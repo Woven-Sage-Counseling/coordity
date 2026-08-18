@@ -7,16 +7,16 @@ CREATE TABLE IF NOT EXISTS "user" (
   "email" TEXT NOT NULL UNIQUE,
   "email_verified" INTEGER NOT NULL DEFAULT 0,
   "image" TEXT,
-  "created_at" INTEGER NOT NULL,
-  "updated_at" INTEGER NOT NULL
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "session" (
   "id" TEXT PRIMARY KEY NOT NULL,
-  "expires_at" INTEGER NOT NULL,
+  "expires_at" TEXT NOT NULL,
   "token" TEXT NOT NULL UNIQUE,
-  "created_at" INTEGER NOT NULL,
-  "updated_at" INTEGER NOT NULL,
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
   "ip_address" TEXT,
   "user_agent" TEXT,
   "user_id" TEXT NOT NULL,
@@ -33,13 +33,13 @@ CREATE TABLE IF NOT EXISTS "account" (
   "access_token" TEXT,
   "refresh_token" TEXT,
   "id_token" TEXT,
-  "access_token_expires_at" INTEGER,
-  "refresh_token_expires_at" INTEGER,
+  "access_token_expires_at" TEXT,
+  "refresh_token_expires_at" TEXT,
   "scope" TEXT,
   "password" TEXT,
   "issuer" TEXT,
-  "created_at" INTEGER NOT NULL,
-  "updated_at" INTEGER NOT NULL,
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
   FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON DELETE CASCADE
 );
 
@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS "verification" (
   "id" TEXT PRIMARY KEY NOT NULL,
   "identifier" TEXT NOT NULL,
   "value" TEXT NOT NULL,
-  "expires_at" INTEGER NOT NULL,
-  "created_at" INTEGER,
-  "updated_at" INTEGER
+  "expires_at" TEXT NOT NULL,
+  "created_at" TEXT,
+  "updated_at" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "employee_profile" (

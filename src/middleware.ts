@@ -24,10 +24,14 @@ function isPublicPath(pathname: string): boolean {
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
-  const auth = createAuth(context.request);
-  const session = await auth.api.getSession({ headers: context.request.headers });
-
-  context.locals.employee = session?.user ? await loadEmployee(session.user.id) : null;
+  try {
+    const auth = createAuth(context.request);
+    const session = await auth.api.getSession({ headers: context.request.headers });
+    context.locals.employee = session?.user ? await loadEmployee(session.user.id) : null;
+  } catch (error) {
+    console.error('session lookup failed', error);
+    context.locals.employee = null;
+  }
   const employee = context.locals.employee;
 
   if (isPublicPath(pathname)) {
