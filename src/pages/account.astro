@@ -1,0 +1,32 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+---
+
+<PortalLayout title="Account">
+  <h1 class="font-display text-4xl text-charcoal">Account</h1>
+  <dl class="card mt-8 space-y-4 text-sm">
+    <div>
+      <dt class="text-sage-dark/60">Name</dt>
+      <dd class="mt-1 text-charcoal">{employee.name}</dd>
+    </div>
+    <div>
+      <dt class="text-sage-dark/60">Email</dt>
+      <dd class="mt-1 text-charcoal">{employee.email}</dd>
+    </div>
+    <div>
+      <dt class="text-sage-dark/60">Roles</dt>
+      <dd class="mt-1 capitalize text-charcoal">{employee.roles.join(', ') || 'None'}</dd>
+    </div>
+    <div>
+      <dt class="text-sage-dark/60">Status</dt>
+      <dd class="mt-1 capitalize text-charcoal">{employee.status}</dd>
+    </div>
+  </dl>
+  <form method="post" action="/api/session/sign-out" class="mt-8">
+    <button class="btn-secondary" type="submit">Sign out</button>
+  </form>
+</PortalLayout>

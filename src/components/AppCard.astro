@@ -1,0 +1,23 @@
+---
+import type { PortalApp } from '../lib/apps';
+
+interface Props {
+  app: PortalApp;
+}
+
+const { app } = Astro.props;
+---
+
+<a
+  href={app.href}
+  class="app-tile"
+  target={app.external ? '_blank' : undefined}
+  rel={app.external ? 'noopener noreferrer' : undefined}
+>
+  <p class="text-xs uppercase tracking-[0.16em] text-sage-dark/55">{app.category}</p>
+  <h3 class="mt-2 font-display text-2xl text-charcoal">{app.name}</h3>
+  <p class="mt-2 flex-1 text-sm leading-relaxed text-sage-dark/75">{app.description}</p>
+  <span class="mt-4 text-sm font-medium text-sage-dark">
+    {app.external ? 'Open application ↗' : 'Open'}
+  </span>
+</a>

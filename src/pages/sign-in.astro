@@ -1,0 +1,44 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+
+export const prerender = false;
+
+const error = Astro.url.searchParams.get('error');
+---
+
+<PortalLayout title="Sign in">
+  <div class="mx-auto max-w-md">
+    <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Woven Sage Counseling</p>
+    <h1 class="mt-3 font-display text-4xl text-charcoal">Employee sign in</h1>
+    <p class="mt-4 text-sm leading-relaxed text-sage-dark/75">
+      Individual accounts only. There is no public registration — an owner must invite you.
+    </p>
+
+    {
+      error && (
+        <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </p>
+      )
+    }
+
+    <form method="post" action="/api/session/sign-in" class="mt-8 space-y-4">
+      <label class="block text-sm font-medium">
+        Email
+        <input class="field" type="email" name="email" autocomplete="username" required />
+      </label>
+      <label class="block text-sm font-medium">
+        Password
+        <input
+          class="field"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+          minlength="12"
+        />
+      </label>
+      <button class="btn-primary w-full" type="submit">Sign in</button>
+    </form>
+  </div>
+</PortalLayout>

@@ -1,0 +1,118 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import { getFinancialSummary, formatUsd } from '../lib/financials/summary';
+import { hasPermission } from '../lib/permissions';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+if (!hasPermission(employee, 'financials:view')) {
+  return new Response('Forbidden', { status: 403 });
+}
+
+const summary = await getFinancialSummary();
+const snapshot = summary.snapshot;
+const canManage = hasPermission(employee, 'financials:manage');
+---
+
+<PortalLayout title="Financials" wide>
+  <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Permission: financials:view</p>
+  <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
+  <p class="mt-4 max-w-2xl text-sage-dark/75">
+    QuickBooks is the source of truth. Figures below are cash-basis. Bank balances show a dash until
+    real amounts are connected.
+  </p>
+
+  {
+    snapshot ? (
+      <p class="mt-4 text-sm text-sage-dark/65">
+        Period {snapshot.periodStart} through {snapshot.periodEnd} · {snapshot.accountingMethod} basis
+        · source: {snapshot.source === 'quickbooks' ? 'QuickBooks sync' : 'QuickBooks (manual snapshot)'}
+      </p>
+    ) : (
+      <p class="mt-4 text-sm text-sage-dark/65">No financial snapshot is available yet.</p>
+    )
+  }
+
+  <section class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <article class="card">
+      <h2 class="text-sm text-sage-dark/60">Revenue</h2>
+      <p class="mt-2 font-display text-3xl">{formatUsd(snapshot?.revenueCents ?? null)}</p>
+    </article>
+    <article class="card">
+      <h2 class="text-sm text-sage-dark/60">Therapist compensation</h2>
+      <p class="mt-2 font-display text-3xl">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</p>
+    </article>
+    <article class="card">
+      <h2 class="text-sm text-sage-dark/60">Management compensation</h2>
+      <p class="mt-2 font-display text-3xl">{formatUsd(snapshot?.managementCompensationCents ?? null)}</p>
+    </article>
+    <article class="card">
+      <h2 class="text-sm text-sage-dark/60">Software and technology</h2>
+      <p class="mt-2 font-display text-3xl">{formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}</p>
+    </article>
+    <article class="card">
+      <h2 class="text-sm text-sage-dark/60">Total expenses</h2>
+      <p class="mt-2 font-display text-3xl">{formatUsd(snapshot?.totalExpensesCents ?? null)}</p>
+    </article>
+    <article class="card">
+      <h2 class="text-sm text-sage-dark/60">Net income</h2>
+      <p class="mt-2 font-display text-3xl">{formatUsd(snapshot?.netIncomeCents ?? null)}</p>
+    </article>
+  </section>
+
+  <section class="mt-12">
+    <h2 class="font-display text-3xl text-charcoal">Cash and reserves</h2>
+    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+      <article class="card">
+        <h3 class="text-sm text-sage-dark/60">Relay operating cash</h3>
+        <p class="mt-2 font-display text-3xl">{formatUsd(summary.cash.relayOperatingCents)}</p>
+      </article>
+      <article class="card">
+        <h3 class="text-sm text-sage-dark/60">Bank of America reserve</h3>
+        <p class="mt-2 font-display text-3xl">{formatUsd(summary.cash.boaReserveCents)}</p>
+      </article>
+      <article class="card">
+        <h3 class="text-sm text-sage-dark/60">Total cash</h3>
+        <p class="mt-2 font-display text-3xl">{formatUsd(summary.totalCashCents)}</p>
+      </article>
+      <article class="card">
+        <h3 class="text-sm text-sage-dark/60">
+          Reserve progress ({summary.reserveTargetMonths} months of average revenue)
+        </h3>
+        <p class="mt-2 font-display text-3xl">
+          {
+            summary.reserveProgressRatio == null
+              ? '—'
+              : `${Math.round(summary.reserveProgressRatio * 100)}%`
+          }
+        </p>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          Target: {formatUsd(summary.reserveTargetCents)} based on average revenue in this period.
+          Progress stays blank until cash balances are available.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="card mt-12">
+    <h2 class="font-display text-2xl text-charcoal">QuickBooks connection</h2>
+    <p class="mt-2 text-sm text-sage-dark/70">
+      Status: {summary.quickbooks.status}.
+      {
+        summary.quickbooks.configured
+          ? 'OAuth credentials are present on the server.'
+          : 'OAuth client ID and secret are not set yet. Add them in Cloudflare encrypted environment settings when you are ready.'
+      }
+    </p>
+    {
+      canManage && (
+        <form method="post" action="/api/quickbooks/connect" class="mt-4">
+          <button class="btn-secondary" type="submit">
+            Connect QuickBooks
+          </button>
+        </form>
+      )
+    }
+  </section>
+</PortalLayout>

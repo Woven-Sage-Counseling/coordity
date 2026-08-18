@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wovensage-portal-preview",
+  "compatibility_date": "2026-08-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "PORTAL_ENVIRONMENT": "preview",
+    "PORTAL_OWNER_EMAIL": "admin@wovensage.com"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SESSION"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wovensage-portal-preview",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

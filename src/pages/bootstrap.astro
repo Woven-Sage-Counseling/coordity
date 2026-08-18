@@ -1,0 +1,62 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import { ownerExists } from '../lib/employees';
+import { isPreview } from '../lib/env';
+
+export const prerender = false;
+
+const exists = await ownerExists();
+const error = Astro.url.searchParams.get('error');
+---
+
+<PortalLayout title="Create owner account">
+  <div class="mx-auto max-w-md">
+    <h1 class="font-display text-4xl text-charcoal">Create the owner account</h1>
+    <p class="mt-4 text-sm leading-relaxed text-sage-dark/75">
+      This one-time setup creates <strong>admin@wovensage.com</strong> as Owner/Admin. Public users
+      cannot register. After this succeeds, remove the bootstrap token from environment settings.
+    </p>
+    {
+      isPreview() && (
+        <p class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          You are on the preview portal, not production.
+        </p>
+      )
+    }
+    {
+      exists ? (
+        <p class="mt-8 text-sm text-sage-dark/75">
+          An owner account already exists. Sign in instead.
+        </p>
+      ) : (
+        <form method="post" action="/api/bootstrap" class="mt-8 space-y-4">
+          {error && (
+            <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error}
+            </p>
+          )}
+          <label class="block text-sm font-medium">
+            Bootstrap token
+            <input class="field" type="password" name="token" required autocomplete="off" />
+          </label>
+          <label class="block text-sm font-medium">
+            Owner name
+            <input class="field" type="text" name="name" value="Woven Sage Admin" required />
+          </label>
+          <label class="block text-sm font-medium">
+            Password
+            <input
+              class="field"
+              type="password"
+              name="password"
+              required
+              minlength="12"
+              autocomplete="new-password"
+            />
+          </label>
+          <button class="btn-primary w-full" type="submit">Create owner account</button>
+        </form>
+      )
+    }
+  </div>
+</PortalLayout>

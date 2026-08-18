@@ -1,0 +1,48 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import { getInvitationByToken } from '../lib/invites';
+
+export const prerender = false;
+
+const token = Astro.url.searchParams.get('token') ?? '';
+const invite = token ? await getInvitationByToken(token) : null;
+const error = Astro.url.searchParams.get('error');
+---
+
+<PortalLayout title="Accept invitation">
+  <div class="mx-auto max-w-md">
+    <h1 class="font-display text-4xl text-charcoal">Accept invitation</h1>
+    {
+      !invite ? (
+        <p class="mt-6 text-sm text-sage-dark/75">
+          This invitation is invalid, expired, or already used. Ask an owner to send a new invite.
+        </p>
+      ) : (
+        <form method="post" action="/api/invites/accept" class="mt-8 space-y-4">
+          {error && (
+            <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error}
+            </p>
+          )}
+          <input type="hidden" name="token" value={token} />
+          <p class="text-sm text-sage-dark/75">
+            You are joining as <strong>{invite.name}</strong> ({invite.email}) with the
+            {invite.role_name} role.
+          </p>
+          <label class="block text-sm font-medium">
+            Create a password
+            <input
+              class="field"
+              type="password"
+              name="password"
+              required
+              minlength="12"
+              autocomplete="new-password"
+            />
+          </label>
+          <button class="btn-primary w-full" type="submit">Activate account</button>
+        </form>
+      )
+    }
+  </div>
+</PortalLayout>

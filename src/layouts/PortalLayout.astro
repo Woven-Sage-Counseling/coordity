@@ -1,0 +1,67 @@
+---
+import '../styles/global.css';
+import PreviewBanner from '../components/PreviewBanner.astro';
+import { hasPermission } from '../lib/permissions';
+
+interface Props {
+  title: string;
+  wide?: boolean;
+}
+
+const { title, wide = false } = Astro.props;
+const employee = Astro.locals.employee;
+const canSeeFinancials = hasPermission(employee, 'financials:view');
+const canManageEmployees = hasPermission(employee, 'employees:manage');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Private employee portal for Woven Sage Counseling." />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>{title} | Woven Sage Employee Portal</title>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <PreviewBanner />
+    {
+      employee?.status === 'active' && (
+        <header class="border-b border-sage-dark/10 bg-cream/90">
+          <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+            <a href="/" class="flex items-center gap-3">
+              <img
+                src="https://wovensage.com/images/logo-text-header-transparent.png"
+                alt="Woven Sage Counseling"
+                class="h-7 w-auto"
+                width="220"
+                height="38"
+              />
+              <span class="hidden text-xs uppercase tracking-[0.18em] text-sage-dark/70 sm:inline">
+                Employee portal
+              </span>
+            </a>
+            <nav class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
+              <a href="/" class="text-sage-dark/80 hover:text-sage-dark">Home</a>
+              <a href="/apps" class="text-sage-dark/80 hover:text-sage-dark">Applications</a>
+              <a href="/resources" class="text-sage-dark/80 hover:text-sage-dark">Resources</a>
+              {canSeeFinancials && (
+                <a href="/financials" class="text-sage-dark/80 hover:text-sage-dark">Financials</a>
+              )}
+              {canManageEmployees && (
+                <a href="/admin/employees" class="text-sage-dark/80 hover:text-sage-dark">Employees</a>
+              )}
+              <a href="/account" class="text-sage-dark/80 hover:text-sage-dark">Account</a>
+            </nav>
+          </div>
+        </header>
+      )
+    }
+    <main class="flex-1">
+      <div class:list={['mx-auto px-5 py-10 sm:px-8', wide ? 'max-w-6xl' : 'max-w-3xl']}>
+        <slot />
+      </div>
+    </main>
+  </body>
+</html>
