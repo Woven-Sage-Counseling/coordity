@@ -14,7 +14,12 @@ export function createAuth(request?: Request) {
       disableSignUp: true,
       minPasswordLength: 12,
     },
-    trustedOrigins: [origin, env.BETTER_AUTH_URL].filter(Boolean),
+    trustedOrigins: [
+      origin,
+      env.BETTER_AUTH_URL,
+      'https://portal.wovensage.com',
+      'https://wovensage-portal-preview.pages.dev',
+    ].filter(Boolean),
     user: {
       fields: {
         emailVerified: 'email_verified',

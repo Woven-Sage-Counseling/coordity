@@ -8,9 +8,9 @@
     "enabled": true
   },
   "vars": {
-    "PORTAL_ENVIRONMENT": "preview",
+    "PORTAL_ENVIRONMENT": "production",
     "PORTAL_OWNER_EMAIL": "admin@wovensage.com",
-    "BETTER_AUTH_URL": "https://wovensage-portal-preview.pages.dev"
+    "BETTER_AUTH_URL": "https://portal.wovensage.com"
   },
   "kv_namespaces": [
     {

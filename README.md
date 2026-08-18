@@ -1,17 +1,15 @@
-# Woven Sage employee portal — PREVIEW
+# Woven Sage employee portal
 
-This folder is a **separate preview app**. It is not the live marketing website.
+Private invite-only portal for clinicians and staff. It is a **separate** Cloudflare Pages app from the public marketing site.
 
-| | Preview (this app) | Production website |
+| | Employee portal | Public website |
 |--|--|--|
-| What | Private employee portal | wovensage.com |
-| Cloudflare name | `wovensage-portal-preview` | Pages project `wovensage` |
-| Domain now | https://wovensage-portal-preview.pages.dev | wovensage.com |
-| Domain later | portal.wovensage.com | unchanged |
-| Git branch | `feat/employee-portal-preview` | `master` |
-| Auto-deploy | **No** (manual only) | GitHub Action on `master` |
+| What | Invite-only staff app | wovensage.com |
+| Cloudflare project | `wovensage-portal-preview` | `wovensage` |
+| Live domain | https://portal.wovensage.com | https://wovensage.com |
+| Auto-deploy | GitHub Action on `master` (`portal/**`) | GitHub Action on `master` (root site) |
 
-Do not deploy this Worker to the `wovensage` Pages project. Do not merge to `master` until the portal has been reviewed on preview.
+Do not deploy this app to the `wovensage` Pages project.
 
 ## What this portal includes
 
@@ -39,21 +37,9 @@ npm run dev
 
 Open http://localhost:4321/bootstrap, enter the bootstrap token and a password for `admin@wovensage.com`.
 
-## Live preview (not production)
-
-The preview portal is deployed to a **separate** Cloudflare Pages project named `wovensage-portal-preview`.
-
-- Preview: https://wovensage-portal-preview.pages.dev
-- Production website, unchanged: https://wovensage.com
-
-Create the owner account at https://wovensage-portal-preview.pages.dev/bootstrap using the token in the gitignored file `portal/.preview-bootstrap.txt`. Use email **admin@wovensage.com** and a password of at least 12 characters.
-
-## Preview deploy (not production)
-
-Do not deploy this app to the `wovensage` Pages project. Use:
+## Manual deploy
 
 ```bash
-npx wrangler pages deploy dist --project-name=wovensage-portal-preview --branch=feat/employee-portal-preview
+npm run build
+npx wrangler pages deploy dist --project-name=wovensage-portal-preview --branch=master --commit-dirty=true
 ```
-
-Production cutover (`portal.wovensage.com`) is a later step.
