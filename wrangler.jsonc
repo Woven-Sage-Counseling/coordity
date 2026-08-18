@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "wovensage-portal-preview",
+  "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-08-18",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
@@ -8,17 +9,20 @@
   },
   "vars": {
     "PORTAL_ENVIRONMENT": "preview",
-    "PORTAL_OWNER_EMAIL": "admin@wovensage.com"
+    "PORTAL_OWNER_EMAIL": "admin@wovensage.com",
+    "BETTER_AUTH_URL": "https://wovensage-portal-preview.pages.dev"
   },
   "kv_namespaces": [
     {
-      "binding": "SESSION"
+      "binding": "SESSION",
+      "id": "c61bf4a353ec40cfbc14e67aec5c30d6"
     }
   ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "wovensage-portal-preview",
+      "database_id": "d2f2a45d-81d5-47cb-acee-1b914a43f014",
       "migrations_dir": "migrations"
     }
   ]

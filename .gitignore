@@ -3,6 +3,8 @@ dist/
 .astro/
 .wrangler/
 .dev.vars
+.preview-secrets.json
+.preview-bootstrap.txt
 .env
 .env.*
 *.log

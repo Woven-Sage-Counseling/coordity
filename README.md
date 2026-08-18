@@ -6,7 +6,7 @@ This folder is a **separate preview app**. It is not the live marketing website.
 |--|--|--|
 | What | Private employee portal | wovensage.com |
 | Cloudflare name | `wovensage-portal-preview` | Pages project `wovensage` |
-| Domain now | local / `*.pages.dev` or workers.dev | wovensage.com |
+| Domain now | https://wovensage-portal-preview.pages.dev | wovensage.com |
 | Domain later | portal.wovensage.com | unchanged |
 | Git branch | `feat/employee-portal-preview` | `master` |
 | Auto-deploy | **No** (manual only) | GitHub Action on `master` |
@@ -39,13 +39,21 @@ npm run dev
 
 Open http://localhost:4321/bootstrap, enter the bootstrap token and a password for `admin@wovensage.com`.
 
+## Live preview (not production)
+
+The preview portal is deployed to a **separate** Cloudflare Pages project named `wovensage-portal-preview`.
+
+- Preview: https://wovensage-portal-preview.pages.dev
+- Production website, unchanged: https://wovensage.com
+
+Create the owner account at https://wovensage-portal-preview.pages.dev/bootstrap using the token in the gitignored file `portal/.preview-bootstrap.txt`. Use email **admin@wovensage.com** and a password of at least 12 characters.
+
 ## Preview deploy (not production)
 
-1. Create D1: `npx wrangler d1 create wovensage-portal-preview`
-2. Put the database id into `wrangler.jsonc`
-3. Apply migrations with `--remote`
-4. Set encrypted secrets (`BETTER_AUTH_SECRET`, `PORTAL_BOOTSTRAP_TOKEN`, later QuickBooks)
-5. `npx wrangler deploy` — deploys Worker **wovensage-portal-preview only**
-6. Bootstrap the owner on the preview URL, then remove `PORTAL_BOOTSTRAP_TOKEN`
+Do not deploy this app to the `wovensage` Pages project. Use:
 
-Production cutover (`portal.wovensage.com`) is a later step and will use a different Worker name / environment.
+```bash
+npx wrangler pages deploy dist --project-name=wovensage-portal-preview --branch=feat/employee-portal-preview
+```
+
+Production cutover (`portal.wovensage.com`) is a later step.
