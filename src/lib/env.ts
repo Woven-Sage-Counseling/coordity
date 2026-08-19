@@ -8,8 +8,8 @@ export function getEnv(): Env {
 
 export function isPreview(): boolean {
   try {
-    return getEnv().PORTAL_ENVIRONMENT !== 'production';
+    return getEnv().PORTAL_ENVIRONMENT === 'preview';
   } catch {
-    return true;
+    return false;
   }
 }
