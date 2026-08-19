@@ -5,6 +5,7 @@ export type BankBucket = 'relay_operating' | 'boa_reserve';
 
 function normalize(name: string): string {
   return name
+    .replace(/\u00a0/g, ' ')
     .toLowerCase()
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, ' ')

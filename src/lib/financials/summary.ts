@@ -1,7 +1,7 @@
 import { getEnv } from '../env';
 import { ManualSnapshotProvider } from './manual-snapshot';
 import { QuickBooksProvider } from './quickbooks';
-import type { CashBalances, FinancialSummary } from './types';
+import type { BankAccountLine, CashBalances, FinancialSummary, PnlLine } from './types';
 
 function daysInclusive(start: string, end: string): number {
   const from = Date.parse(`${start}T00:00:00Z`);
@@ -58,6 +58,22 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
     `SELECT status, last_sync_at, last_error FROM quickbooks_connection WHERE id = 'default'`,
   ).first<{ status: 'disconnected' | 'connected' | 'error'; last_sync_at: number | null; last_error: string | null }>();
 
+  let pnlLines: PnlLine[] = [];
+  let bankAccounts: BankAccountLine[] = [];
+  if (snapshot?.notes?.startsWith('{')) {
+    try {
+      const meta = JSON.parse(snapshot.notes) as {
+        lines?: PnlLine[];
+        banks?: BankAccountLine[];
+      };
+      pnlLines = meta.lines ?? [];
+      bankAccounts = meta.banks ?? [];
+    } catch {
+      pnlLines = [];
+      bankAccounts = [];
+    }
+  }
+
   return {
     snapshot,
     cash,
@@ -65,6 +81,8 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
     reserveTargetMonths,
     reserveTargetCents,
     reserveProgressRatio,
+    pnlLines,
+    bankAccounts,
     quickbooks: {
       configured: qb.isConfigured(),
       status: connection?.status ?? 'disconnected',

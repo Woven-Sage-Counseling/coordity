@@ -17,6 +17,18 @@ export interface CashBalances {
   boaReserveCents: number | null;
 }
 
+export interface PnlLine {
+  name: string;
+  cents: number;
+  bucket: 'therapist' | 'management' | 'software' | 'income' | 'other' | null;
+}
+
+export interface BankAccountLine {
+  name: string;
+  balanceCents: number | null;
+  mappedKey: 'relay_operating' | 'boa_reserve' | null;
+}
+
 export interface FinancialSummary {
   snapshot: FinancialSnapshot | null;
   cash: CashBalances;
@@ -24,6 +36,8 @@ export interface FinancialSummary {
   reserveTargetMonths: number;
   reserveTargetCents: number | null;
   reserveProgressRatio: number | null;
+  pnlLines: PnlLine[];
+  bankAccounts: BankAccountLine[];
   quickbooks: {
     configured: boolean;
     status: 'disconnected' | 'connected' | 'error';

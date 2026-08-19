@@ -124,9 +124,44 @@ const lastSync = summary.quickbooks.lastSyncAt
     {
       summary.quickbooks.environment === 'sandbox' && (
         <p class="mt-2 text-sm text-sage-dark/65">
-          When Intuit asks which company to connect, choose the <strong>sandbox</strong> company — Development
-          keys cannot access live Woven Sage books yet.
+          Connected to a <strong>sandbox</strong> company with Development keys. The $86 net income figure is from
+          live Woven Sage books — sandbox P&L will not match until you reconnect with Production keys.
         </p>
+      )
+    }
+    {
+      canManage && (summary.pnlLines.length > 0 || summary.bankAccounts.length > 0) && (
+        <div class="mt-6 border-t border-sage-dark/10 pt-5">
+          <h3 class="font-display text-xl text-charcoal">Accounts in this sync</h3>
+          {
+            summary.bankAccounts.length > 0 && (
+              <ul class="mt-3 space-y-1 text-sm text-sage-dark/80">
+                {summary.bankAccounts.map((account) => (
+                  <li>
+                    {account.name}: {formatUsd(account.balanceCents)}{' '}
+                    {account.mappedKey === 'relay_operating'
+                      ? '→ operating cash'
+                      : account.mappedKey === 'boa_reserve'
+                        ? '→ reserve'
+                        : '→ not mapped'}
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+          {
+            summary.pnlLines.length > 0 && (
+              <ul class="mt-4 space-y-1 text-sm text-sage-dark/80">
+                {summary.pnlLines.map((line) => (
+                  <li>
+                    {line.name}: {formatUsd(line.cents)}
+                    {line.bucket ? ` → ${line.bucket}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </div>
       )
     }
     {

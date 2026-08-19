@@ -93,11 +93,11 @@ function parsePnl(rows: QbRow[]): {
   income: number;
   expenses: number;
   net: number;
-  leaves: Map<string, number>;
+  leaves: Map<string, { cents: number; expense: boolean }>;
 } {
   const groups: Partial<Record<string, number>> = {};
   const named = new Map<string, number>();
-  const leaves = new Map<string, number>();
+  const leaves = new Map<string, { cents: number; expense: boolean }>();
   let expenseData = 0;
 
   function walk(list: QbRow[], inExpense: boolean): void {
@@ -113,7 +113,11 @@ function parsePnl(rows: QbRow[]): {
       const nested = asRows(row.Rows?.Row);
       const accountName = Boolean(name && !isStructuralAccount(name) && !/^total\b/i.test(name));
       if (accountName) {
-        leaves.set(name, (leaves.get(name) ?? 0) + amount);
+        const previous = leaves.get(name);
+        leaves.set(name, {
+          cents: (previous?.cents ?? 0) + amount,
+          expense: previous?.expense || nextExpense,
+        });
       }
 
       if (nested.length > 0) {
@@ -290,12 +294,41 @@ export class QuickBooksProvider implements FinancialDataProvider {
       let therapist = 0;
       let management = 0;
       let software = 0;
-      for (const [name, cents] of parsed.leaves) {
+      for (const [name, line] of parsed.leaves) {
         const kind = classifyExpense(name);
-        if (kind === 'therapist') therapist += cents;
-        if (kind === 'management') management += cents;
-        if (kind === 'software') software += cents;
+        if (kind === 'therapist') therapist += line.cents;
+        if (kind === 'management') management += line.cents;
+        if (kind === 'software') software += line.cents;
       }
+
+      const tracked = therapist + management + software;
+      const totalExpenses = tracked > 0 ? tracked : parsed.expenses;
+      const netIncome = tracked > 0 ? parsed.income - tracked : parsed.net;
+
+      type BankAccount = {
+        Name?: string;
+        FullyQualifiedName?: string;
+        AcctNum?: string;
+        CurrentBalance?: number;
+      };
+      const bankRows = asRows((accounts as { QueryResponse?: { Account?: BankAccount | BankAccount[] } }).QueryResponse?.Account);
+
+      let relay: number | null = null;
+      let boa: number | null = null;
+      const bankAccounts = bankRows.map((account) => {
+        const label = (account.FullyQualifiedName || account.Name || 'Bank').slice(0, 200);
+        const kind = classifyBank(`${account.FullyQualifiedName ?? ''} ${account.Name ?? ''}`, account.AcctNum);
+        const cents = dollarsToCents(account.CurrentBalance);
+        if (kind === 'relay_operating') relay = (relay ?? 0) + cents;
+        if (kind === 'boa_reserve') boa = (boa ?? 0) + cents;
+        return { name: label, balanceCents: cents, mappedKey: kind };
+      });
+
+      const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => ({
+        name: name.slice(0, 200),
+        cents: line.cents,
+        bucket: classifyExpense(name) ?? (line.expense ? 'other' : 'income'),
+      }));
 
       const snapshotId = `snap_qb_${periodStart}_${periodEnd}_${randomToken(4)}`;
       await env.DB.prepare(
@@ -313,32 +346,18 @@ export class QuickBooksProvider implements FinancialDataProvider {
           therapist,
           management,
           software,
-          parsed.expenses,
-          parsed.net,
+          totalExpenses,
+          netIncome,
           nowMs(),
-          `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
+          JSON.stringify({
+            label: `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
+            qboNet: parsed.net,
+            qboExpenses: parsed.expenses,
+            lines: pnlLines,
+            banks: bankAccounts,
+          }),
         )
         .run();
-
-      type BankAccount = {
-        Name?: string;
-        FullyQualifiedName?: string;
-        AcctNum?: string;
-        CurrentBalance?: number;
-      };
-      const bankRows = asRows((accounts as { QueryResponse?: { Account?: BankAccount | BankAccount[] } }).QueryResponse?.Account);
-
-      let relay: number | null = null;
-      let boa: number | null = null;
-      for (const account of bankRows) {
-        const kind = classifyBank(
-          `${account.FullyQualifiedName ?? ''} ${account.Name ?? ''}`,
-          account.AcctNum,
-        );
-        const cents = dollarsToCents(account.CurrentBalance);
-        if (kind === 'relay_operating') relay = (relay ?? 0) + cents;
-        if (kind === 'boa_reserve') boa = (boa ?? 0) + cents;
-      }
 
       await this.upsertCash('relay_operating', 'Relay operating cash', relay, periodEnd);
       await this.upsertCash('boa_reserve', 'Bank of America reserve', boa, periodEnd);
