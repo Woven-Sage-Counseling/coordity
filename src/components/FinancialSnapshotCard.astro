@@ -16,8 +16,12 @@ const reserveTargetMonths = summary?.reserveTargetMonths ?? 3;
 const revenue = snapshot?.revenueCents ?? 0;
 const expenses = snapshot?.totalExpensesCents ?? 0;
 const net = snapshot?.netIncomeCents ?? 0;
-const scale = Math.max(revenue, expenses, 1);
+const therapist = snapshot?.therapistCompensationCents ?? 0;
+const management = snapshot?.managementCompensationCents ?? 0;
+const scale = Math.max(revenue, expenses, therapist, management, 1);
 const incomeWidth = `${Math.round((revenue / scale) * 100)}%`;
+const therapistWidth = `${Math.round((therapist / scale) * 100)}%`;
+const managementWidth = `${Math.round((management / scale) * 100)}%`;
 const expenseWidth = `${Math.round((expenses / scale) * 100)}%`;
 const netPositive = net >= 0;
 
@@ -84,6 +88,24 @@ const periodLabel = snapshot
         </div>
         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
           <div class="h-full rounded-full bg-[#2CA01C]" style={`width: ${snapshot ? incomeWidth : '0%'}`}></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between gap-3 text-[12px]">
+          <span class="font-medium">Therapist income</span>
+          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
+        </div>
+        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+          <div class="h-full rounded-full bg-[#3d8b37]" style={`width: ${snapshot ? therapistWidth : '0%'}`}></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between gap-3 text-[12px]">
+          <span class="font-medium">Management income</span>
+          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
+        </div>
+        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+          <div class="h-full rounded-full bg-[#6aa84f]" style={`width: ${snapshot ? managementWidth : '0%'}`}></div>
         </div>
       </div>
       <div>
