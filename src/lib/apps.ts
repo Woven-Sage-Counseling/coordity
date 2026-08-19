@@ -55,20 +55,17 @@ export const portalApps: PortalApp[] = [
   },
 ];
 
-export const appCategories: { id: PortalApp['category']; title: string; intro: string }[] = [
+export const appCategories: { id: PortalApp['category']; title: string }[] = [
   {
     id: 'clinical',
     title: 'Clinical tools',
-    intro: 'Clinical notes, diagnoses, and appointments stay in SimplePractice — never in this portal.',
   },
   {
     id: 'business',
     title: 'Business tools',
-    intro: 'Accounting and operations tools for approved finance and ownership roles.',
   },
   {
     id: 'financial',
     title: 'Financial tools',
-    intro: 'Banking for the Bank of America reserve and Relay operating cash.',
   },
 ];

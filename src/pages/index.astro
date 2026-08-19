@@ -45,7 +45,6 @@ const canSeeFinancials = hasPermission(employee, 'financials:view');
               <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
                 {category.title}
               </h2>
-              <p class="mt-2 max-w-2xl text-sm text-sage-dark/70">{category.intro}</p>
               <div class="mt-5 flex flex-wrap gap-x-8 gap-y-6">
                 {apps.map((app) => (
                   <AppCard app={app} />
