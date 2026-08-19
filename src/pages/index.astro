@@ -1,6 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AppCard from '../components/AppCard.astro';
+import FinancialSnapshotCard from '../components/FinancialSnapshotCard.astro';
 import { appCategories, portalApps } from '../lib/apps';
 import { hasPermission } from '../lib/permissions';
 
@@ -9,50 +10,58 @@ export const prerender = false;
 const employee = Astro.locals.employee!;
 const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permission));
 const firstName = employee.name.split(' ')[0] || employee.name;
+const canSeeFinancials = hasPermission(employee, 'financials:view');
 ---
 
 <PortalLayout title="Home" wide>
-  <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Employee home</p>
-  <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
-  <p class="mt-4 max-w-2xl text-sage-dark/75">
-    Use the applications below for day-to-day work. Clinical records stay in SimplePractice. This
-    portal does not store patient information.
-  </p>
-
-  {
-    appCategories.map((category) => {
-      const apps = visibleApps.filter((app) => app.category === category.id);
-      if (apps.length === 0) return null;
-      return (
-        <section class="mt-12" aria-labelledby={`${category.id}-heading`}>
-          <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
-            {category.title}
-          </h2>
-          <p class="mt-2 max-w-2xl text-sm text-sage-dark/70">{category.intro}</p>
-          <div class="mt-5 grid gap-4 sm:grid-cols-2">
-            {apps.map((app) => (
-              <AppCard app={app} />
-            ))}
-          </div>
-        </section>
-      );
-    })
-  }
-
-  <section class="mt-12 grid gap-4 sm:grid-cols-2">
-    <a href="/resources" class="card block hover:border-sage-dark/25">
-      <h2 class="font-display text-2xl text-charcoal">Resources</h2>
-      <p class="mt-2 text-sm text-sage-dark/70">Internal employee resources and practice links.</p>
-    </a>
+  <div
+    class:list={[
+      'flex flex-col lg:grid lg:items-start lg:gap-8',
+      canSeeFinancials && 'lg:grid-cols-[minmax(0,1fr)_19.5rem]',
+    ]}
+  >
     {
-      hasPermission(employee, 'financials:view') && (
-        <a href="/financials" class="card block hover:border-sage-dark/25">
-          <h2 class="font-display text-2xl text-charcoal">Financials</h2>
-          <p class="mt-2 text-sm text-sage-dark/70">
-            Cash-basis snapshot from QuickBooks. Restricted to finance roles.
-          </p>
-        </a>
+      canSeeFinancials && (
+        <div class="order-1 mb-10 lg:order-2 lg:mb-0">
+          <FinancialSnapshotCard />
+        </div>
       )
     }
-  </section>
+
+    <div class="order-2 lg:order-1">
+      <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Employee home</p>
+      <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
+      <p class="mt-4 max-w-2xl text-sage-dark/75">
+        Use the applications below for day-to-day work. Clinical records stay in SimplePractice. This
+        portal does not store patient information.
+      </p>
+
+      {
+        appCategories.map((category) => {
+          const apps = visibleApps.filter((app) => app.category === category.id);
+          if (apps.length === 0) return null;
+          return (
+            <section class="mt-12" aria-labelledby={`${category.id}-heading`}>
+              <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
+                {category.title}
+              </h2>
+              <p class="mt-2 max-w-2xl text-sm text-sage-dark/70">{category.intro}</p>
+              <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                {apps.map((app) => (
+                  <AppCard app={app} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      }
+
+      <section class="mt-12">
+        <a href="/resources" class="card block hover:border-sage-dark/25">
+          <h2 class="font-display text-2xl text-charcoal">Resources</h2>
+          <p class="mt-2 text-sm text-sage-dark/70">Internal employee resources and practice links.</p>
+        </a>
+      </section>
+    </div>
+  </div>
 </PortalLayout>
