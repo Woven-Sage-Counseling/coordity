@@ -42,6 +42,15 @@ function formatPeriod(iso: string): string {
   });
 }
 
+function formatMonthYear(iso: string): string {
+  const [year, month] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 const periodLabel = snapshot
   ? `${formatPeriod(snapshot.periodStart)} – ${formatPeriod(snapshot.periodEnd)}`
   : 'No snapshot yet';
@@ -134,7 +143,12 @@ const periodLabel = snapshot
         <p class="mt-0.5 text-[11px] text-[#6b6c72]">
           {formatUsd(summary?.totalCashCents ?? null)} of {formatUsd(summary?.reserveTargetCents ?? null)}
         </p>
-        <p class="mt-0.5 text-[11px] text-[#b0b1b6]">{reserveTargetMonths}-month target</p>
+        <p class="mt-0.5 text-[11px] text-[#b0b1b6]">
+          {reserveTargetMonths}-month target
+          {summary?.reserveAveragingStart
+            ? ` since ${formatMonthYear(summary.reserveAveragingStart)}`
+            : ''}
+        </p>
       </div>
       <div
         class="relative h-16 w-16 shrink-0"

@@ -18,3 +18,8 @@ export function qbApiEnvironment(): 'sandbox' | 'production' {
   const raw = (getEnv().QB_ENVIRONMENT ?? '').trim().toLowerCase();
   return raw === 'production' || raw === 'prod' ? 'production' : 'sandbox';
 }
+
+export function practiceOperationsStart(): string {
+  const raw = (getEnv().PRACTICE_OPERATIONS_START ?? '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '2026-06-01';
+}

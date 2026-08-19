@@ -120,6 +120,11 @@ export function resolvePeriodFromSearch(search?: URLSearchParams | null, now = n
   return resolvePreset('ytd', now);
 }
 
+export function averagingStart(periodStart: string, periodEnd: string, operationsStart: string): string {
+  if (operationsStart > periodStart && operationsStart <= periodEnd) return operationsStart;
+  return periodStart;
+}
+
 export function periodQuery(period: ResolvedPeriod): string {
   const params = new URLSearchParams({ period: period.id });
   if (period.id === 'custom') {

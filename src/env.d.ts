@@ -40,4 +40,5 @@ interface Env {
   QB_CLIENT_ID?: string;
   QB_CLIENT_SECRET?: string;
   QB_ENVIRONMENT?: string;
+  PRACTICE_OPERATIONS_START?: string;
 }

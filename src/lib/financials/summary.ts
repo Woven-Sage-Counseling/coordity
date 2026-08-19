@@ -1,6 +1,6 @@
-import { getEnv, qbApiEnvironment } from '../env';
+import { getEnv, practiceOperationsStart, qbApiEnvironment } from '../env';
 import { ManualSnapshotProvider } from './manual-snapshot';
-import { resolvePeriodFromSearch, resolvePreset } from './periods';
+import { averagingStart, resolvePeriodFromSearch, resolvePreset } from './periods';
 import { QuickBooksProvider } from './quickbooks';
 import type { BankAccountLine, CashBalances, FinancialSummary, PnlLine } from './types';
 
@@ -40,10 +40,14 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
   const ytd = resolvePreset('ytd');
   const snapshot =
     (await qb.getOrFetchSnapshot(period.start, period.end)) ?? (await manual.getSnapshot());
+  const operationsStart = practiceOperationsStart();
+  const ytdReserveStart = averagingStart(ytd.start, ytd.end, operationsStart);
   const reserveSnapshot =
-    period.start === ytd.start && period.end === ytd.end
+    period.start === ytdReserveStart && period.end === ytd.end
       ? snapshot
-      : ((await qb.getCachedSnapshot(ytd.start, ytd.end)) ?? snapshot);
+      : ((await qb.getOrFetchSnapshot(ytdReserveStart, ytd.end)) ??
+        (await qb.getCachedSnapshot(ytd.start, ytd.end)) ??
+        snapshot);
 
   const cashRow = await env.DB.prepare(
     `SELECT account_key, balance_cents FROM cash_account_balance`,
@@ -68,10 +72,13 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
   ).first<{ target_months: number }>();
   const reserveTargetMonths = reserve?.target_months ?? 3;
 
+  const reserveAveragingStart = reserveSnapshot
+    ? averagingStart(reserveSnapshot.periodStart, reserveSnapshot.periodEnd, operationsStart)
+    : null;
   const reserveTargetCents = reserveSnapshot
     ? averageMonthlyRevenueCents(
         reserveSnapshot.revenueCents,
-        reserveSnapshot.periodStart,
+        reserveAveragingStart!,
         reserveSnapshot.periodEnd,
       ) * reserveTargetMonths
     : null;
@@ -99,6 +106,7 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
     reserveTargetMonths,
     reserveTargetCents,
     reserveProgressRatio,
+    reserveAveragingStart,
     pnlLines,
     bankAccounts,
     quickbooks: {

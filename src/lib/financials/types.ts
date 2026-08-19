@@ -39,6 +39,7 @@ export interface FinancialSummary {
   reserveTargetMonths: number;
   reserveTargetCents: number | null;
   reserveProgressRatio: number | null;
+  reserveAveragingStart: string | null;
   pnlLines: PnlLine[];
   bankAccounts: BankAccountLine[];
   quickbooks: {
