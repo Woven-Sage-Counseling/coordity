@@ -27,7 +27,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .bind(userId)
       .first<{ email: string }>();
     if (target && isOwnerEmail(target.email) && roleId !== 'role_owner') {
-      return formErrorRedirect('/admin/employees', 'The owner account must keep the Owner / Admin role.');
+      return formErrorRedirect('/admin/employees', 'The primary owner account cannot change roles.');
+    }
+    if ((!target || !isOwnerEmail(target.email)) && roleId === 'role_owner') {
+      return formErrorRedirect(
+        '/admin/employees',
+        'Primary owner is reserved for admin@wovensage.com. Use Owner for view-only access.',
+      );
     }
     await assignRole({ userId, roleId, actorUserId: actor!.id });
   } else if (action === 'disable') {

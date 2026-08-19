@@ -11,7 +11,8 @@ interface Props {
 const { title, wide = false } = Astro.props;
 const employee = Astro.locals.employee;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
-const canManageEmployees = hasPermission(employee, 'employees:manage');
+const canSeePeople =
+  hasPermission(employee, 'employees:view') || hasPermission(employee, 'employees:manage');
 ---
 
 <!doctype html>
@@ -49,7 +50,7 @@ const canManageEmployees = hasPermission(employee, 'employees:manage');
               {canSeeFinancials && (
                 <a href="/financials" class="text-sage-dark/80 hover:text-sage-dark">Financials</a>
               )}
-              {canManageEmployees && (
+              {canSeePeople && (
                 <a href="/admin/employees" class="text-sage-dark/80 hover:text-sage-dark">People</a>
               )}
               <a href="/account" class="text-sage-dark/80 hover:text-sage-dark">Account</a>

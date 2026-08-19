@@ -65,7 +65,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/employees')) {
+  if (pathname.startsWith('/admin')) {
+    if (
+      !employee.permissions.includes('employees:view') &&
+      !employee.permissions.includes('employees:manage')
+    ) {
+      return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
+    }
+  }
+
+  if (pathname.startsWith('/api/employees')) {
     if (!employee.permissions.includes('employees:manage')) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }

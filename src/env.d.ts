@@ -10,6 +10,7 @@ type PortalPermission =
   | 'apps:management'
   | 'financials:view'
   | 'financials:manage'
+  | 'employees:view'
   | 'employees:manage';
 
 interface PortalEmployee {

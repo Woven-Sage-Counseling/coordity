@@ -14,6 +14,7 @@ if (!hasPermission(employee, 'financials:view')) {
 const summary = await getFinancialSummary(Astro.url.searchParams);
 const snapshot = summary.snapshot;
 const canManage = hasPermission(employee, 'financials:manage');
+const canViewBooks = hasPermission(employee, 'financials:view');
 const error = Astro.url.searchParams.get('error');
 const lastSync = summary.quickbooks.lastSyncAt
   ? new Date(summary.quickbooks.lastSyncAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
@@ -148,7 +149,7 @@ function formatMonthYear(iso: string): string {
       )
     }
     {
-      canManage && (summary.pnlLines.length > 0 || summary.bankAccounts.length > 0) && (
+      canViewBooks && (summary.pnlLines.length > 0 || summary.bankAccounts.length > 0) && (
         <div class="mt-6 border-t border-sage-dark/10 pt-5">
           <h3 class="font-display text-xl text-charcoal">Accounts in this sync</h3>
           {

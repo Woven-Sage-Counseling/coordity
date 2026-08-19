@@ -34,7 +34,16 @@ export async function listEmployees() {
 
 export async function listRoles() {
   const { DB } = getEnv();
-  const rows = await DB.prepare(`SELECT id, key, name, description FROM role ORDER BY name`).all<{
+  const rows = await DB.prepare(
+    `SELECT id, key, name, description FROM role
+     ORDER BY CASE key
+       WHEN 'owner' THEN 0
+       WHEN 'owner_view' THEN 1
+       WHEN 'finance' THEN 2
+       WHEN 'manager' THEN 3
+       ELSE 4
+     END`,
+  ).all<{
     id: string;
     key: string;
     name: string;
@@ -112,6 +121,14 @@ export async function setEmployeeStatus(input: {
     targetType: 'user',
     targetId: input.userId,
   });
+}
+
+export function assignableRoles<T extends { id: string; key: string }>(
+  roles: T[],
+  options?: { includePrimaryOwner?: boolean },
+): T[] {
+  if (options?.includePrimaryOwner) return roles;
+  return roles.filter((role) => role.key !== 'owner');
 }
 
 export async function createInvitedAccount(

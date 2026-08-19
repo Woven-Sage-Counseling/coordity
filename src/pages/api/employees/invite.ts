@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { hasPermission } from '../../../lib/permissions';
+import { hasPermission, isOwnerEmail } from '../../../lib/permissions';
 import { createInvitation } from '../../../lib/invites';
 import { formErrorRedirect } from '../../../lib/http';
 
@@ -18,6 +18,13 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
 
   if (!name || !email || !roleId) {
     return formErrorRedirect('/admin/employees', 'Name, email, and role are required.');
+  }
+
+  if (roleId === 'role_owner' || isOwnerEmail(email)) {
+    return formErrorRedirect(
+      '/admin/employees',
+      'Primary owner is reserved for admin@wovensage.com. Invite your mom as Owner if she should see everything without making changes.',
+    );
   }
 
   const invite = await createInvitation({
