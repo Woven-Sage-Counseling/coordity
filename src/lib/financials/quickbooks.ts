@@ -1,4 +1,4 @@
-import { getEnv } from '../env';
+import { getEnv, qbApiEnvironment } from '../env';
 import { nowMs, randomToken } from '../crypto';
 import { classifyBank, classifyExpense } from './account-map';
 import type { FinancialDataProvider, FinancialSnapshot } from './types';
@@ -47,7 +47,7 @@ function apiHost(environment: QbEnvironment): string {
 }
 
 function qbEnvironment(): QbEnvironment {
-  return getEnv().QB_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
+  return qbApiEnvironment();
 }
 
 function dollarsToCents(value: string | number | undefined): number {

@@ -1,4 +1,4 @@
-import { getEnv } from '../env';
+import { getEnv, qbApiEnvironment } from '../env';
 import { ManualSnapshotProvider } from './manual-snapshot';
 import { QuickBooksProvider } from './quickbooks';
 import type { BankAccountLine, CashBalances, FinancialSummary, PnlLine } from './types';
@@ -88,7 +88,7 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
       status: connection?.status ?? 'disconnected',
       lastSyncAt: connection?.last_sync_at ?? null,
       lastError: connection?.last_error ?? null,
-      environment: env.QB_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
+      environment: qbApiEnvironment(),
     },
   };
 }

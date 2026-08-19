@@ -13,3 +13,8 @@ export function isPreview(): boolean {
     return false;
   }
 }
+
+export function qbApiEnvironment(): 'sandbox' | 'production' {
+  const raw = (getEnv().QB_ENVIRONMENT ?? '').trim().toLowerCase();
+  return raw === 'production' || raw === 'prod' ? 'production' : 'sandbox';
+}
