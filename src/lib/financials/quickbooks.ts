@@ -1,5 +1,6 @@
 import { getEnv } from '../env';
 import { nowMs, randomToken } from '../crypto';
+import { classifyBank, classifyExpense } from './account-map';
 import type { FinancialDataProvider, FinancialSnapshot } from './types';
 
 const INTUIT_AUTH = 'https://appcenter.intuit.com/connect/oauth2';
@@ -128,33 +129,6 @@ function basicAuth(clientId: string, clientSecret: string): string {
   return btoa(`${clientId}:${clientSecret}`);
 }
 
-function classifyExpense(name: string): 'therapist' | 'management' | 'software' | null {
-  const n = name.toLowerCase();
-  if (
-    /simplepractice|software|technology|saas|subscription|zoom|google workspace|microsoft|adobe|intuit|practice management/.test(
-      n,
-    )
-  ) {
-    return 'software';
-  }
-  if (/therapist|clinician|contractor|1099|clinical payroll|wages - therapy/.test(n)) {
-    return 'therapist';
-  }
-  if (/owner|officer|management|guaranteed payment|director|admin (pay|salary|comp)/.test(n)) {
-    return 'management';
-  }
-  return null;
-}
-
-function classifyBank(name: string): 'relay_operating' | 'boa_reserve' | null {
-  const n = name.toLowerCase();
-  if (n.includes('relay')) return 'relay_operating';
-  if (n.includes('bank of america') || n.includes('bofa') || /\bboa\b/.test(n) || n.includes('reserve')) {
-    return 'boa_reserve';
-  }
-  return null;
-}
-
 function walkPnl(
   rows: QbRow[],
   totals: { income: number; expenses: number; net: number },
@@ -174,7 +148,7 @@ function walkPnl(
     }
 
     const name = row.ColData?.[0]?.value ?? row.Header?.ColData?.[0]?.value;
-    if (name) {
+    if (name && !/^total\b/i.test(name.trim())) {
       leaves.set(name, (leaves.get(name) ?? 0) + lastAmount(row.ColData));
     }
   }
@@ -303,16 +277,28 @@ export class QuickBooksProvider implements FinancialDataProvider {
         .run();
 
       const bankRows = (
-        accounts as { QueryResponse?: { Account?: Array<{ Name?: string; CurrentBalance?: number }> } }
+        accounts as {
+          QueryResponse?: {
+            Account?: Array<{
+              Name?: string;
+              FullyQualifiedName?: string;
+              AcctNum?: string;
+              CurrentBalance?: number;
+            }>;
+          };
+        }
       ).QueryResponse?.Account ?? [];
 
       let relay: number | null = null;
       let boa: number | null = null;
       for (const account of bankRows) {
-        const kind = classifyBank(account.Name ?? '');
+        const kind = classifyBank(
+          `${account.FullyQualifiedName ?? ''} ${account.Name ?? ''}`,
+          account.AcctNum,
+        );
         const cents = dollarsToCents(account.CurrentBalance);
-        if (kind === 'relay_operating') relay = cents;
-        if (kind === 'boa_reserve') boa = cents;
+        if (kind === 'relay_operating') relay = (relay ?? 0) + cents;
+        if (kind === 'boa_reserve') boa = (boa ?? 0) + cents;
       }
 
       await this.upsertCash('relay_operating', 'Relay operating cash', relay, periodEnd);
