@@ -31,6 +31,7 @@ export const portalApps: PortalApp[] = [
     href: 'https://app.qbo.intuit.com',
     external: true,
     permission: 'financials:view',
+    iconSrc: '/app-icons/quickbooks.png',
   },
 ];
 
