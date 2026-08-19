@@ -8,6 +8,7 @@ export interface PortalApp {
   href: string;
   external: boolean;
   permission: Permission;
+  iconSrc?: string;
 }
 
 export const portalApps: PortalApp[] = [
@@ -20,6 +21,7 @@ export const portalApps: PortalApp[] = [
     href: 'https://secure.simplepractice.com',
     external: true,
     permission: 'apps:clinical',
+    iconSrc: '/app-icons/simplepractice.png',
   },
   {
     id: 'quickbooks',

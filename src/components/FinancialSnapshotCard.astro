@@ -14,15 +14,15 @@ const ratio = summary?.reserveProgressRatio ?? null;
 const percent = ratio == null ? null : Math.round(ratio * 100);
 const reserveTargetMonths = summary?.reserveTargetMonths ?? 3;
 const revenue = snapshot?.revenueCents ?? 0;
-const expenses = snapshot?.totalExpensesCents ?? 0;
 const net = snapshot?.netIncomeCents ?? 0;
 const therapist = snapshot?.therapistCompensationCents ?? 0;
 const management = snapshot?.managementCompensationCents ?? 0;
-const scale = Math.max(revenue, expenses, therapist, management, 1);
+const scale = Math.max(revenue, therapist, management, 1);
 const incomeWidth = `${Math.round((revenue / scale) * 100)}%`;
 const therapistWidth = `${Math.round((therapist / scale) * 100)}%`;
 const managementWidth = `${Math.round((management / scale) * 100)}%`;
-const expenseWidth = `${Math.round((expenses / scale) * 100)}%`;
+const therapistShare = revenue > 0 ? `${Math.round((therapist / revenue) * 100)}%` : null;
+const managementShare = revenue > 0 ? `${Math.round((management / revenue) * 100)}%` : null;
 const netPositive = net >= 0;
 
 function formatPeriod(iso: string): string {
@@ -93,7 +93,12 @@ const periodLabel = snapshot
       <div>
         <div class="flex items-baseline justify-between gap-3 text-[12px]">
           <span class="font-medium">Therapist income</span>
-          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
+          <span class="flex items-baseline gap-1.5 tabular-nums">
+            <span class="font-semibold">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
+            {therapistShare ? (
+              <span class="font-medium text-[#b0b1b6]">{therapistShare}</span>
+            ) : null}
+          </span>
         </div>
         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
           <div class="h-full rounded-full bg-[#3d8b37]" style={`width: ${snapshot ? therapistWidth : '0%'}`}></div>
@@ -102,19 +107,15 @@ const periodLabel = snapshot
       <div>
         <div class="flex items-baseline justify-between gap-3 text-[12px]">
           <span class="font-medium">Management income</span>
-          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
+          <span class="flex items-baseline gap-1.5 tabular-nums">
+            <span class="font-semibold">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
+            {managementShare ? (
+              <span class="font-medium text-[#b0b1b6]">{managementShare}</span>
+            ) : null}
+          </span>
         </div>
         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
           <div class="h-full rounded-full bg-[#6aa84f]" style={`width: ${snapshot ? managementWidth : '0%'}`}></div>
-        </div>
-      </div>
-      <div>
-        <div class="flex items-baseline justify-between gap-3 text-[12px]">
-          <span class="font-medium">Expenses</span>
-          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.totalExpensesCents ?? null)}</span>
-        </div>
-        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-          <div class="h-full rounded-full bg-[#6b6c72]" style={`width: ${snapshot ? expenseWidth : '0%'}`}></div>
         </div>
       </div>
     </div>
