@@ -17,7 +17,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const form = await request.formData();
     const token = String(form.get('token') ?? '');
-    const name = String(form.get('name') ?? 'Woven Sage Admin');
+    const name = String(form.get('name') ?? 'Christian Evans');
     const password = String(form.get('password') ?? '');
 
     if (!env.PORTAL_BOOTSTRAP_TOKEN || !timingSafeEqual(token, env.PORTAL_BOOTSTRAP_TOKEN)) {

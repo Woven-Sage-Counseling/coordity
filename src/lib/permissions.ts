@@ -54,10 +54,19 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     id: profile.id,
     email: profile.email,
     name: profile.name,
-    status: profile.status,
-    roles: (roles.results ?? []).map((row) => row.key),
-    permissions: (permissions.results ?? []).map((row) => row.key),
+    status: isOwnerEmail(profile.email) ? 'active' : profile.status,
+    roles: isOwnerEmail(profile.email)
+      ? Array.from(new Set(['owner', ...(roles.results ?? []).map((row) => row.key)]))
+      : (roles.results ?? []).map((row) => row.key),
+    permissions: isOwnerEmail(profile.email)
+      ? [...PERMISSIONS]
+      : (permissions.results ?? []).map((row) => row.key),
   };
+}
+
+export function isOwnerEmail(email: string): boolean {
+  const owner = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim().toLowerCase();
+  return Boolean(owner) && email.trim().toLowerCase() === owner;
 }
 
 export function hasPermission(employee: PortalEmployee | null, permission: Permission): boolean {

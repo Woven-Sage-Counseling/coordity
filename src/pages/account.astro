@@ -1,13 +1,21 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+const canManageEmployees = hasPermission(employee, 'employees:manage');
+const error = Astro.url.searchParams.get('error');
 ---
 
 <PortalLayout title="Account">
   <h1 class="font-display text-4xl text-charcoal">Account</h1>
+  {
+    error && (
+      <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    )
+  }
   <dl class="card mt-8 space-y-4 text-sm">
     <div>
       <dt class="text-sage-dark/60">Name</dt>
@@ -26,6 +34,27 @@ const employee = Astro.locals.employee!;
       <dd class="mt-1 capitalize text-charcoal">{employee.status}</dd>
     </div>
   </dl>
+
+  <form method="post" action="/api/account/update" class="card mt-6 space-y-4">
+    <h2 class="font-display text-2xl text-charcoal">Update name</h2>
+    <label class="block text-sm font-medium">
+      Display name
+      <input class="field" type="text" name="name" value={employee.name} required minlength="2" maxlength="80" />
+    </label>
+    <button class="btn-primary" type="submit">Save name</button>
+  </form>
+
+  {
+    canManageEmployees && (
+      <a href="/admin/employees" class="card mt-6 block hover:border-sage-dark/25">
+        <h2 class="font-display text-2xl text-charcoal">People and roles</h2>
+        <p class="mt-2 text-sm text-sage-dark/70">
+          View every registered user, invite new people, and change roles.
+        </p>
+      </a>
+    )
+  }
+
   <form method="post" action="/api/session/sign-out" class="mt-8">
     <button class="btn-secondary" type="submit">Sign out</button>
   </form>

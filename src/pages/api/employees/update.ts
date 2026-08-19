@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
-import { hasPermission } from '../../../lib/permissions';
+import { hasPermission, isOwnerEmail } from '../../../lib/permissions';
 import { assignRole, setEmployeeStatus } from '../../../lib/employees';
+import { getEnv } from '../../../lib/env';
 import { formErrorRedirect } from '../../../lib/http';
 
 export const prerender = false;
@@ -21,10 +22,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'role') {
     const roleId = String(form.get('roleId') ?? '');
+    const target = await getEnv()
+      .DB.prepare(`SELECT email FROM user WHERE id = ?`)
+      .bind(userId)
+      .first<{ email: string }>();
+    if (target && isOwnerEmail(target.email) && roleId !== 'role_owner') {
+      return formErrorRedirect('/admin/employees', 'The owner account must keep the Owner / Admin role.');
+    }
     await assignRole({ userId, roleId, actorUserId: actor!.id });
   } else if (action === 'disable') {
     if (userId === actor!.id) {
       return formErrorRedirect('/admin/employees', 'You cannot disable your own account.');
+    }
+    const target = await getEnv()
+      .DB.prepare(`SELECT email FROM user WHERE id = ?`)
+      .bind(userId)
+      .first<{ email: string }>();
+    if (target && isOwnerEmail(target.email)) {
+      return formErrorRedirect('/admin/employees', 'The owner account cannot be disabled.');
     }
     await setEmployeeStatus({ userId, status: 'disabled', actorUserId: actor!.id });
   } else if (action === 'enable') {

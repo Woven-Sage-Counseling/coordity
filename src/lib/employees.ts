@@ -43,6 +43,27 @@ export async function listRoles() {
   return rows.results ?? [];
 }
 
+export async function updateDisplayName(input: {
+  userId: string;
+  name: string;
+  actorUserId: string;
+}): Promise<void> {
+  const name = input.name.trim();
+  if (name.length < 2 || name.length > 80) {
+    throw new Error('Name must be between 2 and 80 characters.');
+  }
+
+  const { DB } = getEnv();
+  await DB.prepare(`UPDATE user SET name = ? WHERE id = ?`).bind(name, input.userId).run();
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'employee.name_changed',
+    targetType: 'user',
+    targetId: input.userId,
+    metadata: { name },
+  });
+}
+
 export async function assignRole(input: {
   userId: string;
   roleId: string;
