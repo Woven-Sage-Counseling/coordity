@@ -31,10 +31,6 @@ const canSeeFinancials = hasPermission(employee, 'financials:view');
     <div class="order-2 lg:order-1">
       <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Employee home</p>
       <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
-      <p class="mt-4 max-w-2xl text-sage-dark/75">
-        Use the applications below for day-to-day work. Clinical records stay in SimplePractice. This
-        portal does not store patient information.
-      </p>
 
       {
         appCategories.map((category) => {
