@@ -1,6 +1,7 @@
 import { getEnv, qbApiEnvironment } from '../env';
 import { nowMs, randomToken } from '../crypto';
 import { classifyBank, classifyExpense } from './account-map';
+import { resolvePreset, todayEastern } from './periods';
 import type { FinancialDataProvider, FinancialSnapshot } from './types';
 
 const INTUIT_AUTH = 'https://appcenter.intuit.com/connect/oauth2';
@@ -139,17 +140,22 @@ function parsePnl(rows: QbRow[]): {
   return { income, expenses, net, leaves };
 }
 
-function todayEastern(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
+const PNL_CACHE_MS = 30 * 60 * 1000;
 
-function yearStartEastern(): string {
-  return `${todayEastern().slice(0, 4)}-01-01`;
+function snapshotFromRow(row: Record<string, unknown>): FinancialSnapshot {
+  return {
+    source: 'quickbooks',
+    accountingMethod: 'cash',
+    periodStart: String(row.period_start),
+    periodEnd: String(row.period_end),
+    revenueCents: Number(row.revenue_cents),
+    therapistCompensationCents: Number(row.therapist_compensation_cents),
+    managementCompensationCents: Number(row.management_compensation_cents),
+    softwareAndTechnologyCents: Number(row.software_and_technology_cents),
+    totalExpensesCents: Number(row.total_expenses_cents),
+    netIncomeCents: Number(row.net_income_cents),
+    notes: (row.notes as string | null) ?? null,
+  };
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -263,10 +269,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
   }
 
   async syncSnapshot(): Promise<void> {
-    const env = getEnv();
-    const periodStart = yearStartEastern();
-    const periodEnd = todayEastern();
-
+    const ytd = resolvePreset('ytd');
     try {
       const accessToken = await this.validAccessToken();
       const connection = await this.connection();
@@ -274,106 +277,20 @@ export class QuickBooksProvider implements FinancialDataProvider {
         throw new Error('QuickBooks is not connected.');
       }
 
-      const pnl = (await this.qbGet(
-        accessToken,
-        connection.realm_id,
-        `/reports/ProfitAndLoss?accounting_method=Cash&summarize_column_by=Total&start_date=${periodStart}&end_date=${periodEnd}`,
-      )) as {
-        Header?: { ReportBasis?: string; StartPeriod?: string; EndPeriod?: string };
-        Rows?: { Row?: QbRow | QbRow[] };
-      };
-      const accounts = await this.qbGet(
-        accessToken,
-        connection.realm_id,
-        `/query?query=${encodeURIComponent("select * from Account where AccountType = 'Bank' maxresults 100")}`,
-      );
+      await this.fetchAndStorePnl(accessToken, connection.realm_id, ytd.start, ytd.end, { includeBanks: true });
 
-      const parsed = parsePnl(asRows(pnl.Rows?.Row));
-      const basis = pnl.Header?.ReportBasis ?? 'Cash';
-
-      let therapist = 0;
-      let management = 0;
-      let software = 0;
-      for (const [name, line] of parsed.leaves) {
-        const kind = classifyExpense(name);
-        if (kind === 'therapist') therapist += line.cents;
-        if (kind === 'management') management += line.cents;
-        if (kind === 'software') software += line.cents;
-      }
-
-      const tracked = therapist + management + software;
-      const totalExpenses = tracked > 0 ? tracked : parsed.expenses;
-      const netIncome = tracked > 0 ? parsed.income - tracked : parsed.net;
-
-      type BankAccount = {
-        Name?: string;
-        FullyQualifiedName?: string;
-        AcctNum?: string;
-        CurrentBalance?: number;
-      };
-      const bankRows = asRows((accounts as { QueryResponse?: { Account?: BankAccount | BankAccount[] } }).QueryResponse?.Account);
-
-      let relay: number | null = null;
-      let boa: number | null = null;
-      const bankAccounts = bankRows.map((account) => {
-        const label = (account.FullyQualifiedName || account.Name || 'Bank').slice(0, 200);
-        const kind = classifyBank(`${account.FullyQualifiedName ?? ''} ${account.Name ?? ''}`, account.AcctNum);
-        const cents = dollarsToCents(account.CurrentBalance);
-        if (kind === 'relay_operating') relay = (relay ?? 0) + cents;
-        if (kind === 'boa_reserve') boa = (boa ?? 0) + cents;
-        return { name: label, balanceCents: cents, mappedKey: kind };
-      });
-
-      const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => ({
-        name: name.slice(0, 200),
-        cents: line.cents,
-        bucket: classifyExpense(name) ?? (line.expense ? 'other' : 'income'),
-      }));
-
-      const snapshotId = `snap_qb_${periodStart}_${periodEnd}_${randomToken(4)}`;
-      await env.DB.prepare(
-        `INSERT INTO financial_snapshot (
-           id, source, accounting_method, period_start, period_end,
-           revenue_cents, therapist_compensation_cents, management_compensation_cents,
-           software_and_technology_cents, total_expenses_cents, net_income_cents, created_at, notes
-         ) VALUES (?, 'quickbooks', 'cash', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
-          snapshotId,
-          periodStart,
-          periodEnd,
-          parsed.income,
-          therapist,
-          management,
-          software,
-          totalExpenses,
-          netIncome,
-          nowMs(),
-          JSON.stringify({
-            label: `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
-            qboNet: parsed.net,
-            qboExpenses: parsed.expenses,
-            lines: pnlLines,
-            banks: bankAccounts,
-          }),
+      await getEnv()
+        .DB.prepare(
+          `UPDATE quickbooks_connection
+           SET status = 'connected', last_sync_at = ?, last_error = NULL
+           WHERE id = ?`,
         )
-        .run();
-
-      await this.upsertCash('relay_operating', 'Relay operating cash', relay, periodEnd);
-      await this.upsertCash('boa_reserve', 'Bank of America reserve', boa, periodEnd);
-
-      await env.DB.prepare(
-        `UPDATE quickbooks_connection
-         SET status = 'connected', last_sync_at = ?, last_error = NULL
-         WHERE id = ?`,
-      )
         .bind(nowMs(), CONNECTION_ID)
         .run();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'QuickBooks sync failed.';
-      await env.DB.prepare(
-        `UPDATE quickbooks_connection SET status = 'error', last_error = ? WHERE id = ?`,
-      )
+      await getEnv()
+        .DB.prepare(`UPDATE quickbooks_connection SET status = 'error', last_error = ? WHERE id = ?`)
         .bind(message.slice(0, 500), CONNECTION_ID)
         .run();
       throw error;
@@ -381,32 +298,191 @@ export class QuickBooksProvider implements FinancialDataProvider {
   }
 
   async getSnapshot(): Promise<FinancialSnapshot | null> {
+    return this.readSnapshot();
+  }
+
+  async getCachedSnapshot(periodStart: string, periodEnd: string): Promise<FinancialSnapshot | null> {
+    return this.readSnapshot(periodStart, periodEnd);
+  }
+
+  async getOrFetchSnapshot(periodStart: string, periodEnd: string): Promise<FinancialSnapshot | null> {
+    const cached = await this.readSnapshot(periodStart, periodEnd);
+    const today = todayEastern();
+    const createdAt = await this.snapshotCreatedAt(periodStart, periodEnd);
+    const fresh =
+      cached != null &&
+      createdAt != null &&
+      (periodEnd < today || nowMs() - createdAt < PNL_CACHE_MS);
+    if (fresh) return cached;
+
+    try {
+      const accessToken = await this.validAccessToken();
+      const connection = await this.connection();
+      if (!connection?.realm_id) return cached;
+
+      return await this.fetchAndStorePnl(accessToken, connection.realm_id, periodStart, periodEnd, {
+        includeBanks: false,
+      });
+    } catch (error) {
+      if (cached) return cached;
+      throw error;
+    }
+  }
+
+  private async readSnapshot(periodStart?: string, periodEnd?: string): Promise<FinancialSnapshot | null> {
     const { DB } = getEnv();
-    const row = await DB.prepare(
-      `SELECT source, accounting_method, period_start, period_end,
-              revenue_cents, therapist_compensation_cents, management_compensation_cents,
-              software_and_technology_cents, total_expenses_cents, net_income_cents, notes
-       FROM financial_snapshot
-       WHERE source = 'quickbooks'
-       ORDER BY period_end DESC, created_at DESC
-       LIMIT 1`,
-    ).first<Record<string, unknown>>();
+    const row =
+      periodStart && periodEnd
+        ? await DB.prepare(
+            `SELECT source, accounting_method, period_start, period_end,
+                    revenue_cents, therapist_compensation_cents, management_compensation_cents,
+                    software_and_technology_cents, total_expenses_cents, net_income_cents, notes
+             FROM financial_snapshot
+             WHERE source = 'quickbooks' AND period_start = ? AND period_end = ?
+             ORDER BY created_at DESC
+             LIMIT 1`,
+          )
+            .bind(periodStart, periodEnd)
+            .first<Record<string, unknown>>()
+        : await DB.prepare(
+            `SELECT source, accounting_method, period_start, period_end,
+                    revenue_cents, therapist_compensation_cents, management_compensation_cents,
+                    software_and_technology_cents, total_expenses_cents, net_income_cents, notes
+             FROM financial_snapshot
+             WHERE source = 'quickbooks'
+             ORDER BY period_end DESC, created_at DESC
+             LIMIT 1`,
+          ).first<Record<string, unknown>>();
 
-    if (!row) return null;
+    return row ? snapshotFromRow(row) : null;
+  }
 
-    return {
-      source: 'quickbooks',
-      accountingMethod: 'cash',
-      periodStart: String(row.period_start),
-      periodEnd: String(row.period_end),
-      revenueCents: Number(row.revenue_cents),
-      therapistCompensationCents: Number(row.therapist_compensation_cents),
-      managementCompensationCents: Number(row.management_compensation_cents),
-      softwareAndTechnologyCents: Number(row.software_and_technology_cents),
-      totalExpensesCents: Number(row.total_expenses_cents),
-      netIncomeCents: Number(row.net_income_cents),
-      notes: (row.notes as string | null) ?? null,
+  private async snapshotCreatedAt(periodStart: string, periodEnd: string): Promise<number | null> {
+    const row = await getEnv()
+      .DB.prepare(
+        `SELECT created_at FROM financial_snapshot
+         WHERE source = 'quickbooks' AND period_start = ? AND period_end = ?
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      )
+      .bind(periodStart, periodEnd)
+      .first<{ created_at: number }>();
+    return row?.created_at ?? null;
+  }
+
+  private async fetchAndStorePnl(
+    accessToken: string,
+    realmId: string,
+    periodStart: string,
+    periodEnd: string,
+    options: { includeBanks: boolean },
+  ): Promise<FinancialSnapshot> {
+    const env = getEnv();
+    const pnl = (await this.qbGet(
+      accessToken,
+      realmId,
+      `/reports/ProfitAndLoss?accounting_method=Cash&summarize_column_by=Total&start_date=${periodStart}&end_date=${periodEnd}`,
+    )) as {
+      Header?: { ReportBasis?: string; StartPeriod?: string; EndPeriod?: string };
+      Rows?: { Row?: QbRow | QbRow[] };
     };
+
+    const parsed = parsePnl(asRows(pnl.Rows?.Row));
+    const basis = pnl.Header?.ReportBasis ?? 'Cash';
+
+    let therapist = 0;
+    let management = 0;
+    let software = 0;
+    for (const [name, line] of parsed.leaves) {
+      const kind = classifyExpense(name);
+      if (kind === 'therapist') therapist += line.cents;
+      if (kind === 'management') management += line.cents;
+      if (kind === 'software') software += line.cents;
+    }
+
+    const tracked = therapist + management + software;
+    const totalExpenses = tracked > 0 ? tracked : parsed.expenses;
+    const netIncome = tracked > 0 ? parsed.income - tracked : parsed.net;
+
+    type BankAccount = {
+      Name?: string;
+      FullyQualifiedName?: string;
+      AcctNum?: string;
+      CurrentBalance?: number;
+    };
+
+    let relay: number | null = null;
+    let boa: number | null = null;
+    let bankAccounts: Array<{ name: string; balanceCents: number; mappedKey: ReturnType<typeof classifyBank> }> = [];
+
+    if (options.includeBanks) {
+      const accounts = await this.qbGet(
+        accessToken,
+        realmId,
+        `/query?query=${encodeURIComponent("select * from Account where AccountType = 'Bank' maxresults 100")}`,
+      );
+      const bankRows = asRows(
+        (accounts as { QueryResponse?: { Account?: BankAccount | BankAccount[] } }).QueryResponse?.Account,
+      );
+      bankAccounts = bankRows.map((account) => {
+        const label = (account.FullyQualifiedName || account.Name || 'Bank').slice(0, 200);
+        const kind = classifyBank(`${account.FullyQualifiedName ?? ''} ${account.Name ?? ''}`, account.AcctNum);
+        const cents = dollarsToCents(account.CurrentBalance);
+        if (kind === 'relay_operating') relay = (relay ?? 0) + cents;
+        if (kind === 'boa_reserve') boa = (boa ?? 0) + cents;
+        return { name: label, balanceCents: cents, mappedKey: kind };
+      });
+      await this.upsertCash('relay_operating', 'Relay operating cash', relay, periodEnd);
+      await this.upsertCash('boa_reserve', 'Bank of America reserve', boa, periodEnd);
+    }
+
+    const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => ({
+      name: name.slice(0, 200),
+      cents: line.cents,
+      bucket: classifyExpense(name) ?? (line.expense ? 'other' : 'income'),
+    }));
+
+    const notes = JSON.stringify({
+      label: `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
+      qboNet: parsed.net,
+      qboExpenses: parsed.expenses,
+      lines: pnlLines,
+      banks: bankAccounts,
+    });
+    const snapshotId = `snap_qb_${periodStart}_${periodEnd}_${randomToken(4)}`;
+    await env.DB.prepare(
+      `INSERT INTO financial_snapshot (
+         id, source, accounting_method, period_start, period_end,
+         revenue_cents, therapist_compensation_cents, management_compensation_cents,
+         software_and_technology_cents, total_expenses_cents, net_income_cents, created_at, notes
+       ) VALUES (?, 'quickbooks', 'cash', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        snapshotId,
+        periodStart,
+        periodEnd,
+        parsed.income,
+        therapist,
+        management,
+        software,
+        totalExpenses,
+        netIncome,
+        nowMs(),
+        notes,
+      )
+      .run();
+
+    return snapshotFromRow({
+      period_start: periodStart,
+      period_end: periodEnd,
+      revenue_cents: parsed.income,
+      therapist_compensation_cents: therapist,
+      management_compensation_cents: management,
+      software_and_technology_cents: software,
+      total_expenses_cents: totalExpenses,
+      net_income_cents: netIncome,
+      notes,
+    });
   }
 
   private async requestTokens(body: URLSearchParams): Promise<TokenResponse> {

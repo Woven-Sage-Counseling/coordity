@@ -1,0 +1,72 @@
+---
+import { periodOptions, type ResolvedPeriod } from '../lib/financials/periods';
+
+interface Props {
+  period: ResolvedPeriod;
+  action: string;
+  compact?: boolean;
+  allowCustom?: boolean;
+}
+
+const { period, action, compact = false, allowCustom = false } = Astro.props;
+const options = periodOptions();
+const showDates = allowCustom && period.id === 'custom';
+---
+
+<form method="get" action={action} class:list={[compact ? 'mt-2' : 'mt-4 flex flex-wrap items-end gap-3']}>
+  <label class="block">
+    <span class:list={[compact ? 'sr-only' : 'text-sm text-sage-dark/70']}>Timeframe</span>
+    <select
+      name="period"
+      class:list={[
+        compact
+          ? 'mt-0 w-full rounded-md border-0 bg-white px-2 py-1.5 text-[12px] text-[#393a3d] shadow-sm ring-1 ring-black/[0.08]'
+          : 'field mt-1 max-w-xs',
+      ]}
+      onchange="const custom = this.value === 'custom'; const start = this.form.elements.namedItem('start'); const end = this.form.elements.namedItem('end'); if (start) start.disabled = !custom; if (end) end.disabled = !custom; if (!custom) this.form.submit();"
+    >
+      {options.map((option) => (
+        <option value={option.id} selected={period.id === option.id}>
+          {option.label}
+        </option>
+      ))}
+      {allowCustom ? (
+        <option value="custom" selected={period.id === 'custom'}>
+          Custom dates
+        </option>
+      ) : null}
+    </select>
+  </label>
+  {
+    allowCustom && (
+      <div class:list={['flex flex-wrap items-end gap-3', showDates ? '' : 'hidden']} data-custom-dates>
+        <label class="block">
+          <span class="text-sm text-sage-dark/70">From</span>
+          <input class="field mt-1" type="date" name="start" value={period.start} disabled={!showDates} />
+        </label>
+        <label class="block">
+          <span class="text-sm text-sage-dark/70">To</span>
+          <input class="field mt-1" type="date" name="end" value={period.end} disabled={!showDates} />
+        </label>
+        <button class="btn-secondary" type="submit">
+          Apply
+        </button>
+      </div>
+    )
+  }
+</form>
+
+{
+  allowCustom && (
+    <script is:inline>
+      document.querySelectorAll('select[name="period"]').forEach((select) => {
+        select.addEventListener('change', () => {
+          const form = select.form;
+          if (!form) return;
+          const dates = form.querySelector('[data-custom-dates]');
+          if (dates) dates.classList.toggle('hidden', select.value !== 'custom');
+        });
+      });
+    </script>
+  )
+}

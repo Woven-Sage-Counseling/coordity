@@ -1,5 +1,6 @@
 import { getEnv, qbApiEnvironment } from '../env';
 import { ManualSnapshotProvider } from './manual-snapshot';
+import { resolvePeriodFromSearch, resolvePreset } from './periods';
 import { QuickBooksProvider } from './quickbooks';
 import type { BankAccountLine, CashBalances, FinancialSummary, PnlLine } from './types';
 
@@ -15,11 +16,34 @@ function averageMonthlyRevenueCents(revenueCents: number, periodStart: string, p
   return Math.round(averageDay * 30.4375);
 }
 
-export async function getFinancialSummary(): Promise<FinancialSummary> {
+function parseSnapshotMeta(snapshot: { notes?: string | null } | null): {
+  pnlLines: PnlLine[];
+  bankAccounts: BankAccountLine[];
+} {
+  if (!snapshot?.notes?.startsWith('{')) return { pnlLines: [], bankAccounts: [] };
+  try {
+    const meta = JSON.parse(snapshot.notes) as {
+      lines?: PnlLine[];
+      banks?: BankAccountLine[];
+    };
+    return { pnlLines: meta.lines ?? [], bankAccounts: meta.banks ?? [] };
+  } catch {
+    return { pnlLines: [], bankAccounts: [] };
+  }
+}
+
+export async function getFinancialSummary(search?: URLSearchParams | null): Promise<FinancialSummary> {
   const env = getEnv();
   const qb = new QuickBooksProvider();
   const manual = new ManualSnapshotProvider();
-  const snapshot = (await qb.getSnapshot()) ?? (await manual.getSnapshot());
+  const period = resolvePeriodFromSearch(search);
+  const ytd = resolvePreset('ytd');
+  const snapshot =
+    (await qb.getOrFetchSnapshot(period.start, period.end)) ?? (await manual.getSnapshot());
+  const reserveSnapshot =
+    period.start === ytd.start && period.end === ytd.end
+      ? snapshot
+      : ((await qb.getCachedSnapshot(ytd.start, ytd.end)) ?? snapshot);
 
   const cashRow = await env.DB.prepare(
     `SELECT account_key, balance_cents FROM cash_account_balance`,
@@ -44,9 +68,12 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
   ).first<{ target_months: number }>();
   const reserveTargetMonths = reserve?.target_months ?? 3;
 
-  const reserveTargetCents = snapshot
-    ? averageMonthlyRevenueCents(snapshot.revenueCents, snapshot.periodStart, snapshot.periodEnd) *
-      reserveTargetMonths
+  const reserveTargetCents = reserveSnapshot
+    ? averageMonthlyRevenueCents(
+        reserveSnapshot.revenueCents,
+        reserveSnapshot.periodStart,
+        reserveSnapshot.periodEnd,
+      ) * reserveTargetMonths
     : null;
 
   const reserveProgressRatio =
@@ -58,23 +85,14 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
     `SELECT status, last_sync_at, last_error FROM quickbooks_connection WHERE id = 'default'`,
   ).first<{ status: 'disconnected' | 'connected' | 'error'; last_sync_at: number | null; last_error: string | null }>();
 
-  let pnlLines: PnlLine[] = [];
-  let bankAccounts: BankAccountLine[] = [];
-  if (snapshot?.notes?.startsWith('{')) {
-    try {
-      const meta = JSON.parse(snapshot.notes) as {
-        lines?: PnlLine[];
-        banks?: BankAccountLine[];
-      };
-      pnlLines = meta.lines ?? [];
-      bankAccounts = meta.banks ?? [];
-    } catch {
-      pnlLines = [];
-      bankAccounts = [];
-    }
-  }
+  const selectedMeta = parseSnapshotMeta(snapshot);
+  const reserveMeta = parseSnapshotMeta(reserveSnapshot);
+  const pnlLines = selectedMeta.pnlLines;
+  const bankAccounts =
+    selectedMeta.bankAccounts.length > 0 ? selectedMeta.bankAccounts : reserveMeta.bankAccounts;
 
   return {
+    period,
     snapshot,
     cash,
     totalCashCents,

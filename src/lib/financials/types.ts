@@ -1,3 +1,5 @@
+import type { ResolvedPeriod } from './periods';
+
 export interface FinancialSnapshot {
   source: 'manual' | 'quickbooks';
   accountingMethod: 'cash';
@@ -30,6 +32,7 @@ export interface BankAccountLine {
 }
 
 export interface FinancialSummary {
+  period: ResolvedPeriod;
   snapshot: FinancialSnapshot | null;
   cash: CashBalances;
   totalCashCents: number | null;

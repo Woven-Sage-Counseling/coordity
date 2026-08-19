@@ -1,5 +1,6 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import PeriodPicker from '../components/PeriodPicker.astro';
 import { getFinancialSummary, formatUsd } from '../lib/financials/summary';
 import { hasPermission } from '../lib/permissions';
 
@@ -10,7 +11,7 @@ if (!hasPermission(employee, 'financials:view')) {
   return new Response('Forbidden', { status: 403 });
 }
 
-const summary = await getFinancialSummary();
+const summary = await getFinancialSummary(Astro.url.searchParams);
 const snapshot = summary.snapshot;
 const canManage = hasPermission(employee, 'financials:manage');
 const error = Astro.url.searchParams.get('error');
@@ -23,15 +24,17 @@ const lastSync = summary.quickbooks.lastSyncAt
   <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Permission: financials:view</p>
   <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
   <p class="mt-4 max-w-2xl text-sage-dark/75">
-    QuickBooks is the source of truth. Figures below are cash-basis. Bank balances show a dash until
-    real amounts are connected.
+    QuickBooks is the source of truth. Figures below are cash-basis for the selected timeframe.
+    Bank balances are current, not tied to the profit and loss dates.
   </p>
+
+  <PeriodPicker period={summary.period} action="/financials" allowCustom />
 
   {
     snapshot ? (
       <p class="mt-4 text-sm text-sage-dark/65">
-        Period {snapshot.periodStart} through {snapshot.periodEnd} · {snapshot.accountingMethod} basis
-        · source: {snapshot.source === 'quickbooks' ? 'QuickBooks sync' : 'QuickBooks (manual snapshot)'}
+        {summary.period.label}: {snapshot.periodStart} through {snapshot.periodEnd} · {snapshot.accountingMethod}{' '}
+        basis · source: {snapshot.source === 'quickbooks' ? 'QuickBooks' : 'QuickBooks (manual snapshot)'}
       </p>
     ) : (
       <p class="mt-4 text-sm text-sage-dark/65">No financial snapshot is available yet.</p>
@@ -92,7 +95,7 @@ const lastSync = summary.quickbooks.lastSyncAt
           }
         </p>
         <p class="mt-2 text-sm text-sage-dark/65">
-          Target: {formatUsd(summary.reserveTargetCents)} based on average revenue in this period.
+          Target: {formatUsd(summary.reserveTargetCents)} based on year-to-date average revenue.
           Progress stays blank until cash balances are available.
         </p>
       </article>
