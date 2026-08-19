@@ -84,8 +84,8 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
     : null;
 
   const reserveProgressRatio =
-    totalCashCents != null && reserveTargetCents && reserveTargetCents > 0
-      ? totalCashCents / reserveTargetCents
+    cash.boaReserveCents != null && reserveTargetCents && reserveTargetCents > 0
+      ? cash.boaReserveCents / reserveTargetCents
       : null;
 
   const connection = await env.DB.prepare(

@@ -141,7 +141,7 @@ const periodLabel = snapshot
       <div class="min-w-0">
         <p class="font-medium">Reserve</p>
         <p class="mt-0.5 text-[11px] text-[#6b6c72]">
-          {formatUsd(summary?.totalCashCents ?? null)} of {formatUsd(summary?.reserveTargetCents ?? null)}
+          {formatUsd(summary?.cash.boaReserveCents ?? null)} of {formatUsd(summary?.reserveTargetCents ?? null)}
         </p>
         <p class="mt-0.5 text-[11px] text-[#b0b1b6]">
           {reserveTargetMonths}-month target

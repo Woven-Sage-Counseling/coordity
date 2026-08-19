@@ -83,10 +83,14 @@ function formatMonthYear(iso: string): string {
       <article class="card">
         <h3 class="text-sm text-sage-dark/60">Relay operating cash</h3>
         <p class="mt-2 font-display text-3xl">{formatUsd(summary.cash.relayOperatingCents)}</p>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          Revolving operating cash. This is not counted toward the reserve.
+        </p>
       </article>
       <article class="card">
         <h3 class="text-sm text-sage-dark/60">Bank of America reserve</h3>
         <p class="mt-2 font-display text-3xl">{formatUsd(summary.cash.boaReserveCents)}</p>
+        <p class="mt-2 text-sm text-sage-dark/65">This account is the cash reserve.</p>
       </article>
       <article class="card">
         <h3 class="text-sm text-sage-dark/60">Total cash</h3>
@@ -106,8 +110,7 @@ function formatMonthYear(iso: string): string {
         <p class="mt-2 text-sm text-sage-dark/65">
           Target: {formatUsd(summary.reserveTargetCents)} based on average revenue since
           {summary.reserveAveragingStart ? ` ${formatMonthYear(summary.reserveAveragingStart)}` : ' opening'}
-          , not empty months before the practice started. Progress stays blank until cash balances are
-          available.
+          . Progress uses the Bank of America balance only.
         </p>
       </article>
     </div>
