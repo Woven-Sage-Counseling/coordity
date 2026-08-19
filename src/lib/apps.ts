@@ -35,7 +35,7 @@ export const portalApps: PortalApp[] = [
   },
   {
     id: 'providerexpress',
-    name: 'Provider Express',
+    name: 'Optum | Provider Express',
     category: 'clinical',
     description: 'Open Optum Provider Express for behavioral health authorizations and claims.',
     href: 'https://www.providerexpress.com',

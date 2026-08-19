@@ -13,7 +13,7 @@ const isIconApp = Boolean(app.iconSrc);
   isIconApp ? (
     <a
       href={app.href}
-      class="group inline-flex w-[8.5rem] flex-col items-center text-center outline-none"
+      class="group inline-flex w-[10.5rem] flex-col items-center text-center outline-none"
       target={app.external ? '_blank' : undefined}
       rel={app.external ? 'noopener noreferrer' : undefined}
     >
@@ -22,7 +22,7 @@ const isIconApp = Boolean(app.iconSrc);
         alt=""
         width="128"
         height="128"
-        class="h-32 w-32 rounded-[1.85rem] shadow-[0_10px_24px_rgba(26,28,30,0.18)] ring-1 ring-black/10 transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_28px_rgba(26,28,30,0.22)] group-focus-visible:ring-2 group-focus-visible:ring-sage-dark"
+        class="h-32 w-32 rounded-[1.85rem] bg-white shadow-[0_10px_24px_rgba(26,28,30,0.18)] ring-1 ring-black/10 transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_28px_rgba(26,28,30,0.22)] group-focus-visible:ring-2 group-focus-visible:ring-sage-dark"
       />
       <span class="mt-2.5 text-sm font-medium leading-tight text-charcoal">{app.name}</span>
     </a>
