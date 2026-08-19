@@ -52,19 +52,87 @@ function qbEnvironment(): QbEnvironment {
 
 function dollarsToCents(value: string | number | undefined): number {
   if (value == null || value === '') return 0;
-  const parsed = typeof value === 'number' ? value : Number(String(value).replace(/,/g, ''));
+  if (typeof value === 'number') return Math.round(value * 100);
+  let raw = String(value).trim().replace(/[$,]/g, '');
+  const negative = /^\(.*\)$/.test(raw) || raw.endsWith('-');
+  raw = raw.replace(/[()]/g, '').replace(/-$/, '');
+  const parsed = Number(raw);
   if (!Number.isFinite(parsed)) return 0;
-  return Math.round(parsed * 100);
+  const cents = Math.round(parsed * 100);
+  return negative ? -cents : cents;
 }
 
-function asRows(row?: QbRow | QbRow[]): QbRow[] {
+function asRows<T>(row?: T | T[]): T[] {
   if (!row) return [];
   return Array.isArray(row) ? row : [row];
 }
 
-function lastAmount(cols?: QbCol[]): number {
-  if (!cols?.length) return 0;
-  return dollarsToCents(cols[cols.length - 1]?.value);
+function firstMoney(cols?: QbCol[]): number | null {
+  if (!cols?.length) return null;
+  const last = cols[cols.length - 1]?.value;
+  if (last == null || String(last).trim() === '') return null;
+  return dollarsToCents(last);
+}
+
+function rowAmount(row: QbRow): number {
+  return firstMoney(row.Summary?.ColData) ?? firstMoney(row.ColData) ?? firstMoney(row.Header?.ColData) ?? 0;
+}
+
+function rowName(row: QbRow): string {
+  return (row.ColData?.[0]?.value ?? row.Header?.ColData?.[0]?.value ?? row.Summary?.ColData?.[0]?.value ?? '').trim();
+}
+
+function isStructuralAccount(name: string): boolean {
+  const key = name.toLowerCase().replace(/^total\s+/, '');
+  return /^(income|other income|cost of goods sold|cogs|gross profit|expenses|other expenses|net operating income|net other income|net income|ordinary income\/expenses|ordinary income)$/.test(
+    key,
+  );
+}
+
+function parsePnl(rows: QbRow[]): {
+  income: number;
+  expenses: number;
+  net: number;
+  leaves: Map<string, number>;
+} {
+  const groups: Partial<Record<string, number>> = {};
+  const named = new Map<string, number>();
+  const leaves = new Map<string, number>();
+  let expenseData = 0;
+
+  function walk(list: QbRow[], inExpense: boolean): void {
+    for (const row of list) {
+      const group = row.group ?? '';
+      const name = rowName(row);
+      const amount = rowAmount(row);
+      const nextExpense = inExpense || group === 'Expenses' || group === 'OtherExpenses' || group === 'COGS';
+
+      if (group && groups[group] == null) groups[group] = amount;
+      if (name) named.set(name.toLowerCase(), amount);
+
+      const nested = asRows(row.Rows?.Row);
+      const accountName = Boolean(name && !isStructuralAccount(name) && !/^total\b/i.test(name));
+      if (accountName) {
+        leaves.set(name, (leaves.get(name) ?? 0) + amount);
+      }
+
+      if (nested.length > 0) {
+        walk(nested, nextExpense);
+        continue;
+      }
+
+      if (accountName && nextExpense) expenseData += amount;
+    }
+  }
+
+  walk(rows, false);
+
+  const income = (groups.Income ?? 0) + (groups.OtherIncome ?? 0) || named.get('total income') || 0;
+  const expensesFromGroups = (groups.Expenses ?? 0) + (groups.OtherExpenses ?? 0) + (groups.COGS ?? 0);
+  const expenses = expensesFromGroups || named.get('total expenses') || expenseData;
+  const net = groups.NetIncome ?? named.get('net income') ?? income - expenses;
+
+  return { income, expenses, net, leaves };
 }
 
 function todayEastern(): string {
@@ -127,31 +195,6 @@ async function decryptSecret(payload: string): Promise<string> {
 
 function basicAuth(clientId: string, clientSecret: string): string {
   return btoa(`${clientId}:${clientSecret}`);
-}
-
-function walkPnl(
-  rows: QbRow[],
-  totals: { income: number; expenses: number; net: number },
-  leaves: Map<string, number>,
-): void {
-  for (const row of rows) {
-    const group = row.group ?? '';
-    const summary = lastAmount(row.Summary?.ColData) || lastAmount(row.ColData);
-    if (group === 'Income' || group === 'OtherIncome') totals.income += summary;
-    if (group === 'Expenses' || group === 'OtherExpenses' || group === 'COGS') totals.expenses += summary;
-    if (group === 'NetIncome') totals.net = summary;
-
-    const nested = asRows(row.Rows?.Row);
-    if (nested.length > 0) {
-      walkPnl(nested, totals, leaves);
-      continue;
-    }
-
-    const name = row.ColData?.[0]?.value ?? row.Header?.ColData?.[0]?.value;
-    if (name && !/^total\b/i.test(name.trim())) {
-      leaves.set(name, (leaves.get(name) ?? 0) + lastAmount(row.ColData));
-    }
-  }
 }
 
 export class QuickBooksProvider implements FinancialDataProvider {
@@ -227,32 +270,33 @@ export class QuickBooksProvider implements FinancialDataProvider {
         throw new Error('QuickBooks is not connected.');
       }
 
-      const pnl = await this.qbGet(
+      const pnl = (await this.qbGet(
         accessToken,
         connection.realm_id,
-        `/reports/ProfitAndLoss?accounting_method=Cash&start_date=${periodStart}&end_date=${periodEnd}`,
-      );
+        `/reports/ProfitAndLoss?accounting_method=Cash&summarize_column_by=Total&start_date=${periodStart}&end_date=${periodEnd}`,
+      )) as {
+        Header?: { ReportBasis?: string; StartPeriod?: string; EndPeriod?: string };
+        Rows?: { Row?: QbRow | QbRow[] };
+      };
       const accounts = await this.qbGet(
         accessToken,
         connection.realm_id,
         `/query?query=${encodeURIComponent("select * from Account where AccountType = 'Bank' maxresults 100")}`,
       );
 
-      const totals = { income: 0, expenses: 0, net: 0 };
-      const leaves = new Map<string, number>();
-      walkPnl(asRows((pnl as { Rows?: { Row?: QbRow | QbRow[] } }).Rows?.Row), totals, leaves);
+      const parsed = parsePnl(asRows(pnl.Rows?.Row));
+      const basis = pnl.Header?.ReportBasis ?? 'Cash';
 
       let therapist = 0;
       let management = 0;
       let software = 0;
-      for (const [name, cents] of leaves) {
+      for (const [name, cents] of parsed.leaves) {
         const kind = classifyExpense(name);
         if (kind === 'therapist') therapist += cents;
         if (kind === 'management') management += cents;
         if (kind === 'software') software += cents;
       }
 
-      const netIncome = totals.net || totals.income - totals.expenses;
       const snapshotId = `snap_qb_${periodStart}_${periodEnd}_${randomToken(4)}`;
       await env.DB.prepare(
         `INSERT INTO financial_snapshot (
@@ -265,29 +309,24 @@ export class QuickBooksProvider implements FinancialDataProvider {
           snapshotId,
           periodStart,
           periodEnd,
-          totals.income,
+          parsed.income,
           therapist,
           management,
           software,
-          totals.expenses,
-          netIncome,
+          parsed.expenses,
+          parsed.net,
           nowMs(),
-          `Live QuickBooks ${qbEnvironment()} cash-basis sync.`,
+          `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
         )
         .run();
 
-      const bankRows = (
-        accounts as {
-          QueryResponse?: {
-            Account?: Array<{
-              Name?: string;
-              FullyQualifiedName?: string;
-              AcctNum?: string;
-              CurrentBalance?: number;
-            }>;
-          };
-        }
-      ).QueryResponse?.Account ?? [];
+      type BankAccount = {
+        Name?: string;
+        FullyQualifiedName?: string;
+        AcctNum?: string;
+        CurrentBalance?: number;
+      };
+      const bankRows = asRows((accounts as { QueryResponse?: { Account?: BankAccount | BankAccount[] } }).QueryResponse?.Account);
 
       let relay: number | null = null;
       let boa: number | null = null;
