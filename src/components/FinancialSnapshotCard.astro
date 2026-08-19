@@ -12,93 +12,133 @@ try {
 const snapshot = summary?.snapshot ?? null;
 const ratio = summary?.reserveProgressRatio ?? null;
 const percent = ratio == null ? null : Math.round(ratio * 100);
-const clamped = ratio == null ? 0 : Math.min(Math.max(ratio, 0), 1);
-const radius = 38;
-const circumference = 2 * Math.PI * radius;
-const dash = clamped * circumference;
-const periodLabel = snapshot ? `${snapshot.periodStart} – ${snapshot.periodEnd}` : null;
 const reserveTargetMonths = summary?.reserveTargetMonths ?? 3;
+const revenue = snapshot?.revenueCents ?? 0;
+const expenses = snapshot?.totalExpensesCents ?? 0;
+const net = snapshot?.netIncomeCents ?? 0;
+const scale = Math.max(revenue, expenses, 1);
+const incomeWidth = `${Math.round((revenue / scale) * 100)}%`;
+const expenseWidth = `${Math.round((expenses / scale) * 100)}%`;
+const netPositive = net >= 0;
+
+function formatPeriod(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+const periodLabel = snapshot
+  ? `${formatPeriod(snapshot.periodStart)} – ${formatPeriod(snapshot.periodEnd)}`
+  : 'No snapshot yet';
 ---
 
 <aside
-  class="card overflow-hidden lg:sticky lg:top-6"
+  class="overflow-hidden rounded-[1.05rem] bg-[#1b1c1e] shadow-[0_22px_50px_rgba(26,28,30,0.28)] ring-1 ring-black/15 lg:sticky lg:top-6"
   aria-labelledby="home-financials-heading"
 >
-  <div class="flex items-start justify-between gap-3">
-    <div>
-      <p class="text-xs uppercase tracking-[0.18em] text-sage-dark/55">At a glance</p>
-      <h2 id="home-financials-heading" class="mt-1 font-display text-2xl text-charcoal">
-        Financials
-      </h2>
-    </div>
-    <a href="/financials" class="text-sm font-medium text-sage-dark hover:text-charcoal">
-      Full view
-    </a>
-  </div>
-
-  {
-    periodLabel ? (
-      <p class="mt-1 text-xs text-sage-dark/55">{periodLabel} · cash basis</p>
-    ) : (
-      <p class="mt-1 text-xs text-sage-dark/55">No snapshot yet</p>
-    )
-  }
-
-  <div class="mt-5 flex items-center gap-5">
-    <div class="relative h-[6.5rem] w-[6.5rem] shrink-0" role="img" aria-label={
-      percent == null
-        ? 'Reserve progress unavailable until cash balances are connected'
-        : `Reserve progress ${percent} percent of a ${reserveTargetMonths}-month target`
-    }>
-      <svg viewBox="0 0 96 96" class="-rotate-90 h-full w-full" aria-hidden="true">
-        <circle
-          cx="48"
-          cy="48"
-          r={radius}
-          fill="none"
-          class="stroke-sage-dark/12"
-          stroke-width="9"
-        />
-        <circle
-          cx="48"
-          cy="48"
-          r={radius}
-          fill="none"
-          class="stroke-sage-dark"
-          stroke-width="9"
-          stroke-linecap="round"
-          stroke-dasharray={`${dash} ${circumference}`}
+  <div class="flex items-center gap-1.5 px-3 py-2">
+    <span class="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" aria-hidden="true"></span>
+    <span class="h-2.5 w-2.5 rounded-full bg-[#febc2e]" aria-hidden="true"></span>
+    <span class="h-2.5 w-2.5 rounded-full bg-[#28c840]" aria-hidden="true"></span>
+    <p
+      class="ml-1 flex min-w-0 flex-1 items-center gap-1.5 rounded-md bg-[#111213] px-2 py-1 text-[11px] leading-none text-white/65"
+    >
+      <svg class="h-3 w-3 shrink-0 text-white/45" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path
+          fill-rule="evenodd"
+          d="M8 1.5a3 3 0 00-3 3V6H4.5A1.5 1.5 0 003 7.5v5A1.5 1.5 0 004.5 14h7a1.5 1.5 0 001.5-1.5v-5A1.5 1.5 0 0011.5 6H11V4.5a3 3 0 00-3-3zM9.5 6V4.5a1.5 1.5 0 10-3 0V6h3z"
+          clip-rule="evenodd"
         />
       </svg>
-      <div class="absolute inset-0 flex flex-col items-center justify-center">
-        <span class="font-display text-[1.65rem] leading-none text-charcoal">
-          {percent == null ? '—' : `${percent}%`}
-        </span>
+      <span class="truncate">qbo.intuit.com/app/report/profitandloss</span>
+    </p>
+  </div>
+
+  <div class="bg-[#2CA01C] px-3 py-2.5 text-white">
+    <div class="flex items-center gap-2">
+      <span
+        class="flex h-7 w-7 items-center justify-center rounded-md bg-white text-sm font-black text-[#2CA01C]"
+        aria-hidden="true"
+      >
+        q
+      </span>
+      <div class="min-w-0">
+        <p class="text-[11px] font-medium leading-none text-white/80">QuickBooks</p>
+        <h2 id="home-financials-heading" class="mt-0.5 truncate text-sm font-semibold leading-none">
+          Woven Sage Counseling
+        </h2>
       </div>
-    </div>
-    <div class="min-w-0">
-      <p class="text-xs uppercase tracking-[0.16em] text-sage-dark/55">Reserve</p>
-      <p class="mt-1 text-sm leading-snug text-sage-dark/75">
-        {reserveTargetMonths} months of average revenue
-      </p>
-      <p class="mt-1 text-xs text-sage-dark/55">
-        Target {formatUsd(summary?.reserveTargetCents ?? null)}
-      </p>
     </div>
   </div>
 
-  <dl class="mt-5 grid grid-cols-2 gap-3 border-t border-sage-dark/10 pt-4">
-    <div>
-      <dt class="text-xs uppercase tracking-[0.16em] text-sage-dark/55">Revenue</dt>
-      <dd class="mt-1 font-display text-2xl leading-none text-charcoal">
-        {formatUsd(snapshot?.revenueCents ?? null)}
-      </dd>
+  <div class="bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reports</p>
+        <p class="mt-1 text-base font-semibold leading-tight">Profit and Loss</p>
+      </div>
+      <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#2CA01C] ring-1 ring-[#2CA01C]/25">
+        Cash
+      </span>
     </div>
-    <div>
-      <dt class="text-xs uppercase tracking-[0.16em] text-sage-dark/55">Net income</dt>
-      <dd class="mt-1 font-display text-2xl leading-none text-charcoal">
+    <p class="mt-1 text-[11px] text-[#6b6c72]">{periodLabel}</p>
+
+    <div class="mt-4 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
+      <p class="text-[11px] font-medium text-[#6b6c72]">Net income</p>
+      <p class:list={['mt-1 text-[1.85rem] font-semibold leading-none tracking-tight', netPositive ? 'text-[#2CA01C]' : 'text-[#d52b1e]']}>
         {formatUsd(snapshot?.netIncomeCents ?? null)}
-      </dd>
+      </p>
     </div>
-  </dl>
+
+    <div class="mt-3 space-y-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
+      <div>
+        <div class="flex items-baseline justify-between gap-3 text-[12px]">
+          <span class="font-medium">Income</span>
+          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.revenueCents ?? null)}</span>
+        </div>
+        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+          <div class="h-full rounded-full bg-[#2CA01C]" style={`width: ${snapshot ? incomeWidth : '0%'}`}></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between gap-3 text-[12px]">
+          <span class="font-medium">Expenses</span>
+          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.totalExpensesCents ?? null)}</span>
+        </div>
+        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+          <div class="h-full rounded-full bg-[#6b6c72]" style={`width: ${snapshot ? expenseWidth : '0%'}`}></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between rounded-lg bg-white px-3 py-2.5 text-[12px] shadow-sm ring-1 ring-black/[0.06]">
+      <div>
+        <p class="font-medium">Reserve</p>
+        <p class="mt-0.5 text-[11px] text-[#6b6c72]">
+          {reserveTargetMonths}-month target {formatUsd(summary?.reserveTargetCents ?? null)}
+        </p>
+      </div>
+      <p class="text-base font-semibold tabular-nums text-[#393a3d]">
+        {percent == null ? '—' : `${percent}%`}
+      </p>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between text-[11px]">
+      <a href="/financials" class="font-semibold text-[#2CA01C] hover:underline">
+        Open in portal
+      </a>
+      <a
+        href="https://app.qbo.intuit.com"
+        class="font-medium text-[#6b6c72] hover:text-[#393a3d]"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Open QuickBooks
+      </a>
+    </div>
+  </div>
 </aside>
