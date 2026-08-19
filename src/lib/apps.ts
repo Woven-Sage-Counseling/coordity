@@ -3,7 +3,7 @@ import type { Permission } from './permissions';
 export interface PortalApp {
   id: string;
   name: string;
-  category: 'clinical' | 'business' | 'internal';
+  category: 'clinical' | 'business' | 'financial' | 'internal';
   description: string;
   href: string;
   external: boolean;
@@ -33,6 +33,26 @@ export const portalApps: PortalApp[] = [
     permission: 'financials:view',
     iconSrc: '/app-icons/quickbooks.png',
   },
+  {
+    id: 'bankofamerica',
+    name: 'Bank of America',
+    category: 'financial',
+    description: 'Open Bank of America for the practice reserve account.',
+    href: 'https://www.bankofamerica.com',
+    external: true,
+    permission: 'financials:view',
+    iconSrc: '/app-icons/bankofamerica.png',
+  },
+  {
+    id: 'relay',
+    name: 'Relay',
+    category: 'financial',
+    description: 'Open Relay for operating cash and revolving business expenses.',
+    href: 'https://bank.relayfi.com',
+    external: true,
+    permission: 'financials:view',
+    iconSrc: '/app-icons/relay.png',
+  },
 ];
 
 export const appCategories: { id: PortalApp['category']; title: string; intro: string }[] = [
@@ -45,5 +65,10 @@ export const appCategories: { id: PortalApp['category']; title: string; intro: s
     id: 'business',
     title: 'Business tools',
     intro: 'Accounting and operations tools for approved finance and ownership roles.',
+  },
+  {
+    id: 'financial',
+    title: 'Financial tools',
+    intro: 'Banking for the Bank of America reserve and Relay operating cash.',
   },
 ];
