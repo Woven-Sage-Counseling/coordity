@@ -29,6 +29,7 @@ export interface FinancialSummary {
     status: 'disconnected' | 'connected' | 'error';
     lastSyncAt: number | null;
     lastError: string | null;
+    environment: 'sandbox' | 'production';
   };
 }
 

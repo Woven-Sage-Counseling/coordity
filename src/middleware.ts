@@ -46,6 +46,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (!employee || employee.status !== 'active' || !employee.permissions.includes('portal:access')) {
+    if (pathname === '/api/quickbooks/callback') {
+      return context.redirect('/sign-in?next=/financials');
+    }
     if (pathname.startsWith('/api/')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,

@@ -31,6 +31,7 @@ declare namespace App {
 
 interface Env {
   DB: D1Database;
+  SESSION: KVNamespace;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   PORTAL_BOOTSTRAP_TOKEN: string;

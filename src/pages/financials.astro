@@ -13,6 +13,10 @@ if (!hasPermission(employee, 'financials:view')) {
 const summary = await getFinancialSummary();
 const snapshot = summary.snapshot;
 const canManage = hasPermission(employee, 'financials:manage');
+const error = Astro.url.searchParams.get('error');
+const lastSync = summary.quickbooks.lastSyncAt
+  ? new Date(summary.quickbooks.lastSyncAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
+  : null;
 ---
 
 <PortalLayout title="Financials" wide>
@@ -97,21 +101,52 @@ const canManage = hasPermission(employee, 'financials:manage');
 
   <section class="card mt-12">
     <h2 class="font-display text-2xl text-charcoal">QuickBooks connection</h2>
+    {
+      error && (
+        <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+      )
+    }
     <p class="mt-2 text-sm text-sage-dark/70">
-      Status: {summary.quickbooks.status}.
+      Status: {summary.quickbooks.status}
+      {summary.quickbooks.environment === 'sandbox' ? ' · sandbox' : ''}
+      {lastSync ? ` · last sync ${lastSync}` : ''}.
       {
         summary.quickbooks.configured
           ? 'OAuth credentials are present on the server.'
-          : 'OAuth client ID and secret are not set yet. Add them in Cloudflare encrypted environment settings when you are ready.'
+          : 'OAuth client ID and secret are not set yet.'
       }
     </p>
     {
-      canManage && (
-        <form method="post" action="/api/quickbooks/connect" class="mt-4">
-          <button class="btn-secondary" type="submit">
-            Connect QuickBooks
-          </button>
-        </form>
+      summary.quickbooks.lastError && (
+        <p class="mt-2 text-sm text-red-800">{summary.quickbooks.lastError}</p>
+      )
+    }
+    {
+      summary.quickbooks.environment === 'sandbox' && (
+        <p class="mt-2 text-sm text-sage-dark/65">
+          When Intuit asks which company to connect, choose the <strong>sandbox</strong> company — Development
+          keys cannot access live Woven Sage books yet.
+        </p>
+      )
+    }
+    {
+      canManage && summary.quickbooks.configured && (
+        <div class="mt-4 flex flex-wrap gap-3">
+          <form method="post" action="/api/quickbooks/connect">
+            <button class="btn-secondary" type="submit">
+              {summary.quickbooks.status === 'connected' ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
+            </button>
+          </form>
+          {
+            summary.quickbooks.status === 'connected' || summary.quickbooks.status === 'error' ? (
+              <form method="post" action="/api/quickbooks/sync">
+                <button class="btn-primary" type="submit">
+                  Sync numbers now
+                </button>
+              </form>
+            ) : null
+          }
+        </div>
       )
     }
   </section>

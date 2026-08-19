@@ -14,12 +14,13 @@ export const POST: APIRoute = async ({ locals, url }) => {
   if (!provider.isConfigured()) {
     return new Response(null, {
       status: 303,
-      headers: { Location: '/financials' },
+      headers: { Location: '/financials?error=' + encodeURIComponent('QuickBooks secrets are not configured.') },
     });
   }
 
   const redirectUri = `${url.origin}/api/quickbooks/callback`;
   const state = randomToken(16);
+  await provider.saveOauthState(state, locals.employee!.id);
   return new Response(null, {
     status: 303,
     headers: { Location: provider.authorizationUrl(state, redirectUri) },
