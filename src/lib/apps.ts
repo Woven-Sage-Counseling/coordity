@@ -31,7 +31,7 @@ export const portalApps: PortalApp[] = [
     href: 'https://essentials.availity.com',
     external: true,
     permission: 'apps:clinical',
-    iconSrc: '/app-icons/availity.png?v=4',
+    iconSrc: '/app-icons/availity.png?v=5',
   },
   {
     id: 'providerexpress',
