@@ -51,7 +51,7 @@ export const portalApps: PortalApp[] = [
     href: 'https://sigmund.headway.co',
     external: true,
     permission: 'apps:clinical',
-    iconSrc: '/app-icons/headway.png',
+    iconSrc: '/app-icons/headway.png?v=2',
   },
   {
     id: 'tava',
