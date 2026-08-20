@@ -74,6 +74,16 @@ export const portalApps: PortalApp[] = [
     iconSrc: '/app-icons/quickbooks.png',
   },
   {
+    id: 'quo',
+    name: 'Quo',
+    category: 'business',
+    description: 'Open Quo for the practice business phone, texts, and team inbox.',
+    href: 'https://my.quo.com/login',
+    external: true,
+    permission: 'apps:management',
+    iconSrc: '/app-icons/quo.png',
+  },
+  {
     id: 'bankofamerica',
     name: 'Bank of America',
     category: 'financial',
