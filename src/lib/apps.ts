@@ -84,6 +84,16 @@ export const portalApps: PortalApp[] = [
     iconSrc: '/app-icons/quo.png',
   },
   {
+    id: 'dropbox-fax',
+    name: 'Dropbox Fax',
+    category: 'business',
+    description: 'Open Dropbox Fax to send and receive practice faxes online.',
+    href: 'https://app.hellofax.com',
+    external: true,
+    permission: 'apps:management',
+    iconSrc: '/app-icons/dropbox-fax.png',
+  },
+  {
     id: 'bankofamerica',
     name: 'Bank of America',
     category: 'financial',
