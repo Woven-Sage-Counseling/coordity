@@ -64,6 +64,16 @@ export const portalApps: PortalApp[] = [
     iconSrc: '/app-icons/optum.png',
   },
   {
+    id: 'optum-payments',
+    name: 'Optum Provider Payments Portal',
+    category: 'billing',
+    description: 'Open Optum Pay to view claim payments, remittances, and electronic payment details.',
+    href: 'https://myservices.optumhealthpaymentservices.com',
+    external: true,
+    permission: 'apps:clinical',
+    iconSrc: '/app-icons/optum-payments.png',
+  },
+  {
     id: 'quickbooks',
     name: 'QuickBooks',
     category: 'business',
