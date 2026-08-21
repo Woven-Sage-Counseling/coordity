@@ -28,17 +28,24 @@ const software = snapshot?.softwareAndTechnologyCents ?? 0;
 const expenses = snapshot?.totalExpensesCents ?? 0;
 const scale = Math.max(revenue, therapist, management, software, expenses, 1);
 const bar = (cents: number) => `${Math.round((cents / scale) * 100)}%`;
-const share = (cents: number) => (revenue > 0 ? `${Math.round((cents / revenue) * 100)}%` : null);
-const therapistShare = share(therapist);
-const managementShare = share(management);
+const shareOfIncome = (cents: number) => (revenue > 0 ? Math.round((cents / revenue) * 100) : null);
 const netPositive = net >= 0;
 
 const ratio = summary.reserveProgressRatio;
 const percent = ratio == null ? null : Math.round(ratio * 100);
 const ringRatio = ratio == null ? 0 : Math.min(Math.max(ratio, 0), 1);
-const ringRadius = 28;
+const ringRadius = 30;
 const ringCircumference = 2 * Math.PI * ringRadius;
 const ringOffset = ringCircumference * (1 - ringRatio);
+
+const pnlRows = [
+  { label: 'Income', cents: revenue, color: '#2CA01C', share: null as number | null },
+  { label: 'Therapist income', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist) },
+  { label: 'Management income', cents: management, color: '#6aa84f', share: shareOfIncome(management) },
+  { label: 'Software and technology', cents: software, color: '#8fbc8f', share: shareOfIncome(software) },
+  { label: 'Total expenses', cents: expenses, color: '#a8c5a0', share: shareOfIncome(expenses) },
+  { label: 'Net income', cents: net, color: netPositive ? '#2CA01C' : '#d52b1e', share: shareOfIncome(net) },
+];
 
 function formatPeriod(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number);
@@ -65,307 +72,366 @@ const periodLabel = snapshot
 ---
 
 <PortalLayout title="Financials" wide>
-  <div
-    class="overflow-hidden rounded-[1.15rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
-  >
-    <div class="bg-[#2CA01C] px-4 py-3 text-white sm:px-5">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <span
-            class="flex h-8 w-8 items-center justify-center rounded-md bg-white text-base font-black text-[#2CA01C]"
-            aria-hidden="true"
-          >
-            q
-          </span>
-          <div class="min-w-0">
-            <p class="text-[11px] font-medium leading-none text-white/80">QuickBooks</p>
-            <h1 class="mt-0.5 truncate text-base font-semibold leading-none sm:text-lg">
-              Woven Sage Counseling
-            </h1>
-          </div>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Financials</p>
+      <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
+      <p class="mt-3 max-w-2xl text-sage-dark/75">
+        QuickBooks is the source of truth. Profit and loss figures are cash-basis for the selected timeframe.
+        Bank balances are current and not tied to those dates.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 pt-1">
+      <span
+        class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2CA01C] ring-1 ring-[#2CA01C]/25"
+      >
+        <span
+          class="flex h-4 w-4 items-center justify-center rounded-[3px] bg-[#2CA01C] text-[9px] font-black text-white"
+          aria-hidden="true"
+        >
+          q
+        </span>
+        QuickBooks
+      </span>
+      <span
+        class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#2CA01C] ring-1 ring-[#2CA01C]/25"
+      >
+        Cash
+      </span>
+    </div>
+  </div>
+
+  <div class="mt-6 flex flex-wrap items-end gap-4">
+    <PeriodPicker period={summary.period} action="/financials" allowCustom theme="quickbooks" />
+  </div>
+  {
+    snapshot ? (
+      <p class="mt-2 text-sm text-sage-dark/65">
+        {summary.period.label}: {periodLabel} · {snapshot.accountingMethod} basis · source:{' '}
+        {snapshot.source === 'quickbooks' ? 'QuickBooks' : 'QuickBooks (manual snapshot)'}
+      </p>
+    ) : (
+      <p class="mt-2 text-sm text-sage-dark/65">No financial snapshot is available yet.</p>
+    )
+  }
+
+  <!-- Overview -->
+  <section class="mt-10" aria-labelledby="overview-heading">
+    <h2 id="overview-heading" class="font-display text-2xl text-charcoal">Overview</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Net income</p>
+        <p
+          class:list={[
+            'mt-2 text-4xl font-semibold tracking-tight tabular-nums',
+            netPositive ? 'text-[#2CA01C]' : 'text-[#d52b1e]',
+          ]}
+        >
+          {formatUsd(snapshot?.netIncomeCents ?? null)}
+        </p>
+        <p class="mt-2 text-sm text-[#6b6c72]">
+          For {summary.period.label.toLowerCase()}
+          {snapshot ? ` (${periodLabel})` : ''}.
+        </p>
+      </article>
+
+      <article class="flex items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reserve progress</p>
+          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+            {formatUsd(summary.cash.boaReserveCents)}
+          </p>
+          <p class="mt-1 text-sm text-[#6b6c72]">
+            of {formatUsd(summary.reserveTargetCents)} target
+          </p>
+          <p class="mt-2 text-xs text-[#b0b1b6]">
+            {summary.reserveTargetMonths} months of average revenue
+            {summary.reserveAveragingStart
+              ? ` since ${formatMonthYear(summary.reserveAveragingStart)}`
+              : ''}
+            . Bank of America only; Relay is excluded.
+          </p>
         </div>
-        <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/75">Financial dashboard</p>
+        <div
+          class="relative h-24 w-24 shrink-0"
+          role="img"
+          aria-label={percent == null ? 'Reserve progress unavailable' : `Reserve ${percent} percent of target`}
+        >
+          <svg class="h-full w-full -rotate-90" viewBox="0 0 76 76" aria-hidden="true">
+            <circle cx="38" cy="38" r={ringRadius} fill="none" stroke="#e3e5e8" stroke-width="6"></circle>
+            <circle
+              cx="38"
+              cy="38"
+              r={ringRadius}
+              fill="none"
+              stroke={percent != null && percent >= 100 ? '#2CA01C' : '#3d8b37'}
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-dasharray={ringCircumference.toFixed(2)}
+              stroke-dashoffset={ringOffset.toFixed(2)}
+            ></circle>
+          </svg>
+          <p class="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums text-charcoal">
+            {percent == null ? '—' : `${percent}%`}
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Profit and Loss -->
+  <section class="mt-12" aria-labelledby="pnl-heading">
+    <div class="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
+        <p class="mt-1 text-sm text-sage-dark/65">Cash-basis summary for the selected timeframe.</p>
       </div>
     </div>
 
-    <div class="bg-[#f4f5f8] px-4 py-5 font-sans text-[#393a3d] sm:px-5 sm:py-6">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reports</p>
-          <p class="mt-1 text-xl font-semibold leading-tight sm:text-2xl">Profit and Loss</p>
-          <p class="mt-1 text-[12px] text-[#6b6c72]">{periodLabel}</p>
+    <div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
+      <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relative scale</p>
+        <div class="mt-4 space-y-3.5">
+          {
+            pnlRows
+              .filter((row) => row.label !== 'Net income')
+              .map((row) => (
+                <div>
+                  <div class="flex items-baseline justify-between gap-3 text-[13px]">
+                    <span class="font-medium text-charcoal">{row.label}</span>
+                    <span class="font-semibold tabular-nums text-charcoal">
+                      {formatUsd(snapshot ? row.cents : null)}
+                    </span>
+                  </div>
+                  <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                    <div
+                      class="h-full rounded-full"
+                      style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
+                    ></div>
+                  </div>
+                </div>
+              ))
+          }
         </div>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-black/[0.06] bg-[#f4f5f8] text-[11px] uppercase tracking-[0.12em] text-[#6b6c72]">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Line</th>
+              <th class="px-4 py-3 text-right font-semibold">Amount</th>
+              <th class="px-4 py-3 text-right font-semibold">% of income</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              pnlRows.map((row) => (
+                <tr class="border-b border-black/[0.05] last:border-0">
+                  <td class="px-4 py-3 font-medium text-charcoal">{row.label}</td>
+                  <td
+                    class:list={[
+                      'px-4 py-3 text-right tabular-nums font-semibold',
+                      row.label === 'Net income'
+                        ? netPositive
+                          ? 'text-[#2CA01C]'
+                          : 'text-[#d52b1e]'
+                        : 'text-charcoal',
+                    ]}
+                  >
+                    {formatUsd(snapshot ? row.cents : null)}
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums text-[#6b6c72]">
+                    {row.share == null ? (row.label === 'Income' ? '100%' : '—') : `${row.share}%`}
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cash and reserves -->
+  <section class="mt-12" aria-labelledby="cash-heading">
+    <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
+    <p class="mt-1 text-sm text-sage-dark/65">
+      Current balances from QuickBooks. Reserve progress uses Bank of America only.
+    </p>
+    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relay operating</p>
+        <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+          {formatUsd(summary.cash.relayOperatingCents)}
+        </p>
+        <p class="mt-2 text-sm text-[#6b6c72]">
+          Revolving operating cash. Not counted toward the reserve target.
+        </p>
+      </article>
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Bank of America reserve</p>
+        <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+          {formatUsd(summary.cash.boaReserveCents)}
+        </p>
+        <p class="mt-2 text-sm text-[#6b6c72]">This account is the practice cash reserve.</p>
+      </article>
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
+        <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+          {formatUsd(summary.totalCashCents)}
+        </p>
+        <p class="mt-2 text-sm text-[#6b6c72]">Relay + Bank of America combined.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Sync details -->
+  {
+    canViewBooks && (summary.pnlLines.length > 0 || summary.bankAccounts.length > 0) && (
+      <section class="mt-12" aria-labelledby="sync-heading">
+        <h2 id="sync-heading" class="font-display text-2xl text-charcoal">Accounts in this sync</h2>
+        <p class="mt-1 text-sm text-sage-dark/65">
+          Raw QuickBooks lines and how they map into the dashboard.
+        </p>
+
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          {summary.bankAccounts.length > 0 && (
+            <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+              <div class="border-b border-black/[0.06] bg-[#f4f5f8] px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Bank accounts</p>
+              </div>
+              <table class="w-full text-left text-sm">
+                <thead class="border-b border-black/[0.05] text-[11px] uppercase tracking-[0.12em] text-[#6b6c72]">
+                  <tr>
+                    <th class="px-4 py-2.5 font-semibold">Account</th>
+                    <th class="px-4 py-2.5 text-right font-semibold">Balance</th>
+                    <th class="px-4 py-2.5 font-semibold">Mapped to</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.bankAccounts.map((account) => (
+                    <tr class="border-b border-black/[0.05] last:border-0">
+                      <td class="px-4 py-3 font-medium text-charcoal">{account.name}</td>
+                      <td class="px-4 py-3 text-right tabular-nums text-charcoal">
+                        {formatUsd(account.balanceCents)}
+                      </td>
+                      <td class="px-4 py-3 text-[#6b6c72]">
+                        {account.mappedKey === 'relay_operating'
+                          ? 'Operating cash'
+                          : account.mappedKey === 'boa_reserve'
+                            ? 'Reserve'
+                            : 'Not mapped'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {summary.pnlLines.length > 0 && (
+            <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+              <div class="border-b border-black/[0.06] bg-[#f4f5f8] px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">P&L lines</p>
+              </div>
+              <table class="w-full text-left text-sm">
+                <thead class="border-b border-black/[0.05] text-[11px] uppercase tracking-[0.12em] text-[#6b6c72]">
+                  <tr>
+                    <th class="px-4 py-2.5 font-semibold">Line</th>
+                    <th class="px-4 py-2.5 text-right font-semibold">Amount</th>
+                    <th class="px-4 py-2.5 font-semibold">Bucket</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.pnlLines.map((line) => (
+                    <tr class="border-b border-black/[0.05] last:border-0">
+                      <td class="px-4 py-3 font-medium text-charcoal">{line.name}</td>
+                      <td class="px-4 py-3 text-right tabular-nums text-charcoal">{formatUsd(line.cents)}</td>
+                      <td class="px-4 py-3 text-[#6b6c72]">{line.bucket || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Connection -->
+  <section class="mt-12" aria-labelledby="connection-heading">
+    <h2 id="connection-heading" class="font-display text-2xl text-charcoal">QuickBooks connection</h2>
+    <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm text-[#6b6c72]">
+          Environment: <span class="font-medium text-charcoal">{summary.quickbooks.environment}</span>
+          {lastSync ? ` · last sync ${lastSync}` : ''}
+        </p>
         <span
-          class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#2CA01C] ring-1 ring-[#2CA01C]/25"
+          class:list={[
+            'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1',
+            summary.quickbooks.status === 'connected'
+              ? 'bg-[#eaf6ea] text-[#2CA01C] ring-[#2CA01C]/25'
+              : 'bg-[#f4f5f8] text-[#6b6c72] ring-black/10',
+          ]}
         >
-          Cash
+          {summary.quickbooks.status}
         </span>
       </div>
 
-      <PeriodPicker period={summary.period} action="/financials" allowCustom theme="quickbooks" />
-
       {
-        snapshot ? (
-          <p class="mt-2 text-[11px] text-[#6b6c72]">
-            {summary.period.label} · {snapshot.accountingMethod} basis · source:{' '}
-            {snapshot.source === 'quickbooks' ? 'QuickBooks' : 'QuickBooks (manual snapshot)'}
-          </p>
-        ) : (
-          <p class="mt-2 text-[11px] text-[#6b6c72]">No financial snapshot is available yet.</p>
+        error && (
+          <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
         )
       }
 
-      <div class="mt-5 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-        <div class="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
-          <p class="text-[11px] font-medium text-[#6b6c72]">Net income</p>
-          <p
-            class:list={[
-              'mt-1 text-[2.35rem] font-semibold leading-none tracking-tight sm:text-[2.75rem]',
-              netPositive ? 'text-[#2CA01C]' : 'text-[#d52b1e]',
-            ]}
-          >
-            {formatUsd(snapshot?.netIncomeCents ?? null)}
+      <p class="mt-3 text-sm text-[#6b6c72]">
+        {summary.quickbooks.configured
+          ? 'OAuth credentials are present on the server.'
+          : 'OAuth client ID and secret are not set yet.'}
+      </p>
+
+      {
+        summary.quickbooks.lastError && (
+          <p class="mt-2 text-sm text-red-800">{summary.quickbooks.lastError}</p>
+        )
+      }
+
+      {
+        summary.quickbooks.environment === 'sandbox' && (
+          <p class="mt-2 text-sm text-[#6b6c72]">
+            Connected to a <strong class="font-semibold text-charcoal">sandbox</strong> company with Development
+            keys. Live books will not match until you reconnect with Production keys.
           </p>
-          <p class="mt-2 text-[12px] text-[#6b6c72]">
-            Cash-basis for the selected timeframe. Bank balances below are current.
-          </p>
-        </div>
+        )
+      }
 
-        <div
-          class="flex items-center justify-between gap-4 rounded-lg bg-white px-4 py-3 shadow-sm ring-1 ring-black/[0.06]"
-        >
-          <div class="min-w-0">
-            <p class="text-[13px] font-medium">Reserve</p>
-            <p class="mt-1 text-[12px] text-[#6b6c72]">
-              {formatUsd(summary.cash.boaReserveCents)} of {formatUsd(summary.reserveTargetCents)}
-            </p>
-            <p class="mt-0.5 text-[11px] text-[#b0b1b6]">
-              {summary.reserveTargetMonths}-month target
-              {summary.reserveAveragingStart
-                ? ` since ${formatMonthYear(summary.reserveAveragingStart)}`
-                : ''}
-            </p>
-            <p class="mt-1 text-[11px] text-[#b0b1b6]">Bank of America only · Relay excluded</p>
-          </div>
-          <div
-            class="relative h-[4.5rem] w-[4.5rem] shrink-0"
-            role="img"
-            aria-label={percent == null ? 'Reserve progress unavailable' : `Reserve ${percent} percent of target`}
-          >
-            <svg class="h-full w-full -rotate-90" viewBox="0 0 70 70" aria-hidden="true">
-              <circle cx="35" cy="35" r={ringRadius} fill="none" stroke="#e3e5e8" stroke-width="6"></circle>
-              <circle
-                cx="35"
-                cy="35"
-                r={ringRadius}
-                fill="none"
-                stroke={percent != null && percent >= 100 ? '#2CA01C' : '#3d8b37'}
-                stroke-width="6"
-                stroke-linecap="round"
-                stroke-dasharray={ringCircumference.toFixed(2)}
-                stroke-dashoffset={ringOffset.toFixed(2)}
-              ></circle>
-            </svg>
-            <p class="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums text-[#393a3d]">
-              {percent == null ? '—' : `${percent}%`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-3 space-y-3.5 rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
-        <div>
-          <div class="flex items-baseline justify-between gap-3 text-[13px]">
-            <span class="font-medium">Income</span>
-            <span class="font-semibold tabular-nums">{formatUsd(snapshot?.revenueCents ?? null)}</span>
-          </div>
-          <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-            <div class="h-full rounded-full bg-[#2CA01C]" style={`width: ${snapshot ? bar(revenue) : '0%'}`}></div>
-          </div>
-        </div>
-        <div>
-          <div class="flex items-baseline justify-between gap-3 text-[13px]">
-            <span class="font-medium">Therapist income</span>
-            <span class="flex items-baseline gap-1.5 tabular-nums">
-              <span class="font-semibold">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
-              {therapistShare ? <span class="font-medium text-[#b0b1b6]">{therapistShare}</span> : null}
-            </span>
-          </div>
-          <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-            <div class="h-full rounded-full bg-[#3d8b37]" style={`width: ${snapshot ? bar(therapist) : '0%'}`}></div>
-          </div>
-        </div>
-        <div>
-          <div class="flex items-baseline justify-between gap-3 text-[13px]">
-            <span class="font-medium">Management income</span>
-            <span class="flex items-baseline gap-1.5 tabular-nums">
-              <span class="font-semibold">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
-              {managementShare ? <span class="font-medium text-[#b0b1b6]">{managementShare}</span> : null}
-            </span>
-          </div>
-          <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-            <div
-              class="h-full rounded-full bg-[#6aa84f]"
-              style={`width: ${snapshot ? bar(management) : '0%'}`}
-            ></div>
-          </div>
-        </div>
-        <div>
-          <div class="flex items-baseline justify-between gap-3 text-[13px]">
-            <span class="font-medium">Software and technology</span>
-            <span class="font-semibold tabular-nums">
-              {formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}
-            </span>
-          </div>
-          <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-            <div class="h-full rounded-full bg-[#8fbc8f]" style={`width: ${snapshot ? bar(software) : '0%'}`}></div>
-          </div>
-        </div>
-        <div>
-          <div class="flex items-baseline justify-between gap-3 text-[13px]">
-            <span class="font-medium">Total expenses</span>
-            <span class="font-semibold tabular-nums">{formatUsd(snapshot?.totalExpensesCents ?? null)}</span>
-          </div>
-          <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-            <div class="h-full rounded-full bg-[#a8c5a0]" style={`width: ${snapshot ? bar(expenses) : '0%'}`}></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-5">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Cash and reserves</p>
-        <div class="mt-2 grid gap-3 sm:grid-cols-3">
-          <div class="rounded-lg bg-white p-3.5 shadow-sm ring-1 ring-black/[0.06]">
-            <p class="text-[11px] font-medium text-[#6b6c72]">Relay operating</p>
-            <p class="mt-1 text-xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(summary.cash.relayOperatingCents)}
-            </p>
-            <p class="mt-1 text-[11px] text-[#b0b1b6]">Not counted toward reserve</p>
-          </div>
-          <div class="rounded-lg bg-white p-3.5 shadow-sm ring-1 ring-black/[0.06]">
-            <p class="text-[11px] font-medium text-[#6b6c72]">Bank of America reserve</p>
-            <p class="mt-1 text-xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(summary.cash.boaReserveCents)}
-            </p>
-            <p class="mt-1 text-[11px] text-[#b0b1b6]">Reserve account</p>
-          </div>
-          <div class="rounded-lg bg-white p-3.5 shadow-sm ring-1 ring-black/[0.06]">
-            <p class="text-[11px] font-medium text-[#6b6c72]">Total cash</p>
-            <p class="mt-1 text-xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(summary.totalCashCents)}
-            </p>
-            <p class="mt-1 text-[11px] text-[#b0b1b6]">Current balances</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-5 rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
-        <div class="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Connection</p>
-            <h2 class="mt-1 text-base font-semibold">QuickBooks</h2>
-          </div>
-          <span
-            class:list={[
-              'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ring-1',
-              summary.quickbooks.status === 'connected'
-                ? 'bg-[#eaf6ea] text-[#2CA01C] ring-[#2CA01C]/25'
-                : 'bg-[#f4f5f8] text-[#6b6c72] ring-black/10',
-            ]}
-          >
-            {summary.quickbooks.status}
-          </span>
-        </div>
-
-        {
-          error && (
-            <p class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">
-              {error}
-            </p>
-          )
-        }
-
-        <p class="mt-2 text-[13px] text-[#6b6c72]">
-          {summary.quickbooks.environment}
-          {lastSync ? ` · last sync ${lastSync}` : ''}
-          {' · '}
-          {summary.quickbooks.configured
-            ? 'OAuth credentials are present on the server.'
-            : 'OAuth client ID and secret are not set yet.'}
-        </p>
-
-        {
-          summary.quickbooks.lastError && (
-            <p class="mt-2 text-[13px] text-red-800">{summary.quickbooks.lastError}</p>
-          )
-        }
-
-        {
-          summary.quickbooks.environment === 'sandbox' && (
-            <p class="mt-2 text-[13px] text-[#6b6c72]">
-              Connected to a <strong class="font-semibold text-[#393a3d]">sandbox</strong> company with Development
-              keys. Live books will not match until you reconnect with Production keys.
-            </p>
-          )
-        }
-
-        {
-          canViewBooks && (summary.pnlLines.length > 0 || summary.bankAccounts.length > 0) && (
-            <div class="mt-4 border-t border-black/[0.06] pt-4">
-              <p class="text-[12px] font-semibold text-[#393a3d]">Accounts in this sync</p>
-              {summary.bankAccounts.length > 0 && (
-                <ul class="mt-2 space-y-1 text-[12px] text-[#6b6c72]">
-                  {summary.bankAccounts.map((account) => (
-                    <li>
-                      {account.name}: {formatUsd(account.balanceCents)}{' '}
-                      {account.mappedKey === 'relay_operating'
-                        ? '→ operating cash'
-                        : account.mappedKey === 'boa_reserve'
-                          ? '→ reserve'
-                          : '→ not mapped'}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {summary.pnlLines.length > 0 && (
-                <ul class="mt-3 space-y-1 text-[12px] text-[#6b6c72]">
-                  {summary.pnlLines.map((line) => (
-                    <li>
-                      {line.name}: {formatUsd(line.cents)}
-                      {line.bucket ? ` → ${line.bucket}` : ''}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )
-        }
-
-        {
-          canManage && summary.quickbooks.configured && (
-            <div class="mt-4 flex flex-wrap gap-2">
-              <form method="post" action="/api/quickbooks/connect">
+      {
+        canManage && summary.quickbooks.configured && (
+          <div class="mt-4 flex flex-wrap gap-2">
+            <form method="post" action="/api/quickbooks/connect">
+              <button
+                class="rounded-md bg-white px-3.5 py-2 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]"
+                type="submit"
+              >
+                {summary.quickbooks.status === 'connected' ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
+              </button>
+            </form>
+            {(summary.quickbooks.status === 'connected' || summary.quickbooks.status === 'error') && (
+              <form method="post" action="/api/quickbooks/sync">
                 <button
-                  class="rounded-md bg-white px-3 py-1.5 text-[13px] font-semibold text-[#393a3d] shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]"
+                  class="rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]"
                   type="submit"
                 >
-                  {summary.quickbooks.status === 'connected' ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
+                  Sync numbers now
                 </button>
               </form>
-              {(summary.quickbooks.status === 'connected' || summary.quickbooks.status === 'error') && (
-                <form method="post" action="/api/quickbooks/sync">
-                  <button
-                    class="rounded-md bg-[#2CA01C] px-3 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-[#248a18]"
-                    type="submit"
-                  >
-                    Sync numbers now
-                  </button>
-                </form>
-              )}
-            </div>
-          )
-        }
-      </div>
+            )}
+          </div>
+        )
+      }
     </div>
-  </div>
+  </section>
 </PortalLayout>
