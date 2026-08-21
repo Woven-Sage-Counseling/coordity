@@ -1,0 +1,60 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
+import { listActiveAnnouncements } from '../lib/announcements';
+import { listRolesWithPermissions } from '../lib/employees';
+import { canAccessManagement } from '../lib/permissions';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+if (!canAccessManagement(employee)) {
+  return new Response('Forbidden', { status: 403 });
+}
+
+const announcements = await listActiveAnnouncements();
+const roles = await listRolesWithPermissions();
+const error = Astro.url.searchParams.get('error');
+---
+
+<PortalLayout title="Management" wide>
+  <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Management</h1>
+  <p class="mt-3 max-w-2xl text-sage-dark/75">
+    Post announcements and review portal roles. People invites stay on the People page.
+  </p>
+
+  <AnnouncementsPanel announcements={announcements} canManage={true} error={error} />
+
+  <section class="mt-14" aria-labelledby="roles-heading">
+    <h2 id="roles-heading" class="font-display text-3xl text-charcoal">Roles and permissions</h2>
+    <p class="mt-2 text-sm text-sage-dark/65">
+      What each role can access in the portal.
+    </p>
+
+    <div class="mt-6 space-y-4">
+      {
+        roles.map((role) => (
+          <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="font-display text-2xl text-charcoal">{role.name}</h3>
+              <p class="text-xs uppercase tracking-[0.14em] text-sage-dark/50">{role.key}</p>
+            </div>
+            <p class="mt-2 text-sm text-sage-dark/70">{role.description}</p>
+            {role.permissions.length === 0 ? (
+              <p class="mt-4 text-sm text-sage-dark/55">No permissions assigned.</p>
+            ) : (
+              <ul class="mt-4 grid gap-2 sm:grid-cols-2">
+                {role.permissions.map((permission) => (
+                  <li class="rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
+                    <p class="font-medium text-charcoal">{permission.key}</p>
+                    <p class="mt-0.5 text-xs text-sage-dark/60">{permission.description}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</PortalLayout>

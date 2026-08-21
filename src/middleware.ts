@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createAuth } from './lib/auth';
-import { loadEmployee } from './lib/permissions';
+import { canAccessManagement, loadEmployee } from './lib/permissions';
 
 const PUBLIC_PATHS = new Set([
   '/sign-in',
@@ -70,6 +70,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
       !employee.permissions.includes('employees:view') &&
       !employee.permissions.includes('employees:manage')
     ) {
+      return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
+    }
+  }
+
+  if (pathname.startsWith('/management') || pathname.startsWith('/api/announcements')) {
+    if (!canAccessManagement(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }
   }

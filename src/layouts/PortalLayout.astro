@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import PreviewBanner from '../components/PreviewBanner.astro';
-import { hasPermission } from '../lib/permissions';
+import { canAccessManagement, hasPermission } from '../lib/permissions';
 
 interface Props {
   title: string;
@@ -13,6 +13,7 @@ const employee = Astro.locals.employee;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeePeople =
   hasPermission(employee, 'employees:view') || hasPermission(employee, 'employees:manage');
+const canSeeManagement = canAccessManagement(employee);
 ---
 
 <!doctype html>
@@ -52,6 +53,9 @@ const canSeePeople =
               )}
               {canSeePeople && (
                 <a href="/admin/employees" class="text-sage-dark/80 hover:text-sage-dark">People</a>
+              )}
+              {canSeeManagement && (
+                <a href="/management" class="text-sage-dark/80 hover:text-sage-dark">Management</a>
               )}
               <a href="/account" class="text-sage-dark/80 hover:text-sage-dark">Account</a>
             </nav>

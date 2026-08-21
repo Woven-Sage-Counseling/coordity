@@ -41,7 +41,10 @@ export async function listRoles() {
        WHEN 'owner_view' THEN 1
        WHEN 'finance' THEN 2
        WHEN 'manager' THEN 3
-       ELSE 4
+       WHEN 'clinician' THEN 4
+       WHEN 'employee' THEN 5
+       WHEN 'intern' THEN 6
+       ELSE 7
      END`,
   ).all<{
     id: string;
@@ -50,6 +53,35 @@ export async function listRoles() {
     description: string;
   }>();
   return rows.results ?? [];
+}
+
+export async function listRolesWithPermissions() {
+  const roles = await listRoles();
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT r.key AS role_key, perm.key AS permission_key, perm.description AS permission_description
+     FROM role r
+     LEFT JOIN role_permission rp ON rp.role_id = r.id
+     LEFT JOIN permission perm ON perm.id = rp.permission_id
+     ORDER BY r.key, perm.key`,
+  ).all<{
+    role_key: string;
+    permission_key: string | null;
+    permission_description: string | null;
+  }>();
+
+  const byRole = new Map<string, { key: string; description: string }[]>();
+  for (const row of rows.results ?? []) {
+    if (!row.permission_key) continue;
+    const list = byRole.get(row.role_key) ?? [];
+    list.push({ key: row.permission_key, description: row.permission_description ?? row.permission_key });
+    byRole.set(row.role_key, list);
+  }
+
+  return roles.map((role) => ({
+    ...role,
+    permissions: byRole.get(role.key) ?? [],
+  }));
 }
 
 export async function updateDisplayName(input: {

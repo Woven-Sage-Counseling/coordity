@@ -13,9 +13,7 @@ const employee = Astro.locals.employee!;
 const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permission));
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
-const canManageAnnouncements = hasPermission(employee, 'apps:management');
 const announcements = await listActiveAnnouncements();
-const announcementError = Astro.url.searchParams.get('error');
 ---
 
 <PortalLayout title="Home" wide>
@@ -37,11 +35,7 @@ const announcementError = Astro.url.searchParams.get('error');
       <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Employee home</p>
       <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
 
-      <AnnouncementsPanel
-        announcements={announcements}
-        canManage={canManageAnnouncements}
-        error={announcementError}
-      />
+      <AnnouncementsPanel announcements={announcements} canManage={false} />
 
       {
         appCategories.map((category) => {

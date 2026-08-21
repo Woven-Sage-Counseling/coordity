@@ -65,7 +65,7 @@ function roleLabel(keys: string[]): string {
           Role
           <select class="field" name="roleId" required>
             {inviteRoles.map((role) => (
-              <option value={role.id} selected={role.key === 'employee'}>
+              <option value={role.id} selected={role.key === 'clinician'}>
                 {role.name}
               </option>
             ))}
