@@ -70,30 +70,8 @@ const periodLabel = snapshot
 ---
 
 <PortalLayout title="Financials" wide>
-  <div class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Financials</p>
-      <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
-    </div>
-    <div class="flex flex-wrap items-center gap-2 pt-1">
-      <span
-        class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2CA01C] ring-1 ring-[#2CA01C]/25"
-      >
-        <span
-          class="flex h-4 w-4 items-center justify-center rounded-[3px] bg-[#2CA01C] text-[9px] font-black text-white"
-          aria-hidden="true"
-        >
-          q
-        </span>
-        QuickBooks
-      </span>
-      <span
-        class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#2CA01C] ring-1 ring-[#2CA01C]/25"
-      >
-        Cash
-      </span>
-    </div>
-  </div>
+  <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Financials</p>
+  <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
 
   <div class="mt-6">
     <PeriodPicker period={summary.period} action="/financials" allowCustom theme="quickbooks" />
