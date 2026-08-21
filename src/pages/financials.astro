@@ -141,11 +141,11 @@ const periodLabel = snapshot
     </div>
   </section>
 
-  <div class="mt-12 grid gap-8 lg:grid-cols-2 lg:items-start">
-    <section aria-labelledby="pnl-heading">
+  <div class="mt-12 grid gap-8 lg:grid-cols-2 lg:items-stretch">
+    <section class="flex flex-col" aria-labelledby="pnl-heading">
       <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
-      <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <div class="space-y-3.5">
+      <div class="mt-4 flex flex-1 flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <div class="flex flex-1 flex-col justify-between gap-5">
           {
             pnlRows.map((row) => (
               <div>
@@ -156,7 +156,7 @@ const periodLabel = snapshot
                     {row.share ? <span class="font-medium text-[#b0b1b6]">{row.share}</span> : null}
                   </span>
                 </div>
-                <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
                   <div
                     class="h-full rounded-full"
                     style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
@@ -169,9 +169,9 @@ const periodLabel = snapshot
       </div>
     </section>
 
-    <section aria-labelledby="cash-heading">
+    <section class="flex flex-col" aria-labelledby="cash-heading">
       <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
-      <div class="mt-4 flex flex-col gap-3">
+      <div class="mt-4 flex flex-1 flex-col gap-3">
         <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
           <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relay operating</p>
           <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
