@@ -141,56 +141,58 @@ const periodLabel = snapshot
     </div>
   </section>
 
-  <section class="mt-12" aria-labelledby="pnl-heading">
-    <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
-    <div class="mt-4 max-w-md rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-      <div class="space-y-3.5">
-        {
-          pnlRows.map((row) => (
-            <div>
-              <div class="flex items-baseline justify-between gap-3 text-[13px]">
-                <span class="font-medium text-charcoal">{row.label}</span>
-                <span class="flex items-baseline gap-1.5 tabular-nums">
-                  <span class="font-semibold text-charcoal">{formatUsd(snapshot ? row.cents : null)}</span>
-                  {row.share ? <span class="font-medium text-[#b0b1b6]">{row.share}</span> : null}
-                </span>
+  <div class="mt-12 grid gap-8 lg:grid-cols-2 lg:items-start">
+    <section aria-labelledby="pnl-heading">
+      <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
+      <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <div class="space-y-3.5">
+          {
+            pnlRows.map((row) => (
+              <div>
+                <div class="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span class="font-medium text-charcoal">{row.label}</span>
+                  <span class="flex items-baseline gap-1.5 tabular-nums">
+                    <span class="font-semibold text-charcoal">{formatUsd(snapshot ? row.cents : null)}</span>
+                    {row.share ? <span class="font-medium text-[#b0b1b6]">{row.share}</span> : null}
+                  </span>
+                </div>
+                <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                  <div
+                    class="h-full rounded-full"
+                    style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
+                  ></div>
+                </div>
               </div>
-              <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-                <div
-                  class="h-full rounded-full"
-                  style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
-                ></div>
-              </div>
-            </div>
-          ))
-        }
+            ))
+          }
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="mt-12" aria-labelledby="cash-heading">
-    <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
-    <div class="mt-4 grid gap-4 sm:grid-cols-3">
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relay operating</p>
-        <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-          {formatUsd(summary.cash.relayOperatingCents)}
-        </p>
-      </article>
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Bank of America reserve</p>
-        <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-          {formatUsd(summary.cash.boaReserveCents)}
-        </p>
-      </article>
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
-        <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-          {formatUsd(summary.totalCashCents)}
-        </p>
-      </article>
-    </div>
-  </section>
+    <section aria-labelledby="cash-heading">
+      <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
+      <div class="mt-4 flex flex-col gap-3">
+        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relay operating</p>
+          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+            {formatUsd(summary.cash.relayOperatingCents)}
+          </p>
+        </article>
+        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Bank of America reserve</p>
+          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+            {formatUsd(summary.cash.boaReserveCents)}
+          </p>
+        </article>
+        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
+          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
+            {formatUsd(summary.totalCashCents)}
+          </p>
+        </article>
+      </div>
+    </section>
+  </div>
 
   <section class="mt-12" aria-labelledby="connection-heading">
     <h2 id="connection-heading" class="font-display text-2xl text-charcoal">QuickBooks connection</h2>
