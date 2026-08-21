@@ -14,7 +14,6 @@ if (!hasPermission(employee, 'financials:view')) {
 const summary = await getFinancialSummary(Astro.url.searchParams);
 const snapshot = summary.snapshot;
 const canManage = hasPermission(employee, 'financials:manage');
-const canViewBooks = hasPermission(employee, 'financials:view');
 const error = Astro.url.searchParams.get('error');
 const lastSync = summary.quickbooks.lastSyncAt
   ? new Date(summary.quickbooks.lastSyncAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
@@ -28,7 +27,7 @@ const software = snapshot?.softwareAndTechnologyCents ?? 0;
 const expenses = snapshot?.totalExpensesCents ?? 0;
 const scale = Math.max(revenue, therapist, management, software, expenses, 1);
 const bar = (cents: number) => `${Math.round((cents / scale) * 100)}%`;
-const shareOfIncome = (cents: number) => (revenue > 0 ? Math.round((cents / revenue) * 100) : null);
+const shareOfIncome = (cents: number) => (revenue > 0 ? `${Math.round((cents / revenue) * 100)}%` : null);
 const netPositive = net >= 0;
 
 const ratio = summary.reserveProgressRatio;
@@ -39,12 +38,11 @@ const ringCircumference = 2 * Math.PI * ringRadius;
 const ringOffset = ringCircumference * (1 - ringRatio);
 
 const pnlRows = [
-  { label: 'Income', cents: revenue, color: '#2CA01C', share: null as number | null },
+  { label: 'Income', cents: revenue, color: '#2CA01C', share: null as string | null },
   { label: 'Therapist income', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist) },
   { label: 'Management income', cents: management, color: '#6aa84f', share: shareOfIncome(management) },
   { label: 'Software and technology', cents: software, color: '#8fbc8f', share: shareOfIncome(software) },
   { label: 'Total expenses', cents: expenses, color: '#a8c5a0', share: shareOfIncome(expenses) },
-  { label: 'Net income', cents: net, color: netPositive ? '#2CA01C' : '#d52b1e', share: shareOfIncome(net) },
 ];
 
 function formatPeriod(iso: string): string {
@@ -68,7 +66,7 @@ function formatMonthYear(iso: string): string {
 
 const periodLabel = snapshot
   ? `${formatPeriod(snapshot.periodStart)} – ${formatPeriod(snapshot.periodEnd)}`
-  : 'No snapshot yet';
+  : null;
 ---
 
 <PortalLayout title="Financials" wide>
@@ -76,10 +74,6 @@ const periodLabel = snapshot
     <div>
       <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Financials</p>
       <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
-      <p class="mt-3 max-w-2xl text-sage-dark/75">
-        QuickBooks is the source of truth. Profit and loss figures are cash-basis for the selected timeframe.
-        Bank balances are current and not tied to those dates.
-      </p>
     </div>
     <div class="flex flex-wrap items-center gap-2 pt-1">
       <span
@@ -101,21 +95,17 @@ const periodLabel = snapshot
     </div>
   </div>
 
-  <div class="mt-6 flex flex-wrap items-end gap-4">
+  <div class="mt-6">
     <PeriodPicker period={summary.period} action="/financials" allowCustom theme="quickbooks" />
   </div>
   {
-    snapshot ? (
-      <p class="mt-2 text-sm text-sage-dark/65">
-        {summary.period.label}: {periodLabel} · {snapshot.accountingMethod} basis · source:{' '}
-        {snapshot.source === 'quickbooks' ? 'QuickBooks' : 'QuickBooks (manual snapshot)'}
-      </p>
+    periodLabel ? (
+      <p class="mt-2 text-sm text-sage-dark/65">{periodLabel}</p>
     ) : (
       <p class="mt-2 text-sm text-sage-dark/65">No financial snapshot is available yet.</p>
     )
   }
 
-  <!-- Overview -->
   <section class="mt-10" aria-labelledby="overview-heading">
     <h2 id="overview-heading" class="font-display text-2xl text-charcoal">Overview</h2>
     <div class="mt-4 grid gap-4 md:grid-cols-2">
@@ -129,27 +119,22 @@ const periodLabel = snapshot
         >
           {formatUsd(snapshot?.netIncomeCents ?? null)}
         </p>
-        <p class="mt-2 text-sm text-[#6b6c72]">
-          For {summary.period.label.toLowerCase()}
-          {snapshot ? ` (${periodLabel})` : ''}.
-        </p>
       </article>
 
       <article class="flex items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <div class="min-w-0">
-          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reserve progress</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reserve</p>
           <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
             {formatUsd(summary.cash.boaReserveCents)}
           </p>
           <p class="mt-1 text-sm text-[#6b6c72]">
-            of {formatUsd(summary.reserveTargetCents)} target
+            of {formatUsd(summary.reserveTargetCents)}
           </p>
           <p class="mt-2 text-xs text-[#b0b1b6]">
-            {summary.reserveTargetMonths} months of average revenue
+            {summary.reserveTargetMonths}-month target
             {summary.reserveAveragingStart
               ? ` since ${formatMonthYear(summary.reserveAveragingStart)}`
               : ''}
-            . Bank of America only; Relay is excluded.
           </p>
         </div>
         <div
@@ -179,94 +164,40 @@ const periodLabel = snapshot
     </div>
   </section>
 
-  <!-- Profit and Loss -->
   <section class="mt-12" aria-labelledby="pnl-heading">
-    <div class="flex flex-wrap items-end justify-between gap-2">
-      <div>
-        <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
-        <p class="mt-1 text-sm text-sage-dark/65">Cash-basis summary for the selected timeframe.</p>
-      </div>
-    </div>
-
-    <div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
-      <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relative scale</p>
-        <div class="mt-4 space-y-3.5">
-          {
-            pnlRows
-              .filter((row) => row.label !== 'Net income')
-              .map((row) => (
-                <div>
-                  <div class="flex items-baseline justify-between gap-3 text-[13px]">
-                    <span class="font-medium text-charcoal">{row.label}</span>
-                    <span class="font-semibold tabular-nums text-charcoal">
-                      {formatUsd(snapshot ? row.cents : null)}
-                    </span>
-                  </div>
-                  <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-                    <div
-                      class="h-full rounded-full"
-                      style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
-                    ></div>
-                  </div>
-                </div>
-              ))
-          }
-        </div>
-      </div>
-
-      <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-        <table class="w-full text-left text-sm">
-          <thead class="border-b border-black/[0.06] bg-[#f4f5f8] text-[11px] uppercase tracking-[0.12em] text-[#6b6c72]">
-            <tr>
-              <th class="px-4 py-3 font-semibold">Line</th>
-              <th class="px-4 py-3 text-right font-semibold">Amount</th>
-              <th class="px-4 py-3 text-right font-semibold">% of income</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              pnlRows.map((row) => (
-                <tr class="border-b border-black/[0.05] last:border-0">
-                  <td class="px-4 py-3 font-medium text-charcoal">{row.label}</td>
-                  <td
-                    class:list={[
-                      'px-4 py-3 text-right tabular-nums font-semibold',
-                      row.label === 'Net income'
-                        ? netPositive
-                          ? 'text-[#2CA01C]'
-                          : 'text-[#d52b1e]'
-                        : 'text-charcoal',
-                    ]}
-                  >
-                    {formatUsd(snapshot ? row.cents : null)}
-                  </td>
-                  <td class="px-4 py-3 text-right tabular-nums text-[#6b6c72]">
-                    {row.share == null ? (row.label === 'Income' ? '100%' : '—') : `${row.share}%`}
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
+    <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
+    <div class="mt-4 max-w-md rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <div class="space-y-3.5">
+        {
+          pnlRows.map((row) => (
+            <div>
+              <div class="flex items-baseline justify-between gap-3 text-[13px]">
+                <span class="font-medium text-charcoal">{row.label}</span>
+                <span class="flex items-baseline gap-1.5 tabular-nums">
+                  <span class="font-semibold text-charcoal">{formatUsd(snapshot ? row.cents : null)}</span>
+                  {row.share ? <span class="font-medium text-[#b0b1b6]">{row.share}</span> : null}
+                </span>
+              </div>
+              <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                <div
+                  class="h-full rounded-full"
+                  style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
+                ></div>
+              </div>
+            </div>
+          ))
+        }
       </div>
     </div>
   </section>
 
-  <!-- Cash and reserves -->
   <section class="mt-12" aria-labelledby="cash-heading">
     <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
-    <p class="mt-1 text-sm text-sage-dark/65">
-      Current balances from QuickBooks. Reserve progress uses Bank of America only.
-    </p>
     <div class="mt-4 grid gap-4 sm:grid-cols-3">
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Relay operating</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
           {formatUsd(summary.cash.relayOperatingCents)}
-        </p>
-        <p class="mt-2 text-sm text-[#6b6c72]">
-          Revolving operating cash. Not counted toward the reserve target.
         </p>
       </article>
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
@@ -274,99 +205,22 @@ const periodLabel = snapshot
         <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
           {formatUsd(summary.cash.boaReserveCents)}
         </p>
-        <p class="mt-2 text-sm text-[#6b6c72]">This account is the practice cash reserve.</p>
       </article>
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
         <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
           {formatUsd(summary.totalCashCents)}
         </p>
-        <p class="mt-2 text-sm text-[#6b6c72]">Relay + Bank of America combined.</p>
       </article>
     </div>
   </section>
 
-  <!-- Sync details -->
-  {
-    canViewBooks && (summary.pnlLines.length > 0 || summary.bankAccounts.length > 0) && (
-      <section class="mt-12" aria-labelledby="sync-heading">
-        <h2 id="sync-heading" class="font-display text-2xl text-charcoal">Accounts in this sync</h2>
-        <p class="mt-1 text-sm text-sage-dark/65">
-          Raw QuickBooks lines and how they map into the dashboard.
-        </p>
-
-        <div class="mt-4 grid gap-4 lg:grid-cols-2">
-          {summary.bankAccounts.length > 0 && (
-            <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-              <div class="border-b border-black/[0.06] bg-[#f4f5f8] px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Bank accounts</p>
-              </div>
-              <table class="w-full text-left text-sm">
-                <thead class="border-b border-black/[0.05] text-[11px] uppercase tracking-[0.12em] text-[#6b6c72]">
-                  <tr>
-                    <th class="px-4 py-2.5 font-semibold">Account</th>
-                    <th class="px-4 py-2.5 text-right font-semibold">Balance</th>
-                    <th class="px-4 py-2.5 font-semibold">Mapped to</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.bankAccounts.map((account) => (
-                    <tr class="border-b border-black/[0.05] last:border-0">
-                      <td class="px-4 py-3 font-medium text-charcoal">{account.name}</td>
-                      <td class="px-4 py-3 text-right tabular-nums text-charcoal">
-                        {formatUsd(account.balanceCents)}
-                      </td>
-                      <td class="px-4 py-3 text-[#6b6c72]">
-                        {account.mappedKey === 'relay_operating'
-                          ? 'Operating cash'
-                          : account.mappedKey === 'boa_reserve'
-                            ? 'Reserve'
-                            : 'Not mapped'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {summary.pnlLines.length > 0 && (
-            <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-              <div class="border-b border-black/[0.06] bg-[#f4f5f8] px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">P&L lines</p>
-              </div>
-              <table class="w-full text-left text-sm">
-                <thead class="border-b border-black/[0.05] text-[11px] uppercase tracking-[0.12em] text-[#6b6c72]">
-                  <tr>
-                    <th class="px-4 py-2.5 font-semibold">Line</th>
-                    <th class="px-4 py-2.5 text-right font-semibold">Amount</th>
-                    <th class="px-4 py-2.5 font-semibold">Bucket</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.pnlLines.map((line) => (
-                    <tr class="border-b border-black/[0.05] last:border-0">
-                      <td class="px-4 py-3 font-medium text-charcoal">{line.name}</td>
-                      <td class="px-4 py-3 text-right tabular-nums text-charcoal">{formatUsd(line.cents)}</td>
-                      <td class="px-4 py-3 text-[#6b6c72]">{line.bucket || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
-    )
-  }
-
-  <!-- Connection -->
   <section class="mt-12" aria-labelledby="connection-heading">
     <h2 id="connection-heading" class="font-display text-2xl text-charcoal">QuickBooks connection</h2>
     <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="text-sm text-[#6b6c72]">
-          Environment: <span class="font-medium text-charcoal">{summary.quickbooks.environment}</span>
+          {summary.quickbooks.environment}
           {lastSync ? ` · last sync ${lastSync}` : ''}
         </p>
         <span
@@ -387,24 +241,9 @@ const periodLabel = snapshot
         )
       }
 
-      <p class="mt-3 text-sm text-[#6b6c72]">
-        {summary.quickbooks.configured
-          ? 'OAuth credentials are present on the server.'
-          : 'OAuth client ID and secret are not set yet.'}
-      </p>
-
       {
         summary.quickbooks.lastError && (
-          <p class="mt-2 text-sm text-red-800">{summary.quickbooks.lastError}</p>
-        )
-      }
-
-      {
-        summary.quickbooks.environment === 'sandbox' && (
-          <p class="mt-2 text-sm text-[#6b6c72]">
-            Connected to a <strong class="font-semibold text-charcoal">sandbox</strong> company with Development
-            keys. Live books will not match until you reconnect with Production keys.
-          </p>
+          <p class="mt-3 text-sm text-red-800">{summary.quickbooks.lastError}</p>
         )
       }
 
