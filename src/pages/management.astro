@@ -1,7 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
-import { listActiveAnnouncements } from '../lib/announcements';
+import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
 import { listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
 import { plainPermission, plainRole } from '../lib/role-plain-language';
@@ -13,7 +13,8 @@ if (!canAccessManagement(employee)) {
   return new Response('Forbidden', { status: 403 });
 }
 
-const announcements = await listActiveAnnouncements();
+const announcements = await listAnnouncementsForUser(employee.id);
+const unreadCount = await countUnreadAnnouncements(employee.id);
 const roles = await listRolesWithPermissions();
 const error = Astro.url.searchParams.get('error');
 ---
@@ -24,7 +25,12 @@ const error = Astro.url.searchParams.get('error');
     Post announcements and review portal roles. People invites stay on the People page.
   </p>
 
-  <AnnouncementsPanel announcements={announcements} canManage={true} error={error} />
+  <AnnouncementsPanel
+    announcements={announcements}
+    unreadCount={unreadCount}
+    canManage={true}
+    error={error}
+  />
 
   <section class="mt-14" aria-labelledby="roles-heading">
     <h2 id="roles-heading" class="font-display text-3xl text-charcoal">Roles and permissions</h2>
