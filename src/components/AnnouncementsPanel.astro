@@ -11,87 +11,115 @@ interface Props {
 
 const { announcements, unreadCount, canManage, error = null } = Astro.props;
 const hasUnread = unreadCount > 0;
+const latest = announcements[0] ?? null;
 ---
 
 <section class="announcement-stage relative mt-10" aria-labelledby="announcements-heading">
   <div class="announcement-stage__glow" aria-hidden="true"></div>
 
-  <div class="relative flex flex-wrap items-center justify-between gap-3">
-    <h2 id="announcements-heading" class="font-display text-3xl text-charcoal">Announcements</h2>
+  <!-- Notifications: separate circle widget above the bar -->
+  <div class="relative z-20 mb-3 flex justify-end pr-2 sm:pr-3" data-announcement-bell>
+    <button
+      type="button"
+      class:list={[
+        'announcement-glass relative flex h-14 w-14 items-center justify-center rounded-full transition',
+        hasUnread ? 'text-charcoal' : 'text-sage-dark/70',
+      ]}
+      aria-expanded="false"
+      aria-controls="announcement-popover"
+      aria-label={hasUnread ? `${unreadCount} unread notifications` : 'Notifications'}
+      data-bell-toggle
+    >
+      <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        ></path>
+      </svg>
+      {
+        hasUnread && (
+          <span class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2CA01C] px-1 text-[10px] font-bold text-white shadow-sm">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )
+      }
+    </button>
 
-    <div class="relative" data-announcement-bell>
-      <button
-        type="button"
-        class:list={[
-          'announcement-glass relative flex h-11 w-11 items-center justify-center rounded-full transition',
-          hasUnread ? 'text-charcoal' : 'text-sage-dark/70',
-        ]}
-        aria-expanded="false"
-        aria-controls="announcement-popover"
-        aria-label={hasUnread ? `${unreadCount} unread announcements` : 'Announcements'}
-        data-bell-toggle
-      >
-        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ></path>
-        </svg>
-        {
-          hasUnread && (
-            <span class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2CA01C] px-1 text-[10px] font-bold text-white shadow-sm">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )
-        }
-      </button>
+    <div
+      id="announcement-popover"
+      class="announcement-glass absolute right-2 top-[calc(100%+0.5rem)] z-30 hidden w-[min(22rem,calc(100vw-2.5rem))] overflow-hidden rounded-[1.35rem] sm:right-3"
+      data-bell-popover
+      hidden
+      role="dialog"
+      aria-label="Notifications"
+    >
+      <div class="border-b border-black/[0.06] px-4 py-3">
+        <p class="text-sm font-semibold text-charcoal">Notifications</p>
+        <p class="mt-0.5 text-xs text-sage-dark/60">
+          {hasUnread ? `${unreadCount} new` : 'You are caught up'}
+        </p>
+      </div>
+      {
+        announcements.length === 0 ? (
+          <p class="px-4 py-5 text-sm text-sage-dark/70">No notifications right now.</p>
+        ) : (
+          <ul class="max-h-80 overflow-y-auto">
+            {announcements.map((item) => (
+              <li
+                class:list={[
+                  'border-b border-black/[0.05] px-4 py-3 last:border-0',
+                  item.unread && 'bg-white/40',
+                ]}
+              >
+                <div class="flex items-start gap-2">
+                  {item.unread ? (
+                    <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#2CA01C]" aria-hidden="true"></span>
+                  ) : (
+                    <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-transparent" aria-hidden="true"></span>
+                  )}
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-charcoal">{item.title}</p>
+                    <p class="mt-0.5 text-[11px] text-sage-dark/55">
+                      {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                    </p>
+                    <p class="mt-1.5 line-clamp-3 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+  </div>
 
-      <div
-        id="announcement-popover"
-        class="announcement-glass absolute right-0 z-30 mt-2 hidden w-[min(22rem,calc(100vw-2.5rem))] overflow-hidden rounded-[1.35rem]"
-        data-bell-popover
-        hidden
-        role="dialog"
-        aria-label="Announcement notifications"
-      >
-        <div class="border-b border-black/[0.06] px-4 py-3">
-          <p class="text-sm font-semibold text-charcoal">Notifications</p>
-          <p class="mt-0.5 text-xs text-sage-dark/60">
-            {hasUnread ? `${unreadCount} new` : 'You are caught up'}
-          </p>
+  <!-- Announcements: separate bar widget -->
+  <div class="announcement-glass relative z-10 rounded-full px-5 py-3.5 sm:px-6 sm:py-4">
+    <div class="flex min-w-0 items-center gap-4">
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+          <h2 id="announcements-heading" class="text-sm font-semibold tracking-wide text-charcoal">
+            Announcements
+          </h2>
+          {
+            latest && (
+              <p class="text-[11px] text-sage-dark/55">
+                {latest.authorName} · {formatAnnouncementDate(latest.createdAt)}
+              </p>
+            )
+          }
         </div>
         {
-          announcements.length === 0 ? (
-            <p class="px-4 py-5 text-sm text-sage-dark/70">No announcements right now.</p>
+          latest ? (
+            <div class="mt-1 min-w-0">
+              <p class="truncate text-[15px] font-medium text-charcoal">{latest.title}</p>
+              <p class="mt-0.5 line-clamp-1 text-sm text-sage-dark/70">{latest.body}</p>
+            </div>
           ) : (
-            <ul class="max-h-80 overflow-y-auto">
-              {announcements.map((item) => (
-                <li
-                  class:list={[
-                    'border-b border-black/[0.05] px-4 py-3 last:border-0',
-                    item.unread && 'bg-white/40',
-                  ]}
-                >
-                  <div class="flex items-start gap-2">
-                    {item.unread ? (
-                      <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#2CA01C]" aria-hidden="true"></span>
-                    ) : (
-                      <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-transparent" aria-hidden="true"></span>
-                    )}
-                    <div class="min-w-0">
-                      <p class="text-sm font-semibold text-charcoal">{item.title}</p>
-                      <p class="mt-0.5 text-[11px] text-sage-dark/55">
-                        {item.authorName} · {formatAnnouncementDate(item.createdAt)}
-                      </p>
-                      <p class="mt-1.5 line-clamp-3 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <p class="mt-1 text-sm text-sage-dark/65">No announcements right now.</p>
           )
         }
       </div>
@@ -113,7 +141,14 @@ const hasUnread = unreadCount > 0;
       >
         <label class="block">
           <span class="text-sm font-medium text-sage-dark/80">Title</span>
-          <input class="field !border-white/40 !bg-white/55" type="text" name="title" maxlength="120" required placeholder="Short headline" />
+          <input
+            class="field !border-white/40 !bg-white/55"
+            type="text"
+            name="title"
+            maxlength="120"
+            required
+            placeholder="Short headline"
+          />
         </label>
         <label class="mt-3 block">
           <span class="text-sm font-medium text-sage-dark/80">Message</span>
@@ -139,13 +174,13 @@ const hasUnread = unreadCount > 0;
   .announcement-stage__glow {
     pointer-events: none;
     position: absolute;
-    inset: -1.5rem -1rem auto;
-    height: 11rem;
+    inset: -1rem -1rem auto;
+    height: 10rem;
     border-radius: 2rem;
     background:
-      radial-gradient(ellipse 70% 80% at 20% 40%, rgba(152, 169, 149, 0.35), transparent 70%),
-      radial-gradient(ellipse 55% 70% at 85% 30%, rgba(190, 210, 185, 0.3), transparent 65%),
-      radial-gradient(ellipse 50% 60% at 50% 90%, rgba(255, 255, 255, 0.55), transparent 70%);
+      radial-gradient(ellipse 70% 80% at 80% 20%, rgba(152, 169, 149, 0.28), transparent 70%),
+      radial-gradient(ellipse 55% 70% at 15% 60%, rgba(190, 210, 185, 0.22), transparent 65%),
+      radial-gradient(ellipse 50% 60% at 50% 100%, rgba(255, 255, 255, 0.5), transparent 70%);
     filter: blur(2px);
     z-index: -1;
   }
@@ -165,10 +200,6 @@ const hasUnread = unreadCount > 0;
       0 2px 6px rgba(40, 55, 40, 0.05);
     backdrop-filter: blur(28px) saturate(185%);
     -webkit-backdrop-filter: blur(28px) saturate(185%);
-  }
-
-  .announcement-glass:hover {
-    border-color: rgba(255, 255, 255, 0.78);
   }
 </style>
 
@@ -199,7 +230,7 @@ const hasUnread = unreadCount > 0;
           if (badge) badge.remove();
           toggle.classList.remove('text-charcoal');
           toggle.classList.add('text-sage-dark/70');
-          toggle.setAttribute('aria-label', 'Announcements');
+          toggle.setAttribute('aria-label', 'Notifications');
           const subtitle = popover.querySelector('.border-b p.text-xs');
           if (subtitle) subtitle.textContent = 'You are caught up';
           popover.querySelectorAll('li.bg-white\\/40').forEach((el) => el.classList.remove('bg-white/40'));
