@@ -1,0 +1,76 @@
+---
+import type { Announcement } from '../lib/announcements';
+import { formatAnnouncementDate } from '../lib/announcements';
+
+interface Props {
+  announcements: Announcement[];
+  canManage: boolean;
+  error?: string | null;
+}
+
+const { announcements, canManage, error = null } = Astro.props;
+---
+
+<section class="mt-10" aria-labelledby="announcements-heading">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h2 id="announcements-heading" class="font-display text-3xl text-charcoal">Announcements</h2>
+  </div>
+
+  {
+    error && (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    )
+  }
+
+  {
+    canManage && (
+      <form method="post" action="/api/announcements/create" class="mt-4 rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+        <label class="block">
+          <span class="text-sm text-sage-dark/70">Title</span>
+          <input class="field" type="text" name="title" maxlength="120" required placeholder="Short headline" />
+        </label>
+        <label class="mt-3 block">
+          <span class="text-sm text-sage-dark/70">Message</span>
+          <textarea
+            class="field min-h-[5.5rem] resize-y"
+            name="body"
+            maxlength="2000"
+            required
+            placeholder="What should the team know?"
+          ></textarea>
+        </label>
+        <button class="btn-primary mt-3" type="submit">Post announcement</button>
+      </form>
+    )
+  }
+
+  {
+    announcements.length === 0 ? (
+      <p class="mt-4 text-sm text-sage-dark/65">No announcements right now.</p>
+    ) : (
+      <ul class="mt-4 space-y-3">
+        {announcements.map((item) => (
+          <li class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="font-display text-xl text-charcoal">{item.title}</h3>
+                <p class="mt-1 text-xs text-sage-dark/55">
+                  {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                </p>
+              </div>
+              {canManage && (
+                <form method="post" action="/api/announcements/archive">
+                  <input type="hidden" name="id" value={item.id} />
+                  <button class="btn-secondary !px-3 !py-1.5 text-xs" type="submit">
+                    Remove
+                  </button>
+                </form>
+              )}
+            </div>
+            <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>
