@@ -3,7 +3,7 @@ import type { Permission } from './permissions';
 export interface PortalApp {
   id: string;
   name: string;
-  category: 'clinical' | 'business' | 'financial' | 'internal';
+  category: 'clinical' | 'billing' | 'business' | 'financial' | 'internal';
   description: string;
   href: string;
   external: boolean;
@@ -24,26 +24,6 @@ export const portalApps: PortalApp[] = [
     iconSrc: '/app-icons/simplepractice.png',
   },
   {
-    id: 'availity',
-    name: 'Availity',
-    category: 'clinical',
-    description: 'Open Availity Essentials for eligibility, claims, and payer transactions.',
-    href: 'https://essentials.availity.com',
-    external: true,
-    permission: 'apps:clinical',
-    iconSrc: '/app-icons/availity.png?v=5',
-  },
-  {
-    id: 'providerexpress',
-    name: 'Optum | Provider Express',
-    category: 'clinical',
-    description: 'Open Optum Provider Express for behavioral health authorizations and claims.',
-    href: 'https://www.providerexpress.com',
-    external: true,
-    permission: 'apps:clinical',
-    iconSrc: '/app-icons/optum.png',
-  },
-  {
     id: 'headway',
     name: 'Headway',
     category: 'clinical',
@@ -62,6 +42,26 @@ export const portalApps: PortalApp[] = [
     external: true,
     permission: 'apps:clinical',
     iconSrc: '/app-icons/tava.png',
+  },
+  {
+    id: 'availity',
+    name: 'Availity',
+    category: 'billing',
+    description: 'Open Availity Essentials for eligibility, claims, and payer transactions.',
+    href: 'https://essentials.availity.com',
+    external: true,
+    permission: 'apps:clinical',
+    iconSrc: '/app-icons/availity.png?v=5',
+  },
+  {
+    id: 'providerexpress',
+    name: 'Optum | Provider Express',
+    category: 'billing',
+    description: 'Open Optum Provider Express for behavioral health authorizations and claims.',
+    href: 'https://www.providerexpress.com',
+    external: true,
+    permission: 'apps:clinical',
+    iconSrc: '/app-icons/optum.png',
   },
   {
     id: 'quickbooks',
@@ -119,6 +119,10 @@ export const appCategories: { id: PortalApp['category']; title: string }[] = [
   {
     id: 'clinical',
     title: 'Clinical tools',
+  },
+  {
+    id: 'billing',
+    title: 'Billing tools',
   },
   {
     id: 'business',
