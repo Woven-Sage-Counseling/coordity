@@ -21,7 +21,6 @@ const ringRadius = 22;
 const ringCircumference = 2 * Math.PI * ringRadius;
 const ringOffset = ringCircumference * (1 - ringRatio);
 const revenue = snapshot?.revenueCents ?? 0;
-const net = snapshot?.netIncomeCents ?? 0;
 const therapist = snapshot?.therapistCompensationCents ?? 0;
 const management = snapshot?.managementCompensationCents ?? 0;
 const scale = Math.max(revenue, therapist, management, 1);
@@ -30,7 +29,6 @@ const therapistWidth = `${Math.round((therapist / scale) * 100)}%`;
 const managementWidth = `${Math.round((management / scale) * 100)}%`;
 const therapistShare = revenue > 0 ? `${Math.round((therapist / revenue) * 100)}%` : null;
 const managementShare = revenue > 0 ? `${Math.round((management / revenue) * 100)}%` : null;
-const netPositive = net >= 0;
 
 function formatPeriod(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number);
@@ -88,14 +86,7 @@ const periodLabel = snapshot
     <p class="mt-1 text-[11px] text-[#6b6c72]">{periodLabel}</p>
     <PeriodPicker period={period} action="/" compact />
 
-    <div class="mt-4 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
-      <p class="text-[11px] font-medium text-[#6b6c72]">Net income</p>
-      <p class:list={['mt-1 text-[1.85rem] font-semibold leading-none tracking-tight', netPositive ? 'text-[#2CA01C]' : 'text-[#d52b1e]']}>
-        {formatUsd(snapshot?.netIncomeCents ?? null)}
-      </p>
-    </div>
-
-    <div class="mt-3 space-y-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
+    <div class="mt-4 space-y-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
       <div>
         <div class="flex items-baseline justify-between gap-3 text-[12px]">
           <span class="font-medium">Income</span>
