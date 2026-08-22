@@ -26,6 +26,12 @@ const error = Astro.url.searchParams.get('error');
       <dd class="mt-1 text-charcoal">{employee.jobTitle || '—'}</dd>
     </div>
     <div>
+      <dt class="text-sage-dark/60">Teams</dt>
+      <dd class="mt-1 text-charcoal">
+        {employee.teams.length > 0 ? employee.teams.join(', ') : '—'}
+      </dd>
+    </div>
+    <div>
       <dt class="text-sage-dark/60">Email</dt>
       <dd class="mt-1 text-charcoal">{employee.email}</dd>
     </div>
@@ -52,7 +58,7 @@ const error = Astro.url.searchParams.get('error');
   <form method="post" action="/api/account/update" class="card mt-6 space-y-4">
     <h2 class="font-display text-2xl text-charcoal">Directory profile</h2>
     <p class="text-sm text-sage-dark/65">
-      Name and phone appear on the staff Directory. Job titles are set by management.
+      Name and phone appear on the staff Directory. Job titles and teams are set by management.
     </p>
     <label class="block text-sm font-medium">
       Display name

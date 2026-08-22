@@ -51,6 +51,16 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     .bind(userId)
     .all<{ key: string }>();
 
+  const teams = await DB.prepare(
+    `SELECT t.name
+     FROM user_team ut
+     JOIN directory_team t ON t.id = ut.team_id
+     WHERE ut.user_id = ?
+     ORDER BY t.sort_order`,
+  )
+    .bind(userId)
+    .all<{ name: string }>();
+
   const permissions =
     profile.status === 'active'
       ? await DB.prepare(
@@ -70,6 +80,7 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     name: profile.name,
     jobTitle: profile.job_title,
     phone: profile.phone,
+    teams: (teams.results ?? []).map((row) => row.name),
     status: isOwnerEmail(profile.email) ? 'active' : profile.status,
     roles: isOwnerEmail(profile.email)
       ? Array.from(new Set(['owner', ...(roles.results ?? []).map((row) => row.key)]))

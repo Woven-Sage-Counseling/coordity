@@ -3,6 +3,73 @@ import { nowMs } from './crypto';
 import { writeAuditLog } from './audit';
 import type { Auth } from './auth';
 
+export const DIRECTORY_TEAMS = [
+  { id: 'team_owners', key: 'owners', name: 'Owners' },
+  { id: 'team_management', key: 'management', name: 'Management' },
+  { id: 'team_financial', key: 'financial', name: 'Financial' },
+  { id: 'team_marketing', key: 'marketing', name: 'Marketing' },
+  { id: 'team_clinical', key: 'clinical', name: 'Clinical' },
+] as const;
+
+export type DirectoryTeamId = (typeof DIRECTORY_TEAMS)[number]['id'];
+
+export interface DirectoryPerson {
+  id: string;
+  name: string;
+  email: string;
+  jobTitle: string | null;
+  phone: string | null;
+  teams: string[];
+}
+
+async function teamsByUser(userIds: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (userIds.length === 0) return map;
+
+  const { DB } = getEnv();
+  const placeholders = userIds.map(() => '?').join(', ');
+  const rows = await DB.prepare(
+    `SELECT ut.user_id, t.name
+     FROM user_team ut
+     JOIN directory_team t ON t.id = ut.team_id
+     WHERE ut.user_id IN (${placeholders})
+     ORDER BY t.sort_order`,
+  )
+    .bind(...userIds)
+    .all<{ user_id: string; name: string }>();
+
+  for (const row of rows.results ?? []) {
+    const list = map.get(row.user_id) ?? [];
+    list.push(row.name);
+    map.set(row.user_id, list);
+  }
+  return map;
+}
+
+async function teamIdsByUser(userIds: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (userIds.length === 0) return map;
+
+  const { DB } = getEnv();
+  const placeholders = userIds.map(() => '?').join(', ');
+  const rows = await DB.prepare(
+    `SELECT ut.user_id, ut.team_id
+     FROM user_team ut
+     JOIN directory_team t ON t.id = ut.team_id
+     WHERE ut.user_id IN (${placeholders})
+     ORDER BY t.sort_order`,
+  )
+    .bind(...userIds)
+    .all<{ user_id: string; team_id: string }>();
+
+  for (const row of rows.results ?? []) {
+    const list = map.get(row.user_id) ?? [];
+    list.push(row.team_id);
+    map.set(row.user_id, list);
+  }
+  return map;
+}
+
 export async function listEmployees() {
   const { DB } = getEnv();
   const rows = await DB.prepare(
@@ -30,13 +97,17 @@ export async function listEmployees() {
     roles: string | null;
   }>();
 
-  return (rows.results ?? []).map((row) => ({
+  const people = rows.results ?? [];
+  const teamIds = await teamIdsByUser(people.map((row) => row.id));
+
+  return people.map((row) => ({
     ...row,
     roles: row.roles ? row.roles.split(',') : [],
+    teamIds: teamIds.get(row.id) ?? [],
   }));
 }
 
-export async function listDirectory() {
+export async function listDirectory(): Promise<DirectoryPerson[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -57,7 +128,23 @@ export async function listDirectory() {
     phone: string | null;
   }>();
 
-  return rows.results ?? [];
+  const people = rows.results ?? [];
+  const teams = await teamsByUser(people.map((row) => row.id));
+
+  return people.map((row) => ({
+    ...row,
+    teams: teams.get(row.id) ?? [],
+  }));
+}
+
+export function groupDirectoryByTeam(people: DirectoryPerson[]) {
+  const groups = DIRECTORY_TEAMS.map((team) => ({
+    id: team.id,
+    name: team.name,
+    people: people.filter((person) => person.teams.includes(team.name)),
+  }));
+  const unassigned = people.filter((person) => person.teams.length === 0);
+  return { groups, unassigned };
 }
 
 export async function listRoles() {
@@ -198,6 +285,40 @@ export async function updateEmployeeJobTitle(input: {
     targetType: 'user',
     targetId: input.userId,
     metadata: { jobTitle: jobTitle || null },
+  });
+}
+
+export async function updateEmployeeTeams(input: {
+  userId: string;
+  teamIds: string[];
+  actorUserId: string;
+}): Promise<void> {
+  const allowed = new Set<string>(DIRECTORY_TEAMS.map((team) => team.id));
+  const teamIds = Array.from(new Set(input.teamIds.filter((id) => allowed.has(id))));
+  const { DB } = getEnv();
+  const now = nowMs();
+
+  const profile = await DB.prepare(`SELECT user_id FROM employee_profile WHERE user_id = ?`)
+    .bind(input.userId)
+    .first();
+  if (!profile) {
+    throw new Error('Employee profile not found.');
+  }
+
+  const statements = [
+    DB.prepare(`DELETE FROM user_team WHERE user_id = ?`).bind(input.userId),
+    ...teamIds.map((teamId) =>
+      DB.prepare(`INSERT INTO user_team (user_id, team_id) VALUES (?, ?)`).bind(input.userId, teamId),
+    ),
+  ];
+  await DB.batch(statements);
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'employee.teams_changed',
+    targetType: 'user',
+    targetId: input.userId,
+    metadata: { teamIds, at: now },
   });
 }
 

@@ -1,55 +1,123 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import { listDirectory } from '../lib/employees';
+import { groupDirectoryByTeam, listDirectory } from '../lib/employees';
 
 export const prerender = false;
 
 const people = await listDirectory();
+const { groups, unassigned } = groupDirectoryByTeam(people);
 ---
 
 <PortalLayout title="Directory" wide>
   <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Directory</h1>
   <p class="mt-3 max-w-2xl text-sage-dark/75">
-    Update your own name and phone on Account. Job titles are set by management.
+    Update your own name and phone on Account. Job titles and teams are set by management.
   </p>
 
   {
     people.length === 0 ? (
       <p class="mt-10 text-sm text-sage-dark/65">No active employees yet.</p>
     ) : (
-      <div class="mt-10 overflow-x-auto">
-        <table class="min-w-full text-left text-sm">
-          <thead>
-            <tr class="border-b border-sage-dark/15 text-sage-dark/60">
-              <th class="py-2 pr-4 font-medium">Name</th>
-              <th class="py-2 pr-4 font-medium">Job title</th>
-              <th class="py-2 pr-4 font-medium">Email</th>
-              <th class="py-2 font-medium">Phone</th>
-            </tr>
-          </thead>
-          <tbody>
-            {people.map((person) => (
-              <tr class="border-b border-sage-dark/10">
-                <td class="py-3 pr-4 font-medium text-charcoal">{person.name}</td>
-                <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>
-                <td class="py-3 pr-4">
-                  <a class="text-charcoal underline-offset-2 hover:underline" href={`mailto:${person.email}`}>
-                    {person.email}
-                  </a>
-                </td>
-                <td class="py-3">
-                  {person.phone ? (
-                    <a class="text-charcoal underline-offset-2 hover:underline" href={`tel:${person.phone}`}>
-                      {person.phone}
-                    </a>
-                  ) : (
-                    <span class="text-sage-dark/50">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div class="mt-10 space-y-12">
+        {groups.map((group) => (
+          <section aria-labelledby={`team-${group.id}`}>
+            <h2 id={`team-${group.id}`} class="font-display text-3xl text-charcoal">
+              {group.name}
+            </h2>
+            {group.people.length === 0 ? (
+              <p class="mt-3 text-sm text-sage-dark/55">No one assigned yet.</p>
+            ) : (
+              <div class="mt-4 overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-sage-dark/15 text-sage-dark/60">
+                      <th class="py-2 pr-4 font-medium">Name</th>
+                      <th class="py-2 pr-4 font-medium">Job title</th>
+                      <th class="py-2 pr-4 font-medium">Email</th>
+                      <th class="py-2 font-medium">Phone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.people.map((person) => (
+                      <tr class="border-b border-sage-dark/10">
+                        <td class="py-3 pr-4 font-medium text-charcoal">{person.name}</td>
+                        <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>
+                        <td class="py-3 pr-4">
+                          <a
+                            class="text-charcoal underline-offset-2 hover:underline"
+                            href={`mailto:${person.email}`}
+                          >
+                            {person.email}
+                          </a>
+                        </td>
+                        <td class="py-3">
+                          {person.phone ? (
+                            <a
+                              class="text-charcoal underline-offset-2 hover:underline"
+                              href={`tel:${person.phone}`}
+                            >
+                              {person.phone}
+                            </a>
+                          ) : (
+                            <span class="text-sage-dark/50">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ))}
+
+        {unassigned.length > 0 && (
+          <section aria-labelledby="team-unassigned">
+            <h2 id="team-unassigned" class="font-display text-3xl text-charcoal">
+              Unassigned
+            </h2>
+            <div class="mt-4 overflow-x-auto">
+              <table class="min-w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-sage-dark/15 text-sage-dark/60">
+                    <th class="py-2 pr-4 font-medium">Name</th>
+                    <th class="py-2 pr-4 font-medium">Job title</th>
+                    <th class="py-2 pr-4 font-medium">Email</th>
+                    <th class="py-2 font-medium">Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassigned.map((person) => (
+                    <tr class="border-b border-sage-dark/10">
+                      <td class="py-3 pr-4 font-medium text-charcoal">{person.name}</td>
+                      <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>
+                      <td class="py-3 pr-4">
+                        <a
+                          class="text-charcoal underline-offset-2 hover:underline"
+                          href={`mailto:${person.email}`}
+                        >
+                          {person.email}
+                        </a>
+                      </td>
+                      <td class="py-3">
+                        {person.phone ? (
+                          <a
+                            class="text-charcoal underline-offset-2 hover:underline"
+                            href={`tel:${person.phone}`}
+                          >
+                            {person.phone}
+                          </a>
+                        ) : (
+                          <span class="text-sage-dark/50">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </div>
     )
   }

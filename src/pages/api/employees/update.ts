@@ -1,6 +1,11 @@
 import type { APIRoute } from 'astro';
 import { canAccessManagement, hasPermission, isOwnerEmail } from '../../../lib/permissions';
-import { assignRole, setEmployeeStatus, updateEmployeeJobTitle } from '../../../lib/employees';
+import {
+  assignRole,
+  setEmployeeStatus,
+  updateEmployeeJobTitle,
+  updateEmployeeTeams,
+} from '../../../lib/employees';
 import { getEnv } from '../../../lib/env';
 import { formErrorRedirect } from '../../../lib/http';
 
@@ -28,6 +33,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update job title.';
+      return formErrorRedirect('/management', message, 'peopleError');
+    }
+    return new Response(null, { status: 303, headers: { Location: '/management#people' } });
+  }
+
+  if (action === 'teams') {
+    if (!canAccessManagement(actor)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    const teamIds = form
+      .getAll('teamIds')
+      .map((value) => String(value))
+      .filter(Boolean);
+    try {
+      await updateEmployeeTeams({
+        userId,
+        teamIds,
+        actorUserId: actor!.id,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to update teams.';
       return formErrorRedirect('/management', message, 'peopleError');
     }
     return new Response(null, { status: 303, headers: { Location: '/management#people' } });
