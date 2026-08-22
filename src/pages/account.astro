@@ -51,21 +51,12 @@ const error = Astro.url.searchParams.get('error');
 
   <form method="post" action="/api/account/update" class="card mt-6 space-y-4">
     <h2 class="font-display text-2xl text-charcoal">Directory profile</h2>
-    <p class="text-sm text-sage-dark/65">These details appear on the staff Directory.</p>
+    <p class="text-sm text-sage-dark/65">
+      Name and phone appear on the staff Directory. Job titles are set by management.
+    </p>
     <label class="block text-sm font-medium">
       Display name
       <input class="field" type="text" name="name" value={employee.name} required minlength="2" maxlength="80" />
-    </label>
-    <label class="block text-sm font-medium">
-      Job title
-      <input
-        class="field"
-        type="text"
-        name="jobTitle"
-        value={employee.jobTitle ?? ''}
-        maxlength="80"
-        placeholder="e.g. Licensed Clinician"
-      />
     </label>
     <label class="block text-sm font-medium">
       Phone

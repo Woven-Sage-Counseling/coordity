@@ -136,19 +136,14 @@ export async function updateDisplayName(input: {
 export async function updateDirectoryProfile(input: {
   userId: string;
   name: string;
-  jobTitle: string;
   phone: string;
   actorUserId: string;
 }): Promise<void> {
   const name = input.name.trim();
-  const jobTitle = input.jobTitle.trim();
   const phone = input.phone.trim();
 
   if (name.length < 2 || name.length > 80) {
     throw new Error('Name must be between 2 and 80 characters.');
-  }
-  if (jobTitle.length > 80) {
-    throw new Error('Job title must be 80 characters or fewer.');
   }
   if (phone.length > 40) {
     throw new Error('Phone number must be 40 characters or fewer.');
@@ -160,9 +155,9 @@ export async function updateDirectoryProfile(input: {
     DB.prepare(`UPDATE user SET name = ? WHERE id = ?`).bind(name, input.userId),
     DB.prepare(
       `UPDATE employee_profile
-       SET job_title = ?, phone = ?, updated_at = ?
+       SET phone = ?, updated_at = ?
        WHERE user_id = ?`,
-    ).bind(jobTitle || null, phone || null, ts, input.userId),
+    ).bind(phone || null, ts, input.userId),
   ]);
 
   await writeAuditLog({
@@ -170,7 +165,39 @@ export async function updateDirectoryProfile(input: {
     action: 'employee.profile_updated',
     targetType: 'user',
     targetId: input.userId,
-    metadata: { name, jobTitle: jobTitle || null, phone: phone || null },
+    metadata: { name, phone: phone || null },
+  });
+}
+
+export async function updateEmployeeJobTitle(input: {
+  userId: string;
+  jobTitle: string;
+  actorUserId: string;
+}): Promise<void> {
+  const jobTitle = input.jobTitle.trim();
+  if (jobTitle.length > 80) {
+    throw new Error('Job title must be 80 characters or fewer.');
+  }
+
+  const { DB } = getEnv();
+  const result = await DB.prepare(
+    `UPDATE employee_profile
+     SET job_title = ?, updated_at = ?
+     WHERE user_id = ?`,
+  )
+    .bind(jobTitle || null, nowMs(), input.userId)
+    .run();
+
+  if (!result.meta.changes) {
+    throw new Error('Employee profile not found.');
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'employee.job_title_changed',
+    targetType: 'user',
+    targetId: input.userId,
+    metadata: { jobTitle: jobTitle || null },
   });
 }
 

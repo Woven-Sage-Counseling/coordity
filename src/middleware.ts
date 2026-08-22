@@ -79,7 +79,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (pathname.startsWith('/api/employees')) {
-    if (!employee.permissions.includes('employees:manage')) {
+    if (!employee.permissions.includes('employees:manage') && !canAccessManagement(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }
   }

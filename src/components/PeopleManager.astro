@@ -27,8 +27,8 @@ function roleLabel(keys: string[]): string {
   <p class="mt-2 text-sm text-sage-dark/65">
     {
       canManage
-        ? 'Invite people and assign roles. Primary owner stays with admin@wovensage.com.'
-        : 'Registered portal users. Only the primary owner can invite people or change roles.'
+        ? 'Invite people, set job titles, and assign roles. Primary owner stays with admin@wovensage.com.'
+        : 'Set job titles for the Directory. Only the primary owner can invite people or change roles.'
     }
   </p>
 
@@ -83,6 +83,7 @@ function roleLabel(keys: string[]): string {
       <thead>
         <tr class="border-b border-sage-dark/15 text-sage-dark/60">
           <th class="py-2 pr-4 font-medium">Name</th>
+          <th class="py-2 pr-4 font-medium">Job title</th>
           <th class="py-2 pr-4 font-medium">Email</th>
           <th class="py-2 pr-4 font-medium">Role</th>
           <th class="py-2 pr-4 font-medium">Status</th>
@@ -97,8 +98,25 @@ function roleLabel(keys: string[]): string {
               ? assignableRoles(roles, { includePrimaryOwner: true })
               : inviteRoles;
             return (
-              <tr class="border-b border-sage-dark/10">
+              <tr class="border-b border-sage-dark/10 align-top">
                 <td class="py-3 pr-4">{person.name}</td>
+                <td class="py-3 pr-4">
+                  <form method="post" action="/api/employees/update" class="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="userId" value={person.id} />
+                    <input type="hidden" name="action" value="jobTitle" />
+                    <input
+                      class="field !mt-0 !min-w-[10rem] !py-1.5"
+                      type="text"
+                      name="jobTitle"
+                      value={person.jobTitle ?? ''}
+                      maxlength="80"
+                      placeholder="Job title"
+                    />
+                    <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                      Save
+                    </button>
+                  </form>
+                </td>
                 <td class="py-3 pr-4">{person.email}</td>
                 <td class="py-3 pr-4">{roleLabel(person.roles)}</td>
                 <td class="py-3 pr-4 capitalize">{person.status}</td>

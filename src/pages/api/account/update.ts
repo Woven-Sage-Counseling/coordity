@@ -12,14 +12,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const form = await request.formData();
   const name = String(form.get('name') ?? '');
-  const jobTitle = String(form.get('jobTitle') ?? '');
   const phone = String(form.get('phone') ?? '');
 
   try {
     await updateDirectoryProfile({
       userId: actor.id,
       name,
-      jobTitle,
       phone,
       actorUserId: actor.id,
     });
