@@ -1,6 +1,7 @@
 import { getEnv } from './env';
 import { randomToken, nowMs } from './crypto';
 import { writeAuditLog } from './audit';
+import { notifyActiveUsers } from './notifications';
 
 export interface Announcement {
   id: string;
@@ -170,12 +171,22 @@ export async function createAnnouncement(input: {
     .bind(input.actorUserId)
     .first<{ name: string }>();
 
+  const authorName = author?.name ?? 'Unknown';
+
+  await notifyActiveUsers({
+    title: 'New announcement',
+    body: `${authorName}: ${input.title}`,
+    excludeUserId: input.actorUserId,
+    sourceType: 'announcement',
+    sourceId: id,
+  });
+
   return {
     id,
     title: input.title,
     body: input.body,
     createdBy: input.actorUserId,
-    authorName: author?.name ?? 'Unknown',
+    authorName,
     createdAt,
     unread: false,
   };

@@ -4,7 +4,8 @@ import AppCard from '../components/AppCard.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
 import FinancialSnapshotCard from '../components/FinancialSnapshotCard.astro';
 import { appCategories, portalApps } from '../lib/apps';
-import { listAnnouncementsForUser } from '../lib/announcements';
+import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
+import { listNotificationsForUser, countUnreadNotifications } from '../lib/notifications';
 import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
@@ -14,6 +15,9 @@ const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permi
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const announcements = await listAnnouncementsForUser(employee.id);
+const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
+const notifications = await listNotificationsForUser(employee.id);
+const notificationUnreadCount = await countUnreadNotifications(employee.id);
 ---
 
 <PortalLayout title="Home" wide>
@@ -35,7 +39,13 @@ const announcements = await listAnnouncementsForUser(employee.id);
       <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Employee home</p>
       <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
 
-      <AnnouncementsPanel announcements={announcements} canManage={false} />
+      <AnnouncementsPanel
+        announcements={announcements}
+        announcementUnreadCount={announcementUnreadCount}
+        notifications={notifications}
+        notificationUnreadCount={notificationUnreadCount}
+        canManage={false}
+      />
 
       {
         appCategories.map((category) => {

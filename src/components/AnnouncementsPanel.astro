@@ -1,15 +1,28 @@
 ---
 import type { Announcement } from '../lib/announcements';
 import { formatAnnouncementDate } from '../lib/announcements';
+import type { PortalNotification } from '../lib/notifications';
 
 interface Props {
   announcements: Announcement[];
+  announcementUnreadCount: number;
+  notifications: PortalNotification[];
+  notificationUnreadCount: number;
   canManage: boolean;
   error?: string | null;
 }
 
-const { announcements, canManage, error = null } = Astro.props;
+const {
+  announcements,
+  announcementUnreadCount,
+  notifications,
+  notificationUnreadCount,
+  canManage,
+  error = null,
+} = Astro.props;
 const latest = announcements[0] ?? null;
+const hasAnnouncementUnread = announcementUnreadCount > 0;
+const hasNotificationUnread = notificationUnreadCount > 0;
 ---
 
 <section class="relative mt-10" aria-labelledby="feed-heading" data-feed-panel>
@@ -33,10 +46,20 @@ const latest = announcements[0] ?? null;
           id="tab-announcements"
           aria-controls="panel-announcements"
           aria-selected="true"
-          class="relative z-10 rounded-full px-3.5 py-1.5 text-sm font-semibold text-charcoal transition-colors duration-300"
+          class="relative z-10 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-charcoal transition-colors duration-300"
           data-feed-tab="announcements"
         >
           Announcements
+          {
+            hasAnnouncementUnread && (
+              <span
+                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+                data-unread-badge="announcements"
+              >
+                {announcementUnreadCount > 9 ? '9+' : announcementUnreadCount}
+              </span>
+            )
+          }
         </button>
         <button
           type="button"
@@ -44,10 +67,20 @@ const latest = announcements[0] ?? null;
           id="tab-notifications"
           aria-controls="panel-notifications"
           aria-selected="false"
-          class="relative z-10 rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70 transition-colors duration-300"
+          class="relative z-10 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70 transition-colors duration-300"
           data-feed-tab="notifications"
         >
           Notifications
+          {
+            hasNotificationUnread && (
+              <span
+                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+                data-unread-badge="notifications"
+              >
+                {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+              </span>
+            )
+          }
         </button>
       </div>
       <p class="text-[11px] text-sage-dark/60" data-feed-status>
@@ -93,11 +126,50 @@ const latest = announcements[0] ?? null;
         id="panel-notifications"
         role="tabpanel"
         aria-labelledby="tab-notifications"
-        class="hidden px-5 py-4 sm:px-6"
+        class="hidden"
         data-feed-panel-view="notifications"
         hidden
       >
-        <p class="text-sm text-sage-dark/70">No notifications right now.</p>
+        {
+          notifications.length === 0 ? (
+            <p class="px-5 py-4 text-sm text-sage-dark/70 sm:px-6">No notifications right now.</p>
+          ) : (
+            <ul class="max-h-80 overflow-y-auto">
+              {notifications.map((item) => (
+                <li
+                  class:list={[
+                    'border-b border-black/[0.05] px-5 py-3 last:border-0 sm:px-6',
+                    item.unread && 'bg-white/40',
+                  ]}
+                  data-notification-item
+                >
+                  <div class="flex items-start gap-2">
+                    {item.unread ? (
+                      <span
+                        class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500"
+                        aria-hidden="true"
+                        data-unread-dot
+                      ></span>
+                    ) : (
+                      <span
+                        class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-transparent"
+                        aria-hidden="true"
+                        data-unread-dot
+                      ></span>
+                    )}
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-charcoal">{item.title}</p>
+                      <p class="mt-0.5 text-[11px] text-sage-dark/55">
+                        {formatAnnouncementDate(item.createdAt)}
+                      </p>
+                      <p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        }
       </div>
     </div>
   </div>
@@ -179,6 +251,8 @@ const latest = announcements[0] ?? null;
     }
 
     let active: 'announcements' | 'notifications' = 'announcements';
+    let announcementsMarked = false;
+    let notificationsMarked = false;
 
     const setTabStyles = (tab: Element, selected: boolean) => {
       tab.setAttribute('aria-selected', selected ? 'true' : 'false');
@@ -201,6 +275,49 @@ const latest = announcements[0] ?? null;
       slider.style.transform = `translateX(${offset}px)`;
     };
 
+    const clearBadge = (key: 'announcements' | 'notifications') => {
+      root.querySelector(`[data-unread-badge="${key}"]`)?.remove();
+      requestAnimationFrame(() => moveSlider(active));
+    };
+
+    const markAnnouncementsRead = async () => {
+      if (announcementsMarked) return;
+      announcementsMarked = true;
+      try {
+        await fetch('/api/announcements/mark-read', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        clearBadge('announcements');
+      } catch {
+        announcementsMarked = false;
+      }
+    };
+
+    const markNotificationsRead = async () => {
+      if (notificationsMarked) return;
+      notificationsMarked = true;
+      try {
+        await fetch('/api/notifications/mark-read', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        clearBadge('notifications');
+        root.querySelectorAll('[data-notification-item]').forEach((el) => el.classList.remove('bg-white/40'));
+        root.querySelectorAll('[data-unread-dot]').forEach((el) => {
+          el.classList.remove('bg-red-500');
+          el.classList.add('bg-transparent');
+        });
+        if (status && active === 'notifications') {
+          status.textContent = 'You are caught up';
+        }
+      } catch {
+        notificationsMarked = false;
+      }
+    };
+
     const setActive = (next: 'announcements' | 'notifications') => {
       active = next;
       const showAnnouncements = next === 'announcements';
@@ -214,9 +331,12 @@ const latest = announcements[0] ?? null;
       moveSlider(next);
       if (status instanceof HTMLElement) {
         if (next === 'notifications') {
-          status.textContent = 'You are caught up';
+          const badge = root.querySelector('[data-unread-badge="notifications"]');
+          status.textContent = badge ? `${badge.textContent?.trim() ?? ''} new` : 'You are caught up';
+          void markNotificationsRead();
         } else {
           status.textContent = status.dataset.announcementsStatus ?? status.textContent;
+          void markAnnouncementsRead();
         }
       }
     };
@@ -234,6 +354,7 @@ const latest = announcements[0] ?? null;
     });
 
     moveSlider('announcements');
+    void markAnnouncementsRead();
     window.addEventListener('resize', () => moveSlider(active));
   }
 
