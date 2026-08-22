@@ -47,7 +47,7 @@ const unreadCount = await countUnreadAnnouncements(employee.id);
               <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
                 {category.title}
               </h2>
-              <div class="mt-5 flex flex-wrap gap-x-8 gap-y-6">
+              <div class="mt-5 flex flex-wrap gap-x-8 gap-y-3">
                 {apps.map((app) => (
                   <AppCard app={app} />
                 ))}
