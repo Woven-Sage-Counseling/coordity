@@ -250,13 +250,10 @@ export async function updateDirectoryProfile(input: {
   }
 
   if (input.phone !== undefined) {
-    const phone = input.phone.trim();
-    if (phone.length > 40) {
-      throw new Error('Phone number must be 40 characters or fewer.');
-    }
+    const phone = formatPhoneNumber(input.phone);
     updates.push('phone = ?');
-    values.push(phone || null);
-    metadata.phone = phone || null;
+    values.push(phone);
+    metadata.phone = phone;
   }
 
   if (updates.length > 0) {
@@ -278,6 +275,24 @@ export async function updateDirectoryProfile(input: {
     targetId: input.userId,
     metadata,
   });
+}
+
+/** Normalize to (XXX) XXX-XXXX when possible; blank clears the field. */
+export function formatPhoneNumber(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const digits = trimmed.replace(/\D/g, '');
+  let national = digits;
+  if (national.length === 11 && national.startsWith('1')) {
+    national = national.slice(1);
+  }
+
+  if (national.length !== 10) {
+    throw new Error('Enter a 10-digit US phone number.');
+  }
+
+  return `(${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`;
 }
 
 export async function updateEmployeeAvatar(input: {

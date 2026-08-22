@@ -42,17 +42,42 @@ const canSeeManagement = canAccessManagement(employee);
                 Employee portal
               </span>
             </a>
-            <nav class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
+            <nav class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-sm">
               <a href="/" class="text-sage-dark/80 hover:text-sage-dark">Home</a>
               <a href="/apps" class="text-sage-dark/80 hover:text-sage-dark">Applications</a>
               <a href="/directory" class="text-sage-dark/80 hover:text-sage-dark">Directory</a>
               <a href="/resources" class="text-sage-dark/80 hover:text-sage-dark">Resources</a>
-              {canSeeFinancials && (
-                <a href="/financials" class="text-sage-dark/80 hover:text-sage-dark">Financials</a>
-              )}
-              {canSeeManagement && (
-                <a href="/management" class="text-sage-dark/80 hover:text-sage-dark">Management</a>
-              )}
+              <div
+                class="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-sage/25 px-3 py-1 ring-1 ring-sage-dark/15"
+                aria-label="Special access"
+              >
+                {canSeeFinancials ? (
+                  <a href="/financials" class="font-medium text-sage-dark hover:text-charcoal">
+                    Financials
+                  </a>
+                ) : (
+                  <span
+                    class="cursor-not-allowed font-medium text-sage-dark/40"
+                    title="Requires financial access"
+                    aria-disabled="true"
+                  >
+                    Financials
+                  </span>
+                )}
+                {canSeeManagement ? (
+                  <a href="/management" class="font-medium text-sage-dark hover:text-charcoal">
+                    Management
+                  </a>
+                ) : (
+                  <span
+                    class="cursor-not-allowed font-medium text-sage-dark/40"
+                    title="Requires management access"
+                    aria-disabled="true"
+                  >
+                    Management
+                  </span>
+                )}
+              </div>
               <a href="/account" class="text-sage-dark/80 hover:text-sage-dark">Account</a>
             </nav>
           </div>
