@@ -207,12 +207,13 @@ const latest = announcements[0] ?? null;
 <script>
   function setupFeedPanel(root: Element) {
     const tabs = Array.from(root.querySelectorAll('[data-feed-tab]'));
-    const views = {
-      announcements: root.querySelector('[data-feed-panel-view="announcements"]'),
-      notifications: root.querySelector('[data-feed-panel-view="notifications"]'),
-    } as const;
+    const announcementsView = root.querySelector('[data-feed-panel-view="announcements"]');
+    const notificationsView = root.querySelector('[data-feed-panel-view="notifications"]');
     const status = root.querySelector('[data-feed-status]');
-    if (!(views.announcements instanceof HTMLElement) || !(views.notifications instanceof HTMLElement)) {
+    if (
+      !(announcementsView instanceof HTMLElement) ||
+      !(notificationsView instanceof HTMLElement)
+    ) {
       return;
     }
 
@@ -261,11 +262,11 @@ const latest = announcements[0] ?? null;
 
     const setActive = (next: 'announcements' | 'notifications') => {
       active = next;
-      for (const [key, view] of Object.entries(views)) {
-        const show = key === next;
-        view.hidden = !show;
-        view.classList.toggle('hidden', !show);
-      }
+      const showAnnouncements = next === 'announcements';
+      announcementsView.hidden = !showAnnouncements;
+      announcementsView.classList.toggle('hidden', !showAnnouncements);
+      notificationsView.hidden = showAnnouncements;
+      notificationsView.classList.toggle('hidden', showAnnouncements);
       tabs.forEach((tab) => {
         setTabStyles(tab, tab.getAttribute('data-feed-tab') === next);
       });
