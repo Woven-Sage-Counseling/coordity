@@ -1,11 +1,11 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import { hasPermission } from '../lib/permissions';
+import { canAccessManagement } from '../lib/permissions';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
-const canManageEmployees = hasPermission(employee, 'employees:manage');
+const canSeeManagement = canAccessManagement(employee);
 const error = Astro.url.searchParams.get('error');
 ---
 
@@ -22,8 +22,16 @@ const error = Astro.url.searchParams.get('error');
       <dd class="mt-1 text-charcoal">{employee.name}</dd>
     </div>
     <div>
+      <dt class="text-sage-dark/60">Job title</dt>
+      <dd class="mt-1 text-charcoal">{employee.jobTitle || '—'}</dd>
+    </div>
+    <div>
       <dt class="text-sage-dark/60">Email</dt>
       <dd class="mt-1 text-charcoal">{employee.email}</dd>
+    </div>
+    <div>
+      <dt class="text-sage-dark/60">Phone</dt>
+      <dd class="mt-1 text-charcoal">{employee.phone || '—'}</dd>
     </div>
     <div>
       <dt class="text-sage-dark/60">Roles</dt>
@@ -42,20 +50,43 @@ const error = Astro.url.searchParams.get('error');
   </dl>
 
   <form method="post" action="/api/account/update" class="card mt-6 space-y-4">
-    <h2 class="font-display text-2xl text-charcoal">Update name</h2>
+    <h2 class="font-display text-2xl text-charcoal">Directory profile</h2>
+    <p class="text-sm text-sage-dark/65">These details appear on the staff Directory.</p>
     <label class="block text-sm font-medium">
       Display name
       <input class="field" type="text" name="name" value={employee.name} required minlength="2" maxlength="80" />
     </label>
-    <button class="btn-primary" type="submit">Save name</button>
+    <label class="block text-sm font-medium">
+      Job title
+      <input
+        class="field"
+        type="text"
+        name="jobTitle"
+        value={employee.jobTitle ?? ''}
+        maxlength="80"
+        placeholder="e.g. Licensed Clinician"
+      />
+    </label>
+    <label class="block text-sm font-medium">
+      Phone
+      <input
+        class="field"
+        type="tel"
+        name="phone"
+        value={employee.phone ?? ''}
+        maxlength="40"
+        placeholder="e.g. (555) 123-4567"
+      />
+    </label>
+    <button class="btn-primary" type="submit">Save profile</button>
   </form>
 
   {
-    canManageEmployees && (
-      <a href="/admin/employees" class="card mt-6 block hover:border-sage-dark/25">
+    canSeeManagement && (
+      <a href="/management#people" class="card mt-6 block hover:border-sage-dark/25">
         <h2 class="font-display text-2xl text-charcoal">People and roles</h2>
         <p class="mt-2 text-sm text-sage-dark/70">
-          Invite people and assign roles. Use Owner for view-only access, including your mom.
+          Invite people and assign roles from Management.
         </p>
       </a>
     )

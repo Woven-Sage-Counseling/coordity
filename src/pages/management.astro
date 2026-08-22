@@ -1,6 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AnnouncementManager from '../components/AnnouncementManager.astro';
+import PeopleManager from '../components/PeopleManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import { listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
@@ -16,15 +17,19 @@ if (!canAccessManagement(employee)) {
 const announcements = await listActiveAnnouncements(50);
 const roles = await listRolesWithPermissions();
 const error = Astro.url.searchParams.get('error');
+const inviteUrl = Astro.url.searchParams.get('inviteUrl');
+const peopleError = Astro.url.searchParams.get('peopleError');
 ---
 
 <PortalLayout title="Management" wide>
   <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Management</h1>
   <p class="mt-3 max-w-2xl text-sage-dark/75">
-    Post announcements and review portal roles. People invites stay on the People page.
+    Post announcements, manage people, and review portal roles.
   </p>
 
   <AnnouncementManager announcements={announcements} error={error} />
+
+  <PeopleManager error={peopleError} inviteUrl={inviteUrl} />
 
   <section class="mt-14" aria-labelledby="roles-heading">
     <h2 id="roles-heading" class="font-display text-3xl text-charcoal">Roles and permissions</h2>

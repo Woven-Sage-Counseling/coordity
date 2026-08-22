@@ -11,8 +11,6 @@ interface Props {
 const { title, wide = false } = Astro.props;
 const employee = Astro.locals.employee;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
-const canSeePeople =
-  hasPermission(employee, 'employees:view') || hasPermission(employee, 'employees:manage');
 const canSeeManagement = canAccessManagement(employee);
 ---
 
@@ -47,12 +45,10 @@ const canSeeManagement = canAccessManagement(employee);
             <nav class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
               <a href="/" class="text-sage-dark/80 hover:text-sage-dark">Home</a>
               <a href="/apps" class="text-sage-dark/80 hover:text-sage-dark">Applications</a>
+              <a href="/directory" class="text-sage-dark/80 hover:text-sage-dark">Directory</a>
               <a href="/resources" class="text-sage-dark/80 hover:text-sage-dark">Resources</a>
               {canSeeFinancials && (
                 <a href="/financials" class="text-sage-dark/80 hover:text-sage-dark">Financials</a>
-              )}
-              {canSeePeople && (
-                <a href="/admin/employees" class="text-sage-dark/80 hover:text-sage-dark">People</a>
               )}
               {canSeeManagement && (
                 <a href="/management" class="text-sage-dark/80 hover:text-sage-dark">Management</a>

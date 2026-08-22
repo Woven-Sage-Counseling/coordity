@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { updateDisplayName } from '../../../lib/employees';
+import { updateDirectoryProfile } from '../../../lib/employees';
 import { formErrorRedirect } from '../../../lib/http';
 
 export const prerender = false;
@@ -12,11 +12,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const form = await request.formData();
   const name = String(form.get('name') ?? '');
+  const jobTitle = String(form.get('jobTitle') ?? '');
+  const phone = String(form.get('phone') ?? '');
 
   try {
-    await updateDisplayName({ userId: actor.id, name, actorUserId: actor.id });
+    await updateDirectoryProfile({
+      userId: actor.id,
+      name,
+      jobTitle,
+      phone,
+      actorUserId: actor.id,
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unable to update name.';
+    const message = error instanceof Error ? error.message : 'Unable to update profile.';
     return formErrorRedirect('/account', message);
   }
 

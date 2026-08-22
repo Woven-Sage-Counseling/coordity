@@ -19,13 +19,26 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
   const { DB } = getEnv();
 
   const profile = await DB.prepare(
-    `SELECT u.id, u.email, u.name, COALESCE(p.status, 'pending') AS status
+    `SELECT
+        u.id,
+        u.email,
+        u.name,
+        COALESCE(p.status, 'pending') AS status,
+        p.job_title,
+        p.phone
      FROM user u
      LEFT JOIN employee_profile p ON p.user_id = u.id
      WHERE u.id = ?`,
   )
     .bind(userId)
-    .first<{ id: string; email: string; name: string; status: PortalEmployee['status'] }>();
+    .first<{
+      id: string;
+      email: string;
+      name: string;
+      status: PortalEmployee['status'];
+      job_title: string | null;
+      phone: string | null;
+    }>();
 
   if (!profile) return null;
 
@@ -55,6 +68,8 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     id: profile.id,
     email: profile.email,
     name: profile.name,
+    jobTitle: profile.job_title,
+    phone: profile.phone,
     status: isOwnerEmail(profile.email) ? 'active' : profile.status,
     roles: isOwnerEmail(profile.email)
       ? Array.from(new Set(['owner', ...(roles.results ?? []).map((row) => row.key)]))

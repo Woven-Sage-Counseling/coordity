@@ -17,7 +17,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const action = String(form.get('action') ?? '');
 
   if (!userId) {
-    return formErrorRedirect('/admin/employees', 'Missing employee.');
+    return formErrorRedirect('/management', 'Missing employee.', 'peopleError');
   }
 
   if (action === 'role') {
@@ -27,32 +27,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .bind(userId)
       .first<{ email: string }>();
     if (target && isOwnerEmail(target.email) && roleId !== 'role_owner') {
-      return formErrorRedirect('/admin/employees', 'The primary owner account cannot change roles.');
+      return formErrorRedirect(
+        '/management',
+        'The primary owner account cannot change roles.',
+        'peopleError',
+      );
     }
     if ((!target || !isOwnerEmail(target.email)) && roleId === 'role_owner') {
       return formErrorRedirect(
-        '/admin/employees',
+        '/management',
         'Primary owner is reserved for admin@wovensage.com. Use Owner for view-only access.',
+        'peopleError',
       );
     }
     await assignRole({ userId, roleId, actorUserId: actor!.id });
   } else if (action === 'disable') {
     if (userId === actor!.id) {
-      return formErrorRedirect('/admin/employees', 'You cannot disable your own account.');
+      return formErrorRedirect('/management', 'You cannot disable your own account.', 'peopleError');
     }
     const target = await getEnv()
       .DB.prepare(`SELECT email FROM user WHERE id = ?`)
       .bind(userId)
       .first<{ email: string }>();
     if (target && isOwnerEmail(target.email)) {
-      return formErrorRedirect('/admin/employees', 'The owner account cannot be disabled.');
+      return formErrorRedirect('/management', 'The owner account cannot be disabled.', 'peopleError');
     }
     await setEmployeeStatus({ userId, status: 'disabled', actorUserId: actor!.id });
   } else if (action === 'enable') {
     await setEmployeeStatus({ userId, status: 'active', actorUserId: actor!.id });
   } else {
-    return formErrorRedirect('/admin/employees', 'Unknown action.');
+    return formErrorRedirect('/management', 'Unknown action.', 'peopleError');
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/admin/employees' } });
+  return new Response(null, { status: 303, headers: { Location: '/management#people' } });
 };

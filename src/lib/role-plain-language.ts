@@ -9,7 +9,7 @@ export const permissionPlainLanguage: Record<string, string> = {
   'apps:management': 'Can open business tools (like Quo and Dropbox Fax)',
   'financials:view': 'Can view the financial dashboard and cash numbers',
   'financials:manage': 'Can connect QuickBooks and sync financial data',
-  'employees:view': 'Can see the People list and who has which role',
+  'employees:view': 'Can see staff roles on the Management people list',
   'employees:manage': 'Can invite people, change roles, and disable accounts',
 };
 
@@ -29,7 +29,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
     can: [
       'Sign in and use clinical, billing, and business tools',
       'View financials',
-      'View the People list',
+      'Open Management and the staff Directory',
       'Post and remove announcements',
     ],
     cannot: [
@@ -42,7 +42,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
     can: [
       'Sign in and open clinical and billing apps',
       'View the financial dashboard',
-      'Open Resources',
+      'Open Resources and the staff Directory',
     ],
     cannot: [
       'Manage people',
@@ -55,7 +55,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
     can: [
       'Sign in and open clinical and billing apps',
       'Open business tools like Quo and Dropbox Fax',
-      'Open Resources',
+      'Open Resources and the staff Directory',
     ],
     cannot: [
       'View financials',
@@ -68,7 +68,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
     can: [
       'Sign in',
       'Open clinical and billing apps',
-      'Open Resources',
+      'Open Resources and the staff Directory',
     ],
     cannot: [
       'View financials',
@@ -80,7 +80,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
     summary: 'General staff access without clinical systems.',
     can: [
       'Sign in',
-      'Open Resources',
+      'Open Resources and the staff Directory',
       'Update their own profile',
     ],
     cannot: [
@@ -94,7 +94,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
     can: [
       'Sign in',
       'Open clinical and billing apps',
-      'Open Resources',
+      'Open Resources and the staff Directory',
     ],
     cannot: [
       'View financials',

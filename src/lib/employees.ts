@@ -11,18 +11,22 @@ export async function listEmployees() {
         u.email,
         u.name,
         COALESCE(p.status, 'pending') AS status,
+        p.job_title AS jobTitle,
+        p.phone,
         GROUP_CONCAT(r.key) AS roles
      FROM user u
      LEFT JOIN employee_profile p ON p.user_id = u.id
      LEFT JOIN user_role ur ON ur.user_id = u.id
      LEFT JOIN role r ON r.id = ur.role_id
      GROUP BY u.id
-     ORDER BY u.email`,
+     ORDER BY u.name COLLATE NOCASE, u.email`,
   ).all<{
     id: string;
     email: string;
     name: string;
     status: string;
+    jobTitle: string | null;
+    phone: string | null;
     roles: string | null;
   }>();
 
@@ -30,6 +34,30 @@ export async function listEmployees() {
     ...row,
     roles: row.roles ? row.roles.split(',') : [],
   }));
+}
+
+export async function listDirectory() {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT
+        u.id,
+        u.name,
+        u.email,
+        p.job_title AS jobTitle,
+        p.phone
+     FROM user u
+     JOIN employee_profile p ON p.user_id = u.id
+     WHERE p.status = 'active'
+     ORDER BY u.name COLLATE NOCASE, u.email`,
+  ).all<{
+    id: string;
+    name: string;
+    email: string;
+    jobTitle: string | null;
+    phone: string | null;
+  }>();
+
+  return rows.results ?? [];
 }
 
 export async function listRoles() {
@@ -102,6 +130,47 @@ export async function updateDisplayName(input: {
     targetType: 'user',
     targetId: input.userId,
     metadata: { name },
+  });
+}
+
+export async function updateDirectoryProfile(input: {
+  userId: string;
+  name: string;
+  jobTitle: string;
+  phone: string;
+  actorUserId: string;
+}): Promise<void> {
+  const name = input.name.trim();
+  const jobTitle = input.jobTitle.trim();
+  const phone = input.phone.trim();
+
+  if (name.length < 2 || name.length > 80) {
+    throw new Error('Name must be between 2 and 80 characters.');
+  }
+  if (jobTitle.length > 80) {
+    throw new Error('Job title must be 80 characters or fewer.');
+  }
+  if (phone.length > 40) {
+    throw new Error('Phone number must be 40 characters or fewer.');
+  }
+
+  const { DB } = getEnv();
+  const ts = nowMs();
+  await DB.batch([
+    DB.prepare(`UPDATE user SET name = ? WHERE id = ?`).bind(name, input.userId),
+    DB.prepare(
+      `UPDATE employee_profile
+       SET job_title = ?, phone = ?, updated_at = ?
+       WHERE user_id = ?`,
+    ).bind(jobTitle || null, phone || null, ts, input.userId),
+  ]);
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'employee.profile_updated',
+    targetType: 'user',
+    targetId: input.userId,
+    metadata: { name, jobTitle: jobTitle || null, phone: phone || null },
   });
 }
 

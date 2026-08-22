@@ -17,6 +17,8 @@ interface PortalEmployee {
   id: string;
   email: string;
   name: string;
+  jobTitle: string | null;
+  phone: string | null;
   status: 'pending' | 'active' | 'disabled';
   roles: string[];
   permissions: PortalPermission[];

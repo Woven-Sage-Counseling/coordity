@@ -1,0 +1,169 @@
+---
+import { assignableRoles, listEmployees, listRoles } from '../lib/employees';
+import { listPendingInvites } from '../lib/invites';
+import { hasPermission, isOwnerEmail } from '../lib/permissions';
+
+interface Props {
+  error?: string | null;
+  inviteUrl?: string | null;
+}
+
+const { error = null, inviteUrl = null } = Astro.props;
+const employee = Astro.locals.employee!;
+const canManage = hasPermission(employee, 'employees:manage');
+const people = await listEmployees();
+const roles = await listRoles();
+const inviteRoles = assignableRoles(roles);
+const invites = canManage ? await listPendingInvites() : [];
+
+function roleLabel(keys: string[]): string {
+  const names = keys.map((key) => roles.find((role) => role.key === key)?.name ?? key);
+  return names.filter(Boolean).join(', ') || '—';
+}
+---
+
+<section class="mt-14" aria-labelledby="people-heading" id="people">
+  <h2 id="people-heading" class="font-display text-3xl text-charcoal">People</h2>
+  <p class="mt-2 text-sm text-sage-dark/65">
+    {
+      canManage
+        ? 'Invite people and assign roles. Primary owner stays with admin@wovensage.com.'
+        : 'Registered portal users. Only the primary owner can invite people or change roles.'
+    }
+  </p>
+
+  {
+    error && (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    )
+  }
+  {
+    inviteUrl && (
+      <p class="mt-4 break-all rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm">
+        Invite link (send this privately — email delivery is not connected yet):
+        <br />
+        <a class="underline" href={inviteUrl}>
+          {inviteUrl}
+        </a>
+      </p>
+    )
+  }
+
+  {
+    canManage && (
+      <form method="post" action="/api/employees/invite" class="card mt-6 grid gap-4 sm:grid-cols-2">
+        <h3 class="font-display text-2xl sm:col-span-2">Invite employee</h3>
+        <label class="text-sm font-medium">
+          Name
+          <input class="field" type="text" name="name" required />
+        </label>
+        <label class="text-sm font-medium">
+          Email
+          <input class="field" type="email" name="email" required />
+        </label>
+        <label class="text-sm font-medium sm:col-span-2">
+          Role
+          <select class="field" name="roleId" required>
+            {inviteRoles.map((role) => (
+              <option value={role.id} selected={role.key === 'clinician'}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button class="btn-primary sm:col-span-2 w-fit" type="submit">
+          Send invite
+        </button>
+      </form>
+    )
+  }
+
+  <div class="mt-8 overflow-x-auto">
+    <table class="min-w-full text-left text-sm">
+      <thead>
+        <tr class="border-b border-sage-dark/15 text-sage-dark/60">
+          <th class="py-2 pr-4 font-medium">Name</th>
+          <th class="py-2 pr-4 font-medium">Email</th>
+          <th class="py-2 pr-4 font-medium">Role</th>
+          <th class="py-2 pr-4 font-medium">Status</th>
+          {canManage ? <th class="py-2 font-medium">Actions</th> : null}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          people.map((person) => {
+            const primary = isOwnerEmail(person.email);
+            const personRoles = primary
+              ? assignableRoles(roles, { includePrimaryOwner: true })
+              : inviteRoles;
+            return (
+              <tr class="border-b border-sage-dark/10">
+                <td class="py-3 pr-4">{person.name}</td>
+                <td class="py-3 pr-4">{person.email}</td>
+                <td class="py-3 pr-4">{roleLabel(person.roles)}</td>
+                <td class="py-3 pr-4 capitalize">{person.status}</td>
+                {canManage ? (
+                  <td class="py-3">
+                    <div class="flex flex-wrap gap-2">
+                      {primary ? (
+                        <p class="text-sage-dark/60">Primary owner</p>
+                      ) : (
+                        <form method="post" action="/api/employees/update">
+                          <input type="hidden" name="userId" value={person.id} />
+                          <input type="hidden" name="action" value="role" />
+                          <select class="field !mt-0 !py-1.5" name="roleId">
+                            {personRoles.map((role) => (
+                              <option value={role.id} selected={person.roles.includes(role.key)}>
+                                {role.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button class="btn-secondary ml-2 !px-3 !py-1.5" type="submit">
+                            Update role
+                          </button>
+                        </form>
+                      )}
+                      {!primary && person.status !== 'disabled' && person.id !== employee.id && (
+                        <form method="post" action="/api/employees/update">
+                          <input type="hidden" name="userId" value={person.id} />
+                          <input type="hidden" name="action" value="disable" />
+                          <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                            Disable
+                          </button>
+                        </form>
+                      )}
+                      {!primary && person.status === 'disabled' && (
+                        <form method="post" action="/api/employees/update">
+                          <input type="hidden" name="userId" value={person.id} />
+                          <input type="hidden" name="action" value="enable" />
+                          <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                            Reactivate
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </td>
+                ) : null}
+              </tr>
+            );
+          })
+        }
+      </tbody>
+    </table>
+  </div>
+
+  {
+    invites.length > 0 && (
+      <div class="mt-8">
+        <h3 class="font-display text-2xl text-charcoal">Pending invites</h3>
+        <ul class="mt-4 space-y-2 text-sm">
+          {invites.map((invite) => (
+            <li class="card">
+              {invite.name} · {invite.email} · {invite.role_name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+</section>
