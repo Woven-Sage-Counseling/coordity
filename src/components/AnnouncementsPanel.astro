@@ -4,13 +4,11 @@ import { formatAnnouncementDate } from '../lib/announcements';
 
 interface Props {
   announcements: Announcement[];
-  unreadCount: number;
   canManage: boolean;
   error?: string | null;
 }
 
-const { announcements, unreadCount, canManage, error = null } = Astro.props;
-const hasUnread = unreadCount > 0;
+const { announcements, canManage, error = null } = Astro.props;
 const latest = announcements[0] ?? null;
 ---
 
@@ -19,17 +17,23 @@ const latest = announcements[0] ?? null;
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] px-4 py-3 sm:px-5">
       <h2 id="feed-heading" class="sr-only">Announcements and notifications</h2>
       <div
-        class="inline-flex rounded-full bg-black/[0.06] p-1"
+        class="relative inline-flex rounded-full bg-black/[0.06] p-1"
         role="tablist"
         aria-label="Feed view"
+        data-feed-tablist
       >
+        <span
+          class="pointer-events-none absolute top-1 bottom-1 left-0 rounded-full bg-white shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+          data-feed-slider
+          aria-hidden="true"
+        ></span>
         <button
           type="button"
           role="tab"
           id="tab-announcements"
           aria-controls="panel-announcements"
           aria-selected="true"
-          class="rounded-full px-3.5 py-1.5 text-sm font-semibold text-charcoal transition"
+          class="relative z-10 rounded-full px-3.5 py-1.5 text-sm font-semibold text-charcoal transition-colors duration-300"
           data-feed-tab="announcements"
         >
           Announcements
@@ -40,20 +44,10 @@ const latest = announcements[0] ?? null;
           id="tab-notifications"
           aria-controls="panel-notifications"
           aria-selected="false"
-          class="relative rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70 transition"
+          class="relative z-10 rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70 transition-colors duration-300"
           data-feed-tab="notifications"
         >
           Notifications
-          {
-            hasUnread && (
-              <span
-                class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2CA01C] px-1 text-[10px] font-bold text-white"
-                data-unread-badge
-              >
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )
-          }
         </button>
       </div>
       <p class="text-[11px] text-sage-dark/60" data-feed-status>
@@ -63,85 +57,48 @@ const latest = announcements[0] ?? null;
       </p>
     </div>
 
-    <div
-      id="panel-announcements"
-      role="tabpanel"
-      aria-labelledby="tab-announcements"
-      class="px-5 py-4 sm:px-6"
-      data-feed-panel-view="announcements"
-    >
-      {
-        latest ? (
-          <div class="min-w-0">
-            <p class="truncate text-[15px] font-medium text-charcoal">{latest.title}</p>
-            <p class="mt-1 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{latest.body}</p>
-            {announcements.length > 1 && (
-              <ul class="mt-4 space-y-3 border-t border-black/[0.06] pt-4">
-                {announcements.slice(1, 4).map((item) => (
-                  <li class="min-w-0">
-                    <p class="truncate text-sm font-medium text-charcoal">{item.title}</p>
-                    <p class="mt-0.5 line-clamp-1 text-xs text-sage-dark/70">
-                      {item.authorName} · {formatAnnouncementDate(item.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-          <p class="text-sm text-sage-dark/75">No announcements right now.</p>
-        )
-      }
-    </div>
+    <div class="relative overflow-hidden" data-feed-stage>
+      <div
+        id="panel-announcements"
+        role="tabpanel"
+        aria-labelledby="tab-announcements"
+        class="px-5 py-4 sm:px-6"
+        data-feed-panel-view="announcements"
+      >
+        {
+          latest ? (
+            <div class="min-w-0">
+              <p class="truncate text-[15px] font-medium text-charcoal">{latest.title}</p>
+              <p class="mt-1 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{latest.body}</p>
+              {announcements.length > 1 && (
+                <ul class="mt-4 space-y-3 border-t border-black/[0.06] pt-4">
+                  {announcements.slice(1, 4).map((item) => (
+                    <li class="min-w-0">
+                      <p class="truncate text-sm font-medium text-charcoal">{item.title}</p>
+                      <p class="mt-0.5 line-clamp-1 text-xs text-sage-dark/70">
+                        {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <p class="text-sm text-sage-dark/75">No announcements right now.</p>
+          )
+        }
+      </div>
 
-    <div
-      id="panel-notifications"
-      role="tabpanel"
-      aria-labelledby="tab-notifications"
-      class="hidden"
-      data-feed-panel-view="notifications"
-      hidden
-    >
-      {
-        announcements.length === 0 ? (
-          <p class="px-5 py-5 text-sm text-sage-dark/70 sm:px-6">No notifications right now.</p>
-        ) : (
-          <ul class="max-h-80 overflow-y-auto">
-            {announcements.map((item) => (
-              <li
-                class:list={[
-                  'border-b border-black/[0.05] px-5 py-3 last:border-0 sm:px-6',
-                  item.unread && 'bg-white/40',
-                ]}
-                data-notification-item
-              >
-                <div class="flex items-start gap-2">
-                  {item.unread ? (
-                    <span
-                      class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#2CA01C]"
-                      aria-hidden="true"
-                      data-unread-dot
-                    ></span>
-                  ) : (
-                    <span
-                      class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-transparent"
-                      aria-hidden="true"
-                      data-unread-dot
-                    ></span>
-                  )}
-                  <div class="min-w-0">
-                    <p class="text-sm font-semibold text-charcoal">{item.title}</p>
-                    <p class="mt-0.5 text-[11px] text-sage-dark/55">
-                      {item.authorName} · {formatAnnouncementDate(item.createdAt)}
-                    </p>
-                    <p class="mt-1.5 line-clamp-3 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )
-      }
+      <div
+        id="panel-notifications"
+        role="tabpanel"
+        aria-labelledby="tab-notifications"
+        class="hidden px-5 py-4 sm:px-6"
+        data-feed-panel-view="notifications"
+        hidden
+      >
+        <p class="text-sm text-sage-dark/70">No notifications right now.</p>
+      </div>
     </div>
   </div>
 
@@ -206,58 +163,42 @@ const latest = announcements[0] ?? null;
 
 <script>
   function setupFeedPanel(root: Element) {
+    const tablist = root.querySelector('[data-feed-tablist]');
+    const slider = root.querySelector('[data-feed-slider]');
     const tabs = Array.from(root.querySelectorAll('[data-feed-tab]'));
     const announcementsView = root.querySelector('[data-feed-panel-view="announcements"]');
     const notificationsView = root.querySelector('[data-feed-panel-view="notifications"]');
     const status = root.querySelector('[data-feed-status]');
     if (
+      !(tablist instanceof HTMLElement) ||
+      !(slider instanceof HTMLElement) ||
       !(announcementsView instanceof HTMLElement) ||
       !(notificationsView instanceof HTMLElement)
     ) {
       return;
     }
 
-    let marked = false;
     let active: 'announcements' | 'notifications' = 'announcements';
 
     const setTabStyles = (tab: Element, selected: boolean) => {
       tab.setAttribute('aria-selected', selected ? 'true' : 'false');
       if (selected) {
-        tab.classList.add('bg-white', 'text-charcoal', 'shadow-sm', 'font-semibold');
+        tab.classList.add('text-charcoal', 'font-semibold');
         tab.classList.remove('text-sage-dark/70', 'font-medium');
       } else {
-        tab.classList.remove('bg-white', 'text-charcoal', 'shadow-sm', 'font-semibold');
+        tab.classList.remove('text-charcoal', 'font-semibold');
         tab.classList.add('text-sage-dark/70', 'font-medium');
       }
     };
 
-    // Initial selected styles
-    tabs.forEach((tab) => {
-      const key = tab.getAttribute('data-feed-tab');
-      setTabStyles(tab, key === 'announcements');
-    });
-
-    const markRead = async () => {
-      if (marked) return;
-      marked = true;
-      try {
-        await fetch('/api/announcements/mark-read', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        root.querySelector('[data-unread-badge]')?.remove();
-        root.querySelectorAll('[data-notification-item]').forEach((el) => el.classList.remove('bg-white/40'));
-        root.querySelectorAll('[data-unread-dot]').forEach((el) => {
-          el.classList.remove('bg-[#2CA01C]');
-          el.classList.add('bg-transparent');
-        });
-        if (status && active === 'notifications') {
-          status.textContent = 'You are caught up';
-        }
-      } catch {
-        marked = false;
-      }
+    const moveSlider = (key: 'announcements' | 'notifications') => {
+      const tab = tabs.find((el) => el.getAttribute('data-feed-tab') === key);
+      if (!(tab instanceof HTMLElement)) return;
+      const listRect = tablist.getBoundingClientRect();
+      const tabRect = tab.getBoundingClientRect();
+      const offset = tabRect.left - listRect.left;
+      slider.style.width = `${tabRect.width}px`;
+      slider.style.transform = `translateX(${offset}px)`;
     };
 
     const setActive = (next: 'announcements' | 'notifications') => {
@@ -270,11 +211,10 @@ const latest = announcements[0] ?? null;
       tabs.forEach((tab) => {
         setTabStyles(tab, tab.getAttribute('data-feed-tab') === next);
       });
+      moveSlider(next);
       if (status instanceof HTMLElement) {
         if (next === 'notifications') {
-          const badge = root.querySelector('[data-unread-badge]');
-          status.textContent = badge ? `${badge.textContent?.trim() ?? ''} new` : 'You are caught up';
-          void markRead();
+          status.textContent = 'You are caught up';
         } else {
           status.textContent = status.dataset.announcementsStatus ?? status.textContent;
         }
@@ -286,11 +226,15 @@ const latest = announcements[0] ?? null;
     }
 
     tabs.forEach((tab) => {
+      const key = tab.getAttribute('data-feed-tab');
+      setTabStyles(tab, key === 'announcements');
       tab.addEventListener('click', () => {
-        const key = tab.getAttribute('data-feed-tab');
         if (key === 'announcements' || key === 'notifications') setActive(key);
       });
     });
+
+    moveSlider('announcements');
+    window.addEventListener('resize', () => moveSlider(active));
   }
 
   document.querySelectorAll('[data-feed-panel]').forEach((root) => setupFeedPanel(root));

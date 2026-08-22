@@ -1,7 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
-import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
+import { listAnnouncementsForUser } from '../lib/announcements';
 import { listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
 import { plainPermission, plainRole } from '../lib/role-plain-language';
@@ -14,7 +14,6 @@ if (!canAccessManagement(employee)) {
 }
 
 const announcements = await listAnnouncementsForUser(employee.id);
-const unreadCount = await countUnreadAnnouncements(employee.id);
 const roles = await listRolesWithPermissions();
 const error = Astro.url.searchParams.get('error');
 ---
@@ -27,7 +26,6 @@ const error = Astro.url.searchParams.get('error');
 
   <AnnouncementsPanel
     announcements={announcements}
-    unreadCount={unreadCount}
     canManage={true}
     error={error}
   />
