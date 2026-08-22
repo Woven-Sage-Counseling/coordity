@@ -25,7 +25,8 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
         u.name,
         COALESCE(p.status, 'pending') AS status,
         p.job_title,
-        p.phone
+        p.phone,
+        CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS has_avatar
      FROM user u
      LEFT JOIN employee_profile p ON p.user_id = u.id
      WHERE u.id = ?`,
@@ -38,6 +39,7 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
       status: PortalEmployee['status'];
       job_title: string | null;
       phone: string | null;
+      has_avatar: number;
     }>();
 
   if (!profile) return null;
@@ -81,6 +83,7 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     jobTitle: profile.job_title,
     phone: profile.phone,
     teams: (teams.results ?? []).map((row) => row.name),
+    hasAvatar: profile.has_avatar === 1,
     status: isOwnerEmail(profile.email) ? 'active' : profile.status,
     roles: isOwnerEmail(profile.email)
       ? Array.from(new Set(['owner', ...(roles.results ?? []).map((row) => row.key)]))

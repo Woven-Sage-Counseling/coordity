@@ -20,6 +20,7 @@ export interface DirectoryPerson {
   jobTitle: string | null;
   phone: string | null;
   teams: string[];
+  hasAvatar: boolean;
 }
 
 async function teamsByUser(userIds: string[]): Promise<Map<string, string[]>> {
@@ -115,7 +116,8 @@ export async function listDirectory(): Promise<DirectoryPerson[]> {
         u.name,
         u.email,
         p.job_title AS jobTitle,
-        p.phone
+        p.phone,
+        CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
      FROM user u
      JOIN employee_profile p ON p.user_id = u.id
      WHERE p.status = 'active'
@@ -126,13 +128,19 @@ export async function listDirectory(): Promise<DirectoryPerson[]> {
     email: string;
     jobTitle: string | null;
     phone: string | null;
+    hasAvatar: number;
   }>();
 
   const people = rows.results ?? [];
   const teams = await teamsByUser(people.map((row) => row.id));
 
   return people.map((row) => ({
-    ...row,
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    jobTitle: row.jobTitle,
+    phone: row.phone,
+    hasAvatar: row.hasAvatar === 1,
     teams: teams.get(row.id) ?? [],
   }));
 }
@@ -222,38 +230,124 @@ export async function updateDisplayName(input: {
 
 export async function updateDirectoryProfile(input: {
   userId: string;
-  name: string;
-  phone: string;
+  name?: string;
+  phone?: string;
   actorUserId: string;
 }): Promise<void> {
-  const name = input.name.trim();
-  const phone = input.phone.trim();
-
-  if (name.length < 2 || name.length > 80) {
-    throw new Error('Name must be between 2 and 80 characters.');
-  }
-  if (phone.length > 40) {
-    throw new Error('Phone number must be 40 characters or fewer.');
-  }
-
   const { DB } = getEnv();
   const ts = nowMs();
-  await DB.batch([
-    DB.prepare(`UPDATE user SET name = ? WHERE id = ?`).bind(name, input.userId),
-    DB.prepare(
+  const updates: string[] = [];
+  const values: Array<string | number | null> = [];
+  const metadata: Record<string, string | null> = {};
+
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (name.length < 2 || name.length > 80) {
+      throw new Error('Name must be between 2 and 80 characters.');
+    }
+    await DB.prepare(`UPDATE user SET name = ? WHERE id = ?`).bind(name, input.userId).run();
+    metadata.name = name;
+  }
+
+  if (input.phone !== undefined) {
+    const phone = input.phone.trim();
+    if (phone.length > 40) {
+      throw new Error('Phone number must be 40 characters or fewer.');
+    }
+    updates.push('phone = ?');
+    values.push(phone || null);
+    metadata.phone = phone || null;
+  }
+
+  if (updates.length > 0) {
+    updates.push('updated_at = ?');
+    values.push(ts, input.userId);
+    await DB.prepare(
       `UPDATE employee_profile
-       SET phone = ?, updated_at = ?
+       SET ${updates.join(', ')}
        WHERE user_id = ?`,
-    ).bind(phone || null, ts, input.userId),
-  ]);
+    )
+      .bind(...values)
+      .run();
+  }
 
   await writeAuditLog({
     actorUserId: input.actorUserId,
     action: 'employee.profile_updated',
     targetType: 'user',
     targetId: input.userId,
-    metadata: { name, phone: phone || null },
+    metadata,
   });
+}
+
+export async function updateEmployeeAvatar(input: {
+  userId: string;
+  mime: string;
+  dataBase64: string;
+  actorUserId: string;
+}): Promise<void> {
+  const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  if (!allowed.has(input.mime)) {
+    throw new Error('Profile photos must be JPEG, PNG, or WebP.');
+  }
+  if (input.dataBase64.length > 350_000) {
+    throw new Error('Profile photo is too large. Try a smaller image.');
+  }
+
+  const { DB } = getEnv();
+  const result = await DB.prepare(
+    `UPDATE employee_profile
+     SET avatar_mime = ?, avatar_data = ?, avatar_updated_at = ?, updated_at = ?
+     WHERE user_id = ?`,
+  )
+    .bind(input.mime, input.dataBase64, nowMs(), nowMs(), input.userId)
+    .run();
+
+  if (!result.meta.changes) {
+    throw new Error('Employee profile not found.');
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'employee.avatar_updated',
+    targetType: 'user',
+    targetId: input.userId,
+  });
+}
+
+export async function clearEmployeeAvatar(input: {
+  userId: string;
+  actorUserId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(
+    `UPDATE employee_profile
+     SET avatar_mime = NULL, avatar_data = NULL, avatar_updated_at = NULL, updated_at = ?
+     WHERE user_id = ?`,
+  )
+    .bind(nowMs(), input.userId)
+    .run();
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'employee.avatar_removed',
+    targetType: 'user',
+    targetId: input.userId,
+  });
+}
+
+export async function getEmployeeAvatar(userId: string): Promise<{ mime: string; dataBase64: string } | null> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT avatar_mime, avatar_data
+     FROM employee_profile
+     WHERE user_id = ? AND avatar_data IS NOT NULL AND avatar_data != ''`,
+  )
+    .bind(userId)
+    .first<{ avatar_mime: string | null; avatar_data: string }>();
+
+  if (!row?.avatar_data || !row.avatar_mime) return null;
+  return { mime: row.avatar_mime, dataBase64: row.avatar_data };
 }
 
 export async function updateEmployeeJobTitle(input: {

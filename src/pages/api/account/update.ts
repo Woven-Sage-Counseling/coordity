@@ -11,16 +11,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const form = await request.formData();
-  const name = String(form.get('name') ?? '');
-  const phone = String(form.get('phone') ?? '');
+  const field = String(form.get('field') ?? '');
 
   try {
-    await updateDirectoryProfile({
-      userId: actor.id,
-      name,
-      phone,
-      actorUserId: actor.id,
-    });
+    if (field === 'name') {
+      await updateDirectoryProfile({
+        userId: actor.id,
+        name: String(form.get('name') ?? ''),
+        actorUserId: actor.id,
+      });
+    } else if (field === 'phone') {
+      await updateDirectoryProfile({
+        userId: actor.id,
+        phone: String(form.get('phone') ?? ''),
+        actorUserId: actor.id,
+      });
+    } else {
+      return formErrorRedirect('/account', 'Unknown field.');
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to update profile.';
     return formErrorRedirect('/account', message);
