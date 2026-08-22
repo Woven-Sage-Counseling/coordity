@@ -29,5 +29,5 @@ export const POST: APIRoute = async ({ request, locals }) => {
     actorUserId: actor!.id,
   });
 
-  return new Response(null, { status: 303, headers: { Location: '/management#announcements-heading' } });
+  return new Response(null, { status: 303, headers: { Location: '/management#announcement-history' } });
 };

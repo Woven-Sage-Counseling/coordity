@@ -1,0 +1,181 @@
+---
+import type { Announcement } from '../lib/announcements';
+import { formatAnnouncementDate } from '../lib/announcements';
+
+interface Props {
+  announcements: Announcement[];
+  error?: string | null;
+}
+
+const { announcements, error = null } = Astro.props;
+---
+
+<section class="mt-10" aria-labelledby="announcement-history">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 id="announcement-history" class="font-display text-3xl text-charcoal">Announcements</h2>
+      <p class="mt-2 text-sm text-sage-dark/65">
+        Post to every dashboard, then edit, resend, or remove from the history log.
+      </p>
+    </div>
+  </div>
+
+  {
+    error && (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    )
+  }
+
+  <form method="post" action="/api/announcements/create" class="card mt-6 grid gap-4">
+    <p class="text-sm font-semibold text-charcoal">New announcement</p>
+    <label class="block">
+      <span class="text-sm font-medium text-sage-dark/80">Title</span>
+      <input
+        class="field"
+        type="text"
+        name="title"
+        maxlength="120"
+        required
+        placeholder="Short headline"
+      />
+    </label>
+    <label class="block">
+      <span class="text-sm font-medium text-sage-dark/80">Message</span>
+      <textarea
+        class="field min-h-[5.5rem] resize-y"
+        name="body"
+        maxlength="2000"
+        required
+        placeholder="What should the team know?"
+      ></textarea>
+    </label>
+    <button class="btn-primary w-fit" type="submit">Post announcement</button>
+  </form>
+
+  <div class="mt-8">
+    <h3 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/55">History</h3>
+    {
+      announcements.length === 0 ? (
+        <p class="mt-4 text-sm text-sage-dark/65">No announcements yet.</p>
+      ) : (
+        <ul class="mt-4 space-y-4">
+          {announcements.map((item) => (
+            <li class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm" data-announcement-row>
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <p class="text-lg font-semibold text-charcoal" data-announcement-title>
+                    {item.title}
+                  </p>
+                  <p class="mt-1 text-xs text-sage-dark/55">
+                    {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                  </p>
+                  <p
+                    class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-sage-dark/80"
+                    data-announcement-body
+                  >
+                    {item.body}
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn-secondary !px-3 !py-1.5"
+                    data-edit-toggle
+                    aria-expanded="false"
+                  >
+                    Edit
+                  </button>
+                  <form method="post" action="/api/announcements/resend">
+                    <input type="hidden" name="id" value={item.id} />
+                    <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                      Resend
+                    </button>
+                  </form>
+                  <form method="post" action="/api/announcements/delete">
+                    <input type="hidden" name="id" value={item.id} />
+                    <button
+                      class="btn-secondary !px-3 !py-1.5 !text-red-700"
+                      type="submit"
+                      data-delete-confirm
+                    >
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <form
+                method="post"
+                action="/api/announcements/update"
+                class="mt-4 hidden space-y-3 border-t border-sage-dark/10 pt-4"
+                data-edit-form
+                hidden
+              >
+                <input type="hidden" name="id" value={item.id} />
+                <label class="block">
+                  <span class="text-sm font-medium text-sage-dark/80">Title</span>
+                  <input
+                    class="field"
+                    type="text"
+                    name="title"
+                    maxlength="120"
+                    required
+                    value={item.title}
+                  />
+                </label>
+                <label class="block">
+                  <span class="text-sm font-medium text-sage-dark/80">Message</span>
+                  <textarea
+                    class="field min-h-[5.5rem] resize-y"
+                    name="body"
+                    maxlength="2000"
+                    required
+                  >{item.body}</textarea>
+                </label>
+                <div class="flex flex-wrap gap-2">
+                  <button class="btn-primary" type="submit">Save changes</button>
+                  <button type="button" class="btn-secondary" data-edit-cancel>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<script>
+  function setupAnnouncementManager(root: ParentNode) {
+    root.querySelectorAll('[data-announcement-row]').forEach((row) => {
+      const toggle = row.querySelector('[data-edit-toggle]');
+      const form = row.querySelector('[data-edit-form]');
+      const cancel = row.querySelector('[data-edit-cancel]');
+      if (!(toggle instanceof HTMLButtonElement) || !(form instanceof HTMLFormElement)) return;
+
+      const setOpen = (open: boolean) => {
+        form.hidden = !open;
+        form.classList.toggle('hidden', !open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.textContent = open ? 'Close' : 'Edit';
+      };
+
+      toggle.addEventListener('click', () => {
+        setOpen(form.hidden);
+      });
+      cancel?.addEventListener('click', () => setOpen(false));
+    });
+
+    root.querySelectorAll('[data-delete-confirm]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        if (!confirm('Delete this announcement from everyone’s dashboard?')) {
+          event.preventDefault();
+        }
+      });
+    });
+  }
+
+  setupAnnouncementManager(document);
+</script>

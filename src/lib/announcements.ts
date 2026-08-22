@@ -1,7 +1,7 @@
 import { getEnv } from './env';
 import { randomToken, nowMs } from './crypto';
 import { writeAuditLog } from './audit';
-import { notifyActiveUsers } from './notifications';
+import { deleteNotificationsBySource, notifyActiveUsers } from './notifications';
 
 export interface Announcement {
   id: string;
@@ -201,9 +201,105 @@ export async function archiveAnnouncement(input: {
     .bind(nowMs(), input.id)
     .run();
 
+  await deleteNotificationsBySource('announcement', input.id);
+
   await writeAuditLog({
     actorUserId: input.actorUserId,
     action: 'announcement.archive',
+    targetType: 'announcement',
+    targetId: input.id,
+  });
+}
+
+export async function updateAnnouncement(input: {
+  id: string;
+  title: string;
+  body: string;
+  actorUserId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const result = await DB.prepare(
+    `UPDATE announcement
+     SET title = ?, body = ?
+     WHERE id = ? AND archived_at IS NULL`,
+  )
+    .bind(input.title, input.body, input.id)
+    .run();
+
+  if (!result.meta.changes) {
+    throw new Error('Announcement not found');
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'announcement.update',
+    targetType: 'announcement',
+    targetId: input.id,
+  });
+}
+
+export async function resendAnnouncement(input: {
+  id: string;
+  actorUserId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT a.id, a.title, a.body, u.name AS author_name
+     FROM announcement a
+     JOIN user u ON u.id = a.created_by
+     WHERE a.id = ? AND a.archived_at IS NULL`,
+  )
+    .bind(input.id)
+    .first<{ id: string; title: string; body: string; author_name: string }>();
+
+  if (!row) {
+    throw new Error('Announcement not found');
+  }
+
+  const now = nowMs();
+
+  await DB.prepare(`DELETE FROM announcement_read WHERE announcement_id = ?`).bind(input.id).run();
+  await DB.prepare(
+    `INSERT OR IGNORE INTO announcement_read (user_id, announcement_id, read_at)
+     VALUES (?, ?, ?)`,
+  )
+    .bind(input.actorUserId, input.id, now)
+    .run();
+
+  await deleteNotificationsBySource('announcement', input.id);
+  await notifyActiveUsers({
+    title: 'Announcement reminder',
+    body: `${row.author_name}: ${row.title}`,
+    excludeUserId: input.actorUserId,
+    sourceType: 'announcement',
+    sourceId: input.id,
+  });
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'announcement.resend',
+    targetType: 'announcement',
+    targetId: input.id,
+  });
+}
+
+export async function deleteAnnouncement(input: {
+  id: string;
+  actorUserId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+
+  await deleteNotificationsBySource('announcement', input.id);
+  await DB.prepare(`DELETE FROM announcement_read WHERE announcement_id = ?`).bind(input.id).run();
+  const result = await DB.prepare(`DELETE FROM announcement WHERE id = ?`).bind(input.id).run();
+
+  if (!result.meta.changes) {
+    throw new Error('Announcement not found');
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'announcement.delete',
     targetType: 'announcement',
     targetId: input.id,
   });

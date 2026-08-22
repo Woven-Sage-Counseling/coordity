@@ -74,7 +74,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  if (pathname.startsWith('/management') || pathname.startsWith('/api/announcements/create') || pathname.startsWith('/api/announcements/archive')) {
+  if (
+    pathname.startsWith('/management') ||
+    pathname.startsWith('/api/announcements/create') ||
+    pathname.startsWith('/api/announcements/archive') ||
+    pathname.startsWith('/api/announcements/update') ||
+    pathname.startsWith('/api/announcements/resend') ||
+    pathname.startsWith('/api/announcements/delete')
+  ) {
     if (!canAccessManagement(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }

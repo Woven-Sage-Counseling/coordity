@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { canAccessManagement } from '../../../lib/permissions';
-import { archiveAnnouncement } from '../../../lib/announcements';
+import { deleteAnnouncement } from '../../../lib/announcements';
 import { formErrorRedirect } from '../../../lib/http';
 
 export const prerender = false;
@@ -17,10 +17,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return formErrorRedirect('/management', 'Announcement id is required.');
   }
 
-  await archiveAnnouncement({
-    id,
-    actorUserId: actor!.id,
-  });
+  try {
+    await deleteAnnouncement({
+      id,
+      actorUserId: actor!.id,
+    });
+  } catch {
+    return formErrorRedirect('/management', 'Could not delete that announcement.');
+  }
 
   return new Response(null, { status: 303, headers: { Location: '/management#announcement-history' } });
 };

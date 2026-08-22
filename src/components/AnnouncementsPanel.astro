@@ -8,8 +8,6 @@ interface Props {
   announcementUnreadCount: number;
   notifications: PortalNotification[];
   notificationUnreadCount: number;
-  canManage: boolean;
-  error?: string | null;
 }
 
 const {
@@ -17,8 +15,6 @@ const {
   announcementUnreadCount,
   notifications,
   notificationUnreadCount,
-  canManage,
-  error = null,
 } = Astro.props;
 const latest = announcements[0] ?? null;
 const hasAnnouncementUnread = announcementUnreadCount > 0;
@@ -173,45 +169,6 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       </div>
     </div>
   </div>
-
-  {
-    error && (
-      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
-    )
-  }
-
-  {
-    canManage && (
-      <form
-        method="post"
-        action="/api/announcements/create"
-        class="announcement-bar mt-4 rounded-[1.35rem] p-4"
-      >
-        <label class="block">
-          <span class="text-sm font-medium text-sage-dark/80">Title</span>
-          <input
-            class="field !border-white/40 !bg-white/55"
-            type="text"
-            name="title"
-            maxlength="120"
-            required
-            placeholder="Short headline"
-          />
-        </label>
-        <label class="mt-3 block">
-          <span class="text-sm font-medium text-sage-dark/80">Message</span>
-          <textarea
-            class="field min-h-[5.5rem] resize-y !border-white/40 !bg-white/55"
-            name="body"
-            maxlength="2000"
-            required
-            placeholder="What should the team know?"
-          ></textarea>
-        </label>
-        <button class="btn-primary mt-3" type="submit">Post announcement</button>
-      </form>
-    )
-  }
 </section>
 
 <style>

@@ -121,3 +121,13 @@ export async function notifyActiveUsers(input: {
     ),
   );
 }
+
+export async function deleteNotificationsBySource(
+  sourceType: string,
+  sourceId: string,
+): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(`DELETE FROM notification WHERE source_type = ? AND source_id = ?`)
+    .bind(sourceType, sourceId)
+    .run();
+}
