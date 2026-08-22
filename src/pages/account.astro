@@ -1,11 +1,9 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import { canAccessManagement } from '../lib/permissions';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
-const canSeeManagement = canAccessManagement(employee);
 const error = Astro.url.searchParams.get('error');
 const saved = Astro.url.searchParams.get('saved');
 const avatarSrc = employee.hasAvatar
@@ -210,17 +208,6 @@ const roleLabel = employee.roles.includes('owner')
       </div>
     </dl>
   </section>
-
-  {
-    canSeeManagement && (
-      <a href="/management#people" class="card mt-6 block hover:border-sage-dark/25">
-        <h2 class="font-display text-2xl text-charcoal">People and roles</h2>
-        <p class="mt-2 text-sm text-sage-dark/70">
-          Invite people and assign roles from Management.
-        </p>
-      </a>
-    )
-  }
 
   <form method="post" action="/api/session/sign-out" class="mt-8">
     <button class="btn-secondary" type="submit">Sign out</button>
