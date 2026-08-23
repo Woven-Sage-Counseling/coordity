@@ -23,7 +23,7 @@ const available = availableWidgets(canSeeFinancials);
 const availableIds = available.map((w) => w.id);
 
 const arrowClass =
-  'inline-flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full bg-white text-sage-dark/70 shadow-sm ring-1 ring-black/10 transition hover:bg-[#f4f5f8] hover:text-charcoal disabled:pointer-events-none disabled:opacity-30';
+  'absolute top-1/2 z-20 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-sage-dark/80 shadow-md ring-1 ring-black/10 transition hover:bg-white hover:text-charcoal disabled:pointer-events-none disabled:opacity-30';
 ---
 
 {
@@ -37,8 +37,13 @@ const arrowClass =
       data-available={JSON.stringify(availableIds)}
       data-can-financials={canSeeFinancials ? '1' : '0'}
     >
-      <div class="flex items-stretch gap-1 sm:gap-1.5">
-        <button type="button" class={arrowClass} aria-label="Previous widget" data-carousel-prev>
+      <div class="relative" data-carousel-shell>
+        <button
+          type="button"
+          class:list={[arrowClass, 'left-0 -translate-x-1/3']}
+          aria-label="Previous widget"
+          data-carousel-prev
+        >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
               d="M10 3L5 8l5 5"
@@ -50,42 +55,31 @@ const arrowClass =
           </svg>
         </button>
 
-        <div class="min-w-0 flex-1">
-          <div class="widget-carousel-viewport relative overflow-hidden py-1" data-carousel-viewport>
-            <div
-              class="widget-carousel-track flex items-stretch will-change-transform"
-              data-carousel-track
-            >
-              {availableIds.includes('quickbooks') && (
-                <div
-                  class="widget-carousel-slide"
-                  data-carousel-slide
-                  data-widget-id="quickbooks"
-                >
-                  <FinancialSnapshotCard />
-                </div>
-              )}
-              {availableIds.includes('schedule') && (
-                <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
-                  <ScheduleCard
-                    canOpenClinicalCalendar={canOpenClinicalCalendar}
-                    ownerEmail={ownerEmail}
-                    employeeName={employeeName}
-                  />
-                </div>
-              )}
-            </div>
+        <div class="widget-carousel-viewport overflow-hidden" data-carousel-viewport>
+          <div class="widget-carousel-track flex items-stretch" data-carousel-track>
+            {availableIds.includes('quickbooks') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="quickbooks">
+                <FinancialSnapshotCard />
+              </div>
+            )}
+            {availableIds.includes('schedule') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
+                <ScheduleCard
+                  canOpenClinicalCalendar={canOpenClinicalCalendar}
+                  ownerEmail={ownerEmail}
+                  employeeName={employeeName}
+                />
+              </div>
+            )}
           </div>
-
-          <div
-            class="mt-3 flex items-center justify-center gap-1.5"
-            data-carousel-dots
-            role="tablist"
-            aria-label="Widget pages"
-          ></div>
         </div>
 
-        <button type="button" class={arrowClass} aria-label="Next widget" data-carousel-next>
+        <button
+          type="button"
+          class:list={[arrowClass, 'right-0 translate-x-1/3']}
+          aria-label="Next widget"
+          data-carousel-next
+        >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
               d="M6 3l5 5-5 5"
@@ -98,6 +92,13 @@ const arrowClass =
         </button>
       </div>
 
+      <div
+        class="mt-3 flex items-center justify-center gap-1.5"
+        data-carousel-dots
+        role="tablist"
+        aria-label="Widget pages"
+      ></div>
+
       <p class="mt-2 text-center text-[11px] text-sage-dark/50">
         <a href="/settings" class="hover:text-sage-dark">Customize widgets</a>
       </p>
@@ -105,22 +106,24 @@ const arrowClass =
   )
 }
 
-<style>
+<style is:global>
   .widget-carousel-viewport {
-    /* Room for scaled neighbors to breathe without clipping hard */
-    margin-inline: -0.15rem;
+    width: 100%;
   }
 
   .widget-carousel-track {
-    gap: 0.75rem;
+    gap: 0.65rem;
     transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
   }
 
   .widget-carousel-slide {
-    flex: 0 0 86%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
     min-height: 28rem;
-    transform: scale(0.9);
-    opacity: 0.55;
+    width: 78%;
+    transform: scale(0.88);
+    opacity: 0.5;
     transition:
       transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
       opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -128,6 +131,12 @@ const arrowClass =
   }
 
   .widget-carousel-slide[data-active='true'] {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  .widget-carousel-slide[data-solo='true'] {
+    width: 100%;
     transform: scale(1);
     opacity: 1;
   }
@@ -141,18 +150,6 @@ const arrowClass =
   .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) input,
   .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) select {
     pointer-events: none;
-  }
-
-  .widget-carousel-slide[data-solo='true'] {
-    flex-basis: 100%;
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  @media (max-width: 640px) {
-    .widget-carousel-slide {
-      flex-basis: 88%;
-    }
   }
 </style>
 
@@ -199,125 +196,198 @@ const arrowClass =
     const track = root.querySelector('[data-carousel-track]');
     if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement)) return;
 
-    const allSlides = Array.from(root.querySelectorAll('[data-carousel-slide]')).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement,
+    const sourceSlides = Array.from(root.querySelectorAll('[data-carousel-slide]')).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement && !el.dataset.clone,
     );
 
-    // Keep only enabled widgets in the track, in preference order.
-    const enabledSlides = prefs.enabled
-      .map((id) => allSlides.find((el) => el.dataset.widgetId === id))
+    const realSlides = prefs.enabled
+      .map((id) => sourceSlides.find((el) => el.dataset.widgetId === id))
       .filter((el): el is HTMLElement => Boolean(el));
 
-    allSlides.forEach((slide) => {
-      if (!enabledSlides.includes(slide)) {
-        slide.remove();
-      }
+    sourceSlides.forEach((slide) => {
+      if (!realSlides.includes(slide)) slide.remove();
     });
 
-    // Re-append in enabled order
-    enabledSlides.forEach((slide) => track.appendChild(slide));
-
-    if (enabledSlides.length === 0) {
+    if (realSlides.length === 0) {
       root.hidden = true;
       return;
     }
 
+    // Rebuild track: optional clones for looping peeks on both sides
+    track.innerHTML = '';
+    const solo = realSlides.length === 1;
+    const loop = realSlides.length > 1;
+
+    const mountSlide = (source: HTMLElement, clone: boolean) => {
+      const node = source.cloneNode(true) as HTMLElement;
+      if (clone) {
+        node.dataset.clone = 'true';
+        // Avoid duplicate ids inside clones
+        node.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+      }
+      node.dataset.solo = solo ? 'true' : 'false';
+      track.appendChild(node);
+      return node;
+    };
+
+    const trackSlides: HTMLElement[] = [];
+    if (loop) {
+      trackSlides.push(mountSlide(realSlides[realSlides.length - 1]!, true));
+    }
+    realSlides.forEach((slide) => {
+      trackSlides.push(mountSlide(slide, false));
+    });
+    if (loop) {
+      trackSlides.push(mountSlide(realSlides[0]!, true));
+    }
+
+    // Drop the original nodes (we remounted copies)
+    realSlides.forEach((slide) => slide.remove());
+
     const prevBtn = root.querySelector('[data-carousel-prev]');
     const nextBtn = root.querySelector('[data-carousel-next]');
     const dots = root.querySelector('[data-carousel-dots]');
-    const solo = enabledSlides.length === 1;
-    let index = Math.max(
-      0,
-      enabledSlides.findIndex((el) => el.dataset.widgetId === prefs.defaultId),
-    );
 
-    enabledSlides.forEach((slide) => {
-      slide.dataset.solo = solo ? 'true' : 'false';
+    // track index: with clones, real items start at 1
+    const firstReal = loop ? 1 : 0;
+    const lastReal = loop ? trackSlides.length - 2 : trackSlides.length - 1;
+    const realCount = realSlides.length;
+
+    let trackIndex = firstReal;
+    const preferred = prefs.enabled.indexOf(prefs.defaultId);
+    if (preferred >= 0) trackIndex = firstReal + preferred;
+
+    let animating = false;
+
+    const realIndexFromTrack = (ti: number) => {
+      if (!loop) return ti;
+      if (ti === 0) return realCount - 1;
+      if (ti === trackSlides.length - 1) return 0;
+      return ti - 1;
+    };
+
+    const setActiveStates = () => {
+      trackSlides.forEach((slide, i) => {
+        slide.dataset.active = i === trackIndex ? 'true' : 'false';
+        slide.setAttribute('aria-hidden', i === trackIndex ? 'false' : 'true');
+      });
+    };
+
+    const renderDots = () => {
+      if (!(dots instanceof HTMLElement)) return;
+      dots.innerHTML = '';
+      const activeReal = realIndexFromTrack(trackIndex);
+      for (let i = 0; i < realCount; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-label', `Show widget ${i + 1}`);
+        btn.setAttribute('aria-selected', i === activeReal ? 'true' : 'false');
+        btn.className =
+          i === activeReal
+            ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
+            : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
+        btn.addEventListener('click', () => goTo(firstReal + i));
+        dots.appendChild(btn);
+      }
+    };
+
+    const layout = (withTransition: boolean) => {
+      if (solo) {
+        track.style.transition = 'none';
+        track.style.transform = 'translate3d(0,0,0)';
+        setActiveStates();
+        return;
+      }
+
+      const viewportWidth = viewport.clientWidth;
+      // Use offsetWidth so scale() does not skew measurements
+      const slideWidth = trackSlides[trackIndex]?.offsetWidth || viewportWidth * 0.78;
+      const styles = getComputedStyle(track);
+      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+      const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
+      const offset = peek - trackIndex * (slideWidth + gap);
+
+      track.style.transition = withTransition ? '' : 'none';
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
+      setActiveStates();
+    };
+
+    const jumpIfClone = () => {
+      if (!loop) return;
+      if (trackIndex === 0) {
+        trackIndex = lastReal;
+        layout(false);
+      } else if (trackIndex === trackSlides.length - 1) {
+        trackIndex = firstReal;
+        layout(false);
+      }
+    };
+
+    const goTo = (nextTrackIndex: number, withTransition = true) => {
+      if (solo) return;
+      trackIndex = nextTrackIndex;
+      animating = withTransition;
+      layout(withTransition);
+      renderDots();
+      if (!withTransition) {
+        animating = false;
+        return;
+      }
+    };
+
+    track.addEventListener('transitionend', (event) => {
+      if (event.target !== track || event.propertyName !== 'transform') return;
+      animating = false;
+      jumpIfClone();
+      renderDots();
+    });
+
+    trackSlides.forEach((slide, i) => {
       slide.addEventListener(
         'click',
         (event) => {
-          if (solo) return;
-          const slideIndex = enabledSlides.indexOf(slide);
-          if (slideIndex === index) return;
+          if (solo || i === trackIndex) return;
           event.preventDefault();
           event.stopPropagation();
-          show(slideIndex);
+          goTo(i);
         },
         true,
       );
     });
 
-    const renderDots = () => {
-      if (!(dots instanceof HTMLElement)) return;
-      dots.innerHTML = '';
-      enabledSlides.forEach((slide, i) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-label', `Show ${slide.dataset.widgetId} widget`);
-        btn.setAttribute('aria-selected', i === index ? 'true' : 'false');
-        btn.className =
-          i === index
-            ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
-            : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
-        btn.addEventListener('click', () => show(i));
-        dots.appendChild(btn);
-      });
-    };
+    prevBtn?.addEventListener('click', () => {
+      if (animating && loop) return;
+      goTo(trackIndex - 1);
+    });
+    nextBtn?.addEventListener('click', () => {
+      if (animating && loop) return;
+      goTo(trackIndex + 1);
+    });
 
-    const layout = () => {
-      if (solo) {
-        track.style.transform = 'translate3d(0,0,0)';
-        enabledSlides[0]!.dataset.active = 'true';
-        return;
-      }
+    const multi = !solo;
+    if (prevBtn instanceof HTMLButtonElement) {
+      prevBtn.disabled = !multi;
+      prevBtn.classList.toggle('invisible', !multi);
+    }
+    if (nextBtn instanceof HTMLButtonElement) {
+      nextBtn.disabled = !multi;
+      nextBtn.classList.toggle('invisible', !multi);
+    }
+    if (dots instanceof HTMLElement) {
+      dots.classList.toggle('invisible', !multi);
+    }
 
-      const viewportWidth = viewport.clientWidth;
-      const slide = enabledSlides[0]!;
-      const slideWidth = slide.getBoundingClientRect().width;
-      const styles = getComputedStyle(track);
-      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
-      const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
-      const offset = peek - index * (slideWidth + gap);
-      track.style.transform = `translate3d(${offset}px, 0, 0)`;
-
-      enabledSlides.forEach((el, i) => {
-        el.dataset.active = i === index ? 'true' : 'false';
-        el.setAttribute('aria-hidden', i === index ? 'false' : 'true');
-      });
-    };
-
-    const show = (next: number) => {
-      index = ((next % enabledSlides.length) + enabledSlides.length) % enabledSlides.length;
-      layout();
-      renderDots();
-      const multi = !solo;
-      if (prevBtn instanceof HTMLButtonElement) {
-        prevBtn.disabled = !multi;
-        prevBtn.classList.toggle('invisible', !multi);
-      }
-      if (nextBtn instanceof HTMLButtonElement) {
-        nextBtn.disabled = !multi;
-        nextBtn.classList.toggle('invisible', !multi);
-      }
-      if (dots instanceof HTMLElement) {
-        dots.classList.toggle('invisible', !multi);
-      }
-    };
-
-    prevBtn?.addEventListener('click', () => show(index - 1));
-    nextBtn?.addEventListener('click', () => show(index + 1));
-
-    // Avoid animating the first paint into place
-    track.style.transition = 'none';
-    show(index);
+    // Initial layout without animation
+    layout(false);
+    renderDots();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         track.style.transition = '';
       });
     });
 
-    window.addEventListener('resize', () => layout());
+    window.addEventListener('resize', () => layout(false));
   }
 
   document.querySelectorAll('[data-widget-carousel]').forEach((root) => setupCarousel(root));
