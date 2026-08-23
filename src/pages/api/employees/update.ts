@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const action = String(form.get('action') ?? '');
 
   if (!userId) {
-    return formErrorRedirect('/management', 'Missing employee.', 'peopleError');
+    return formErrorRedirect('/admin', 'Missing employee.', 'peopleError');
   }
 
   if (action === 'jobTitle') {
@@ -33,9 +33,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update job title.';
-      return formErrorRedirect('/management', message, 'peopleError');
+      return formErrorRedirect('/admin', message, 'peopleError');
     }
-    return new Response(null, { status: 303, headers: { Location: '/management#people' } });
+    return new Response(null, { status: 303, headers: { Location: '/admin#people' } });
   }
 
   if (action === 'teams') {
@@ -54,9 +54,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update teams.';
-      return formErrorRedirect('/management', message, 'peopleError');
+      return formErrorRedirect('/admin', message, 'peopleError');
     }
-    return new Response(null, { status: 303, headers: { Location: '/management#people' } });
+    return new Response(null, { status: 303, headers: { Location: '/admin#people' } });
   }
 
   if (!hasPermission(actor, 'employees:manage')) {
@@ -71,14 +71,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .first<{ email: string }>();
     if (target && isOwnerEmail(target.email) && roleId !== 'role_owner') {
       return formErrorRedirect(
-        '/management',
+        '/admin',
         'The primary owner account cannot change roles.',
         'peopleError',
       );
     }
     if ((!target || !isOwnerEmail(target.email)) && roleId === 'role_owner') {
       return formErrorRedirect(
-        '/management',
+        '/admin',
         'Primary owner is reserved for admin@wovensage.com. Use Owner for view-only access.',
         'peopleError',
       );
@@ -86,21 +86,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await assignRole({ userId, roleId, actorUserId: actor!.id });
   } else if (action === 'disable') {
     if (userId === actor!.id) {
-      return formErrorRedirect('/management', 'You cannot disable your own account.', 'peopleError');
+      return formErrorRedirect('/admin', 'You cannot disable your own account.', 'peopleError');
     }
     const target = await getEnv()
       .DB.prepare(`SELECT email FROM user WHERE id = ?`)
       .bind(userId)
       .first<{ email: string }>();
     if (target && isOwnerEmail(target.email)) {
-      return formErrorRedirect('/management', 'The owner account cannot be disabled.', 'peopleError');
+      return formErrorRedirect('/admin', 'The owner account cannot be disabled.', 'peopleError');
     }
     await setEmployeeStatus({ userId, status: 'disabled', actorUserId: actor!.id });
   } else if (action === 'enable') {
     await setEmployeeStatus({ userId, status: 'active', actorUserId: actor!.id });
   } else {
-    return formErrorRedirect('/management', 'Unknown action.', 'peopleError');
+    return formErrorRedirect('/admin', 'Unknown action.', 'peopleError');
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/management#people' } });
+  return new Response(null, { status: 303, headers: { Location: '/admin#people' } });
 };

@@ -5,7 +5,7 @@ export const prerender = false;
 
 const employee = Astro.locals.employee;
 if (canAccessManagement(employee)) {
-  return Astro.redirect('/management#people');
+  return Astro.redirect('/admin#people');
 }
 return Astro.redirect('/directory');
 ---

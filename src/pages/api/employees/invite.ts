@@ -17,12 +17,12 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
   const roleId = String(form.get('roleId') ?? '');
 
   if (!name || !email || !roleId) {
-    return formErrorRedirect('/management', 'Name, email, and role are required.', 'peopleError');
+    return formErrorRedirect('/admin', 'Name, email, and role are required.', 'peopleError');
   }
 
   if (roleId === 'role_owner' || isOwnerEmail(email)) {
     return formErrorRedirect(
-      '/management',
+      '/admin',
       'Primary owner is reserved for admin@wovensage.com. Invite your mom as Owner if she should see everything without making changes.',
       'peopleError',
     );
@@ -36,6 +36,6 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     origin: url.origin,
   });
 
-  const location = `/management?inviteUrl=${encodeURIComponent(invite.inviteUrl)}#people`;
+  const location = `/admin?inviteUrl=${encodeURIComponent(invite.inviteUrl)}#people`;
   return new Response(null, { status: 303, headers: { Location: location } });
 };

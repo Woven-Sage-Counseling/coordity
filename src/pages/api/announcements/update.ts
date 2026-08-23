@@ -17,13 +17,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = String(form.get('body') ?? '').trim();
 
   if (!id) {
-    return formErrorRedirect('/management', 'Announcement id is required.');
+    return formErrorRedirect('/admin', 'Announcement id is required.');
   }
   if (!title || !body) {
-    return formErrorRedirect('/management', 'Title and message are required.');
+    return formErrorRedirect('/admin', 'Title and message are required.');
   }
   if (title.length > 120 || body.length > 2000) {
-    return formErrorRedirect('/management', 'Announcement is too long.');
+    return formErrorRedirect('/admin', 'Announcement is too long.');
   }
 
   try {
@@ -34,8 +34,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       actorUserId: actor!.id,
     });
   } catch {
-    return formErrorRedirect('/management', 'Could not update that announcement.');
+    return formErrorRedirect('/admin', 'Could not update that announcement.');
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/management#announcement-history' } });
+  return new Response(null, { status: 303, headers: { Location: '/admin#announcement-history' } });
 };

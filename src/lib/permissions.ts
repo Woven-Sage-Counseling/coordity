@@ -99,7 +99,7 @@ export function isOwnerEmail(email: string): boolean {
   return Boolean(owner) && email.trim().toLowerCase() === owner;
 }
 
-/** Primary owner and Owner (view) roles — management tab and announcements. */
+/** Primary owner and Owner (view) roles — admin tab and announcements. */
 export function canAccessManagement(employee: PortalEmployee | null): boolean {
   if (!employee || employee.status !== 'active') return false;
   if (isOwnerEmail(employee.email)) return true;

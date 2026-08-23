@@ -65,8 +65,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  if (pathname.startsWith('/management')) {
+    const redirectPath = pathname.replace(/^\/management/, '/admin');
+    return context.redirect(`${redirectPath}${context.url.search}`);
+  }
+
+  if (pathname.startsWith('/resources')) {
+    return context.redirect('/');
+  }
+
   if (
-    pathname.startsWith('/management') ||
+    pathname.startsWith('/admin') ||
     pathname.startsWith('/api/announcements/create') ||
     pathname.startsWith('/api/announcements/archive') ||
     pathname.startsWith('/api/announcements/update') ||

@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const form = await request.formData();
   const id = String(form.get('id') ?? '').trim();
   if (!id) {
-    return formErrorRedirect('/management', 'Announcement id is required.');
+    return formErrorRedirect('/admin', 'Announcement id is required.');
   }
 
   try {
@@ -23,8 +23,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       actorUserId: actor!.id,
     });
   } catch {
-    return formErrorRedirect('/management', 'Could not delete that announcement.');
+    return formErrorRedirect('/admin', 'Could not delete that announcement.');
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/management#announcement-history' } });
+  return new Response(null, { status: 303, headers: { Location: '/admin#announcement-history' } });
 };
