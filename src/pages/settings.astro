@@ -304,8 +304,11 @@ const widgets = availableWidgets(canSeeFinancials);
           syncSelect();
         });
 
-        controls.append(up, down);
-        li.append(check, label, controls);
+        controls.appendChild(up);
+        controls.appendChild(down);
+        li.appendChild(check);
+        li.appendChild(label);
+        li.appendChild(controls);
         list.appendChild(li);
       });
       syncSelect();
