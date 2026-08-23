@@ -79,11 +79,20 @@ const hasNotificationUnread = notificationUnreadCount > 0;
           }
         </button>
       </div>
-      <p class="text-[11px] text-sage-dark/60" data-feed-status>
-        {latest
-          ? `${latest.authorName} · ${formatAnnouncementDate(latest.createdAt)}`
-          : 'Nothing posted yet'}
-      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        <p class="text-[11px] text-sage-dark/60" data-feed-status>
+          {latest
+            ? `${latest.authorName} · ${formatAnnouncementDate(latest.createdAt)}`
+            : 'Nothing posted yet'}
+        </p>
+        <a
+          href="/announcements"
+          class="text-[11px] font-semibold text-sage-dark hover:text-charcoal"
+          data-view-all-announcements
+        >
+          View all
+        </a>
+      </div>
     </div>
 
     <div class="relative overflow-hidden" data-feed-stage>
