@@ -57,7 +57,7 @@ const arrowClass =
         </button>
 
         <div
-          class="widget-carousel-viewport overflow-hidden px-0 pb-4 pt-2"
+          class="widget-carousel-viewport overflow-hidden px-0 pt-2"
           data-carousel-viewport
         >
           <div class="widget-carousel-track flex items-stretch" data-carousel-track>
@@ -118,6 +118,8 @@ const arrowClass =
 <style is:global>
   .widget-carousel-viewport {
     width: 100%;
+    /* Leave room below so card drop-shadows are not hard-clipped */
+    padding-bottom: 2.75rem;
     /* Fade only the extreme edges so peeks stay readable */
     -webkit-mask-image: linear-gradient(
       90deg,
@@ -151,7 +153,6 @@ const arrowClass =
     flex: 0 0 auto;
     min-height: 28rem;
     width: 70%;
-    padding-bottom: 0.35rem;
     transform: scale(0.92);
     opacity: 0.72;
     transition:
