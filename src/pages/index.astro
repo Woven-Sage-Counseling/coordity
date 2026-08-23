@@ -53,13 +53,10 @@ const reportHref = ownerEmail
         announcementUnreadCount={announcementUnreadCount}
         notifications={notifications}
         notificationUnreadCount={notificationUnreadCount}
-      />
-
-      <HomeShortcuts
-        userId={employee.id}
-        canSeeFinancials={canSeeFinancials}
         canSeeAdmin={canSeeAdmin}
       />
+
+      <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
 
       {
         appCategories.map((category) => {

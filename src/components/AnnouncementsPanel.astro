@@ -8,6 +8,7 @@ interface Props {
   announcementUnreadCount: number;
   notifications: PortalNotification[];
   notificationUnreadCount: number;
+  canSeeAdmin?: boolean;
 }
 
 const {
@@ -15,6 +16,7 @@ const {
   announcementUnreadCount,
   notifications,
   notificationUnreadCount,
+  canSeeAdmin = false,
 } = Astro.props;
 const latest = announcements[0] ?? null;
 const hasAnnouncementUnread = announcementUnreadCount > 0;
@@ -181,6 +183,19 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       </a>
     </div>
   </div>
+
+  {
+    canSeeAdmin && (
+      <div class="mt-3 flex justify-center">
+        <a
+          href="/admin#post-announcement"
+          class="rounded-full border border-sage-dark/25 bg-transparent px-3.5 py-1.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/40 hover:bg-sage/15 hover:text-charcoal"
+        >
+          New announcement
+        </a>
+      </div>
+    )
+  }
 </section>
 
 <style>

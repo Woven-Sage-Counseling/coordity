@@ -8,11 +8,10 @@ import {
 interface Props {
   userId: string;
   canSeeFinancials: boolean;
-  canSeeAdmin: boolean;
 }
 
-const { userId, canSeeFinancials, canSeeAdmin } = Astro.props;
-const allowed = allowedShortcutPaths({ canSeeFinancials, canSeeAdmin });
+const { userId, canSeeFinancials } = Astro.props;
+const allowed = allowedShortcutPaths({ canSeeFinancials, canSeeAdmin: false });
 const initial: ShortcutTarget[] = seedShortcuts(allowed);
 ---
 
@@ -33,16 +32,6 @@ const initial: ShortcutTarget[] = seedShortcuts(allowed);
           {item.label}
         </a>
       ))
-    }
-    {
-      canSeeAdmin && (
-        <a
-          href="/admin#post-announcement"
-          class="rounded-full border border-sage-dark/25 bg-transparent px-3.5 py-1.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/40 hover:bg-sage/15 hover:text-charcoal"
-        >
-          New announcement
-        </a>
-      )
     }
   </div>
   <script
@@ -109,12 +98,10 @@ const initial: ShortcutTarget[] = seedShortcuts(allowed);
       }
 
       var paths = rank(readCounts());
-      var adminLink = list.querySelector('a[href="/admin#post-announcement"]');
       list.querySelectorAll('[data-shortcut-link]').forEach(function (el) {
         el.remove();
       });
 
-      var insertBefore = adminLink;
       paths.forEach(function (path) {
         var a = document.createElement('a');
         a.href = path;
@@ -122,7 +109,7 @@ const initial: ShortcutTarget[] = seedShortcuts(allowed);
           'rounded-full bg-sage/20 px-3.5 py-1.5 text-sm font-medium text-sage-dark ring-1 ring-sage-dark/10 transition hover:bg-sage/35 hover:text-charcoal';
         a.setAttribute('data-shortcut-link', '');
         a.textContent = labelFor(path);
-        list.insertBefore(a, insertBefore);
+        list.appendChild(a);
       });
     })();
   </script>
