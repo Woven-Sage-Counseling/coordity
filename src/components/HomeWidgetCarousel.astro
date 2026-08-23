@@ -56,7 +56,10 @@ const arrowClass =
           </svg>
         </button>
 
-        <div class="widget-carousel-viewport overflow-hidden" data-carousel-viewport>
+        <div
+          class="widget-carousel-viewport overflow-hidden px-0 pb-4 pt-2"
+          data-carousel-viewport
+        >
           <div class="widget-carousel-track flex items-stretch" data-carousel-track>
             {availableIds.includes('quickbooks') && (
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="quickbooks">
@@ -128,12 +131,14 @@ const arrowClass =
     flex: 0 0 auto;
     min-height: 28rem;
     width: 78%;
+    padding-bottom: 0.35rem;
     transform: scale(0.88);
     opacity: 0.5;
     transition:
       transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
       opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
-    transform-origin: center center;
+    /* Grow/shrink from the top so the active card does not paint past the clip edge */
+    transform-origin: top center;
   }
 
   .widget-carousel-slide[data-active='true'] {
