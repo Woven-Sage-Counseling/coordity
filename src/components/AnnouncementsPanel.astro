@@ -85,13 +85,6 @@ const hasNotificationUnread = notificationUnreadCount > 0;
             ? `${latest.authorName} · ${formatAnnouncementDate(latest.createdAt)}`
             : 'Nothing posted yet'}
         </p>
-        <a
-          href="/announcements"
-          class="text-[11px] font-semibold text-sage-dark hover:text-charcoal"
-          data-view-all
-        >
-          View all
-        </a>
       </div>
     </div>
 
@@ -176,6 +169,16 @@ const hasNotificationUnread = notificationUnreadCount > 0;
           )
         }
       </div>
+    </div>
+
+    <div class="flex justify-end border-t border-black/[0.06] px-4 py-2.5 sm:px-5">
+      <a
+        href="/announcements"
+        class="text-[11px] font-semibold text-sage-dark hover:text-charcoal"
+        data-view-all
+      >
+        View all
+      </a>
     </div>
   </div>
 </section>
