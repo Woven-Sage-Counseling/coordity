@@ -88,7 +88,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
         <a
           href="/announcements"
           class="text-[11px] font-semibold text-sage-dark hover:text-charcoal"
-          data-view-all-announcements
+          data-view-all
         >
           View all
         </a>
@@ -207,6 +207,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
     const announcementsView = root.querySelector('[data-feed-panel-view="announcements"]');
     const notificationsView = root.querySelector('[data-feed-panel-view="notifications"]');
     const status = root.querySelector('[data-feed-status]');
+    const viewAll = root.querySelector('[data-view-all]');
     if (
       !(tablist instanceof HTMLElement) ||
       !(slider instanceof HTMLElement) ||
@@ -219,6 +220,11 @@ const hasNotificationUnread = notificationUnreadCount > 0;
     let active: 'announcements' | 'notifications' = 'announcements';
     let announcementsMarked = false;
     let notificationsMarked = false;
+
+    const syncViewAll = (key: 'announcements' | 'notifications') => {
+      if (!(viewAll instanceof HTMLAnchorElement)) return;
+      viewAll.href = key === 'notifications' ? '/notifications' : '/announcements';
+    };
 
     const setTabStyles = (tab: Element, selected: boolean) => {
       tab.setAttribute('aria-selected', selected ? 'true' : 'false');
@@ -295,6 +301,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
         setTabStyles(tab, tab.getAttribute('data-feed-tab') === next);
       });
       moveSlider(next);
+      syncViewAll(next);
       if (status instanceof HTMLElement) {
         if (next === 'notifications') {
           const badge = root.querySelector('[data-unread-badge="notifications"]');
@@ -320,6 +327,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
     });
 
     moveSlider('announcements');
+    syncViewAll('announcements');
     void markAnnouncementsRead();
     window.addEventListener('resize', () => moveSlider(active));
   }
