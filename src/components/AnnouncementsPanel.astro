@@ -82,7 +82,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       <div class="flex flex-wrap items-center gap-3">
         <p class="text-[11px] text-sage-dark/60" data-feed-status>
           {latest
-            ? `${latest.authorName} · ${formatAnnouncementDate(latest.createdAt)}`
+            ? `Posted by: ${latest.authorName} · ${formatAnnouncementDate(latest.createdAt)}`
             : 'Nothing posted yet'}
         </p>
       </div>
@@ -107,7 +107,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                     <li class="min-w-0">
                       <p class="truncate text-sm font-medium text-charcoal">{item.title}</p>
                       <p class="mt-0.5 line-clamp-1 text-xs text-sage-dark/70">
-                        {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                        Posted by: {item.authorName} · {formatAnnouncementDate(item.createdAt)}
                       </p>
                     </li>
                   ))}

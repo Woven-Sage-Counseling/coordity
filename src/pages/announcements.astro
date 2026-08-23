@@ -29,7 +29,7 @@ const announcements = await listAnnouncementsForUser(employee.id, 100);
             <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <h2 class="text-lg font-semibold text-charcoal">{item.title}</h2>
               <p class="text-xs text-sage-dark/55">
-                {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                Posted by: {item.authorName} · {formatAnnouncementDate(item.createdAt)}
               </p>
             </div>
             <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
