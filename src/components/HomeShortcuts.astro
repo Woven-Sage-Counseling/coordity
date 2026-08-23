@@ -1,0 +1,129 @@
+---
+import {
+  allowedShortcutPaths,
+  seedShortcuts,
+  type ShortcutTarget,
+} from '../lib/home-shortcuts';
+
+interface Props {
+  userId: string;
+  canSeeFinancials: boolean;
+  canSeeAdmin: boolean;
+}
+
+const { userId, canSeeFinancials, canSeeAdmin } = Astro.props;
+const allowed = allowedShortcutPaths({ canSeeFinancials, canSeeAdmin });
+const initial: ShortcutTarget[] = seedShortcuts(allowed);
+---
+
+<section class="mt-6" aria-labelledby="home-shortcuts-heading" data-home-shortcuts>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 id="home-shortcuts-heading" class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">
+      Shortcuts
+    </h2>
+  </div>
+  <div class="mt-3 flex flex-wrap gap-2" data-shortcut-list>
+    {
+      initial.map((item) => (
+        <a
+          href={item.path}
+          class="rounded-full bg-sage/20 px-3.5 py-1.5 text-sm font-medium text-sage-dark ring-1 ring-sage-dark/10 transition hover:bg-sage/35 hover:text-charcoal"
+          data-shortcut-link
+        >
+          {item.label}
+        </a>
+      ))
+    }
+    {
+      canSeeAdmin && (
+        <a
+          href="/admin#post-announcement"
+          class="rounded-full bg-charcoal px-3.5 py-1.5 text-sm font-medium text-cream transition hover:bg-charcoal/90"
+        >
+          New announcement
+        </a>
+      )
+    }
+  </div>
+  <script
+    is:inline
+    define:vars={{
+      userId,
+      allowed,
+    }}
+  >
+    (function () {
+      var root = document.querySelector('[data-home-shortcuts]');
+      if (!root) return;
+      var list = root.querySelector('[data-shortcut-list]');
+      if (!list) return;
+
+      var STORAGE_PREFIX = 'portal:home-visits:';
+      var TOP_N = 3;
+      var SEED = ['/directory', '/apps', '/account'];
+      var LABELS = {
+        '/apps': 'Applications',
+        '/directory': 'Directory',
+        '/account': 'Account',
+        '/financials': 'Financials',
+        '/announcements': 'Announcements',
+        '/notifications': 'Notifications',
+        '/admin': 'Admin',
+      };
+
+      function labelFor(path) {
+        return LABELS[path] || path;
+      }
+
+      function readCounts() {
+        try {
+          var raw = localStorage.getItem(STORAGE_PREFIX + userId);
+          if (!raw) return {};
+          var parsed = JSON.parse(raw);
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function rank(counts) {
+        var ranked = Object.keys(counts)
+          .filter(function (path) {
+            return allowed.indexOf(path) !== -1 && counts[path] > 0;
+          })
+          .sort(function (a, b) {
+            return counts[b] - counts[a] || (a < b ? -1 : a > b ? 1 : 0);
+          })
+          .slice(0, TOP_N);
+
+        if (ranked.length < TOP_N) {
+          for (var i = 0; i < SEED.length; i++) {
+            var path = SEED[i];
+            if (allowed.indexOf(path) === -1) continue;
+            if (ranked.indexOf(path) !== -1) continue;
+            ranked.push(path);
+            if (ranked.length >= TOP_N) break;
+          }
+        }
+        return ranked;
+      }
+
+      var paths = rank(readCounts());
+      var adminLink = list.querySelector('a[href="/admin#post-announcement"]');
+      list.querySelectorAll('[data-shortcut-link]').forEach(function (el) {
+        el.remove();
+      });
+
+      var insertBefore = adminLink;
+      paths.forEach(function (path) {
+        var a = document.createElement('a');
+        a.href = path;
+        a.className =
+          'rounded-full bg-sage/20 px-3.5 py-1.5 text-sm font-medium text-sage-dark ring-1 ring-sage-dark/10 transition hover:bg-sage/35 hover:text-charcoal';
+        a.setAttribute('data-shortcut-link', '');
+        a.textContent = labelFor(path);
+        list.insertBefore(a, insertBefore);
+      });
+    })();
+  </script>
+</section>

@@ -88,5 +88,33 @@ const canSeeManagement = canAccessManagement(employee);
         <slot />
       </div>
     </main>
+    {
+      employee?.status === 'active' && (
+        <script
+          is:inline
+          define:vars={{
+            userId: employee.id,
+            canSeeFinancials,
+            canSeeManagement,
+          }}
+        >
+          (function () {
+            var path = window.location.pathname.replace(/\/$/, '') || '/';
+            var allowed = ['/apps', '/directory', '/account', '/announcements', '/notifications'];
+            if (canSeeFinancials) allowed.push('/financials');
+            if (canSeeManagement) allowed.push('/admin');
+            if (allowed.indexOf(path) === -1) return;
+            try {
+              var key = 'portal:home-visits:' + userId;
+              var raw = localStorage.getItem(key);
+              var counts = raw ? JSON.parse(raw) : {};
+              if (!counts || typeof counts !== 'object') counts = {};
+              counts[path] = (counts[path] || 0) + 1;
+              localStorage.setItem(key, JSON.stringify(counts));
+            } catch (e) {}
+          })();
+        </script>
+      )
+    }
   </body>
 </html>

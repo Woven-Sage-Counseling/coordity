@@ -3,10 +3,13 @@ import PortalLayout from '../layouts/PortalLayout.astro';
 import AppCard from '../components/AppCard.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
 import FinancialSnapshotCard from '../components/FinancialSnapshotCard.astro';
+import HomeShortcuts from '../components/HomeShortcuts.astro';
+import ScheduleCard from '../components/ScheduleCard.astro';
 import { appCategories, portalApps } from '../lib/apps';
 import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
+import { getEnv } from '../lib/env';
 import { listNotificationsForUser, countUnreadNotifications } from '../lib/notifications';
-import { hasPermission } from '../lib/permissions';
+import { canAccessManagement, hasPermission } from '../lib/permissions';
 
 export const prerender = false;
 
@@ -14,26 +17,33 @@ const employee = Astro.locals.employee!;
 const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permission));
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
+const canSeeAdmin = canAccessManagement(employee);
+const canOpenClinicalCalendar = hasPermission(employee, 'apps:clinical');
+const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim();
 const announcements = await listAnnouncementsForUser(employee.id);
 const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
 const notifications = await listNotificationsForUser(employee.id);
 const notificationUnreadCount = await countUnreadNotifications(employee.id);
+
+const reportSubject = encodeURIComponent('Portal issue');
+const reportBody = encodeURIComponent(
+  `Hi,\n\nI'd like to report an issue with the employee portal.\n\nName: ${employee.name}\nPage: /\nWhat happened: \n\nThank you.`,
+);
+const reportHref = ownerEmail
+  ? `mailto:${ownerEmail}?subject=${reportSubject}&body=${reportBody}`
+  : null;
 ---
 
 <PortalLayout title="Home" wide>
-  <div
-    class:list={[
-      'flex flex-col lg:grid lg:items-start lg:gap-8',
-      canSeeFinancials && 'lg:grid-cols-[minmax(0,1fr)_22rem]',
-    ]}
-  >
-    {
-      canSeeFinancials && (
-        <div class="order-1 mb-10 lg:order-2 lg:mb-0">
-          <FinancialSnapshotCard />
-        </div>
-      )
-    }
+  <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
+    <div class="order-1 mb-10 space-y-6 lg:order-2 lg:mb-0">
+      {canSeeFinancials && <FinancialSnapshotCard />}
+      <ScheduleCard
+        canOpenClinicalCalendar={canOpenClinicalCalendar}
+        ownerEmail={ownerEmail}
+        employeeName={employee.name}
+      />
+    </div>
 
     <div class="order-2 lg:order-1">
       <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
@@ -43,6 +53,12 @@ const notificationUnreadCount = await countUnreadNotifications(employee.id);
         announcementUnreadCount={announcementUnreadCount}
         notifications={notifications}
         notificationUnreadCount={notificationUnreadCount}
+      />
+
+      <HomeShortcuts
+        userId={employee.id}
+        canSeeFinancials={canSeeFinancials}
+        canSeeAdmin={canSeeAdmin}
       />
 
       {
@@ -63,6 +79,18 @@ const notificationUnreadCount = await countUnreadNotifications(employee.id);
           );
         })
       }
+
+      <div class="mt-14 border-t border-sage-dark/10 pt-6">
+        {
+          reportHref ? (
+            <a href={reportHref} class="text-sm text-sage-dark/65 underline-offset-2 hover:text-sage-dark hover:underline">
+              Report an issue
+            </a>
+          ) : (
+            <p class="text-sm text-sage-dark/50">Report an issue is unavailable right now.</p>
+          )
+        }
+      </div>
     </div>
   </div>
 </PortalLayout>

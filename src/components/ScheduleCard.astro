@@ -1,0 +1,57 @@
+---
+interface Props {
+  canOpenClinicalCalendar: boolean;
+  ownerEmail: string;
+  employeeName: string;
+}
+
+const { canOpenClinicalCalendar, ownerEmail, employeeName } = Astro.props;
+
+const calendarHref = canOpenClinicalCalendar
+  ? 'https://secure.simplepractice.com'
+  : 'https://calendar.google.com';
+const calendarLabel = canOpenClinicalCalendar ? 'Open clinical calendar' : 'Open practice calendar';
+
+const timeOffSubject = encodeURIComponent('Time off request');
+const timeOffBody = encodeURIComponent(
+  `Hi,\n\nI'd like to request time off.\n\nName: ${employeeName}\nDates: \nReason: \n\nThank you.`,
+);
+const timeOffHref = ownerEmail
+  ? `mailto:${ownerEmail}?subject=${timeOffSubject}&body=${timeOffBody}`
+  : '#';
+---
+
+<aside
+  class="overflow-hidden rounded-[1.05rem] border border-sage-dark/10 bg-white/80 shadow-sm"
+  aria-labelledby="home-schedule-heading"
+>
+  <div class="border-b border-sage-dark/10 px-4 py-3">
+    <h2 id="home-schedule-heading" class="text-sm font-semibold text-charcoal">Schedule</h2>
+    <p class="mt-1 text-xs text-sage-dark/65">
+      {canOpenClinicalCalendar
+        ? 'Jump to your clinical calendar, or request time off.'
+        : 'Open the practice calendar, or request time off.'}
+    </p>
+  </div>
+  <div class="flex flex-col gap-2.5 px-4 py-3.5">
+    <a
+      href={calendarHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="inline-flex items-center justify-center rounded-xl bg-sage/25 px-3 py-2 text-sm font-semibold text-sage-dark ring-1 ring-sage-dark/10 transition hover:bg-sage/40 hover:text-charcoal"
+    >
+      {calendarLabel}
+    </a>
+    <a
+      href={timeOffHref}
+      class:list={[
+        'inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition',
+        ownerEmail
+          ? 'text-sage-dark ring-1 ring-sage-dark/15 hover:bg-black/[0.03] hover:text-charcoal'
+          : 'pointer-events-none text-sage-dark/40',
+      ]}
+    >
+      Request time off
+    </a>
+  </div>
+</aside>

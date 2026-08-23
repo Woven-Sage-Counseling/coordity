@@ -26,7 +26,12 @@ const { announcements, error = null } = Astro.props;
     )
   }
 
-  <form method="post" action="/api/announcements/create" class="card mt-6 grid gap-4">
+  <form
+    id="post-announcement"
+    method="post"
+    action="/api/announcements/create"
+    class="card mt-6 grid gap-4 scroll-mt-24"
+  >
     <p class="text-sm font-semibold text-charcoal">New announcement</p>
     <label class="block">
       <span class="text-sm font-medium text-sage-dark/80">Title</span>
