@@ -1,0 +1,192 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import { availableWidgets, HOME_WIDGET_MAX } from '../lib/home-widgets';
+import { hasPermission } from '../lib/permissions';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+const canSeeFinancials = hasPermission(employee, 'financials:view');
+const widgets = availableWidgets(canSeeFinancials);
+---
+
+<PortalLayout title="Settings">
+  <p class="text-sm text-sage-dark/65">
+    <a href="/" class="hover:text-sage-dark">Home</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Settings
+  </p>
+  <h1 class="mt-3 font-display text-4xl text-charcoal">Settings</h1>
+  <p class="mt-3 max-w-2xl text-sage-dark/75">
+    Choose which widgets appear on your home page and which one opens first when you sign in.
+  </p>
+
+  <section
+    class="card mt-8"
+    data-widget-settings
+    data-user-id={employee.id}
+    data-can-financials={canSeeFinancials ? '1' : '0'}
+    data-max={HOME_WIDGET_MAX}
+  >
+    <h2 class="font-display text-2xl text-charcoal">Home widgets</h2>
+    <p class="mt-2 text-sm text-sage-dark/65">
+      Select up to {HOME_WIDGET_MAX}. New widgets will show up here as they are added.
+    </p>
+
+    <p
+      class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+      data-settings-error
+    ></p>
+    <p
+      class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
+      data-settings-saved
+    >
+      Saved. Your home page will use these choices next time you open it.
+    </p>
+
+    <ul class="mt-6 space-y-3">
+      {
+        widgets.map((widget) => (
+          <li class="flex items-start gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3">
+            <input
+              type="checkbox"
+              id={`widget-${widget.id}`}
+              value={widget.id}
+              class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+              data-widget-enabled
+            />
+            <label for={`widget-${widget.id}`} class="min-w-0 flex-1 cursor-pointer">
+              <span class="block text-sm font-semibold text-charcoal">{widget.label}</span>
+              <span class="mt-0.5 block text-sm text-sage-dark/65">{widget.description}</span>
+            </label>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="mt-8">
+      <label for="default-widget" class="block text-sm font-semibold text-charcoal">
+        Open home to
+      </label>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        This widget shows first when you land on Home after signing in.
+      </p>
+      <select
+        id="default-widget"
+        class="field mt-3 max-w-sm"
+        data-widget-default
+      >
+        {
+          widgets.map((widget) => (
+            <option value={widget.id}>{widget.label}</option>
+          ))
+        }
+      </select>
+    </div>
+
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <button type="button" class="btn-primary" data-settings-save>Save preferences</button>
+      <a href="/" class="text-sm text-sage-dark/70 hover:text-sage-dark">Back to home</a>
+    </div>
+  </section>
+</PortalLayout>
+
+<script>
+  type Prefs = { enabled: string[]; defaultId: string };
+
+  function defaultPrefs(canFinancials: boolean): Prefs {
+    const enabled = canFinancials ? ['schedule', 'quickbooks'] : ['schedule'];
+    return { enabled, defaultId: 'schedule' };
+  }
+
+  function setupSettings(root: Element) {
+    if (!(root instanceof HTMLElement)) return;
+    const userId = root.dataset.userId ?? '';
+    const canFinancials = root.dataset.canFinancials === '1';
+    const max = Number(root.dataset.max || 10);
+    const checks = Array.from(root.querySelectorAll('[data-widget-enabled]')).filter(
+      (el): el is HTMLInputElement => el instanceof HTMLInputElement,
+    );
+    const select = root.querySelector('[data-widget-default]');
+    const errorEl = root.querySelector('[data-settings-error]');
+    const savedEl = root.querySelector('[data-settings-saved]');
+    const saveBtn = root.querySelector('[data-settings-save]');
+    if (!(select instanceof HTMLSelectElement)) return;
+
+    const key = 'portal:home-widgets:' + userId;
+    let prefs = defaultPrefs(canFinancials);
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Prefs;
+        if (Array.isArray(parsed.enabled) && parsed.enabled.length) {
+          prefs = {
+            enabled: parsed.enabled.slice(0, max),
+            defaultId: parsed.defaultId || parsed.enabled[0]!,
+          };
+        }
+      }
+    } catch {
+      /* keep defaults */
+    }
+
+    const syncSelectOptions = () => {
+      const enabled = checks.filter((c) => c.checked).map((c) => c.value);
+      Array.from(select.options).forEach((opt) => {
+        opt.disabled = !enabled.includes(opt.value);
+        opt.hidden = !enabled.includes(opt.value);
+      });
+      if (!enabled.includes(select.value) && enabled[0]) {
+        select.value = enabled[0];
+      }
+    };
+
+    checks.forEach((check) => {
+      check.checked = prefs.enabled.includes(check.value);
+      check.addEventListener('change', () => {
+        const enabledCount = checks.filter((c) => c.checked).length;
+        if (check.checked && enabledCount > max) {
+          check.checked = false;
+          if (errorEl instanceof HTMLElement) {
+            errorEl.textContent = `You can enable at most ${max} widgets.`;
+            errorEl.classList.remove('hidden');
+          }
+          return;
+        }
+        if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
+        if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+        if (enabledCount === 0) {
+          check.checked = true;
+          if (errorEl instanceof HTMLElement) {
+            errorEl.textContent = 'Keep at least one widget enabled.';
+            errorEl.classList.remove('hidden');
+          }
+        }
+        syncSelectOptions();
+      });
+    });
+
+    if (prefs.enabled.includes(prefs.defaultId)) {
+      select.value = prefs.defaultId;
+    }
+    syncSelectOptions();
+
+    saveBtn?.addEventListener('click', () => {
+      const enabled = checks.filter((c) => c.checked).map((c) => c.value).slice(0, max);
+      if (enabled.length === 0) {
+        if (errorEl instanceof HTMLElement) {
+          errorEl.textContent = 'Keep at least one widget enabled.';
+          errorEl.classList.remove('hidden');
+        }
+        return;
+      }
+      const defaultId = enabled.includes(select.value) ? select.value : enabled[0]!;
+      const next: Prefs = { enabled, defaultId };
+      localStorage.setItem(key, JSON.stringify(next));
+      if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
+      if (savedEl instanceof HTMLElement) savedEl.classList.remove('hidden');
+    });
+  }
+
+  document.querySelectorAll('[data-widget-settings]').forEach((root) => setupSettings(root));
+</script>
