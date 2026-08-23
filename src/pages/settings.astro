@@ -67,10 +67,11 @@ const widgets = availableWidgets(canSeeFinancials);
     data-user-id={employee.id}
     data-can-financials={canSeeFinancials ? '1' : '0'}
     data-max={HOME_WIDGET_MAX}
+    data-catalog={JSON.stringify(widgets)}
   >
     <h2 class="font-display text-2xl text-charcoal">Home widgets</h2>
     <p class="mt-2 text-sm text-sage-dark/65">
-      Select up to {HOME_WIDGET_MAX}. New widgets will show up here as they are added.
+      Enable widgets, then use the arrows to set carousel order (up to {HOME_WIDGET_MAX}).
     </p>
 
     <p
@@ -84,25 +85,7 @@ const widgets = availableWidgets(canSeeFinancials);
       Saved. Your home page will use these choices next time you open it.
     </p>
 
-    <ul class="mt-6 space-y-3">
-      {
-        widgets.map((widget) => (
-          <li class="flex items-start gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3">
-            <input
-              type="checkbox"
-              id={`widget-${widget.id}`}
-              value={widget.id}
-              class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-              data-widget-enabled
-            />
-            <label for={`widget-${widget.id}`} class="min-w-0 flex-1 cursor-pointer">
-              <span class="block text-sm font-semibold text-charcoal">{widget.label}</span>
-              <span class="mt-0.5 block text-sm text-sage-dark/65">{widget.description}</span>
-            </label>
-          </li>
-        ))
-      }
-    </ul>
+    <ul class="mt-6 space-y-3" data-widget-list></ul>
 
     <div class="mt-8">
       <label for="default-widget" class="block text-sm font-semibold text-charcoal">
@@ -111,17 +94,7 @@ const widgets = availableWidgets(canSeeFinancials);
       <p class="mt-1 text-sm text-sage-dark/65">
         This widget shows first when you land on Home after signing in.
       </p>
-      <select
-        id="default-widget"
-        class="field mt-3 max-w-sm"
-        data-widget-default
-      >
-        {
-          widgets.map((widget) => (
-            <option value={widget.id}>{widget.label}</option>
-          ))
-        }
-      </select>
+      <select id="default-widget" class="field mt-3 max-w-sm" data-widget-default></select>
     </div>
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
@@ -133,9 +106,12 @@ const widgets = availableWidgets(canSeeFinancials);
 
 <script>
   type Prefs = { enabled: string[]; defaultId: string };
+  type CatalogItem = { id: string; label: string; description: string };
 
   function defaultPrefs(canFinancials: boolean): Prefs {
-    const enabled = canFinancials ? ['schedule', 'quickbooks'] : ['schedule'];
+    const enabled = canFinancials
+      ? ['schedule', 'quickbooks', 'coming_soon']
+      : ['schedule', 'coming_soon'];
     return { enabled, defaultId: 'schedule' };
   }
 
@@ -167,8 +143,7 @@ const widgets = availableWidgets(canSeeFinancials);
       option.checked = option.value === theme;
       option.addEventListener('change', () => {
         if (!option.checked) return;
-        const next = option.value === 'dark' ? 'dark' : 'light';
-        applyTheme(next, userId);
+        applyTheme(option.value === 'dark' ? 'dark' : 'light', userId);
       });
     });
   }
@@ -178,14 +153,19 @@ const widgets = availableWidgets(canSeeFinancials);
     const userId = root.dataset.userId ?? '';
     const canFinancials = root.dataset.canFinancials === '1';
     const max = Number(root.dataset.max || 10);
-    const checks = Array.from(root.querySelectorAll('[data-widget-enabled]')).filter(
-      (el): el is HTMLInputElement => el instanceof HTMLInputElement,
-    );
+    const list = root.querySelector('[data-widget-list]');
     const select = root.querySelector('[data-widget-default]');
     const errorEl = root.querySelector('[data-settings-error]');
     const savedEl = root.querySelector('[data-settings-saved]');
     const saveBtn = root.querySelector('[data-settings-save]');
-    if (!(select instanceof HTMLSelectElement)) return;
+    if (!(list instanceof HTMLElement) || !(select instanceof HTMLSelectElement)) return;
+
+    let catalog: CatalogItem[] = [];
+    try {
+      catalog = JSON.parse(root.dataset.catalog || '[]') as CatalogItem[];
+    } catch {
+      catalog = [];
+    }
 
     const key = 'portal:home-widgets:' + userId;
     let prefs = defaultPrefs(canFinancials);
@@ -195,58 +175,149 @@ const widgets = availableWidgets(canSeeFinancials);
         const parsed = JSON.parse(raw) as Prefs;
         if (Array.isArray(parsed.enabled) && parsed.enabled.length) {
           prefs = {
-            enabled: parsed.enabled.slice(0, max),
+            enabled: parsed.enabled.filter((id) => catalog.some((w) => w.id === id)).slice(0, max),
             defaultId: parsed.defaultId || parsed.enabled[0]!,
           };
+          if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials);
         }
       }
     } catch {
       /* keep defaults */
     }
 
-    const syncSelectOptions = () => {
-      const enabled = checks.filter((c) => c.checked).map((c) => c.value);
-      Array.from(select.options).forEach((opt) => {
-        opt.disabled = !enabled.includes(opt.value);
-        opt.hidden = !enabled.includes(opt.value);
+    // Ordered rows: enabled (in saved order) first, then remaining catalog items
+    const orderedIds = [
+      ...prefs.enabled,
+      ...catalog.map((w) => w.id).filter((id) => !prefs.enabled.includes(id)),
+    ];
+
+    type RowState = { id: string; enabled: boolean };
+    let rows: RowState[] = orderedIds.map((id) => ({
+      id,
+      enabled: prefs.enabled.includes(id),
+    }));
+
+    const moveBtnClass =
+      'inline-flex h-8 w-8 items-center justify-center rounded-lg text-sage-dark/70 ring-1 ring-sage-dark/15 transition hover:bg-white hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-30';
+
+    const syncSelect = () => {
+      const enabled = rows.filter((r) => r.enabled).map((r) => r.id);
+      select.innerHTML = '';
+      catalog.forEach((widget) => {
+        if (!enabled.includes(widget.id)) return;
+        const opt = document.createElement('option');
+        opt.value = widget.id;
+        opt.textContent = widget.label;
+        select.appendChild(opt);
       });
-      if (!enabled.includes(select.value) && enabled[0]) {
+      if (enabled.includes(select.value) === false && enabled[0]) {
         select.value = enabled[0];
+      } else if (enabled.includes(prefs.defaultId)) {
+        select.value = prefs.defaultId;
       }
     };
 
-    checks.forEach((check) => {
-      check.checked = prefs.enabled.includes(check.value);
-      check.addEventListener('change', () => {
-        const enabledCount = checks.filter((c) => c.checked).length;
-        if (check.checked && enabledCount > max) {
-          check.checked = false;
-          if (errorEl instanceof HTMLElement) {
-            errorEl.textContent = `You can enable at most ${max} widgets.`;
-            errorEl.classList.remove('hidden');
-          }
-          return;
-        }
-        if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
-        if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
-        if (enabledCount === 0) {
-          check.checked = true;
-          if (errorEl instanceof HTMLElement) {
-            errorEl.textContent = 'Keep at least one widget enabled.';
-            errorEl.classList.remove('hidden');
-          }
-        }
-        syncSelectOptions();
-      });
-    });
+    const render = () => {
+      list.innerHTML = '';
+      rows.forEach((row, index) => {
+        const widget = catalog.find((w) => w.id === row.id);
+        if (!widget) return;
 
+        const li = document.createElement('li');
+        li.className =
+          'flex flex-wrap items-center gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3';
+        li.dataset.widgetId = row.id;
+
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.id = `widget-${row.id}`;
+        check.value = row.id;
+        check.checked = row.enabled;
+        check.className =
+          'h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30';
+        check.addEventListener('change', () => {
+          const enabledCount = rows.filter((r) => r.enabled).length;
+          if (check.checked && enabledCount >= max) {
+            check.checked = false;
+            if (errorEl instanceof HTMLElement) {
+              errorEl.textContent = `You can enable at most ${max} widgets.`;
+              errorEl.classList.remove('hidden');
+            }
+            return;
+          }
+          if (!check.checked && rows.filter((r) => r.enabled).length <= 1) {
+            check.checked = true;
+            if (errorEl instanceof HTMLElement) {
+              errorEl.textContent = 'Keep at least one widget enabled.';
+              errorEl.classList.remove('hidden');
+            }
+            return;
+          }
+          row.enabled = check.checked;
+          if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
+          if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+          syncSelect();
+          render();
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = check.id;
+        label.className = 'min-w-0 flex-1 cursor-pointer';
+        label.innerHTML = `<span class="block text-sm font-semibold text-charcoal"></span><span class="mt-0.5 block text-sm text-sage-dark/65"></span>`;
+        (label.children[0] as HTMLElement).textContent = widget.label;
+        (label.children[1] as HTMLElement).textContent = widget.description;
+
+        const controls = document.createElement('div');
+        controls.className = 'flex items-center gap-1';
+
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.className = moveBtnClass;
+        up.setAttribute('aria-label', `Move ${widget.label} up`);
+        up.disabled = index === 0;
+        up.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 10l5-5 5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        up.addEventListener('click', () => {
+          if (index === 0) return;
+          const tmp = rows[index - 1]!;
+          rows[index - 1] = rows[index]!;
+          rows[index] = tmp;
+          if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+          render();
+          syncSelect();
+        });
+
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.className = moveBtnClass;
+        down.setAttribute('aria-label', `Move ${widget.label} down`);
+        down.disabled = index === rows.length - 1;
+        down.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        down.addEventListener('click', () => {
+          if (index >= rows.length - 1) return;
+          const tmp = rows[index + 1]!;
+          rows[index + 1] = rows[index]!;
+          rows[index] = tmp;
+          if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+          render();
+          syncSelect();
+        });
+
+        controls.append(up, down);
+        li.append(check, label, controls);
+        list.appendChild(li);
+      });
+      syncSelect();
+    };
+
+    render();
     if (prefs.enabled.includes(prefs.defaultId)) {
       select.value = prefs.defaultId;
     }
-    syncSelectOptions();
 
     saveBtn?.addEventListener('click', () => {
-      const enabled = checks.filter((c) => c.checked).map((c) => c.value).slice(0, max);
+      const enabled = rows.filter((r) => r.enabled).map((r) => r.id).slice(0, max);
       if (enabled.length === 0) {
         if (errorEl instanceof HTMLElement) {
           errorEl.textContent = 'Keep at least one widget enabled.';
@@ -257,6 +328,7 @@ const widgets = availableWidgets(canSeeFinancials);
       const defaultId = enabled.includes(select.value) ? select.value : enabled[0]!;
       const next: Prefs = { enabled, defaultId };
       localStorage.setItem(key, JSON.stringify(next));
+      prefs = next;
       if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
       if (savedEl instanceof HTMLElement) savedEl.classList.remove('hidden');
     });

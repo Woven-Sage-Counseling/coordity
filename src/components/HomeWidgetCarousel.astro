@@ -1,6 +1,7 @@
 ---
 import FinancialSnapshotCard from './FinancialSnapshotCard.astro';
 import ScheduleCard from './ScheduleCard.astro';
+import PlaceholderWidget from './PlaceholderWidget.astro';
 import { availableWidgets } from '../lib/home-widgets';
 
 interface Props {
@@ -69,6 +70,11 @@ const arrowClass =
                   ownerEmail={ownerEmail}
                   employeeName={employeeName}
                 />
+              </div>
+            )}
+            {availableIds.includes('coming_soon') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="coming_soon">
+                <PlaceholderWidget />
               </div>
             )}
           </div>
@@ -157,7 +163,9 @@ const arrowClass =
   type Prefs = { enabled: string[]; defaultId: string };
 
   function defaultPrefs(canFinancials: boolean): Prefs {
-    const enabled = canFinancials ? ['schedule', 'quickbooks'] : ['schedule'];
+    const enabled = canFinancials
+      ? ['schedule', 'quickbooks', 'coming_soon']
+      : ['schedule', 'coming_soon'];
     return { enabled, defaultId: 'schedule' };
   }
 
@@ -196,198 +204,118 @@ const arrowClass =
     const track = root.querySelector('[data-carousel-track]');
     if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement)) return;
 
-    const sourceSlides = Array.from(root.querySelectorAll('[data-carousel-slide]')).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement && !el.dataset.clone,
+    const allSlides = Array.from(root.querySelectorAll('[data-carousel-slide]')).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement,
     );
 
-    const realSlides = prefs.enabled
-      .map((id) => sourceSlides.find((el) => el.dataset.widgetId === id))
+    const enabledSlides = prefs.enabled
+      .map((id) => allSlides.find((el) => el.dataset.widgetId === id))
       .filter((el): el is HTMLElement => Boolean(el));
 
-    sourceSlides.forEach((slide) => {
-      if (!realSlides.includes(slide)) slide.remove();
+    allSlides.forEach((slide) => {
+      if (!enabledSlides.includes(slide)) slide.remove();
     });
+    enabledSlides.forEach((slide) => track.appendChild(slide));
 
-    if (realSlides.length === 0) {
+    if (enabledSlides.length === 0) {
       root.hidden = true;
       return;
     }
 
-    // Rebuild track: optional clones for looping peeks on both sides
-    track.innerHTML = '';
-    const solo = realSlides.length === 1;
-    const loop = realSlides.length > 1;
-
-    const mountSlide = (source: HTMLElement, clone: boolean) => {
-      const node = source.cloneNode(true) as HTMLElement;
-      if (clone) {
-        node.dataset.clone = 'true';
-        // Avoid duplicate ids inside clones
-        node.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
-      }
-      node.dataset.solo = solo ? 'true' : 'false';
-      track.appendChild(node);
-      return node;
-    };
-
-    const trackSlides: HTMLElement[] = [];
-    if (loop) {
-      trackSlides.push(mountSlide(realSlides[realSlides.length - 1]!, true));
-    }
-    realSlides.forEach((slide) => {
-      trackSlides.push(mountSlide(slide, false));
-    });
-    if (loop) {
-      trackSlides.push(mountSlide(realSlides[0]!, true));
-    }
-
-    // Drop the original nodes (we remounted copies)
-    realSlides.forEach((slide) => slide.remove());
-
     const prevBtn = root.querySelector('[data-carousel-prev]');
     const nextBtn = root.querySelector('[data-carousel-next]');
     const dots = root.querySelector('[data-carousel-dots]');
+    const solo = enabledSlides.length === 1;
+    let index = Math.max(
+      0,
+      enabledSlides.findIndex((el) => el.dataset.widgetId === prefs.defaultId),
+    );
 
-    // track index: with clones, real items start at 1
-    const firstReal = loop ? 1 : 0;
-    const lastReal = loop ? trackSlides.length - 2 : trackSlides.length - 1;
-    const realCount = realSlides.length;
-
-    let trackIndex = firstReal;
-    const preferred = prefs.enabled.indexOf(prefs.defaultId);
-    if (preferred >= 0) trackIndex = firstReal + preferred;
-
-    let animating = false;
-
-    const realIndexFromTrack = (ti: number) => {
-      if (!loop) return ti;
-      if (ti === 0) return realCount - 1;
-      if (ti === trackSlides.length - 1) return 0;
-      return ti - 1;
-    };
-
-    const setActiveStates = () => {
-      trackSlides.forEach((slide, i) => {
-        slide.dataset.active = i === trackIndex ? 'true' : 'false';
-        slide.setAttribute('aria-hidden', i === trackIndex ? 'false' : 'true');
-      });
-    };
-
-    const renderDots = () => {
-      if (!(dots instanceof HTMLElement)) return;
-      dots.innerHTML = '';
-      const activeReal = realIndexFromTrack(trackIndex);
-      for (let i = 0; i < realCount; i++) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-label', `Show widget ${i + 1}`);
-        btn.setAttribute('aria-selected', i === activeReal ? 'true' : 'false');
-        btn.className =
-          i === activeReal
-            ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
-            : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
-        btn.addEventListener('click', () => goTo(firstReal + i));
-        dots.appendChild(btn);
-      }
-    };
-
-    const layout = (withTransition: boolean) => {
-      if (solo) {
-        track.style.transition = 'none';
-        track.style.transform = 'translate3d(0,0,0)';
-        setActiveStates();
-        return;
-      }
-
-      const viewportWidth = viewport.clientWidth;
-      // Use offsetWidth so scale() does not skew measurements
-      const slideWidth = trackSlides[trackIndex]?.offsetWidth || viewportWidth * 0.78;
-      const styles = getComputedStyle(track);
-      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
-      const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
-      const offset = peek - trackIndex * (slideWidth + gap);
-
-      track.style.transition = withTransition ? '' : 'none';
-      track.style.transform = `translate3d(${offset}px, 0, 0)`;
-      setActiveStates();
-    };
-
-    const jumpIfClone = () => {
-      if (!loop) return;
-      if (trackIndex === 0) {
-        trackIndex = lastReal;
-        layout(false);
-      } else if (trackIndex === trackSlides.length - 1) {
-        trackIndex = firstReal;
-        layout(false);
-      }
-    };
-
-    const goTo = (nextTrackIndex: number, withTransition = true) => {
-      if (solo) return;
-      trackIndex = nextTrackIndex;
-      animating = withTransition;
-      layout(withTransition);
-      renderDots();
-      if (!withTransition) {
-        animating = false;
-        return;
-      }
-    };
-
-    track.addEventListener('transitionend', (event) => {
-      if (event.target !== track || event.propertyName !== 'transform') return;
-      animating = false;
-      jumpIfClone();
-      renderDots();
-    });
-
-    trackSlides.forEach((slide, i) => {
+    enabledSlides.forEach((slide) => {
+      slide.dataset.solo = solo ? 'true' : 'false';
       slide.addEventListener(
         'click',
         (event) => {
-          if (solo || i === trackIndex) return;
+          if (solo) return;
+          const slideIndex = enabledSlides.indexOf(slide);
+          if (slideIndex === index) return;
           event.preventDefault();
           event.stopPropagation();
-          goTo(i);
+          show(slideIndex);
         },
         true,
       );
     });
 
-    prevBtn?.addEventListener('click', () => {
-      if (animating && loop) return;
-      goTo(trackIndex - 1);
-    });
-    nextBtn?.addEventListener('click', () => {
-      if (animating && loop) return;
-      goTo(trackIndex + 1);
-    });
+    const renderDots = () => {
+      if (!(dots instanceof HTMLElement)) return;
+      dots.innerHTML = '';
+      enabledSlides.forEach((slide, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-label', `Show ${slide.dataset.widgetId} widget`);
+        btn.setAttribute('aria-selected', i === index ? 'true' : 'false');
+        btn.className =
+          i === index
+            ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
+            : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
+        btn.addEventListener('click', () => show(i));
+        dots.appendChild(btn);
+      });
+    };
 
-    const multi = !solo;
-    if (prevBtn instanceof HTMLButtonElement) {
-      prevBtn.disabled = !multi;
-      prevBtn.classList.toggle('invisible', !multi);
-    }
-    if (nextBtn instanceof HTMLButtonElement) {
-      nextBtn.disabled = !multi;
-      nextBtn.classList.toggle('invisible', !multi);
-    }
-    if (dots instanceof HTMLElement) {
-      dots.classList.toggle('invisible', !multi);
-    }
+    const layout = () => {
+      if (solo) {
+        track.style.transform = 'translate3d(0,0,0)';
+        enabledSlides[0]!.dataset.active = 'true';
+        return;
+      }
 
-    // Initial layout without animation
-    layout(false);
-    renderDots();
+      const viewportWidth = viewport.clientWidth;
+      const slideWidth = enabledSlides[index]?.offsetWidth || viewportWidth * 0.78;
+      const styles = getComputedStyle(track);
+      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+      const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
+      const offset = peek - index * (slideWidth + gap);
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
+
+      enabledSlides.forEach((el, i) => {
+        el.dataset.active = i === index ? 'true' : 'false';
+        el.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+      });
+    };
+
+    const show = (next: number) => {
+      index = Math.min(enabledSlides.length - 1, Math.max(0, next));
+      layout();
+      renderDots();
+      const multi = !solo;
+      if (prevBtn instanceof HTMLButtonElement) {
+        prevBtn.disabled = !multi || index === 0;
+        prevBtn.classList.toggle('invisible', !multi);
+      }
+      if (nextBtn instanceof HTMLButtonElement) {
+        nextBtn.disabled = !multi || index === enabledSlides.length - 1;
+        nextBtn.classList.toggle('invisible', !multi);
+      }
+      if (dots instanceof HTMLElement) {
+        dots.classList.toggle('invisible', !multi);
+      }
+    };
+
+    prevBtn?.addEventListener('click', () => show(index - 1));
+    nextBtn?.addEventListener('click', () => show(index + 1));
+
+    track.style.transition = 'none';
+    show(index);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         track.style.transition = '';
       });
     });
 
-    window.addEventListener('resize', () => layout(false));
+    window.addEventListener('resize', () => layout());
   }
 
   document.querySelectorAll('[data-widget-carousel]').forEach((root) => setupCarousel(root));

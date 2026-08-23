@@ -1,6 +1,6 @@
 export const HOME_WIDGET_MAX = 10;
 
-export type HomeWidgetId = 'quickbooks' | 'schedule';
+export type HomeWidgetId = 'quickbooks' | 'schedule' | 'coming_soon';
 
 export interface HomeWidgetDef {
   id: HomeWidgetId;
@@ -13,15 +13,20 @@ export interface HomeWidgetDef {
 /** Registry of home widgets. Add new widgets here as they are built. */
 export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
   {
+    id: 'schedule',
+    label: 'Schedule',
+    description: 'Clinical or practice calendar and time-off request.',
+  },
+  {
     id: 'quickbooks',
     label: 'QuickBooks',
     description: 'Profit and loss snapshot and reserve progress.',
     requiresFinancials: true,
   },
   {
-    id: 'schedule',
-    label: 'Schedule',
-    description: 'Clinical or practice calendar and time-off request.',
+    id: 'coming_soon',
+    label: 'Coming soon',
+    description: 'Placeholder for the next home widget.',
   },
 ];
 
@@ -45,12 +50,13 @@ export function availableWidgets(canSeeFinancials: boolean): HomeWidgetDef[] {
 
 export function defaultPrefs(canSeeFinancials: boolean): HomeWidgetPrefs {
   const available = availableWidgets(canSeeFinancials).map((w) => w.id);
-  const enabled = available.slice(0, HOME_WIDGET_MAX);
+  const preferredOrder: HomeWidgetId[] = canSeeFinancials
+    ? ['schedule', 'quickbooks', 'coming_soon']
+    : ['schedule', 'coming_soon'];
+  const enabled = preferredOrder.filter((id) => available.includes(id)).slice(0, HOME_WIDGET_MAX);
   return {
     enabled,
-    defaultId: enabled.includes('schedule')
-      ? 'schedule'
-      : (enabled[0] ?? 'schedule'),
+    defaultId: enabled.includes('schedule') ? 'schedule' : (enabled[0] ?? 'schedule'),
   };
 }
 
