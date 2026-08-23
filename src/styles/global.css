@@ -4,6 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+  --portal-cream: 247 244 238;
+  --portal-sage: 120 143 117;
+  --portal-sage-light: 150 166 147;
+  --portal-sage-dark: 83 95 81;
+  --portal-accent: 185 181 174;
+  --portal-charcoal: 58 58 56;
+  --portal-surface: 255 255 255;
+  --portal-muted: 244 245 248;
+  --portal-panel: 247 248 246;
+  --portal-soft: 232 235 231;
+}
+
+html.dark {
+  color-scheme: dark;
+  --portal-cream: 17 19 17;
+  --portal-sage: 138 158 134;
+  --portal-sage-light: 158 174 154;
+  --portal-sage-dark: 186 198 182;
+  --portal-accent: 120 118 112;
+  --portal-charcoal: 232 230 224;
+  --portal-surface: 30 33 30;
+  --portal-muted: 37 41 37;
+  --portal-panel: 34 38 34;
+  --portal-soft: 48 54 48;
+}
+
 @layer base {
   html {
     @apply scroll-smooth;
@@ -12,6 +40,11 @@
   body {
     @apply bg-cream font-sans text-sage-dark antialiased;
   }
+
+  html.dark header img[alt='Woven Sage Counseling'] {
+    filter: brightness(0) invert(1);
+    opacity: 0.92;
+  }
 }
 
 @layer components {
@@ -19,19 +52,86 @@
     @apply inline-flex items-center justify-center rounded-full bg-sage-dark px-5 py-2.5 text-sm font-semibold text-cream transition hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-dark disabled:cursor-not-allowed disabled:opacity-60;
   }
 
+  html.dark .btn-primary {
+    @apply text-[#111311] hover:bg-sage-light;
+  }
+
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-full border border-sage-dark/25 bg-white/70 px-5 py-2.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/40 hover:bg-white;
+    @apply inline-flex items-center justify-center rounded-full border border-sage-dark/25 bg-surface/70 px-5 py-2.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/40 hover:bg-surface;
   }
 
   .field {
-    @apply mt-1 w-full rounded-xl border border-sage-dark/15 bg-white px-3.5 py-2.5 text-sm text-charcoal outline-none ring-sage-dark/30 focus:ring-2;
+    @apply mt-1 w-full rounded-xl border border-sage-dark/15 bg-surface px-3.5 py-2.5 text-sm text-charcoal outline-none ring-sage-dark/30 focus:ring-2;
   }
 
   .card {
-    @apply rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm;
+    @apply rounded-2xl border border-sage-dark/10 bg-surface/80 p-5 shadow-sm;
   }
 
   .app-tile {
-    @apply flex h-full flex-col rounded-2xl border border-sage-dark/10 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sage-dark/25 hover:shadow-md;
+    @apply flex h-full flex-col rounded-2xl border border-sage-dark/10 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sage-dark/25 hover:shadow-md;
   }
+}
+
+/* Remap common light-only utilities used across portal pages */
+html.dark .bg-white {
+  background-color: rgb(var(--portal-surface) / 1) !important;
+}
+html.dark .bg-white\/80 {
+  background-color: rgb(var(--portal-surface) / 0.88) !important;
+}
+html.dark .bg-white\/70 {
+  background-color: rgb(var(--portal-surface) / 0.78) !important;
+}
+html.dark .bg-white\/40 {
+  background-color: rgb(var(--portal-surface) / 0.45) !important;
+}
+html.dark .bg-white\/15 {
+  background-color: rgb(255 255 255 / 0.1) !important;
+}
+html.dark .bg-\[\#f4f5f8\],
+html.dark .bg-\[\#f7f8f6\] {
+  background-color: rgb(var(--portal-muted) / 1) !important;
+}
+html.dark .bg-\[\#e8ebe7\],
+html.dark .bg-\[\#dde2dc\] {
+  background-color: rgb(var(--portal-soft) / 1) !important;
+}
+html.dark .bg-\[\#e3e5e8\] {
+  background-color: rgb(var(--portal-soft) / 1) !important;
+}
+html.dark .text-\[\#393a3d\] {
+  color: rgb(var(--portal-charcoal) / 1) !important;
+}
+html.dark .text-\[\#6b6c72\],
+html.dark .text-\[\#b0b1b6\] {
+  color: rgb(var(--portal-sage-dark) / 0.72) !important;
+}
+html.dark .ring-black\/10,
+html.dark .ring-black\/\[0\.06\] {
+  --tw-ring-color: rgb(255 255 255 / 0.1) !important;
+}
+html.dark .border-black\/\[0\.05\],
+html.dark .border-black\/\[0\.06\] {
+  border-color: rgb(255 255 255 / 0.08) !important;
+}
+html.dark .shadow-\[0_12px_32px_rgba\(26\,28\,30\,0\.12\)\] {
+  --tw-shadow: 0 12px 32px rgb(0 0 0 / 0.35) !important;
+  --tw-shadow-colored: 0 12px 32px var(--tw-shadow-color) !important;
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow) !important;
+}
+html.dark .announcement-bar {
+  background: linear-gradient(
+    165deg,
+    rgba(40, 44, 40, 0.92) 0%,
+    rgba(32, 36, 32, 0.88) 45%,
+    rgba(26, 29, 26, 0.9) 100%
+  ) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    0 1px 1px rgba(255, 255, 255, 0.04) inset,
+    0 -1px 1px rgba(0, 0, 0, 0.25) inset,
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.2) !important;
 }

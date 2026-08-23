@@ -23,6 +23,16 @@ const canSeeManagement = canAccessManagement(employee);
     <meta name="description" content="Private employee portal for Woven Sage Counseling." />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>{title} | Woven Sage Employee Portal</title>
+    <script is:inline define:vars={{ themeUserId: employee?.id ?? null }}>
+      (function () {
+        try {
+          var key = themeUserId ? 'portal:theme:' + themeUserId : 'portal:theme';
+          var value = localStorage.getItem(key) || localStorage.getItem('portal:theme');
+          if (value === 'dark') document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="flex min-h-screen flex-col">
     <PreviewBanner />
