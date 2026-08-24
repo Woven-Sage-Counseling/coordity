@@ -1,0 +1,52 @@
+---
+import { formatUsd } from '../lib/financials/summary';
+import {
+  hasExpandableTransactionDetails,
+  transactionDetailsText,
+  transactionShortName,
+} from '../lib/financials/transaction-display';
+import type { FinancialTransaction } from '../lib/financials/types';
+
+interface Props {
+  transaction: FinancialTransaction;
+  metaLine: string;
+  amountClass: string;
+}
+
+const { transaction, metaLine, amountClass } = Astro.props;
+const title = transactionShortName(transaction.name);
+const details = transactionDetailsText(transaction.name, transaction.memo);
+const showDetails = hasExpandableTransactionDetails(transaction.name, transaction.memo);
+---
+
+<li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+  <div class="min-w-0">
+    <p class="text-sm font-medium text-charcoal">{title}</p>
+    <p class="mt-0.5 text-xs text-sage-dark/65">{metaLine}</p>
+    {
+      transaction.accountName && (
+        <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
+          {transaction.accountName}
+        </p>
+      )
+    }
+    {
+      showDetails && details && (
+        <details class="financials-transaction-details mt-1.5">
+          <summary class="financials-transaction-details__summary">Details</summary>
+          <p class="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-sage-dark/65">{details}</p>
+        </details>
+      )
+    }
+  </div>
+  <div class="shrink-0 text-right">
+    <p class:list={['text-sm font-semibold tabular-nums', amountClass]}>
+      {formatUsd(Math.abs(transaction.cents))}
+    </p>
+    {
+      transaction.docNum && (
+        <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">{transaction.docNum}</p>
+      )
+    }
+  </div>
+</li>

@@ -89,6 +89,19 @@ html.dark {
   .financials-scroll-panel::-webkit-scrollbar-track {
     background-color: transparent;
   }
+
+  .financials-transaction-details__summary {
+    @apply cursor-pointer text-xs font-medium text-sage-dark/75 transition hover:text-charcoal;
+    list-style: none;
+  }
+
+  .financials-transaction-details__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .financials-transaction-details[open] .financials-transaction-details__summary {
+    @apply text-charcoal;
+  }
 }
 
 /* Remap common light-only utilities used across portal pages */

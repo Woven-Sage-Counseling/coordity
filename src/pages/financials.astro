@@ -1,6 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import PeriodPicker from '../components/PeriodPicker.astro';
+import FinancialTransactionItem from '../components/FinancialTransactionItem.astro';
 import { calendarDateValue, formatDisplayDate, formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { hasPermission } from '../lib/permissions';
 
@@ -253,38 +254,11 @@ const periodLabel = snapshot
             >
               <ul class="divide-y divide-black/[0.06]">
                 {incomeTransactions.map((transaction) => (
-                  <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
-                      <p class="mt-0.5 text-xs text-sage-dark/65">
-                        {transactionMetaLine(transaction, ['deposit'])}
-                      </p>
-                      {
-                        transaction.accountName && (
-                          <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
-                            {transaction.accountName}
-                          </p>
-                        )
-                      }
-                      {
-                        transaction.memo && (
-                          <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
-                        )
-                      }
-                    </div>
-                    <div class="shrink-0 text-right">
-                      <p class="text-sm font-semibold tabular-nums text-[#2CA01C]">
-                        {formatUsd(transaction.cents)}
-                      </p>
-                      {
-                        transaction.docNum && (
-                          <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
-                            {transaction.docNum}
-                          </p>
-                        )
-                      }
-                    </div>
-                  </li>
+                  <FinancialTransactionItem
+                    transaction={transaction}
+                    metaLine={transactionMetaLine(transaction, ['deposit'])}
+                    amountClass="text-[#2CA01C]"
+                  />
                 ))}
               </ul>
             </div>
@@ -308,38 +282,11 @@ const periodLabel = snapshot
             >
               <ul class="divide-y divide-black/[0.06]">
                 {expenseTransactions.map((transaction) => (
-                  <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
-                      <p class="mt-0.5 text-xs text-sage-dark/65">
-                        {transactionMetaLine(transaction, ['expense'])}
-                      </p>
-                      {
-                        transaction.accountName && (
-                          <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
-                            {transaction.accountName}
-                          </p>
-                        )
-                      }
-                      {
-                        transaction.memo && (
-                          <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
-                        )
-                      }
-                    </div>
-                    <div class="shrink-0 text-right">
-                      <p class="text-sm font-semibold tabular-nums text-charcoal">
-                        {formatUsd(Math.abs(transaction.cents))}
-                      </p>
-                      {
-                        transaction.docNum && (
-                          <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
-                            {transaction.docNum}
-                          </p>
-                        )
-                      }
-                    </div>
-                  </li>
+                  <FinancialTransactionItem
+                    transaction={transaction}
+                    metaLine={transactionMetaLine(transaction, ['expense'])}
+                    amountClass="text-charcoal"
+                  />
                 ))}
               </ul>
             </div>
