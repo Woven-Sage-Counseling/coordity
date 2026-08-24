@@ -73,27 +73,29 @@ html.dark {
   }
 
   .financials-scroll-panel {
-    @apply mt-4 h-[28rem] overflow-y-auto overscroll-contain;
+    @apply mt-4 h-[28rem] overscroll-contain;
+    overflow-y: scroll;
     margin-right: -0.75rem;
     padding-right: 1.25rem;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--portal-sage-dark) / 0.3) transparent;
+    scrollbar-color: rgb(var(--portal-sage-dark) / 0.42) rgb(var(--portal-sage-dark) / 0.12);
   }
 
   .financials-scroll-panel::-webkit-scrollbar {
-    width: 6px;
+    -webkit-appearance: none;
+    width: 8px;
   }
 
   .financials-scroll-panel::-webkit-scrollbar-thumb {
-    background-color: rgb(var(--portal-sage-dark) / 0.3);
-    border: 2px solid transparent;
+    background-color: rgb(var(--portal-sage-dark) / 0.42);
     border-radius: 9999px;
-    background-clip: padding-box;
+    min-height: 3rem;
   }
 
   .financials-scroll-panel::-webkit-scrollbar-track {
-    background-color: transparent;
+    background-color: rgb(var(--portal-sage-dark) / 0.12);
+    border-radius: 9999px;
   }
 
   .financials-transaction-details__summary {
