@@ -1,7 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import PeriodPicker from '../components/PeriodPicker.astro';
-import { getFinancialSummary, formatDisplayDate, formatUsd } from '../lib/financials/summary';
+import { calendarDateValue, formatDisplayDate, formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
@@ -63,11 +63,19 @@ const expenseLines = summary.pnlLines
 
 const incomeTransactions = summary.transactions
   .filter((transaction) => transaction.bucket === 'income' && transaction.cents !== 0)
-  .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
+  .sort(
+    (a, b) =>
+      calendarDateValue(b.date) - calendarDateValue(a.date) ||
+      Math.abs(b.cents) - Math.abs(a.cents),
+  );
 
 const expenseTransactions = summary.transactions
   .filter((transaction) => transaction.bucket !== 'income' && transaction.cents !== 0)
-  .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
+  .sort(
+    (a, b) =>
+      calendarDateValue(b.date) - calendarDateValue(a.date) ||
+      Math.abs(b.cents) - Math.abs(a.cents),
+  );
 
 function formatPeriod(iso: string): string {
   return formatDisplayDate(iso) ?? iso;

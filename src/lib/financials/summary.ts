@@ -172,3 +172,8 @@ export function formatDisplayDate(value: string | null | undefined): string | nu
   const year = date.getUTCFullYear();
   return `${month}, ${ordinalDay(day)} ${year}`;
 }
+
+export function calendarDateValue(value: string | null | undefined): number {
+  if (!value) return 0;
+  return parseCalendarDate(value)?.getTime() ?? 0;
+}
