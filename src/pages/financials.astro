@@ -61,6 +61,14 @@ const expenseLines = summary.pnlLines
   .filter((line) => line.bucket !== 'income' && line.cents !== 0)
   .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
 
+const incomeTransactions = summary.transactions
+  .filter((transaction) => transaction.bucket === 'income' && transaction.cents !== 0)
+  .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
+
+const expenseTransactions = summary.transactions
+  .filter((transaction) => transaction.bucket !== 'income' && transaction.cents !== 0)
+  .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
+
 function formatPeriod(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
@@ -211,18 +219,119 @@ const periodLabel = snapshot
   </div>
 
   <section class="mt-12" aria-labelledby="detail-heading">
-    <h2 id="detail-heading" class="font-display text-2xl text-charcoal">Income and expense detail</h2>
+    <h2 id="detail-heading" class="font-display text-2xl text-charcoal">Income and expense transactions</h2>
     <p class="mt-2 text-sm text-sage-dark/65">
-      Individual QuickBooks accounts for this period. Sync QuickBooks to refresh the list.
+      Individual QuickBooks transactions for this period, grouped by income and expense. Sync QuickBooks to refresh the list.
     </p>
 
     <div class="mt-4 grid gap-8 lg:grid-cols-2 lg:items-start">
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Income</h3>
         {
+          incomeTransactions.length === 0 ? (
+            <p class="mt-4 text-sm text-sage-dark/65">
+              No income transactions are available for this period yet.
+            </p>
+          ) : (
+            <ul class="mt-4 divide-y divide-black/[0.06]">
+              {incomeTransactions.map((transaction) => (
+                <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
+                    <p class="mt-0.5 text-xs text-sage-dark/65">
+                      {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                    </p>
+                    {
+                      transaction.memo && (
+                        <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
+                      )
+                    }
+                  </div>
+                  <div class="shrink-0 text-right">
+                    <p class="text-sm font-semibold tabular-nums text-[#2CA01C]">
+                      {formatUsd(transaction.cents)}
+                    </p>
+                    {
+                      transaction.docNum && (
+                        <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
+                          {transaction.docNum}
+                        </p>
+                      )
+                    }
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </article>
+
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expenses</h3>
+        {
+          expenseTransactions.length === 0 ? (
+            <p class="mt-4 text-sm text-sage-dark/65">
+              No expense transactions are available for this period yet.
+            </p>
+          ) : (
+            <ul class="mt-4 divide-y divide-black/[0.06]">
+              {expenseTransactions.map((transaction) => {
+                const tag = bucketLabel(transaction.bucket);
+                return (
+                  <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
+                      <p class="mt-0.5 text-xs text-sage-dark/65">
+                        {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                      </p>
+                      {
+                        tag && (
+                          <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
+                            {tag}
+                          </p>
+                        )
+                      }
+                      {
+                        transaction.memo && (
+                          <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
+                        )
+                      }
+                    </div>
+                    <div class="shrink-0 text-right">
+                      <p class="text-sm font-semibold tabular-nums text-charcoal">
+                        {formatUsd(Math.abs(transaction.cents))}
+                      </p>
+                      {
+                        transaction.docNum && (
+                          <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
+                            {transaction.docNum}
+                          </p>
+                        )
+                      }
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
+      </article>
+    </div>
+  </section>
+
+  <section class="mt-12" aria-labelledby="account-detail-heading">
+    <h2 id="account-detail-heading" class="font-display text-2xl text-charcoal">Account totals</h2>
+    <p class="mt-2 text-sm text-sage-dark/65">
+      QuickBooks account-level totals for this period.
+    </p>
+
+    <div class="mt-4 grid gap-8 lg:grid-cols-2 lg:items-start">
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Income accounts</h3>
+        {
           incomeLines.length === 0 ? (
             <p class="mt-4 text-sm text-sage-dark/65">
-              No income line items are available for this period yet.
+              No income account totals are available for this period yet.
             </p>
           ) : (
             <ul class="mt-4 divide-y divide-black/[0.06]">
@@ -240,11 +349,11 @@ const periodLabel = snapshot
       </article>
 
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expenses</h3>
+        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expense accounts</h3>
         {
           expenseLines.length === 0 ? (
             <p class="mt-4 text-sm text-sage-dark/65">
-              No expense line items are available for this period yet.
+              No expense account totals are available for this period yet.
             </p>
           ) : (
             <ul class="mt-4 divide-y divide-black/[0.06]">

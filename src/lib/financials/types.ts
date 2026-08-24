@@ -25,6 +25,17 @@ export interface PnlLine {
   bucket: 'therapist' | 'management' | 'software' | 'income' | 'other' | null;
 }
 
+export interface FinancialTransaction {
+  date: string | null;
+  type: string | null;
+  docNum: string | null;
+  name: string;
+  memo: string | null;
+  accountName: string;
+  cents: number;
+  bucket: 'therapist' | 'management' | 'software' | 'income' | 'other' | null;
+}
+
 export interface BankAccountLine {
   name: string;
   balanceCents: number | null;
@@ -41,6 +52,7 @@ export interface FinancialSummary {
   reserveProgressRatio: number | null;
   reserveAveragingStart: string | null;
   pnlLines: PnlLine[];
+  transactions: FinancialTransaction[];
   bankAccounts: BankAccountLine[];
   quickbooks: {
     configured: boolean;

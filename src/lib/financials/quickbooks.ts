@@ -2,7 +2,7 @@ import { getEnv, qbApiEnvironment } from '../env';
 import { nowMs, randomToken } from '../crypto';
 import { classifyBank, classifyExpense } from './account-map';
 import { resolvePreset, todayEastern } from './periods';
-import type { FinancialDataProvider, FinancialSnapshot } from './types';
+import type { FinancialDataProvider, FinancialSnapshot, FinancialTransaction } from './types';
 
 const INTUIT_AUTH = 'https://appcenter.intuit.com/connect/oauth2';
 const INTUIT_TOKEN = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -29,6 +29,7 @@ interface ConnectionRow {
 }
 
 interface QbCol {
+  id?: string;
   value?: string;
 }
 
@@ -138,6 +139,61 @@ function parsePnl(rows: QbRow[]): {
   const net = groups.NetIncome ?? named.get('net income') ?? income - expenses;
 
   return { income, expenses, net, leaves };
+}
+
+function parseGeneralLedger(rows: QbRow[]): FinancialTransaction[] {
+  const transactions: FinancialTransaction[] = [];
+
+  function walk(list: QbRow[], currentAccount: string | null, inExpense: boolean): void {
+    for (const row of list) {
+      const group = row.group ?? '';
+      const nested = asRows(row.Rows?.Row);
+      const headerName = (row.Header?.ColData?.[0]?.value ?? rowName(row)).trim();
+      const nextExpense = inExpense || group === 'Expenses' || group === 'OtherExpenses' || group === 'COGS';
+      let nextAccount = currentAccount;
+
+      if (
+        row.type === 'Section' &&
+        headerName &&
+        !isStructuralAccount(headerName) &&
+        !/^total\b/i.test(headerName)
+      ) {
+        nextAccount = headerName;
+      }
+
+      if (nested.length > 0) {
+        walk(nested, nextAccount, nextExpense);
+        continue;
+      }
+
+      if (row.type !== 'Data' || !nextAccount) continue;
+
+      const cols = row.ColData ?? [];
+      const amount = dollarsToCents(cols[5]?.value);
+      if (amount === 0) continue;
+
+      const accountName = nextAccount.slice(0, 200);
+      const displayName = (cols[3]?.value ?? cols[1]?.value ?? nextAccount).trim().slice(0, 200);
+      const memo = cols[4]?.value?.trim() || null;
+      const date = cols[0]?.value?.trim() || null;
+      const type = cols[1]?.value?.trim() || null;
+      const docNum = cols[2]?.value?.trim() || null;
+
+      transactions.push({
+        date,
+        type,
+        docNum,
+        name: displayName || accountName,
+        memo: memo ? memo.slice(0, 300) : null,
+        accountName,
+        cents: amount,
+        bucket: classifyExpense(accountName) ?? (nextExpense ? 'other' : 'income'),
+      });
+    }
+  }
+
+  walk(rows, null, false);
+  return transactions;
 }
 
 const PNL_CACHE_MS = 30 * 60 * 1000;
@@ -389,6 +445,14 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
     const parsed = parsePnl(asRows(pnl.Rows?.Row));
     const basis = pnl.Header?.ReportBasis ?? 'Cash';
+    const generalLedger = (await this.qbGet(
+      accessToken,
+      realmId,
+      `/reports/GeneralLedger?accounting_method=Cash&start_date=${periodStart}&end_date=${periodEnd}&columns=tx_date,txn_type,doc_num,name,memo,subt_nat_amount`,
+    )) as {
+      Rows?: { Row?: QbRow | QbRow[] };
+    };
+    const transactions = parseGeneralLedger(asRows(generalLedger.Rows?.Row));
 
     let therapist = 0;
     let management = 0;
@@ -447,6 +511,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
       qboNet: parsed.net,
       qboExpenses: parsed.expenses,
       lines: pnlLines,
+      transactions,
       banks: bankAccounts,
     });
     const snapshotId = `snap_qb_${periodStart}_${periodEnd}_${randomToken(4)}`;

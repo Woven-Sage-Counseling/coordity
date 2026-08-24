@@ -2,7 +2,7 @@ import { getEnv, practiceOperationsStart, qbApiEnvironment } from '../env';
 import { ManualSnapshotProvider } from './manual-snapshot';
 import { averagingStart, resolvePeriodFromSearch, resolvePreset } from './periods';
 import { QuickBooksProvider } from './quickbooks';
-import type { BankAccountLine, CashBalances, FinancialSummary, PnlLine } from './types';
+import type { BankAccountLine, CashBalances, FinancialSummary, FinancialTransaction, PnlLine } from './types';
 
 function daysInclusive(start: string, end: string): number {
   const from = Date.parse(`${start}T00:00:00Z`);
@@ -18,17 +18,23 @@ function averageMonthlyRevenueCents(revenueCents: number, periodStart: string, p
 
 function parseSnapshotMeta(snapshot: { notes?: string | null } | null): {
   pnlLines: PnlLine[];
+  transactions: FinancialTransaction[];
   bankAccounts: BankAccountLine[];
 } {
-  if (!snapshot?.notes?.startsWith('{')) return { pnlLines: [], bankAccounts: [] };
+  if (!snapshot?.notes?.startsWith('{')) return { pnlLines: [], transactions: [], bankAccounts: [] };
   try {
     const meta = JSON.parse(snapshot.notes) as {
       lines?: PnlLine[];
+      transactions?: FinancialTransaction[];
       banks?: BankAccountLine[];
     };
-    return { pnlLines: meta.lines ?? [], bankAccounts: meta.banks ?? [] };
+    return {
+      pnlLines: meta.lines ?? [],
+      transactions: meta.transactions ?? [],
+      bankAccounts: meta.banks ?? [],
+    };
   } catch {
-    return { pnlLines: [], bankAccounts: [] };
+    return { pnlLines: [], transactions: [], bankAccounts: [] };
   }
 }
 
@@ -95,6 +101,7 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
   const selectedMeta = parseSnapshotMeta(snapshot);
   const reserveMeta = parseSnapshotMeta(reserveSnapshot);
   const pnlLines = selectedMeta.pnlLines;
+  const transactions = selectedMeta.transactions;
   const bankAccounts =
     selectedMeta.bankAccounts.length > 0 ? selectedMeta.bankAccounts : reserveMeta.bankAccounts;
 
@@ -108,6 +115,7 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
     reserveProgressRatio,
     reserveAveragingStart,
     pnlLines,
+    transactions,
     bankAccounts,
     quickbooks: {
       configured: qb.isConfigured(),

@@ -118,7 +118,7 @@ export const portalApps: PortalApp[] = [
     name: 'Relay',
     category: 'financial',
     description: 'Open Relay for operating cash and revolving business expenses.',
-    href: 'https://bank.relayfi.com',
+    href: 'https://app.relayfi.com/login',
     external: true,
     permission: 'financials:view',
     iconSrc: '/app-icons/relay.png',
