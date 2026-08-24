@@ -90,6 +90,16 @@ function formatMonthYear(iso: string): string {
   });
 }
 
+function transactionMetaLine(
+  transaction: (typeof summary.transactions)[number],
+  omitTypes: readonly string[],
+): string {
+  const omit = new Set(omitTypes.map((value) => value.toLowerCase()));
+  const type =
+    transaction.type && !omit.has(transaction.type.trim().toLowerCase()) ? transaction.type : null;
+  return [formatDisplayDate(transaction.date), transaction.accountName, type].filter(Boolean).join(' · ');
+}
+
 const periodLabel = snapshot
   ? `${formatPeriod(snapshot.periodStart)} – ${formatPeriod(snapshot.periodEnd)}`
   : null;
@@ -247,7 +257,7 @@ const periodLabel = snapshot
                     <div class="min-w-0">
                       <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
                       <p class="mt-0.5 text-xs text-sage-dark/65">
-                        {[formatDisplayDate(transaction.date), transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                        {transactionMetaLine(transaction, ['deposit'])}
                       </p>
                       {
                         transaction.memo && (
@@ -297,7 +307,7 @@ const periodLabel = snapshot
                       <div class="min-w-0">
                         <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
                         <p class="mt-0.5 text-xs text-sage-dark/65">
-                          {[formatDisplayDate(transaction.date), transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                          {transactionMetaLine(transaction, ['expense'])}
                         </p>
                         {
                           tag && (
