@@ -42,6 +42,28 @@ interface QbRow {
   Rows?: { Row?: QbRow | QbRow[] };
 }
 
+interface QbReportColumn {
+  ColType?: string;
+}
+
+function buildColumnIndex(report: { Columns?: { Column?: QbReportColumn | QbReportColumn[] } }): Map<string, number> {
+  const index = new Map<string, number>();
+  for (const [position, column] of asRows(report.Columns?.Column).entries()) {
+    if (column.ColType) index.set(column.ColType, position);
+  }
+  return index;
+}
+
+function reportColValue(cols: QbCol[], index: Map<string, number>, type: string, fallback: number): string | undefined {
+  const position = index.get(type) ?? fallback;
+  return cols[position]?.value;
+}
+
+function looksLikeDate(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) || /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value);
+}
+
 function apiHost(environment: QbEnvironment): string {
   return environment === 'production'
     ? 'https://quickbooks.api.intuit.com'
@@ -141,24 +163,29 @@ function parsePnl(rows: QbRow[]): {
   return { income, expenses, net, leaves };
 }
 
-function parseGeneralLedger(rows: QbRow[]): FinancialTransaction[] {
+function parsePnlDetail(
+  rows: QbRow[],
+  columnIndex: Map<string, number>,
+  accountBuckets: Map<string, FinancialTransaction['bucket']>,
+): FinancialTransaction[] {
   const transactions: FinancialTransaction[] = [];
+  const seen = new Set<string>();
 
   function walk(list: QbRow[], currentAccount: string | null, inExpense: boolean): void {
     for (const row of list) {
       const group = row.group ?? '';
+      const name = rowName(row);
       const nested = asRows(row.Rows?.Row);
-      const headerName = (row.Header?.ColData?.[0]?.value ?? rowName(row)).trim();
       const nextExpense = inExpense || group === 'Expenses' || group === 'OtherExpenses' || group === 'COGS';
       let nextAccount = currentAccount;
 
       if (
         row.type === 'Section' &&
-        headerName &&
-        !isStructuralAccount(headerName) &&
-        !/^total\b/i.test(headerName)
+        name &&
+        !isStructuralAccount(name) &&
+        !/^total\b/i.test(name)
       ) {
-        nextAccount = headerName;
+        nextAccount = name;
       }
 
       if (nested.length > 0) {
@@ -168,16 +195,27 @@ function parseGeneralLedger(rows: QbRow[]): FinancialTransaction[] {
 
       if (row.type !== 'Data' || !nextAccount) continue;
 
+      const accountName = nextAccount.slice(0, 200);
+      if (!accountBuckets.has(accountName)) continue;
+
       const cols = row.ColData ?? [];
-      const amount = dollarsToCents(cols[5]?.value);
+      const date = reportColValue(cols, columnIndex, 'tx_date', 0)?.trim() || null;
+      if (!looksLikeDate(date)) continue;
+
+      const amount = dollarsToCents(reportColValue(cols, columnIndex, 'subt_nat_amount', 7));
       if (amount === 0) continue;
 
-      const accountName = nextAccount.slice(0, 200);
-      const displayName = (cols[3]?.value ?? cols[1]?.value ?? nextAccount).trim().slice(0, 200);
-      const memo = cols[4]?.value?.trim() || null;
-      const date = cols[0]?.value?.trim() || null;
-      const type = cols[1]?.value?.trim() || null;
-      const docNum = cols[2]?.value?.trim() || null;
+      const type = reportColValue(cols, columnIndex, 'txn_type', 1)?.trim() || null;
+      const docNum = reportColValue(cols, columnIndex, 'doc_num', 2)?.trim() || null;
+      const displayName = (reportColValue(cols, columnIndex, 'name', 3) ?? type ?? accountName)
+        .trim()
+        .slice(0, 200);
+      const memo = reportColValue(cols, columnIndex, 'memo', 5)?.trim() || null;
+      const bucket = accountBuckets.get(accountName) ?? classifyExpense(accountName) ?? (nextExpense ? 'other' : 'income');
+
+      const key = `${date}|${type ?? ''}|${docNum ?? ''}|${accountName}|${amount}|${displayName}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
       transactions.push({
         date,
@@ -187,7 +225,7 @@ function parseGeneralLedger(rows: QbRow[]): FinancialTransaction[] {
         memo: memo ? memo.slice(0, 300) : null,
         accountName,
         cents: amount,
-        bucket: classifyExpense(accountName) ?? (nextExpense ? 'other' : 'income'),
+        bucket,
       });
     }
   }
@@ -445,14 +483,27 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
     const parsed = parsePnl(asRows(pnl.Rows?.Row));
     const basis = pnl.Header?.ReportBasis ?? 'Cash';
-    const generalLedger = (await this.qbGet(
+    const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => ({
+      name: name.slice(0, 200),
+      cents: line.cents,
+      bucket: (classifyExpense(name) ?? (line.expense ? 'other' : 'income')) as FinancialTransaction['bucket'],
+    }));
+    const accountBuckets = new Map<string, FinancialTransaction['bucket']>(
+      pnlLines.map((line) => [line.name, line.bucket]),
+    );
+    const pnlDetail = (await this.qbGet(
       accessToken,
       realmId,
-      `/reports/GeneralLedger?accounting_method=Cash&start_date=${periodStart}&end_date=${periodEnd}&columns=tx_date,txn_type,doc_num,name,memo,subt_nat_amount`,
+      `/reports/ProfitAndLossDetail?accounting_method=Cash&start_date=${periodStart}&end_date=${periodEnd}&columns=tx_date,txn_type,doc_num,name,memo,subt_nat_amount`,
     )) as {
+      Columns?: { Column?: QbReportColumn | QbReportColumn[] };
       Rows?: { Row?: QbRow | QbRow[] };
     };
-    const transactions = parseGeneralLedger(asRows(generalLedger.Rows?.Row));
+    const transactions = parsePnlDetail(
+      asRows(pnlDetail.Rows?.Row),
+      buildColumnIndex(pnlDetail),
+      accountBuckets,
+    );
 
     let therapist = 0;
     let management = 0;
@@ -499,12 +550,6 @@ export class QuickBooksProvider implements FinancialDataProvider {
       await this.upsertCash('relay_operating', 'Relay operating cash', relay, periodEnd);
       await this.upsertCash('boa_reserve', 'Bank of America reserve', boa, periodEnd);
     }
-
-    const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => ({
-      name: name.slice(0, 200),
-      cents: line.cents,
-      bucket: classifyExpense(name) ?? (line.expense ? 'other' : 'income'),
-    }));
 
     const notes = JSON.stringify({
       label: `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
