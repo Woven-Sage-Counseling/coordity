@@ -61,7 +61,57 @@ function reportColValue(cols: QbCol[], index: Map<string, number>, type: string,
 
 function looksLikeDate(value: string | null | undefined): boolean {
   if (!value) return false;
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) || /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value);
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return true;
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(trimmed)) return true;
+  if (/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(trimmed)) return true;
+  if (/^[A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}$/.test(trimmed)) return true;
+  return false;
+}
+
+function normalizeAccountKey(name: string): string {
+  return name
+    .replace(/\u00a0/g, ' ')
+    .toLowerCase()
+    .replace(/^total\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resolveAccountBucket(
+  accountName: string,
+  accountBuckets: Map<string, FinancialTransaction['bucket']>,
+  inExpense: boolean,
+): FinancialTransaction['bucket'] {
+  const direct = accountBuckets.get(accountName);
+  if (direct) return direct;
+
+  const normalized = normalizeAccountKey(accountName);
+  for (const [name, bucket] of accountBuckets) {
+    if (normalizeAccountKey(name) === normalized) return bucket;
+  }
+
+  return classifyExpense(accountName) ?? (inExpense ? 'other' : 'income');
+}
+
+function isTransactionRow(row: QbRow): boolean {
+  if (row.type === 'Data') return true;
+  return Boolean(row.ColData?.length && asRows(row.Rows?.Row).length === 0);
+}
+
+function isAccountHeader(row: QbRow, name: string, nestedCount: number): boolean {
+  if (!name || isStructuralAccount(name) || /^total\b/i.test(name)) return false;
+  return row.type === 'Section' || nestedCount > 0;
+}
+
+function reportAmount(cols: QbCol[], columnIndex: Map<string, number>): number {
+  for (const type of ['subt_nat_amount', 'net_amount', 'debt_amt', 'credit_amt'] as const) {
+    const value = reportColValue(cols, columnIndex, type, -1);
+    if (value != null && String(value).trim() !== '') {
+      return dollarsToCents(value);
+    }
+  }
+  return firstMoney(cols) ?? 0;
 }
 
 function apiHost(environment: QbEnvironment): string {
@@ -179,12 +229,7 @@ function parsePnlDetail(
       const nextExpense = inExpense || group === 'Expenses' || group === 'OtherExpenses' || group === 'COGS';
       let nextAccount = currentAccount;
 
-      if (
-        row.type === 'Section' &&
-        name &&
-        !isStructuralAccount(name) &&
-        !/^total\b/i.test(name)
-      ) {
+      if (isAccountHeader(row, name, nested.length)) {
         nextAccount = name;
       }
 
@@ -193,16 +238,14 @@ function parsePnlDetail(
         continue;
       }
 
-      if (row.type !== 'Data' || !nextAccount) continue;
+      if (!isTransactionRow(row) || !nextAccount) continue;
 
       const accountName = nextAccount.slice(0, 200);
-      if (!accountBuckets.has(accountName)) continue;
-
       const cols = row.ColData ?? [];
       const date = reportColValue(cols, columnIndex, 'tx_date', 0)?.trim() || null;
       if (!looksLikeDate(date)) continue;
 
-      const amount = dollarsToCents(reportColValue(cols, columnIndex, 'subt_nat_amount', 7));
+      const amount = reportAmount(cols, columnIndex);
       if (amount === 0) continue;
 
       const type = reportColValue(cols, columnIndex, 'txn_type', 1)?.trim() || null;
@@ -210,8 +253,77 @@ function parsePnlDetail(
       const displayName = (reportColValue(cols, columnIndex, 'name', 3) ?? type ?? accountName)
         .trim()
         .slice(0, 200);
-      const memo = reportColValue(cols, columnIndex, 'memo', 5)?.trim() || null;
-      const bucket = accountBuckets.get(accountName) ?? classifyExpense(accountName) ?? (nextExpense ? 'other' : 'income');
+      const memo = reportColValue(cols, columnIndex, 'memo', 4)?.trim() || null;
+      const bucket = resolveAccountBucket(accountName, accountBuckets, nextExpense);
+
+      const key = `${date}|${type ?? ''}|${docNum ?? ''}|${accountName}|${amount}|${displayName}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      transactions.push({
+        date,
+        type,
+        docNum,
+        name: displayName || accountName,
+        memo: memo ? memo.slice(0, 300) : null,
+        accountName,
+        cents: amount,
+        bucket,
+      });
+    }
+  }
+
+  walk(rows, null, false);
+  return transactions;
+}
+
+function parseGeneralLedgerForAccounts(
+  rows: QbRow[],
+  columnIndex: Map<string, number>,
+  accountBuckets: Map<string, FinancialTransaction['bucket']>,
+): FinancialTransaction[] {
+  const allowedAccounts = new Set([...accountBuckets.keys()].map(normalizeAccountKey));
+  const transactions: FinancialTransaction[] = [];
+  const seen = new Set<string>();
+
+  function isAllowedAccount(accountName: string): boolean {
+    return allowedAccounts.has(normalizeAccountKey(accountName));
+  }
+
+  function walk(list: QbRow[], currentAccount: string | null, inExpense: boolean): void {
+    for (const row of list) {
+      const group = row.group ?? '';
+      const name = rowName(row);
+      const nested = asRows(row.Rows?.Row);
+      const nextExpense = inExpense || group === 'Expenses' || group === 'OtherExpenses' || group === 'COGS';
+      let nextAccount = currentAccount;
+
+      if (isAccountHeader(row, name, nested.length)) {
+        nextAccount = name;
+      }
+
+      if (nested.length > 0) {
+        walk(nested, nextAccount, nextExpense);
+        continue;
+      }
+
+      if (!isTransactionRow(row) || !nextAccount || !isAllowedAccount(nextAccount)) continue;
+
+      const accountName = nextAccount.slice(0, 200);
+      const cols = row.ColData ?? [];
+      const date = reportColValue(cols, columnIndex, 'tx_date', 0)?.trim() || null;
+      if (!looksLikeDate(date)) continue;
+
+      const amount = reportAmount(cols, columnIndex);
+      if (amount === 0) continue;
+
+      const type = reportColValue(cols, columnIndex, 'txn_type', 1)?.trim() || null;
+      const docNum = reportColValue(cols, columnIndex, 'doc_num', 2)?.trim() || null;
+      const displayName = (reportColValue(cols, columnIndex, 'name', 3) ?? type ?? accountName)
+        .trim()
+        .slice(0, 200);
+      const memo = reportColValue(cols, columnIndex, 'memo', 4)?.trim() || null;
+      const bucket = resolveAccountBucket(accountName, accountBuckets, nextExpense);
 
       const key = `${date}|${type ?? ''}|${docNum ?? ''}|${accountName}|${amount}|${displayName}`;
       if (seen.has(key)) continue;
@@ -499,11 +611,27 @@ export class QuickBooksProvider implements FinancialDataProvider {
       Columns?: { Column?: QbReportColumn | QbReportColumn[] };
       Rows?: { Row?: QbRow | QbRow[] };
     };
-    const transactions = parsePnlDetail(
+    const detailColumnIndex = buildColumnIndex(pnlDetail);
+    let transactions = parsePnlDetail(
       asRows(pnlDetail.Rows?.Row),
-      buildColumnIndex(pnlDetail),
+      detailColumnIndex,
       accountBuckets,
     );
+    if (transactions.length === 0 && accountBuckets.size > 0) {
+      const generalLedger = (await this.qbGet(
+        accessToken,
+        realmId,
+        `/reports/GeneralLedger?accounting_method=Cash&start_date=${periodStart}&end_date=${periodEnd}&columns=tx_date,txn_type,doc_num,name,memo,subt_nat_amount`,
+      )) as {
+        Columns?: { Column?: QbReportColumn | QbReportColumn[] };
+        Rows?: { Row?: QbRow | QbRow[] };
+      };
+      transactions = parseGeneralLedgerForAccounts(
+        asRows(generalLedger.Rows?.Row),
+        buildColumnIndex(generalLedger),
+        accountBuckets,
+      );
+    }
 
     let therapist = 0;
     let management = 0;
