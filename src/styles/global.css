@@ -71,6 +71,24 @@ html.dark {
   .app-tile {
     @apply flex h-full flex-col rounded-2xl border border-sage-dark/10 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sage-dark/25 hover:shadow-md;
   }
+
+  .financials-scroll-panel {
+    @apply mt-4 h-[28rem] overflow-y-auto overscroll-contain pr-1;
+    scrollbar-gutter: stable;
+  }
+
+  .financials-scroll-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .financials-scroll-panel::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--portal-sage-dark) / 0.28);
+    border-radius: 9999px;
+  }
+
+  .financials-scroll-panel::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
 }
 
 /* Remap common light-only utilities used across portal pages */

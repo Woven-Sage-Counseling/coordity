@@ -225,7 +225,7 @@ const periodLabel = snapshot
     </p>
 
     <div class="mt-4 grid gap-8 lg:grid-cols-2 lg:items-start">
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <article class="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Income</h3>
         {
           incomeTransactions.length === 0 ? (
@@ -233,51 +233,14 @@ const periodLabel = snapshot
               No income transactions are available for this period yet.
             </p>
           ) : (
-            <ul class="mt-4 divide-y divide-black/[0.06]">
-              {incomeTransactions.map((transaction) => (
-                <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
-                    <p class="mt-0.5 text-xs text-sage-dark/65">
-                      {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
-                    </p>
-                    {
-                      transaction.memo && (
-                        <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
-                      )
-                    }
-                  </div>
-                  <div class="shrink-0 text-right">
-                    <p class="text-sm font-semibold tabular-nums text-[#2CA01C]">
-                      {formatUsd(transaction.cents)}
-                    </p>
-                    {
-                      transaction.docNum && (
-                        <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
-                          {transaction.docNum}
-                        </p>
-                      )
-                    }
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-      </article>
-
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expenses</h3>
-        {
-          expenseTransactions.length === 0 ? (
-            <p class="mt-4 text-sm text-sage-dark/65">
-              No expense transactions are available for this period yet.
-            </p>
-          ) : (
-            <ul class="mt-4 divide-y divide-black/[0.06]">
-              {expenseTransactions.map((transaction) => {
-                const tag = bucketLabel(transaction.bucket);
-                return (
+            <div
+              class="financials-scroll-panel"
+              tabindex="0"
+              role="region"
+              aria-label="Income transactions"
+            >
+              <ul class="divide-y divide-black/[0.06]">
+                {incomeTransactions.map((transaction) => (
                   <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
                     <div class="min-w-0">
                       <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
@@ -285,21 +248,14 @@ const periodLabel = snapshot
                         {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
                       </p>
                       {
-                        tag && (
-                          <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
-                            {tag}
-                          </p>
-                        )
-                      }
-                      {
                         transaction.memo && (
                           <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
                         )
                       }
                     </div>
                     <div class="shrink-0 text-right">
-                      <p class="text-sm font-semibold tabular-nums text-charcoal">
-                        {formatUsd(Math.abs(transaction.cents))}
+                      <p class="text-sm font-semibold tabular-nums text-[#2CA01C]">
+                        {formatUsd(transaction.cents)}
                       </p>
                       {
                         transaction.docNum && (
@@ -310,9 +266,67 @@ const periodLabel = snapshot
                       }
                     </div>
                   </li>
-                );
-              })}
-            </ul>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+      </article>
+
+      <article class="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expenses</h3>
+        {
+          expenseTransactions.length === 0 ? (
+            <p class="mt-4 text-sm text-sage-dark/65">
+              No expense transactions are available for this period yet.
+            </p>
+          ) : (
+            <div
+              class="financials-scroll-panel"
+              tabindex="0"
+              role="region"
+              aria-label="Expense transactions"
+            >
+              <ul class="divide-y divide-black/[0.06]">
+                {expenseTransactions.map((transaction) => {
+                  const tag = bucketLabel(transaction.bucket);
+                  return (
+                    <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
+                        <p class="mt-0.5 text-xs text-sage-dark/65">
+                          {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                        </p>
+                        {
+                          tag && (
+                            <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
+                              {tag}
+                            </p>
+                          )
+                        }
+                        {
+                          transaction.memo && (
+                            <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
+                          )
+                        }
+                      </div>
+                      <div class="shrink-0 text-right">
+                        <p class="text-sm font-semibold tabular-nums text-charcoal">
+                          {formatUsd(Math.abs(transaction.cents))}
+                        </p>
+                        {
+                          transaction.docNum && (
+                            <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
+                              {transaction.docNum}
+                            </p>
+                          )
+                        }
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )
         }
       </article>
@@ -326,7 +340,7 @@ const periodLabel = snapshot
     </p>
 
     <div class="mt-4 grid gap-8 lg:grid-cols-2 lg:items-start">
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <article class="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Income accounts</h3>
         {
           incomeLines.length === 0 ? (
@@ -334,21 +348,28 @@ const periodLabel = snapshot
               No income account totals are available for this period yet.
             </p>
           ) : (
-            <ul class="mt-4 divide-y divide-black/[0.06]">
-              {incomeLines.map((line) => (
-                <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <span class="min-w-0 text-sm font-medium text-charcoal">{line.name}</span>
-                  <span class="shrink-0 text-sm font-semibold tabular-nums text-[#2CA01C]">
-                    {formatUsd(line.cents)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div
+              class="financials-scroll-panel"
+              tabindex="0"
+              role="region"
+              aria-label="Income account totals"
+            >
+              <ul class="divide-y divide-black/[0.06]">
+                {incomeLines.map((line) => (
+                  <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <span class="min-w-0 text-sm font-medium text-charcoal">{line.name}</span>
+                    <span class="shrink-0 text-sm font-semibold tabular-nums text-[#2CA01C]">
+                      {formatUsd(line.cents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )
         }
       </article>
 
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <article class="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expense accounts</h3>
         {
           expenseLines.length === 0 ? (
@@ -356,28 +377,35 @@ const periodLabel = snapshot
               No expense account totals are available for this period yet.
             </p>
           ) : (
-            <ul class="mt-4 divide-y divide-black/[0.06]">
-              {expenseLines.map((line) => {
-                const tag = bucketLabel(line.bucket);
-                return (
-                  <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium text-charcoal">{line.name}</p>
-                      {
-                        tag && (
-                          <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
-                            {tag}
-                          </p>
-                        )
-                      }
-                    </div>
-                    <span class="shrink-0 text-sm font-semibold tabular-nums text-charcoal">
-                      {formatUsd(Math.abs(line.cents))}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div
+              class="financials-scroll-panel"
+              tabindex="0"
+              role="region"
+              aria-label="Expense account totals"
+            >
+              <ul class="divide-y divide-black/[0.06]">
+                {expenseLines.map((line) => {
+                  const tag = bucketLabel(line.bucket);
+                  return (
+                    <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-charcoal">{line.name}</p>
+                        {
+                          tag && (
+                            <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
+                              {tag}
+                            </p>
+                          )
+                        }
+                      </div>
+                      <span class="shrink-0 text-sm font-semibold tabular-nums text-charcoal">
+                        {formatUsd(Math.abs(line.cents))}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )
         }
       </article>
