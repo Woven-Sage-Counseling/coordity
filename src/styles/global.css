@@ -91,8 +91,16 @@ html.dark {
   }
 
   .financials-transaction-details__summary {
-    @apply cursor-pointer text-xs font-medium text-sage-dark/75 transition hover:text-charcoal;
+    @apply inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-sage-dark/75 transition hover:text-charcoal;
     list-style: none;
+  }
+
+  .financials-transaction-details__arrow {
+    @apply shrink-0 transition-transform duration-200;
+  }
+
+  .financials-transaction-details[open] .financials-transaction-details__arrow {
+    transform: rotate(180deg);
   }
 
   .financials-transaction-details__summary::-webkit-details-marker {

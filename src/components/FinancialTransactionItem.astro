@@ -33,7 +33,24 @@ const showDetails = hasExpandableTransactionDetails(transaction.name, transactio
     {
       showDetails && details && (
         <details class="financials-transaction-details mt-1.5">
-          <summary class="financials-transaction-details__summary">Click for details...</summary>
+          <summary class="financials-transaction-details__summary">
+            <span>Details</span>
+            <svg
+              class="financials-transaction-details__arrow"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 6l4 4 4-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path>
+            </svg>
+          </summary>
           <p class="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-sage-dark/65">{details}</p>
         </details>
       )
