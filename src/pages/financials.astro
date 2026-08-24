@@ -1,6 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import PeriodPicker from '../components/PeriodPicker.astro';
+import FinancialScrollPanel from '../components/FinancialScrollPanel.astro';
 import FinancialTransactionItem from '../components/FinancialTransactionItem.astro';
 import { calendarDateValue, formatDisplayDate, formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { hasPermission } from '../lib/permissions';
@@ -230,12 +231,7 @@ const periodLabel = snapshot
               No income transactions are available for this period yet.
             </p>
           ) : (
-            <div
-              class="financials-scroll-panel"
-              tabindex="0"
-              role="region"
-              aria-label="Income transactions"
-            >
+            <FinancialScrollPanel ariaLabel="Income transactions">
               <ul class="divide-y divide-black/[0.06]">
                 {incomeTransactions.map((transaction) => (
                   <FinancialTransactionItem
@@ -245,7 +241,7 @@ const periodLabel = snapshot
                   />
                 ))}
               </ul>
-            </div>
+            </FinancialScrollPanel>
           )
         }
       </article>
@@ -258,12 +254,7 @@ const periodLabel = snapshot
               No expense transactions are available for this period yet.
             </p>
           ) : (
-            <div
-              class="financials-scroll-panel"
-              tabindex="0"
-              role="region"
-              aria-label="Expense transactions"
-            >
+            <FinancialScrollPanel ariaLabel="Expense transactions">
               <ul class="divide-y divide-black/[0.06]">
                 {expenseTransactions.map((transaction) => (
                   <FinancialTransactionItem
@@ -273,7 +264,7 @@ const periodLabel = snapshot
                   />
                 ))}
               </ul>
-            </div>
+            </FinancialScrollPanel>
           )
         }
       </article>
@@ -339,3 +330,31 @@ const periodLabel = snapshot
     </div>
   </section>
 </PortalLayout>
+
+<script>
+  const updateFinancialScrollHints = () => {
+    document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
+      const shell = panel.closest('.financials-scroll-shell');
+      const fade = shell?.querySelector<HTMLElement>('[data-financials-scroll-fade]');
+      const hint = shell?.querySelector<HTMLElement>('[data-financials-scroll-hint]');
+      const canScroll = panel.scrollHeight > panel.clientHeight + 1;
+      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 8;
+      const showHint = canScroll && !atBottom;
+
+      panel.classList.toggle('is-scrollable', canScroll);
+      fade?.classList.toggle('is-visible', showHint);
+      hint?.classList.toggle('is-visible', showHint);
+    });
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
+    panel.addEventListener('scroll', updateFinancialScrollHints, { passive: true });
+  });
+
+  document.querySelectorAll<HTMLDetailsElement>('.financials-scroll-panel details').forEach((details) => {
+    details.addEventListener('toggle', updateFinancialScrollHints);
+  });
+
+  window.addEventListener('resize', updateFinancialScrollHints, { passive: true });
+  updateFinancialScrollHints();
+</script>

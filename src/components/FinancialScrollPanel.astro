@@ -1,0 +1,32 @@
+---
+interface Props {
+  ariaLabel: string;
+}
+
+const { ariaLabel } = Astro.props;
+---
+
+<div class="financials-scroll-shell">
+  <div
+    class="financials-scroll-panel"
+    data-financials-scroll
+    tabindex="0"
+    role="region"
+    aria-label={ariaLabel}
+  >
+    <slot />
+  </div>
+  <div class="financials-scroll-fade" data-financials-scroll-fade aria-hidden="true"></div>
+  <p class="financials-scroll-hint" data-financials-scroll-hint aria-hidden="true">
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path
+        d="M4 6l4 4 4-4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </svg>
+    Scroll for more
+  </p>
+</div>

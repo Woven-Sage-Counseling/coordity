@@ -72,30 +72,97 @@ html.dark {
     @apply flex h-full flex-col rounded-2xl border border-sage-dark/10 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sage-dark/25 hover:shadow-md;
   }
 
+  .financials-scroll-shell {
+    @apply relative mt-4;
+  }
+
   .financials-scroll-panel {
-    @apply mt-4 h-[28rem] overscroll-contain;
-    overflow-y: scroll;
+    @apply h-[28rem] overflow-y-auto overscroll-contain;
     margin-right: -0.75rem;
     padding-right: 1.25rem;
-    scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--portal-sage-dark) / 0.42) rgb(var(--portal-sage-dark) / 0.12);
+    scrollbar-color: rgb(var(--portal-sage-dark) / 0.3) transparent;
+  }
+
+  .financials-scroll-panel.is-scrollable {
+    padding-bottom: 2rem;
   }
 
   .financials-scroll-panel::-webkit-scrollbar {
-    -webkit-appearance: none;
-    width: 8px;
+    width: 6px;
   }
 
   .financials-scroll-panel::-webkit-scrollbar-thumb {
-    background-color: rgb(var(--portal-sage-dark) / 0.42);
+    background-color: rgb(var(--portal-sage-dark) / 0.3);
+    border: 2px solid transparent;
     border-radius: 9999px;
-    min-height: 3rem;
+    background-clip: padding-box;
   }
 
   .financials-scroll-panel::-webkit-scrollbar-track {
-    background-color: rgb(var(--portal-sage-dark) / 0.12);
-    border-radius: 9999px;
+    background-color: transparent;
+  }
+
+  .financials-scroll-fade {
+    pointer-events: none;
+    position: absolute;
+    inset: auto 0 0;
+    height: 3.5rem;
+    border-radius: 0 0 1rem 1rem;
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0%) 0%,
+      rgb(255 255 255 / 88%) 55%,
+      rgb(255 255 255 / 98%) 100%
+    );
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .financials-scroll-fade.is-visible {
+    opacity: 1;
+  }
+
+  .financials-scroll-hint {
+    pointer-events: none;
+    position: absolute;
+    inset: auto 0 0.55rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--portal-sage-dark) / 0.82);
+    opacity: 0;
+    transform: translateY(0.2rem);
+    transition:
+      opacity 200ms ease,
+      transform 200ms ease;
+  }
+
+  .financials-scroll-hint svg {
+    animation: financials-scroll-bounce 1.6s ease-in-out infinite;
+  }
+
+  .financials-scroll-hint.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @keyframes financials-scroll-bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(0.18rem);
+    }
   }
 
   .financials-transaction-details__summary {
@@ -181,4 +248,13 @@ html.dark .announcement-bar {
     0 -1px 1px rgba(0, 0, 0, 0.25) inset,
     0 10px 28px rgba(0, 0, 0, 0.35),
     0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.dark .financials-scroll-fade {
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--portal-surface) / 0%) 0%,
+    rgb(var(--portal-surface) / 88%) 55%,
+    rgb(var(--portal-surface) / 98%) 100%
+  ) !important;
 }
