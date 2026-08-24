@@ -134,3 +134,41 @@ export function formatUsd(cents: number | null): string {
     currency: 'USD',
   }).format(cents / 100);
 }
+
+function ordinalDay(day: number): string {
+  const mod100 = day % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${day}th`;
+  if (day % 10 === 1) return `${day}st`;
+  if (day % 10 === 2) return `${day}nd`;
+  if (day % 10 === 3) return `${day}rd`;
+  return `${day}th`;
+}
+
+function parseCalendarDate(value: string): Date | null {
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [year, month, day] = trimmed.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(trimmed)) {
+    const [month, day, yearRaw] = trimmed.split('/').map(Number);
+    const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+  const parsed = Date.parse(trimmed);
+  if (!Number.isNaN(parsed)) {
+    const date = new Date(parsed);
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  }
+  return null;
+}
+
+export function formatDisplayDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = parseCalendarDate(value);
+  if (!date) return value;
+  const month = date.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  const day = date.getUTCDate();
+  const year = date.getUTCFullYear();
+  return `${month}, ${ordinalDay(day)} ${year}`;
+}

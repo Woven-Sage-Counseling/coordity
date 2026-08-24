@@ -1,7 +1,7 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import PeriodPicker from '../components/PeriodPicker.astro';
-import { getFinancialSummary, formatUsd } from '../lib/financials/summary';
+import { getFinancialSummary, formatDisplayDate, formatUsd } from '../lib/financials/summary';
 import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
@@ -70,13 +70,7 @@ const expenseTransactions = summary.transactions
   .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
 
 function formatPeriod(iso: string): string {
-  const [year, month, day] = iso.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatDisplayDate(iso) ?? iso;
 }
 
 function formatMonthYear(iso: string): string {
@@ -245,7 +239,7 @@ const periodLabel = snapshot
                     <div class="min-w-0">
                       <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
                       <p class="mt-0.5 text-xs text-sage-dark/65">
-                        {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                        {[formatDisplayDate(transaction.date), transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
                       </p>
                       {
                         transaction.memo && (
@@ -295,7 +289,7 @@ const periodLabel = snapshot
                       <div class="min-w-0">
                         <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
                         <p class="mt-0.5 text-xs text-sage-dark/65">
-                          {[transaction.date, transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
+                          {[formatDisplayDate(transaction.date), transaction.accountName, transaction.type].filter(Boolean).join(' · ')}
                         </p>
                         {
                           tag && (
