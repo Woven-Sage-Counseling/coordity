@@ -46,8 +46,6 @@ const pnlRows = [
 ];
 
 function bucketLabel(bucket: (typeof summary.pnlLines)[number]['bucket']): string | null {
-  if (bucket === 'therapist') return 'Therapist';
-  if (bucket === 'management') return 'Management';
   if (bucket === 'software') return 'Software';
   if (bucket === 'other') return 'Other';
   return null;
