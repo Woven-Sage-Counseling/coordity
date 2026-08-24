@@ -73,17 +73,23 @@ html.dark {
   }
 
   .financials-scroll-panel {
-    @apply mt-4 h-[28rem] overflow-y-auto overscroll-contain pr-1;
+    @apply mt-4 h-[28rem] overflow-y-auto overscroll-contain;
+    margin-right: -0.75rem;
+    padding-right: 1.25rem;
     scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--portal-sage-dark) / 0.3) transparent;
   }
 
   .financials-scroll-panel::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
 
   .financials-scroll-panel::-webkit-scrollbar-thumb {
-    background-color: rgb(var(--portal-sage-dark) / 0.28);
+    background-color: rgb(var(--portal-sage-dark) / 0.3);
+    border: 2px solid transparent;
     border-radius: 9999px;
+    background-clip: padding-box;
   }
 
   .financials-scroll-panel::-webkit-scrollbar-track {
