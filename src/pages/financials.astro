@@ -46,6 +46,8 @@ const pnlRows = [
 ];
 
 function bucketLabel(bucket: (typeof summary.pnlLines)[number]['bucket']): string | null {
+  if (bucket === 'therapist') return 'Therapist';
+  if (bucket === 'management') return 'Management';
   if (bucket === 'software') return 'Software';
   if (bucket === 'other') return 'Other';
   return null;
@@ -95,7 +97,7 @@ function transactionMetaLine(
   const omit = new Set(omitTypes.map((value) => value.toLowerCase()));
   const type =
     transaction.type && !omit.has(transaction.type.trim().toLowerCase()) ? transaction.type : null;
-  return [formatDisplayDate(transaction.date), transaction.accountName, type].filter(Boolean).join(' · ');
+  return [formatDisplayDate(transaction.date), type].filter(Boolean).join(' · ');
 }
 
 const periodLabel = snapshot
@@ -258,6 +260,11 @@ const periodLabel = snapshot
                         {transactionMetaLine(transaction, ['deposit'])}
                       </p>
                       {
+                        transaction.accountName && (
+                          <p class="mt-0.5 text-xs text-sage-dark/65">{transaction.accountName}</p>
+                        )
+                      }
+                      {
                         transaction.memo && (
                           <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
                         )
@@ -298,43 +305,38 @@ const periodLabel = snapshot
               aria-label="Expense transactions"
             >
               <ul class="divide-y divide-black/[0.06]">
-                {expenseTransactions.map((transaction) => {
-                  const tag = bucketLabel(transaction.bucket);
-                  return (
-                    <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
-                        <p class="mt-0.5 text-xs text-sage-dark/65">
-                          {transactionMetaLine(transaction, ['expense'])}
-                        </p>
-                        {
-                          tag && (
-                            <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[#b0b1b6]">
-                              {tag}
-                            </p>
-                          )
-                        }
-                        {
-                          transaction.memo && (
-                            <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
-                          )
-                        }
-                      </div>
-                      <div class="shrink-0 text-right">
-                        <p class="text-sm font-semibold tabular-nums text-charcoal">
-                          {formatUsd(Math.abs(transaction.cents))}
-                        </p>
-                        {
-                          transaction.docNum && (
-                            <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
-                              {transaction.docNum}
-                            </p>
-                          )
-                        }
-                      </div>
-                    </li>
-                  );
-                })}
+                {expenseTransactions.map((transaction) => (
+                  <li class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-charcoal">{transaction.name}</p>
+                      <p class="mt-0.5 text-xs text-sage-dark/65">
+                        {transactionMetaLine(transaction, ['expense'])}
+                      </p>
+                      {
+                        transaction.accountName && (
+                          <p class="mt-0.5 text-xs text-sage-dark/65">{transaction.accountName}</p>
+                        )
+                      }
+                      {
+                        transaction.memo && (
+                          <p class="mt-1 text-xs text-sage-dark/65">{transaction.memo}</p>
+                        )
+                      }
+                    </div>
+                    <div class="shrink-0 text-right">
+                      <p class="text-sm font-semibold tabular-nums text-charcoal">
+                        {formatUsd(Math.abs(transaction.cents))}
+                      </p>
+                      {
+                        transaction.docNum && (
+                          <p class="mt-0.5 text-[11px] uppercase tracking-wide text-[#b0b1b6]">
+                            {transaction.docNum}
+                          </p>
+                        )
+                      }
+                    </div>
+                  </li>
+                ))}
               </ul>
             </div>
           )
