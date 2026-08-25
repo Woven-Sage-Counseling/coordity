@@ -95,7 +95,7 @@ function boundsForRange(start: string, end: string): { timeMin: string; timeMax:
 }
 
 export function isScheduleRangeId(value: string): value is ScheduleRangeId {
-  return value === 'today' || value === 'this_week' || value === 'next_7_days' || value === 'next_14_days';
+  return value === 'today' || value === 'this_week' || value === 'this_month';
 }
 
 export function resolveScheduleRange(id: ScheduleRangeId, now = new Date()): ResolvedScheduleRange {
@@ -114,15 +114,15 @@ export function resolveScheduleRange(id: ScheduleRangeId, now = new Date()): Res
     return { id, start, end, label: 'This week', ...bounds };
   }
 
-  if (id === 'next_7_days') {
-    const end = addDays(today, 6);
-    const bounds = boundsForRange(today, end);
-    return { id, start: today, end, label: 'Next 7 days', ...bounds };
-  }
+  const { year, month } = parseIso(today)!;
+  const start = toIso(year, month, 1);
+  const end = toIso(year, month, lastDayOfMonth(year, month));
+  const bounds = boundsForRange(start, end);
+  return { id, start, end, label: 'This month', ...bounds };
+}
 
-  const end = addDays(today, 13);
-  const bounds = boundsForRange(today, end);
-  return { id, start: today, end, label: 'Next 14 days', ...bounds };
+function lastDayOfMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 export function formatScheduleEventTime(event: { start: string; end: string; allDay: boolean }): string {
@@ -176,12 +176,21 @@ export function groupEventsByDay<T extends { start: string; allDay: boolean }>(
 export function eachDayInRange(start: string, end: string): string[] {
   const days: string[] = [];
   let cursor = start;
-  for (let i = 0; i < 32; i += 1) {
+  for (let i = 0; i < 45; i += 1) {
     days.push(cursor);
     if (cursor === end) break;
     cursor = addDays(cursor, 1);
   }
   return days;
+}
+
+/** Sunday–Saturday grid covering the month (includes leading/trailing days). */
+export function monthGridDays(monthStart: string, monthEnd: string): string[] {
+  const leading = easternWeekdayIndex(monthStart);
+  const gridStart = addDays(monthStart, -leading);
+  const trailing = 6 - easternWeekdayIndex(monthEnd);
+  const gridEnd = addDays(monthEnd, trailing);
+  return eachDayInRange(gridStart, gridEnd);
 }
 
 export function easternMinutesFromMidnight(isoOrDateTime: string): number {

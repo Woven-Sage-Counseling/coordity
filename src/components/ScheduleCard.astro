@@ -7,6 +7,7 @@ import {
   formatScheduleEventTime,
   formatWeekdayShort,
   groupEventsByDay,
+  monthGridDays,
 } from '../lib/schedule/range';
 import { getScheduleSummary, scheduleRangeOptions } from '../lib/schedule/summary';
 import { todayEastern } from '../lib/financials/periods';
@@ -36,23 +37,18 @@ const connection = summary?.connection ?? {
 const range = summary?.range ?? null;
 const events = summary?.events ?? [];
 const rangeOptions = scheduleRangeOptions();
-const isWeekGrid = range?.id === 'this_week';
+const viewMode = range?.id === 'this_week' ? 'week' : range?.id === 'this_month' ? 'month' : 'stack';
 const today = todayEastern();
-const weekDays = range ? eachDayInRange(range.start, range.end) : [];
+const weekDays = range && viewMode === 'week' ? eachDayInRange(range.start, range.end) : [];
+const monthDays = range && viewMode === 'month' ? monthGridDays(range.start, range.end) : [];
+const monthPrefix = range?.start.slice(0, 7) ?? '';
 const grouped = groupEventsByDay(events);
 const dayKeys = [...grouped.keys()].sort();
 
-const timedEvents = events.filter((event) => !event.allDay);
-const eventMinutes = timedEvents.flatMap((event) => [
-  easternMinutesFromMidnight(event.start),
-  easternMinutesFromMidnight(event.end),
-]);
-const minHour = eventMinutes.length ? Math.max(0, Math.floor(Math.min(...eventMinutes) / 60) - 1) : 8;
-const maxHour = eventMinutes.length ? Math.min(24, Math.ceil(Math.max(...eventMinutes) / 60) + 1) : 18;
-const startHour = Math.min(minHour, 8);
-const endHour = Math.max(maxHour, startHour + 8);
+const startHour = 0;
+const endHour = 24;
 const hourHeight = 18;
-const gridHours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
+const gridHours = Array.from({ length: 24 }, (_, index) => index);
 const allDayByDay = new Map(
   weekDays.map((day) => [day, (grouped.get(day) ?? []).filter((event) => event.allDay)]),
 );
@@ -77,7 +73,7 @@ function eventTop(event: ScheduleEvent): number {
 
 function eventHeight(event: ScheduleEvent): number {
   const start = Math.max(easternMinutesFromMidnight(event.start), startHour * 60);
-  const end = Math.min(easternMinutesFromMidnight(event.end), endHour * 60);
+  const end = Math.min(Math.max(easternMinutesFromMidnight(event.end), start + 15), endHour * 60);
   return Math.max(((end - start) / 60) * hourHeight, 14);
 }
 
@@ -86,6 +82,8 @@ function hourLabel(hour: number): string {
   const display = hour % 12 === 0 ? 12 : hour % 12;
   return `${display}${suffix}`;
 }
+
+const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 ---
 
 <aside
@@ -174,8 +172,8 @@ function hourLabel(hour: number): string {
           <div class="p-4">
             <p class="text-sm text-red-700">{connection.lastError}</p>
           </div>
-        ) : isWeekGrid ? (
-          <div class="financials-scroll-panel max-h-[17rem] overflow-auto" data-schedule-events data-view="week">
+        ) : viewMode === 'week' ? (
+          <div class="max-h-[17rem] overflow-auto overscroll-contain" data-schedule-events data-view="week">
             <div class="sticky top-0 z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
               <div class="border-r border-[#eceef2]"></div>
               {
@@ -191,7 +189,7 @@ function hourLabel(hour: number): string {
             </div>
             {
               hasAllDay ? (
-                <div class="grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2]">
+                <div class="sticky top-[2.6rem] z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
                   <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
                   {
                     weekDays.map((day) => (
@@ -213,11 +211,11 @@ function hourLabel(hour: number): string {
                 </div>
               ) : null
             }
-            <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style={`height: ${(endHour - startHour) * hourHeight}px`}>
+            <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style={`height: ${24 * hourHeight}px`}>
               <div class="relative border-r border-[#eceef2]">
                 {
                   gridHours.map((hour) => (
-                    <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style={`top: ${(hour - startHour) * hourHeight}px`}>
+                    <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style={`top: ${hour * hourHeight}px`}>
                       {hourLabel(hour)}
                     </div>
                   ))
@@ -230,7 +228,7 @@ function hourLabel(hour: number): string {
                     <div class={`relative border-r border-[#eceef2] last:border-r-0 ${day === today ? 'bg-[#f7faff]' : ''}`}>
                       {
                         gridHours.map((hour) => (
-                          <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style={`top: ${(hour - startHour) * hourHeight}px`}></div>
+                          <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style={`top: ${hour * hourHeight}px`}></div>
                         ))
                       }
                       {
@@ -253,12 +251,59 @@ function hourLabel(hour: number): string {
               }
             </div>
           </div>
+        ) : viewMode === 'month' ? (
+          <div class="max-h-[17rem] overflow-auto overscroll-contain p-2" data-schedule-events data-view="month">
+            <div class="mb-1 grid grid-cols-7 gap-px">
+              {
+                weekdayHeaders.map((label) => (
+                  <div class="py-1 text-center text-[9px] font-semibold uppercase tracking-wide text-[#6b6c72]">{label}</div>
+                ))
+              }
+            </div>
+            <div class="grid grid-cols-7 gap-px rounded-md bg-[#eceef2] ring-1 ring-[#eceef2]">
+              {
+                monthDays.map((day) => {
+                  const inMonth = day.startsWith(monthPrefix);
+                  const dayEvents = grouped.get(day) ?? [];
+                  const isToday = day === today;
+                  return (
+                    <div class:list={['min-h-[3.1rem] bg-white p-1', !inMonth && 'bg-[#f7f8fa]']}>
+                      <p class:list={[
+                        'mb-0.5 inline-flex h-4 min-w-4 items-center justify-center px-0.5 text-[10px] font-semibold',
+                        isToday ? 'rounded-full bg-[#1a73e8] text-white' : inMonth ? 'text-[#393a3d]' : 'text-[#b0b1b6]',
+                      ]}>
+                        {formatDayNumber(day)}
+                      </p>
+                      <div class="space-y-0.5">
+                        {
+                          dayEvents.slice(0, 2).map((event) => (
+                            <div
+                              class="truncate rounded px-0.5 text-[8px] font-semibold leading-tight text-white"
+                              style={`background-color: ${event.calendarColor ?? '#1a73e8'}`}
+                              title={event.title}
+                            >
+                              {event.title}
+                            </div>
+                          ))
+                        }
+                        {
+                          dayEvents.length > 2 ? (
+                            <p class="text-[8px] font-medium text-[#6b6c72]">+{dayEvents.length - 2}</p>
+                          ) : null
+                        }
+                      </div>
+                    </div>
+                  );
+                })
+              }
+            </div>
+          </div>
         ) : events.length === 0 ? (
           <div class="flex h-full items-center justify-center p-4" data-schedule-events data-view="stack">
             <p class="text-sm text-[#6b6c72]">No events in this range.</p>
           </div>
         ) : (
-          <div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events data-view="stack">
+          <div class="max-h-[15.5rem] overflow-y-auto overscroll-contain p-3" data-schedule-events data-view="stack">
             {
               dayKeys.map((dayKey) => {
                 const dayEvents = grouped.get(dayKey) ?? [];
@@ -305,7 +350,7 @@ function hourLabel(hour: number): string {
           </div>
         )
       }
-      <p class="financials-scroll-hint pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>
+      <p class="pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>
         Scroll for more
       </p>
     </div>
@@ -353,6 +398,7 @@ function hourLabel(hour: number): string {
 
   const TZ = 'America/New_York';
   const HOUR_HEIGHT = 18;
+  const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   function rangeStorageKey(userId: string): string {
     return `portal:schedule-range:${userId}`;
@@ -360,7 +406,9 @@ function hourLabel(hour: number): string {
 
   function readStoredRange(userId: string): string | null {
     try {
-      return localStorage.getItem(rangeStorageKey(userId));
+      const value = localStorage.getItem(rangeStorageKey(userId));
+      if (value === 'today' || value === 'this_week' || value === 'this_month') return value;
+      return null;
     } catch {
       return null;
     }
@@ -401,12 +449,23 @@ function hourLabel(hour: number): string {
   function eachDay(start: string, end: string): string[] {
     const days: string[] = [];
     let cursor = start;
-    for (let i = 0; i < 32; i += 1) {
+    for (let i = 0; i < 45; i += 1) {
       days.push(cursor);
       if (cursor === end) break;
       cursor = addDays(cursor, 1);
     }
     return days;
+  }
+
+  function weekdayIndex(iso: string): number {
+    const label = new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
+    return { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[label] ?? 0;
+  }
+
+  function monthGridDays(monthStart: string, monthEnd: string): string[] {
+    const gridStart = addDays(monthStart, -weekdayIndex(monthStart));
+    const gridEnd = addDays(monthEnd, 6 - weekdayIndex(monthEnd));
+    return eachDay(gridStart, gridEnd);
   }
 
   function dayKeyForEvent(event: ScheduleEventPayload): string {
@@ -427,7 +486,8 @@ function hourLabel(hour: number): string {
       minute: '2-digit',
       hour12: false,
     }).formatToParts(new Date(iso));
-    const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+    let hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+    if (hour === 24) hour = 0;
     const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
     return hour * 60 + minute;
   }
@@ -471,13 +531,7 @@ function hourLabel(hour: number): string {
     return new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { timeZone: TZ, day: 'numeric' });
   }
 
-  function renderStack(container: HTMLElement, events: ScheduleEventPayload[]): void {
-    container.dataset.view = 'stack';
-    container.className = 'financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3';
-    if (events.length === 0) {
-      container.innerHTML = '<div class="flex h-full items-center justify-center p-4"><p class="text-sm text-[#6b6c72]">No events in this range.</p></div>';
-      return;
-    }
+  function groupByDay(events: ScheduleEventPayload[]): Map<string, ScheduleEventPayload[]> {
     const groups = new Map<string, ScheduleEventPayload[]>();
     for (const event of events) {
       const key = dayKeyForEvent(event);
@@ -485,6 +539,17 @@ function hourLabel(hour: number): string {
       bucket.push(event);
       groups.set(key, bucket);
     }
+    return groups;
+  }
+
+  function renderStack(container: HTMLElement, events: ScheduleEventPayload[]): void {
+    container.dataset.view = 'stack';
+    container.className = 'max-h-[15.5rem] overflow-y-auto overscroll-contain p-3';
+    if (events.length === 0) {
+      container.innerHTML = '<div class="flex h-full items-center justify-center p-4"><p class="text-sm text-[#6b6c72]">No events in this range.</p></div>';
+      return;
+    }
+    const groups = groupByDay(events);
     container.innerHTML = [...groups.keys()]
       .sort()
       .map((dayKey) => {
@@ -521,31 +586,14 @@ function hourLabel(hour: number): string {
       .join('');
   }
 
-  function renderWeek(
-    container: HTMLElement,
-    events: ScheduleEventPayload[],
-    start: string,
-    end: string,
-  ): void {
+  function renderWeek(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string): void {
     container.dataset.view = 'week';
-    container.className = 'financials-scroll-panel max-h-[17rem] overflow-auto';
+    container.className = 'max-h-[17rem] overflow-auto overscroll-contain';
     const days = eachDay(start, end);
     const today = todayEastern();
-    const timed = events.filter((event) => !event.allDay);
-    const minutes = timed.flatMap((event) => [minutesFromMidnight(event.start), minutesFromMidnight(event.end)]);
-    const minHour = minutes.length ? Math.max(0, Math.floor(Math.min(...minutes) / 60) - 1) : 8;
-    const maxHour = minutes.length ? Math.min(24, Math.ceil(Math.max(...minutes) / 60) + 1) : 18;
-    const startHour = Math.min(minHour, 8);
-    const endHour = Math.max(maxHour, startHour + 8);
-    const hours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
-    const byDay = new Map<string, ScheduleEventPayload[]>();
-    for (const day of days) byDay.set(day, []);
-    for (const event of events) {
-      const key = dayKeyForEvent(event);
-      const bucket = byDay.get(key);
-      if (bucket) bucket.push(event);
-    }
+    const byDay = groupByDay(events);
     const hasAllDay = events.some((event) => event.allDay);
+    const hours = Array.from({ length: 24 }, (_, index) => index);
 
     const header = `
       <div class="sticky top-0 z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
@@ -566,7 +614,7 @@ function hourLabel(hour: number): string {
 
     const allDayRow = hasAllDay
       ? `
-      <div class="grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2]">
+      <div class="sticky top-[2.6rem] z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
         <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
         ${days
           .map((day) => {
@@ -589,12 +637,12 @@ function hourLabel(hour: number): string {
       : '';
 
     const body = `
-      <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style="height: ${(endHour - startHour) * HOUR_HEIGHT}px">
+      <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style="height: ${24 * HOUR_HEIGHT}px">
         <div class="relative border-r border-[#eceef2]">
           ${hours
             .map(
               (hour) => `
-              <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style="top: ${(hour - startHour) * HOUR_HEIGHT}px">${hourLabel(hour)}</div>
+              <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style="top: ${hour * HOUR_HEIGHT}px">${hourLabel(hour)}</div>
             `,
             )
             .join('')}
@@ -608,15 +656,15 @@ function hourLabel(hour: number): string {
                 ${hours
                   .map(
                     (hour) => `
-                    <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style="top: ${(hour - startHour) * HOUR_HEIGHT}px"></div>
+                    <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style="top: ${hour * HOUR_HEIGHT}px"></div>
                   `,
                   )
                   .join('')}
                 ${dayTimed
                   .map((event) => {
-                    const startMin = Math.max(minutesFromMidnight(event.start), startHour * 60);
-                    const endMin = Math.min(minutesFromMidnight(event.end), endHour * 60);
-                    const top = ((startMin - startHour * 60) / 60) * HOUR_HEIGHT;
+                    const startMin = Math.max(minutesFromMidnight(event.start), 0);
+                    const endMin = Math.min(Math.max(minutesFromMidnight(event.end), startMin + 15), 24 * 60);
+                    const top = (startMin / 60) * HOUR_HEIGHT;
                     const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 14);
                     const href = event.htmlLink ? escapeHtml(event.htmlLink) : '#';
                     return `
@@ -634,6 +682,46 @@ function hourLabel(hour: number): string {
     container.innerHTML = header + allDayRow + body;
   }
 
+  function renderMonth(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string): void {
+    container.dataset.view = 'month';
+    container.className = 'max-h-[17rem] overflow-auto overscroll-contain p-2';
+    const days = monthGridDays(start, end);
+    const today = todayEastern();
+    const monthPrefix = start.slice(0, 7);
+    const byDay = groupByDay(events);
+
+    container.innerHTML = `
+      <div class="mb-1 grid grid-cols-7 gap-px">
+        ${WEEKDAY_HEADERS.map((label) => `<div class="py-1 text-center text-[9px] font-semibold uppercase tracking-wide text-[#6b6c72]">${label}</div>`).join('')}
+      </div>
+      <div class="grid grid-cols-7 gap-px rounded-md bg-[#eceef2] ring-1 ring-[#eceef2]">
+        ${days
+          .map((day) => {
+            const inMonth = day.startsWith(monthPrefix);
+            const dayEvents = byDay.get(day) ?? [];
+            const isToday = day === today;
+            return `
+              <div class="min-h-[3.1rem] p-1 ${inMonth ? 'bg-white' : 'bg-[#f7f8fa]'}">
+                <p class="mb-0.5 inline-flex h-4 min-w-4 items-center justify-center px-0.5 text-[10px] font-semibold ${isToday ? 'rounded-full bg-[#1a73e8] text-white' : inMonth ? 'text-[#393a3d]' : 'text-[#b0b1b6]'}">${dayNumber(day)}</p>
+                <div class="space-y-0.5">
+                  ${dayEvents
+                    .slice(0, 2)
+                    .map(
+                      (event) => `
+                        <div class="truncate rounded px-0.5 text-[8px] font-semibold leading-tight text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>
+                      `,
+                    )
+                    .join('')}
+                  ${dayEvents.length > 2 ? `<p class="text-[8px] font-medium text-[#6b6c72]">+${dayEvents.length - 2}</p>` : ''}
+                </div>
+              </div>
+            `;
+          })
+          .join('')}
+      </div>
+    `;
+  }
+
   function updateScrollHint(shell: HTMLElement): void {
     const list = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
     const hint = shell.querySelector('[data-schedule-scroll-hint]') as HTMLElement | null;
@@ -649,7 +737,7 @@ function hourLabel(hour: number): string {
     let container = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
     if (!container) {
       shell.innerHTML =
-        '<div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events></div><p class="financials-scroll-hint pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>Scroll for more</p>';
+        '<div class="max-h-[15.5rem] overflow-y-auto overscroll-contain p-3" data-schedule-events></div><p class="pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>Scroll for more</p>';
       container = shell.querySelector('[data-schedule-events]') as HTMLElement;
     }
     return container;
@@ -678,10 +766,13 @@ function hourLabel(hour: number): string {
     const events = payload.events ?? [];
     if (payload.range?.id === 'this_week' && payload.range.start && payload.range.end) {
       renderWeek(container, events, payload.range.start, payload.range.end);
+    } else if (payload.range?.id === 'this_month' && payload.range.start && payload.range.end) {
+      renderMonth(container, events, payload.range.start, payload.range.end);
     } else {
       renderStack(container, events);
     }
     updateScrollHint(shell);
+    container.onscroll = () => updateScrollHint(shell);
   }
 
   function initScheduleCard(root: HTMLElement): void {
@@ -702,6 +793,7 @@ function hourLabel(hour: number): string {
       void loadEvents(storedRange, shell, labelEl, root);
     } else {
       updateScrollHint(shell);
+      shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));
     }
 
     rangeSelect.addEventListener('change', () => {
@@ -709,8 +801,6 @@ function hourLabel(hour: number): string {
       writeStoredRange(userId, rangeId);
       void loadEvents(rangeId, shell, labelEl, root);
     });
-
-    shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));
   }
 
   document.querySelectorAll('[data-schedule-card]').forEach((node) => initScheduleCard(node as HTMLElement));

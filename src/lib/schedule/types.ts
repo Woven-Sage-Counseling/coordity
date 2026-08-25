@@ -1,4 +1,4 @@
-export const SCHEDULE_RANGE_IDS = ['today', 'this_week', 'next_7_days', 'next_14_days'] as const;
+export const SCHEDULE_RANGE_IDS = ['today', 'this_week', 'this_month'] as const;
 
 export type ScheduleRangeId = (typeof SCHEDULE_RANGE_IDS)[number];
 

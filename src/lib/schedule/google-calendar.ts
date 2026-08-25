@@ -583,8 +583,7 @@ export function scheduleRangeOptions(): Array<{ id: ScheduleRangeId; label: stri
   return [
     { id: 'today', label: 'Today' },
     { id: 'this_week', label: 'This week' },
-    { id: 'next_7_days', label: 'Next 7 days' },
-    { id: 'next_14_days', label: 'Next 14 days' },
+    { id: 'this_month', label: 'This month' },
   ];
 }
 
