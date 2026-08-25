@@ -41,8 +41,8 @@ const ringOffset = ringCircumference * (1 - ringRatio);
 
 const pnlRows = [
   { label: 'Income', cents: revenue, color: '#2CA01C', share: null as string | null, showBar: false },
-  { label: 'Therapist income', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist), showBar: true },
-  { label: 'Management income', cents: management, color: '#6aa84f', share: shareOfIncome(management), showBar: true },
+  { label: 'Therapist compensation', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist), showBar: true },
+  { label: 'Manager compensation', cents: management, color: '#6aa84f', share: shareOfIncome(management), showBar: true },
   { label: 'Software and technology', cents: software, color: '#8fbc8f', share: shareOfIncome(software), showBar: true },
   { label: 'Total expenses', cents: expenses, color: '#a8c5a0', share: shareOfIncome(expenses), showBar: true },
 ];
