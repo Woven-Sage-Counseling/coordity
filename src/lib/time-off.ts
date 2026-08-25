@@ -78,7 +78,7 @@ export function buildTimeOffEmail(input: {
   employeeEmail: string;
   entries: TimeOffEntry[];
   notes: string;
-}): { subject: string; text: string; html: string } {
+}): { subject: string; text: string; html: string; replyTo: string } {
   const lines = input.entries.map((entry) => `- ${formatTimeOffEntry(entry)}`);
   const notes = input.notes.trim();
   const subject = `Time off request from ${input.employeeName}`;
@@ -104,7 +104,51 @@ export function buildTimeOffEmail(input: {
     <p style="color:#6b6c72;font-size:13px;">Submitted via the Woven Sage employee portal.</p>
   `.trim();
 
-  return { subject, text: textParts.join('\n'), html };
+  return {
+    subject,
+    text: textParts.join('\n'),
+    html,
+    replyTo: input.employeeEmail,
+  };
+}
+
+export function buildTimeOffRetractionEmail(input: {
+  employeeName: string;
+  employeeEmail: string;
+  entries: TimeOffEntry[];
+  notes: string;
+}): { subject: string; text: string; html: string; replyTo: string } {
+  const lines = input.entries.map((entry) => `- ${formatTimeOffEntry(entry)}`);
+  const notes = input.notes.trim();
+  const subject = `Time off request retracted by ${input.employeeName}`;
+
+  const textParts = [
+    `${input.employeeName} (${input.employeeEmail}) retracted a pending time off request:`,
+    '',
+    ...lines,
+  ];
+  if (notes) {
+    textParts.push('', `Original notes: ${notes}`);
+  }
+  textParts.push('', 'The request was removed from the employee portal.');
+
+  const htmlLines = input.entries
+    .map((entry) => `<li>${escapeHtml(formatTimeOffEntry(entry))}</li>`)
+    .join('');
+
+  const html = `
+    <p><strong>${escapeHtml(input.employeeName)}</strong> (${escapeHtml(input.employeeEmail)}) retracted a pending time off request:</p>
+    <ul>${htmlLines}</ul>
+    ${notes ? `<p><strong>Original notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+    <p style="color:#6b6c72;font-size:13px;">The request was removed from the employee portal.</p>
+  `.trim();
+
+  return {
+    subject,
+    text: textParts.join('\n'),
+    html,
+    replyTo: input.employeeEmail,
+  };
 }
 
 function escapeHtml(value: string): string {

@@ -1,26 +1,26 @@
 import { getEnv } from './env';
-import { buildTimeOffEmail, type TimeOffEntry } from './time-off';
 
 const TIME_OFF_RECIPIENT = 'admin@wovensage.com';
 
-export async function sendTimeOffRequestEmail(input: {
-  employeeName: string;
-  employeeEmail: string;
-  entries: TimeOffEntry[];
-  notes: string;
-}): Promise<void> {
+export type AdminEmailPayload = {
+  subject: string;
+  text: string;
+  html: string;
+  replyTo?: string;
+};
+
+async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
   const env = getEnv();
   const fromEmail = (env.PORTAL_FROM_EMAIL ?? 'portal@wovensage.com').trim();
-  const { subject, text, html } = buildTimeOffEmail(input);
 
   if (env.EMAIL) {
     await env.EMAIL.send({
       to: TIME_OFF_RECIPIENT,
       from: { email: fromEmail, name: 'Woven Sage Portal' },
-      replyTo: input.employeeEmail,
-      subject,
-      text,
-      html,
+      replyTo: payload.replyTo,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
     });
     return;
   }
@@ -42,21 +42,35 @@ export async function sendTimeOffRequestEmail(input: {
       body: JSON.stringify({
         to: TIME_OFF_RECIPIENT,
         from: { address: fromEmail, name: 'Woven Sage Portal' },
-        reply_to: input.employeeEmail,
-        subject,
-        text,
-        html,
+        reply_to: payload.replyTo,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
       }),
     },
   );
 
-  const payload = (await response.json()) as {
+  const body = (await response.json()) as {
     success?: boolean;
     errors?: Array<{ message?: string }>;
   };
 
-  if (!response.ok || !payload.success) {
-    const message = payload.errors?.[0]?.message ?? 'Unable to send email.';
+  if (!response.ok || !body.success) {
+    const message = body.errors?.[0]?.message ?? 'Unable to send email.';
     throw new Error(message);
   }
+}
+
+export async function notifyAdminEmail(payload: AdminEmailPayload): Promise<boolean> {
+  try {
+    await sendAdminEmail(payload);
+    return true;
+  } catch (error) {
+    console.error('admin email failed', error);
+    return false;
+  }
+}
+
+export async function sendTimeOffRequestEmail(payload: AdminEmailPayload): Promise<void> {
+  await sendAdminEmail(payload);
 }

@@ -149,6 +149,49 @@ export async function listTimeOffRequestsForAdmin(limit = 100): Promise<TimeOffR
   return attachEntries(rows.results ?? []);
 }
 
+export async function retractTimeOffRequest(requestId: string, userId: string): Promise<TimeOffRequest> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT
+        r.id,
+        r.user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        r.status,
+        r.notes,
+        r.reviewed_by,
+        reviewer.name AS reviewer_name,
+        r.reviewed_at,
+        r.created_at
+     FROM time_off_request r
+     JOIN user u ON u.id = r.user_id
+     LEFT JOIN user reviewer ON reviewer.id = r.reviewed_by
+     WHERE r.id = ? AND r.user_id = ?`,
+  )
+    .bind(requestId, userId)
+    .all<RequestRow>();
+
+  const [request] = await attachEntries(rows.results ?? []);
+  if (!request) {
+    throw new Error('That request was not found.');
+  }
+  if (request.status !== 'pending') {
+    throw new Error('Only pending requests can be retracted.');
+  }
+
+  const result = await DB.prepare(
+    `DELETE FROM time_off_request WHERE id = ? AND user_id = ? AND status = 'pending'`,
+  )
+    .bind(requestId, userId)
+    .run();
+
+  if ((result.meta.changes ?? 0) === 0) {
+    throw new Error('Could not retract that request.');
+  }
+
+  return request;
+}
+
 export async function reviewTimeOffRequest(
   requestId: string,
   reviewerId: string,
