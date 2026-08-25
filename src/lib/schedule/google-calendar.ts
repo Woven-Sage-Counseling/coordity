@@ -34,6 +34,8 @@ interface ConnectionRow {
   refresh_token_expires_at: number | null;
   status: 'disconnected' | 'connected' | 'error';
   last_error: string | null;
+  hidden_title_keywords: string | null;
+  hide_out_of_office: number | null;
 }
 
 interface CalendarListItem {
@@ -49,8 +51,39 @@ interface GoogleEventItem {
   id?: string;
   summary?: string;
   htmlLink?: string;
+  eventType?: string;
   start?: { date?: string; dateTime?: string };
   end?: { date?: string; dateTime?: string };
+}
+
+function parseKeywordList(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function normalizeKeywords(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const keywords: string[] = [];
+  for (const value of input) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    keywords.push(trimmed);
+  }
+  return keywords;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -195,7 +228,34 @@ export class GoogleCalendarProvider {
       googleEmail: row?.google_email ?? null,
       lastError: row?.last_error ?? null,
       configured: this.isConfigured(),
+      hiddenTitleKeywords: parseKeywordList(row?.hidden_title_keywords),
+      hideOutOfOffice: row?.hide_out_of_office === 1,
     };
+  }
+
+  async saveEventFilters(
+    userId: string,
+    filters: { hiddenTitleKeywords?: string[]; hideOutOfOffice?: boolean },
+  ): Promise<void> {
+    await this.ensureConnectionRow(userId);
+    const current = await this.getConnection(userId);
+    const keywords =
+      filters.hiddenTitleKeywords !== undefined
+        ? normalizeKeywords(filters.hiddenTitleKeywords)
+        : current.hiddenTitleKeywords;
+    const hideOutOfOffice =
+      filters.hideOutOfOffice !== undefined ? filters.hideOutOfOffice : current.hideOutOfOffice;
+
+    await getEnv()
+      .DB.prepare(
+        `UPDATE google_calendar_connection
+         SET hidden_title_keywords = ?, hide_out_of_office = ?
+         WHERE user_id = ?`,
+      )
+      .bind(JSON.stringify(keywords), hideOutOfOffice ? 1 : 0, userId)
+      .run();
+
+    await getEnv().DB.prepare(`DELETE FROM google_calendar_event_cache WHERE user_id = ?`).bind(userId).run();
   }
 
   async listCalendars(userId: string): Promise<ScheduleCalendarOption[]> {
@@ -272,7 +332,7 @@ export class GoogleCalendarProvider {
 
   async getEvents(userId: string, range: ResolvedScheduleRange): Promise<ScheduleEvent[]> {
     const cached = await this.readEventCache(userId, range.id);
-    if (cached) return cached;
+    if (cached) return this.applyEventFilters(userId, cached);
 
     const enabledCalendars = (await this.listCalendars(userId)).filter((calendar) => calendar.enabled);
     if (enabledCalendars.length === 0) return [];
@@ -307,7 +367,8 @@ export class GoogleCalendarProvider {
       .flat()
       .sort((left, right) => Date.parse(left.start) - Date.parse(right.start));
 
-    await this.writeEventCache(userId, range.id, events);
+    const filtered = await this.applyEventFilters(userId, events);
+    await this.writeEventCache(userId, range.id, filtered);
     await getEnv()
       .DB.prepare(
         `UPDATE google_calendar_connection
@@ -317,7 +378,18 @@ export class GoogleCalendarProvider {
       .bind(nowMs(), userId)
       .run();
 
-    return events;
+    return filtered;
+  }
+
+  private async applyEventFilters(userId: string, events: ScheduleEvent[]): Promise<ScheduleEvent[]> {
+    const connection = await this.getConnection(userId);
+    const keywords = connection.hiddenTitleKeywords.map((keyword) => keyword.toLowerCase());
+    return events.filter((event) => {
+      if (connection.hideOutOfOffice && event.eventType === 'outOfOffice') return false;
+      if (keywords.length === 0) return true;
+      const title = event.title.toLowerCase();
+      return !keywords.some((keyword) => title.includes(keyword));
+    });
   }
 
   async refreshCalendarList(userId: string): Promise<void> {
@@ -424,6 +496,7 @@ export class GoogleCalendarProvider {
       calendarName: calendar.name,
       calendarColor: calendar.color,
       htmlLink: item.htmlLink ?? null,
+      eventType: item.eventType ?? null,
     };
   }
 
@@ -431,7 +504,8 @@ export class GoogleCalendarProvider {
     return getEnv()
       .DB.prepare(
         `SELECT google_email, access_token_encrypted, refresh_token_encrypted,
-                access_token_expires_at, refresh_token_expires_at, status, last_error
+                access_token_expires_at, refresh_token_expires_at, status, last_error,
+                hidden_title_keywords, hide_out_of_office
          FROM google_calendar_connection
          WHERE user_id = ?`,
       )

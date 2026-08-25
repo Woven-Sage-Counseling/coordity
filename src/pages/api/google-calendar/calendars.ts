@@ -14,7 +14,12 @@ export const GET: APIRoute = async ({ locals }) => {
 export const POST: APIRoute = async ({ locals, request }) => {
   const provider = new GoogleCalendarProvider();
   const userId = locals.employee!.id;
-  const body = (await request.json()) as { enabledIds?: string[]; refresh?: boolean };
+  const body = (await request.json()) as {
+    enabledIds?: string[];
+    refresh?: boolean;
+    hiddenTitleKeywords?: string[];
+    hideOutOfOffice?: boolean;
+  };
 
   if (body.refresh) {
     await provider.refreshCalendarList(userId);
@@ -23,6 +28,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (Array.isArray(body.enabledIds)) {
     const enabledIds = body.enabledIds.filter((value) => typeof value === 'string' && value.trim().length > 0);
     await provider.saveCalendarSelection(userId, enabledIds);
+  }
+
+  if (body.hiddenTitleKeywords !== undefined || body.hideOutOfOffice !== undefined) {
+    await provider.saveEventFilters(userId, {
+      hiddenTitleKeywords: body.hiddenTitleKeywords,
+      hideOutOfOffice: body.hideOutOfOffice,
+    });
   }
 
   const connection = await provider.getConnection(userId);

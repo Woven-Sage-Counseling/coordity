@@ -21,6 +21,7 @@ export interface ScheduleEvent {
   calendarName: string;
   calendarColor: string | null;
   htmlLink: string | null;
+  eventType: string | null;
 }
 
 export interface ScheduleCalendarOption {
@@ -37,6 +38,8 @@ export interface ScheduleConnection {
   googleEmail: string | null;
   lastError: string | null;
   configured: boolean;
+  hiddenTitleKeywords: string[];
+  hideOutOfOffice: boolean;
 }
 
 export interface ScheduleSummary {

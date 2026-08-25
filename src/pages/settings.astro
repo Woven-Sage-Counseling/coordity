@@ -16,6 +16,8 @@ let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection
   googleEmail: null,
   lastError: null,
   configured: calendarProvider.isConfigured(),
+  hiddenTitleKeywords: [],
+  hideOutOfOffice: false,
 };
 let calendarOptions: Array<{ id: string; name: string; enabled: boolean; color: string | null }> = [];
 
@@ -214,6 +216,37 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
               </ul>
             )
           }
+          <div class="mt-8 border-t border-sage-dark/10 pt-6">
+            <h3 class="text-sm font-semibold text-charcoal">Hide events</h3>
+            <p class="mt-1 text-sm text-sage-dark/65">
+              Hide overlapping busy blocks from another workplace. Titles are matched case-insensitively (contains).
+            </p>
+            <label for="hidden-title-keywords" class="mt-4 block text-sm font-medium text-charcoal">
+              Hide titles containing
+            </label>
+            <textarea
+              id="hidden-title-keywords"
+              class="field mt-2 min-h-[6rem]"
+              rows="4"
+              placeholder={'not available\nbusy'}
+              data-hidden-title-keywords
+            >{calendarConnection.hiddenTitleKeywords.join('\n')}</textarea>
+            <p class="mt-1 text-xs text-sage-dark/55">One phrase per line. Example: not available</p>
+            <label class="mt-4 flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+                checked={calendarConnection.hideOutOfOffice}
+                data-hide-out-of-office
+              />
+              <span>
+                <span class="block text-sm font-medium text-charcoal">Hide Out of office events</span>
+                <span class="mt-0.5 block text-sm text-sage-dark/65">
+                  Hides Google Calendar out-of-office / unavailable blocks.
+                </span>
+              </span>
+            </label>
+          </div>
           <div class="mt-8 flex flex-wrap items-center gap-3">
             <button type="button" class="btn-primary" data-calendar-save>Save calendars</button>
             <button type="button" class="text-sm text-sage-dark/70 hover:text-sage-dark" data-calendar-refresh>
@@ -476,10 +509,21 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
       const enabledIds = Array.from(root.querySelectorAll('[data-calendar-option]'))
         .filter((node): node is HTMLInputElement => node instanceof HTMLInputElement && node.checked)
         .map((node) => node.value);
+      const keywordsField = root.querySelector('[data-hidden-title-keywords]');
+      const hideOutOfOfficeField = root.querySelector('[data-hide-out-of-office]');
+      const hiddenTitleKeywords =
+        keywordsField instanceof HTMLTextAreaElement
+          ? keywordsField.value
+              .split('\n')
+              .map((line) => line.trim())
+              .filter(Boolean)
+          : [];
+      const hideOutOfOffice =
+        hideOutOfOfficeField instanceof HTMLInputElement ? hideOutOfOfficeField.checked : false;
       await fetch('/api/google-calendar/calendars', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ enabledIds }),
+        body: JSON.stringify({ enabledIds, hiddenTitleKeywords, hideOutOfOffice }),
       });
       if (savedEl) savedEl.classList.remove('hidden');
     });
