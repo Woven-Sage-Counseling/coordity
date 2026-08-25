@@ -435,7 +435,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     >
       <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
         <div class="flex max-h-[min(92vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#f4f5f8] shadow-2xl ring-1 ring-black/15">
-          <div class="flex items-center justify-between gap-3 bg-sage-dark px-4 py-3 text-cream">
+          <div class="flex shrink-0 items-center justify-between gap-3 bg-sage-dark px-4 py-3 text-cream">
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
               <p class="text-base font-semibold" data-schedule-dialog-label>{range?.label ?? 'This week'}</p>
@@ -462,11 +462,17 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
               </button>
             </div>
           </div>
-          <div class="min-h-0 flex-1 overflow-hidden p-4" data-schedule-dialog-shell>
-            <div class="h-full max-h-[min(78vh,44rem)] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]" data-schedule-dialog-events></div>
+          <div class="flex min-h-0 flex-1 flex-col overflow-hidden p-4" data-schedule-dialog-shell>
+            <div class="min-h-0 flex-1 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+              <div class="h-full overflow-auto" data-schedule-dialog-events></div>
+            </div>
             {
               calendars.length > 0 ? (
-                <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5" data-schedule-dialog-legend aria-label="Calendar color key">
+                <div
+                  class="mt-3 flex shrink-0 flex-wrap gap-x-4 gap-y-1.5 border-t border-sage-dark/10 pt-3"
+                  data-schedule-dialog-legend
+                  aria-label="Calendar color key"
+                >
                   {
                     calendars.map((calendar) => (
                       <span class="inline-flex items-center gap-1.5 text-[11px] text-[#6b6c72]">
@@ -680,7 +686,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     container.dataset.view = 'stack';
     container.className =
       size === 'expanded'
-        ? 'h-full max-h-[min(78vh,44rem)] overflow-y-auto overscroll-contain p-5'
+        ? 'h-full min-h-0 overflow-y-auto overscroll-contain p-5'
         : 'max-h-[15.5rem] overflow-y-auto overscroll-contain p-3';
     if (events.length === 0) {
       container.innerHTML = '<div class="flex h-full items-center justify-center p-4"><p class="text-sm text-[#6b6c72]">No events in this range.</p></div>';
@@ -730,7 +736,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const titleSize = size === 'expanded' ? 'text-[11px]' : 'text-[8px]';
     container.className =
       size === 'expanded'
-        ? 'h-full max-h-[min(78vh,44rem)] overflow-auto overscroll-contain'
+        ? 'h-full min-h-0 overflow-auto overscroll-contain'
         : 'max-h-[17rem] overflow-auto overscroll-contain';
     const days = eachDay(start, end);
     const today = todayEastern();
@@ -829,7 +835,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     container.dataset.view = 'month';
     container.className =
       size === 'expanded'
-        ? 'h-full max-h-[min(78vh,44rem)] overflow-auto overscroll-contain p-4'
+        ? 'h-full min-h-0 overflow-auto overscroll-contain p-4'
         : 'max-h-[17rem] overflow-auto overscroll-contain p-2';
     const days = monthGridDays(start, end);
     const today = todayEastern();
