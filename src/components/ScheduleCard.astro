@@ -253,12 +253,10 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
                         {
                           (allDayByDay.get(day) ?? []).map((event) => (
                             <div
-                              class="truncate rounded px-0.5 text-[8px] font-semibold leading-4 text-white"
+                              class="rounded"
                               style={`background-color: ${event.calendarColor ?? '#6b6c72'}`}
                               title={event.title}
-                            >
-                              {event.title}
-                            </div>
+                            ></div>
                           ))
                         }
                       </div>
@@ -295,12 +293,10 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
                               href={event.htmlLink ?? '#'}
                               target={event.htmlLink ? '_blank' : undefined}
                               rel={event.htmlLink ? 'noopener noreferrer' : undefined}
-                              class="absolute overflow-hidden rounded px-0.5 text-[8px] font-semibold leading-tight text-white"
+                              class="absolute overflow-hidden rounded"
                               style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${event.calendarColor ?? '#1a73e8'};`}
                               title={`${event.title} · ${eventTimeLabel(event)}`}
-                            >
-                              {event.title}
-                            </a>
+                            ></a>
                           );
                         })
                       }
@@ -866,7 +862,11 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
                 ${dayAllDay
                   .map(
                     (event) => `
-                      <div class="truncate rounded px-0.5 ${titleSize} font-semibold leading-4 text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>
+                      ${
+                        size === 'expanded'
+                          ? `<div class="truncate rounded px-0.5 ${titleSize} font-semibold leading-4 text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`
+                          : `<div class="rounded" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}"></div>`
+                      }
                     `,
                   )
                   .join('')}
@@ -911,7 +911,11 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
                     const columnStyle = weekEventColumnStyleClient(column, columnCount);
                     const href = event.htmlLink ? escapeHtml(event.htmlLink) : '#';
                     return `
-                      <a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded px-0.5 ${titleSize} font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>
+                      ${
+                        size === 'expanded'
+                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded px-0.5 ${titleSize} font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
+                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
+                      }
                     `;
                   })
                   .join('')}
