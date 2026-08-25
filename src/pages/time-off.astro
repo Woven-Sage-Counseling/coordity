@@ -1,10 +1,10 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import TimeOffCalendar from '../components/TimeOffCalendar.astro';
 
 export const prerender = false;
 
-const weekParam = Astro.url.searchParams.get('week');
+const error = Astro.url.searchParams.get('error');
+const sent = Astro.url.searchParams.get('sent') === '1';
 ---
 
 <PortalLayout title="Request time off" wide>
@@ -17,11 +17,168 @@ const weekParam = Astro.url.searchParams.get('week');
   <div class="mt-3">
     <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Request time off</h1>
     <p class="mt-3 max-w-2xl text-sage-dark/75">
-      Select the dates you would like to request. Your schedule events will appear here soon.
+      Add the dates you need off. Mark a day as full day unless you are requesting a partial day, such as a half day.
     </p>
   </div>
 
-  <div class="mt-8">
-    <TimeOffCalendar weekStart={weekParam} />
-  </div>
+  {
+    error ? (
+      <p class="mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        {error}
+      </p>
+    ) : null
+  }
+
+  {
+    sent ? (
+      <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
+        Your time off request was sent to admin@wovensage.com.
+      </p>
+    ) : null
+  }
+
+  <form class="card mt-8 max-w-2xl" method="post" action="/api/time-off/request" data-time-off-form>
+    <fieldset class="space-y-4" data-time-off-entries>
+      <legend class="text-sm font-semibold text-charcoal">Dates requested</legend>
+      <div class="rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4" data-time-off-row>
+        <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <label class="block text-sm font-medium text-charcoal">
+            Date
+            <input class="field" type="date" name="entry_date_0" required />
+          </label>
+          <label class="inline-flex items-center gap-2 pb-2.5 text-sm text-charcoal">
+            <input
+              type="checkbox"
+              name="entry_full_day_0"
+              checked
+              data-time-off-full-day
+            />
+            Full day
+          </label>
+        </div>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2" data-time-off-times hidden>
+          <label class="block text-sm font-medium text-charcoal">
+            Start time
+            <input class="field" type="time" name="entry_start_0" />
+          </label>
+          <label class="block text-sm font-medium text-charcoal">
+            End time
+            <input class="field" type="time" name="entry_end_0" />
+          </label>
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button class="btn-secondary !px-3 !py-1.5" type="button" data-time-off-add>
+        Add another date
+      </button>
+    </div>
+
+    <label class="mt-6 block text-sm font-medium text-charcoal">
+      Notes <span class="font-normal text-sage-dark/60">(optional)</span>
+      <textarea class="field min-h-[5rem] resize-y" name="notes" maxlength="1000" placeholder="Anything else your admin should know?"></textarea>
+    </label>
+
+    <div class="mt-6">
+      <button class="btn-primary" type="submit">Submit request</button>
+    </div>
+  </form>
 </PortalLayout>
+
+<script>
+  function syncRow(row: HTMLElement): void {
+    const fullDay = row.querySelector('[data-time-off-full-day]');
+    const times = row.querySelector('[data-time-off-times]');
+    const start = row.querySelector('input[name^="entry_start_"]');
+    const end = row.querySelector('input[name^="entry_end_"]');
+    if (!(fullDay instanceof HTMLInputElement) || !(times instanceof HTMLElement)) return;
+
+    const isFullDay = fullDay.checked;
+    times.hidden = isFullDay;
+    if (start instanceof HTMLInputElement) {
+      start.required = !isFullDay;
+      if (isFullDay) start.value = '';
+    }
+    if (end instanceof HTMLInputElement) {
+      end.required = !isFullDay;
+      if (isFullDay) end.value = '';
+    }
+  }
+
+  function bindRow(row: HTMLElement): void {
+    const fullDay = row.querySelector('[data-time-off-full-day]');
+    if (fullDay instanceof HTMLInputElement) {
+      fullDay.addEventListener('change', () => syncRow(row));
+    }
+    syncRow(row);
+  }
+
+  function reindexRows(container: HTMLElement): void {
+    const rows = container.querySelectorAll('[data-time-off-row]');
+    rows.forEach((row, index) => {
+      if (!(row instanceof HTMLElement)) return;
+      const date = row.querySelector('input[name^="entry_date_"]');
+      const fullDay = row.querySelector('[data-time-off-full-day]');
+      const start = row.querySelector('input[name^="entry_start_"]');
+      const end = row.querySelector('input[name^="entry_end_"]');
+      if (date instanceof HTMLInputElement) date.name = `entry_date_${index}`;
+      if (fullDay instanceof HTMLInputElement) fullDay.name = `entry_full_day_${index}`;
+      if (start instanceof HTMLInputElement) start.name = `entry_start_${index}`;
+      if (end instanceof HTMLInputElement) end.name = `entry_end_${index}`;
+
+      let removeButton = row.querySelector('[data-time-off-remove]') as HTMLButtonElement | null;
+      if (index === 0) {
+        removeButton?.remove();
+        return;
+      }
+      if (!(removeButton instanceof HTMLButtonElement)) {
+        removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'mt-3 text-sm font-medium text-sage-dark/70 hover:text-charcoal';
+        removeButton.dataset.timeOffRemove = '1';
+        removeButton.textContent = 'Remove';
+        removeButton.addEventListener('click', () => {
+          row.remove();
+          reindexRows(container);
+        });
+        row.appendChild(removeButton);
+      }
+    });
+  }
+
+  function initTimeOffForm(form: HTMLFormElement): void {
+    const container = form.querySelector('[data-time-off-entries]');
+    const addButton = form.querySelector('[data-time-off-add]');
+    if (!(container instanceof HTMLElement) || !(addButton instanceof HTMLButtonElement)) return;
+
+    container.querySelectorAll('[data-time-off-row]').forEach((row) => {
+      if (row instanceof HTMLElement) bindRow(row);
+    });
+
+    addButton.addEventListener('click', () => {
+      const template = container.querySelector('[data-time-off-row]');
+      if (!(template instanceof HTMLElement)) return;
+      const row = template.cloneNode(true) as HTMLElement;
+      const date = row.querySelector('input[type="date"]');
+      const fullDay = row.querySelector('[data-time-off-full-day]');
+      const start = row.querySelector('input[type="time"]');
+      const end = row.querySelectorAll('input[type="time"]')[1];
+      if (date instanceof HTMLInputElement) date.value = '';
+      if (fullDay instanceof HTMLInputElement) fullDay.checked = true;
+      if (start instanceof HTMLInputElement) start.value = '';
+      if (end instanceof HTMLInputElement) end.value = '';
+      row.querySelector('[data-time-off-remove]')?.remove();
+      container.appendChild(row);
+      bindRow(row);
+      reindexRows(container);
+      if (date instanceof HTMLInputElement) date.focus();
+    });
+
+    reindexRows(container);
+  }
+
+  document.querySelectorAll('[data-time-off-form]').forEach((node) => {
+    if (node instanceof HTMLFormElement) initTimeOffForm(node);
+  });
+</script>

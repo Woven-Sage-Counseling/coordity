@@ -7,9 +7,15 @@
   "observability": {
     "enabled": true
   },
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
   "vars": {
     "PORTAL_ENVIRONMENT": "production",
     "PORTAL_OWNER_EMAIL": "admin@wovensage.com",
+    "PORTAL_FROM_EMAIL": "portal@wovensage.com",
     "BETTER_AUTH_URL": "https://portal.wovensage.com",
     "PRACTICE_OPERATIONS_START": "2026-06-01"
   },

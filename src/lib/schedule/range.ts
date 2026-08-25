@@ -205,16 +205,6 @@ export function groupEventsByDay<T extends { start: string; allDay: boolean }>(
   return groups;
 }
 
-export function shiftIsoDate(iso: string, days: number): string {
-  return addDays(iso, days);
-}
-
-export function weekRangeForDate(isoDate: string): { start: string; end: string } {
-  const weekday = easternWeekdayIndex(isoDate);
-  const start = addDays(isoDate, -weekday);
-  return { start, end: addDays(start, 6) };
-}
-
 export function eachDayInRange(start: string, end: string): string[] {
   const days: string[] = [];
   let cursor = start;

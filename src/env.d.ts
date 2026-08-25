@@ -37,10 +37,12 @@ declare namespace App {
 interface Env {
   DB: D1Database;
   SESSION: KVNamespace;
+  EMAIL?: SendEmail;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   PORTAL_BOOTSTRAP_TOKEN: string;
   PORTAL_OWNER_EMAIL: string;
+  PORTAL_FROM_EMAIL?: string;
   PORTAL_ENVIRONMENT: string;
   QB_CLIENT_ID?: string;
   QB_CLIENT_SECRET?: string;
