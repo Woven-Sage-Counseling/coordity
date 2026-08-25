@@ -1,54 +1,117 @@
 import { getEnv } from './env';
 import { randomToken, nowMs } from './crypto';
 
+export const CALENDAR_CONFLICT_SOURCE = 'calendar_conflict';
+
 export interface PortalNotification {
   id: string;
   title: string;
   body: string;
   createdAt: number;
   unread: boolean;
+  sourceType: string | null;
+  cleared: boolean;
 }
 
-export async function listNotificationsForUser(
-  userId: string,
-  limit = 20,
-): Promise<PortalNotification[]> {
-  const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT id, title, body, created_at, read_at
-     FROM notification
-     WHERE user_id = ?
-     ORDER BY created_at DESC
-     LIMIT ?`,
-  )
-    .bind(userId, limit)
-    .all<{
-      id: string;
-      title: string;
-      body: string;
-      created_at: number;
-      read_at: number | null;
-    }>();
-
-  return (rows.results ?? []).map((row) => ({
+function mapNotification(row: {
+  id: string;
+  title: string;
+  body: string;
+  created_at: number;
+  read_at: number | null;
+  source_type: string | null;
+  cleared_at: number | null;
+}): PortalNotification {
+  return {
     id: row.id,
     title: row.title,
     body: row.body,
     createdAt: row.created_at,
     unread: row.read_at == null,
-  }));
+    sourceType: row.source_type,
+    cleared: row.cleared_at != null,
+  };
+}
+
+export async function listNotificationsForUser(
+  userId: string,
+  limit = 20,
+  options: { includeCleared?: boolean; clearedOnly?: boolean } = {},
+): Promise<PortalNotification[]> {
+  const { DB } = getEnv();
+  const clearedFilter = options.clearedOnly
+    ? 'AND cleared_at IS NOT NULL'
+    : options.includeCleared
+      ? ''
+      : 'AND cleared_at IS NULL';
+
+  try {
+    const rows = await DB.prepare(
+      `SELECT id, title, body, created_at, read_at, source_type, cleared_at
+       FROM notification
+       WHERE user_id = ?
+         ${clearedFilter}
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+      .bind(userId, limit)
+      .all<{
+        id: string;
+        title: string;
+        body: string;
+        created_at: number;
+        read_at: number | null;
+        source_type: string | null;
+        cleared_at: number | null;
+      }>();
+
+    return (rows.results ?? []).map(mapNotification);
+  } catch {
+    // Fallback before migration 0015 is applied.
+    const rows = await DB.prepare(
+      `SELECT id, title, body, created_at, read_at, source_type
+       FROM notification
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+      .bind(userId, limit)
+      .all<{
+        id: string;
+        title: string;
+        body: string;
+        created_at: number;
+        read_at: number | null;
+        source_type: string | null;
+      }>();
+
+    return (rows.results ?? []).map((row) =>
+      mapNotification({ ...row, cleared_at: null }),
+    );
+  }
 }
 
 export async function countUnreadNotifications(userId: string): Promise<number> {
   const { DB } = getEnv();
-  const row = await DB.prepare(
-    `SELECT COUNT(*) AS count
-     FROM notification
-     WHERE user_id = ? AND read_at IS NULL`,
-  )
-    .bind(userId)
-    .first<{ count: number }>();
-  return Number(row?.count ?? 0);
+  try {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM notification
+       WHERE user_id = ? AND read_at IS NULL AND cleared_at IS NULL`,
+    )
+      .bind(userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  } catch {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM notification
+       WHERE user_id = ? AND read_at IS NULL`,
+    )
+      .bind(userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  }
 }
 
 export async function markNotificationsRead(input: {
@@ -95,6 +158,38 @@ export async function markNotificationsUnread(input: {
       ).bind(id, input.userId),
     ),
   );
+}
+
+export async function clearNotifications(input: {
+  userId: string;
+  notificationIds: string[];
+}): Promise<void> {
+  if (input.notificationIds.length === 0) return;
+  const { DB } = getEnv();
+  const now = nowMs();
+  try {
+    await DB.batch(
+      input.notificationIds.map((id) =>
+        DB.prepare(
+          `UPDATE notification
+           SET cleared_at = ?, read_at = COALESCE(read_at, ?)
+           WHERE id = ? AND user_id = ? AND cleared_at IS NULL
+             AND (source_type IS NULL OR source_type != ?)`,
+        ).bind(now, now, id, input.userId, CALENDAR_CONFLICT_SOURCE),
+      ),
+    );
+  } catch {
+    // If cleared_at is missing, fall back to hard delete for non-conflict alerts.
+    await DB.batch(
+      input.notificationIds.map((id) =>
+        DB.prepare(
+          `DELETE FROM notification
+           WHERE id = ? AND user_id = ?
+             AND (source_type IS NULL OR source_type != ?)`,
+        ).bind(id, input.userId, CALENDAR_CONFLICT_SOURCE),
+      ),
+    );
+  }
 }
 
 export async function notifyUser(input: {
