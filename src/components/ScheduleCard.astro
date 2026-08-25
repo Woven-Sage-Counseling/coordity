@@ -11,6 +11,7 @@ import {
   groupEventsByDay,
   monthGridDays,
 } from '../lib/schedule/range';
+import { layoutOverlappingTimedEvents, weekEventColumnStyle } from '../lib/schedule/week-layout';
 import { getScheduleSummary, scheduleRangeOptions } from '../lib/schedule/summary';
 import { todayEastern } from '../lib/financials/periods';
 import type { ScheduleEvent } from '../lib/schedule/types';
@@ -78,6 +79,17 @@ function eventHeight(event: ScheduleEvent): number {
   const start = Math.max(easternMinutesFromMidnight(event.start), 0);
   const end = Math.min(Math.max(easternMinutesFromMidnight(event.end), start + 15), 24 * 60);
   return Math.max(((end - start) / 60) * hourHeight, 14);
+}
+
+function layoutDayTimedEvents(events: ScheduleEvent[]) {
+  const timed = events.filter((event) => !event.allDay);
+  return layoutOverlappingTimedEvents(
+    timed.map((event) => {
+      const startMin = Math.max(easternMinutesFromMidnight(event.start), 0);
+      const endMin = Math.min(Math.max(easternMinutesFromMidnight(event.end), startMin + 15), 24 * 60);
+      return { event, startMin, endMin };
+    }),
+  );
 }
 
 function hourLabel(hour: number): string {
@@ -267,7 +279,7 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
               </div>
               {
                 weekDays.map((day) => {
-                  const dayTimed = (grouped.get(day) ?? []).filter((event) => !event.allDay);
+                  const laidOut = layoutDayTimedEvents(grouped.get(day) ?? []);
                   return (
                     <div class={`relative border-r border-[#eceef2] last:border-r-0 ${day === today ? 'bg-[#f7faff]' : ''}`}>
                       {
@@ -276,18 +288,21 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
                         ))
                       }
                       {
-                        dayTimed.map((event) => (
-                          <a
-                            href={event.htmlLink ?? '#'}
-                            target={event.htmlLink ? '_blank' : undefined}
-                            rel={event.htmlLink ? 'noopener noreferrer' : undefined}
-                            class="absolute inset-x-0.5 overflow-hidden rounded px-0.5 text-[8px] font-semibold leading-tight text-white"
-                            style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; background-color: ${event.calendarColor ?? '#1a73e8'};`}
-                            title={`${event.title} · ${eventTimeLabel(event)}`}
-                          >
-                            {event.title}
-                          </a>
-                        ))
+                        laidOut.map(({ event, column, columnCount }) => {
+                          const columnStyle = weekEventColumnStyle(column, columnCount);
+                          return (
+                            <a
+                              href={event.htmlLink ?? '#'}
+                              target={event.htmlLink ? '_blank' : undefined}
+                              rel={event.htmlLink ? 'noopener noreferrer' : undefined}
+                              class="absolute overflow-hidden rounded px-0.5 text-[8px] font-semibold leading-tight text-white"
+                              style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${event.calendarColor ?? '#1a73e8'};`}
+                              title={`${event.title} · ${eventTimeLabel(event)}`}
+                            >
+                              {event.title}
+                            </a>
+                          );
+                        })
                       }
                     </div>
                   );
@@ -759,6 +774,58 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
       .join('');
   }
 
+  function layoutOverlappingTimedEventsClient<T extends { startMin: number; endMin: number }>(
+    events: T[],
+  ): Array<T & { column: number; columnCount: number }> {
+    if (events.length === 0) return [];
+
+    const sorted = [...events].sort(
+      (left, right) => left.startMin - right.startMin || right.endMin - left.endMin,
+    );
+
+    const columns: number[] = [];
+    const placed: Array<T & { column: number }> = [];
+
+    for (const event of sorted) {
+      let column = columns.findIndex((endMin) => endMin <= event.startMin);
+      if (column === -1) {
+        column = columns.length;
+        columns.push(event.endMin);
+      } else {
+        columns[column] = event.endMin;
+      }
+      placed.push({ ...event, column });
+    }
+
+    return placed.map((event) => {
+      const overlapping = placed.filter(
+        (other) => other.startMin < event.endMin && event.startMin < other.endMin,
+      );
+      const columnCount = new Set(overlapping.map((other) => other.column)).size;
+      return { ...event, columnCount: Math.max(columnCount, 1) };
+    });
+  }
+
+  function layoutDayTimedEventsClient(events: ScheduleEventPayload[]) {
+    const timed = events.filter((event) => !event.allDay);
+    return layoutOverlappingTimedEventsClient(
+      timed.map((event) => {
+        const startMin = Math.max(minutesFromMidnight(event.start), 0);
+        const endMin = Math.min(Math.max(minutesFromMidnight(event.end), startMin + 15), 24 * 60);
+        return { event, startMin, endMin };
+      }),
+    );
+  }
+
+  function weekEventColumnStyleClient(column: number, columnCount: number): { left: string; width: string } {
+    const widthPct = 100 / columnCount;
+    const leftPct = column * widthPct;
+    return {
+      left: `calc(${leftPct}% + 1px)`,
+      width: `calc(${widthPct}% - 2px)`,
+    };
+  }
+
   function renderWeek(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string, size: SizeMode): void {
     container.dataset.view = 'week';
     const hourHeight = size === 'expanded' ? 32 : 18;
@@ -824,7 +891,7 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
         </div>
         ${days
           .map((day) => {
-            const dayTimed = (byDay.get(day) ?? []).filter((event) => !event.allDay);
+            const laidOut = layoutDayTimedEventsClient(byDay.get(day) ?? []);
             const isToday = day === today;
             return `
               <div class="relative border-r border-[#eceef2] last:border-r-0 ${isToday ? 'bg-[#f7faff]' : ''}">
@@ -835,15 +902,16 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
                   `,
                   )
                   .join('')}
-                ${dayTimed
-                  .map((event) => {
+                ${laidOut
+                  .map(({ event, column, columnCount }) => {
                     const startMin = Math.max(minutesFromMidnight(event.start), 0);
                     const endMin = Math.min(Math.max(minutesFromMidnight(event.end), startMin + 15), 24 * 60);
                     const top = (startMin / 60) * hourHeight;
                     const height = Math.max(((endMin - startMin) / 60) * hourHeight, 14);
+                    const columnStyle = weekEventColumnStyleClient(column, columnCount);
                     const href = event.htmlLink ? escapeHtml(event.htmlLink) : '#';
                     return `
-                      <a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute inset-x-0.5 overflow-hidden rounded px-0.5 ${titleSize} font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>
+                      <a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded px-0.5 ${titleSize} font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>
                     `;
                   })
                   .join('')}
