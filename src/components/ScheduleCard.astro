@@ -19,11 +19,9 @@ import type { ScheduleEvent } from '../lib/schedule/types';
 
 interface Props {
   userId: string;
-  ownerEmail: string;
-  employeeName: string;
 }
 
-const { userId, ownerEmail, employeeName } = Astro.props;
+const { userId } = Astro.props;
 
 let summary = null;
 try {
@@ -58,14 +56,6 @@ const allDayByDay = new Map(
   weekDays.map((day) => [day, (grouped.get(day) ?? []).filter((event) => event.allDay)]),
 );
 const hasAllDay = [...allDayByDay.values()].some((list) => list.length > 0);
-
-const timeOffSubject = encodeURIComponent('Time off request');
-const timeOffBody = encodeURIComponent(
-  `Hi,\n\nI'd like to request time off.\n\nName: ${employeeName}\nDates: \nReason: \n\nThank you.`,
-);
-const timeOffHref = ownerEmail
-  ? `mailto:${ownerEmail}?subject=${timeOffSubject}&body=${timeOffBody}`
-  : '#';
 
 function eventTimeLabel(event: ScheduleEvent): string {
   return formatScheduleEventTime(event);
@@ -466,13 +456,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
           <span></span>
         )
       }
-      <a
-        href={timeOffHref}
-        class:list={[
-          'text-[10px] font-medium transition',
-          ownerEmail ? 'text-sage-dark/60 hover:text-sage-dark' : 'pointer-events-none text-sage-dark/30',
-        ]}
-      >
+      <a href="/time-off" class="text-[10px] font-medium text-sage-dark/60 transition hover:text-sage-dark">
         Request time off
       </a>
     </div>
@@ -577,13 +561,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
               >
                 Manage calendars
               </a>
-              <a
-                href={timeOffHref}
-                class:list={[
-                  'text-[11px] font-medium transition',
-                  ownerEmail ? 'text-sage-dark/60 hover:text-sage-dark' : 'pointer-events-none text-sage-dark/30',
-                ]}
-              >
+              <a href="/time-off" class="text-[11px] font-medium text-sage-dark/60 transition hover:text-sage-dark">
                 Request time off
               </a>
             </div>

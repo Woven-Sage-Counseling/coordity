@@ -1,0 +1,27 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import TimeOffCalendar from '../components/TimeOffCalendar.astro';
+
+export const prerender = false;
+
+const weekParam = Astro.url.searchParams.get('week');
+---
+
+<PortalLayout title="Request time off" wide>
+  <p class="text-sm text-sage-dark/65">
+    <a href="/" class="hover:text-sage-dark">Home</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Request time off
+  </p>
+
+  <div class="mt-3">
+    <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Request time off</h1>
+    <p class="mt-3 max-w-2xl text-sage-dark/75">
+      Select the dates you would like to request. Your schedule events will appear here soon.
+    </p>
+  </div>
+
+  <div class="mt-8">
+    <TimeOffCalendar weekStart={weekParam} />
+  </div>
+</PortalLayout>
