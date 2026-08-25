@@ -322,17 +322,33 @@ export class GoogleCalendarProvider {
 
   async refreshCalendarList(userId: string): Promise<void> {
     const accessToken = await this.validAccessToken(userId);
-    const response = await fetch(`${GOOGLE_CALENDAR}/users/me/calendarList?minAccessRole=reader`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const items: CalendarListItem[] = [];
+    let pageToken: string | undefined;
 
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Unable to list Google calendars (${response.status}): ${detail.slice(0, 200)}`);
-    }
+    do {
+      const url = new URL(`${GOOGLE_CALENDAR}/users/me/calendarList`);
+      url.searchParams.set('minAccessRole', 'reader');
+      url.searchParams.set('showHidden', 'true');
+      url.searchParams.set('maxResults', '250');
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
 
-    const payload = (await response.json()) as { items?: CalendarListItem[] };
-    const items = payload.items ?? [];
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`Unable to list Google calendars (${response.status}): ${detail.slice(0, 200)}`);
+      }
+
+      const payload = (await response.json()) as {
+        items?: CalendarListItem[];
+        nextPageToken?: string;
+      };
+      items.push(...(payload.items ?? []));
+      pageToken = payload.nextPageToken;
+    } while (pageToken);
+
     const { DB } = getEnv();
     const existing = await DB.prepare(
       `SELECT calendar_id, enabled FROM google_calendar_selection WHERE user_id = ?`,
@@ -343,30 +359,52 @@ export class GoogleCalendarProvider {
       (existing.results ?? []).map((row) => [row.calendar_id, row.enabled === 1]),
     );
 
-    const statements = items.map((item, index) => {
-      const calendarId = item.id ?? '';
-      const enabled =
-        existingEnabled.has(calendarId) ? (existingEnabled.get(calendarId) ? 1 : 0) : item.primary ? 1 : 0;
-      return DB.prepare(
-        `INSERT INTO google_calendar_selection
-         (user_id, calendar_id, calendar_name, calendar_color, enabled, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id, calendar_id) DO UPDATE SET
-           calendar_name = excluded.calendar_name,
-           calendar_color = excluded.calendar_color,
-           sort_order = excluded.sort_order`,
-      ).bind(
-        userId,
-        calendarId,
-        item.summary ?? 'Untitled calendar',
-        item.backgroundColor ?? null,
-        enabled,
-        item.primary ? 0 : index + 1,
-      );
-    });
+    const seenIds = new Set<string>();
+    const statements = items
+      .filter((item) => Boolean(item.id))
+      .map((item, index) => {
+        const calendarId = item.id!;
+        seenIds.add(calendarId);
+        const enabled = existingEnabled.has(calendarId)
+          ? existingEnabled.get(calendarId)
+            ? 1
+            : 0
+          : item.primary || item.selected
+            ? 1
+            : 0;
+        return DB.prepare(
+          `INSERT INTO google_calendar_selection
+           (user_id, calendar_id, calendar_name, calendar_color, enabled, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, calendar_id) DO UPDATE SET
+             calendar_name = excluded.calendar_name,
+             calendar_color = excluded.calendar_color,
+             sort_order = excluded.sort_order`,
+        ).bind(
+          userId,
+          calendarId,
+          item.summary ?? 'Untitled calendar',
+          item.backgroundColor ?? null,
+          enabled,
+          item.primary ? 0 : index + 1,
+        );
+      });
 
     if (statements.length > 0) {
       await DB.batch(statements);
+    }
+
+    const stale = (existing.results ?? [])
+      .map((row) => row.calendar_id)
+      .filter((id) => !seenIds.has(id));
+    if (stale.length > 0) {
+      await DB.batch(
+        stale.map((calendarId) =>
+          DB.prepare(
+            `DELETE FROM google_calendar_selection WHERE user_id = ? AND calendar_id = ?`,
+          ).bind(userId, calendarId),
+        ),
+      );
     }
 
     await DB.prepare(`DELETE FROM google_calendar_event_cache WHERE user_id = ?`).bind(userId).run();
