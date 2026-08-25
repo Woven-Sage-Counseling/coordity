@@ -1,0 +1,239 @@
+import { getEnv } from './env';
+import { randomToken, nowMs } from './crypto';
+import { todayEastern } from './financials/periods';
+import type { TimeOffEntry } from './time-off';
+
+export type TimeOffRequestStatus = 'pending' | 'approved' | 'denied';
+
+export interface StoredTimeOffEntry {
+  id: string;
+  date: string;
+  fullDay: boolean;
+  startTime: string | null;
+  endTime: string | null;
+}
+
+export interface TimeOffRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  status: TimeOffRequestStatus;
+  notes: string | null;
+  reviewedBy: string | null;
+  reviewerName: string | null;
+  reviewedAt: number | null;
+  createdAt: number;
+  entries: StoredTimeOffEntry[];
+}
+
+type RequestRow = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  status: TimeOffRequestStatus;
+  notes: string | null;
+  reviewed_by: string | null;
+  reviewer_name: string | null;
+  reviewed_at: number | null;
+  created_at: number;
+};
+
+type EntryRow = {
+  id: string;
+  request_id: string;
+  entry_date: string;
+  full_day: number;
+  start_time: string | null;
+  end_time: string | null;
+};
+
+export async function createTimeOffRequest(
+  userId: string,
+  entries: TimeOffEntry[],
+  notes: string,
+): Promise<string> {
+  const { DB } = getEnv();
+  const requestId = randomToken(16);
+  const ts = nowMs();
+
+  await DB.prepare(
+    `INSERT INTO time_off_request (id, user_id, status, notes, created_at)
+     VALUES (?, ?, 'pending', ?, ?)`,
+  )
+    .bind(requestId, userId, notes.trim() || null, ts)
+    .run();
+
+  for (const entry of entries) {
+    await DB.prepare(
+      `INSERT INTO time_off_entry (id, request_id, entry_date, full_day, start_time, end_time)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        randomToken(16),
+        requestId,
+        entry.date,
+        entry.fullDay ? 1 : 0,
+        entry.fullDay ? null : entry.startTime,
+        entry.fullDay ? null : entry.endTime,
+      )
+      .run();
+  }
+
+  return requestId;
+}
+
+export async function listTimeOffRequestsForUser(userId: string, limit = 50): Promise<TimeOffRequest[]> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT
+        r.id,
+        r.user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        r.status,
+        r.notes,
+        r.reviewed_by,
+        reviewer.name AS reviewer_name,
+        r.reviewed_at,
+        r.created_at
+     FROM time_off_request r
+     JOIN user u ON u.id = r.user_id
+     LEFT JOIN user reviewer ON reviewer.id = r.reviewed_by
+     WHERE r.user_id = ?
+     ORDER BY r.created_at DESC
+     LIMIT ?`,
+  )
+    .bind(userId, limit)
+    .all<RequestRow>();
+
+  return attachEntries(rows.results ?? []);
+}
+
+export async function listTimeOffRequestsForAdmin(limit = 100): Promise<TimeOffRequest[]> {
+  const { DB } = getEnv();
+  const today = todayEastern();
+  const rows = await DB.prepare(
+    `SELECT
+        r.id,
+        r.user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        r.status,
+        r.notes,
+        r.reviewed_by,
+        reviewer.name AS reviewer_name,
+        r.reviewed_at,
+        r.created_at
+     FROM time_off_request r
+     JOIN user u ON u.id = r.user_id
+     LEFT JOIN user reviewer ON reviewer.id = r.reviewed_by
+     WHERE r.status = 'pending'
+        OR (
+          r.status = 'approved'
+          AND (
+            SELECT MAX(e.entry_date)
+            FROM time_off_entry e
+            WHERE e.request_id = r.id
+          ) >= ?
+        )
+     ORDER BY
+       CASE r.status WHEN 'pending' THEN 0 ELSE 1 END,
+       r.created_at DESC
+     LIMIT ?`,
+  )
+    .bind(today, limit)
+    .all<RequestRow>();
+
+  return attachEntries(rows.results ?? []);
+}
+
+export async function reviewTimeOffRequest(
+  requestId: string,
+  reviewerId: string,
+  status: 'approved' | 'denied',
+): Promise<void> {
+  const { DB } = getEnv();
+  const existing = await DB.prepare(`SELECT id, status FROM time_off_request WHERE id = ?`)
+    .bind(requestId)
+    .first<{ id: string; status: TimeOffRequestStatus }>();
+
+  if (!existing) {
+    throw new Error('That time off request was not found.');
+  }
+  if (existing.status !== 'pending') {
+    throw new Error('That request has already been reviewed.');
+  }
+
+  const result = await DB.prepare(
+    `UPDATE time_off_request
+     SET status = ?, reviewed_by = ?, reviewed_at = ?
+     WHERE id = ? AND status = 'pending'`,
+  )
+    .bind(status, reviewerId, nowMs(), requestId)
+    .run();
+
+  if ((result.meta.changes ?? 0) === 0) {
+    throw new Error('Could not update that request.');
+  }
+}
+
+async function attachEntries(rows: RequestRow[]): Promise<TimeOffRequest[]> {
+  if (rows.length === 0) return [];
+
+  const { DB } = getEnv();
+  const placeholders = rows.map(() => '?').join(', ');
+  const entryRows = await DB.prepare(
+    `SELECT id, request_id, entry_date, full_day, start_time, end_time
+     FROM time_off_entry
+     WHERE request_id IN (${placeholders})
+     ORDER BY entry_date ASC, start_time ASC`,
+  )
+    .bind(...rows.map((row) => row.id))
+    .all<EntryRow>();
+
+  const entriesByRequest = new Map<string, StoredTimeOffEntry[]>();
+  for (const row of entryRows.results ?? []) {
+    const bucket = entriesByRequest.get(row.request_id) ?? [];
+    bucket.push({
+      id: row.id,
+      date: row.entry_date,
+      fullDay: row.full_day === 1,
+      startTime: row.start_time,
+      endTime: row.end_time,
+    });
+    entriesByRequest.set(row.request_id, bucket);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    userName: row.user_name,
+    userEmail: row.user_email,
+    status: row.status,
+    notes: row.notes,
+    reviewedBy: row.reviewed_by,
+    reviewerName: row.reviewer_name,
+    reviewedAt: row.reviewed_at,
+    createdAt: row.created_at,
+    entries: entriesByRequest.get(row.id) ?? [],
+  }));
+}
+
+export function timeOffStatusLabel(status: TimeOffRequestStatus): string {
+  if (status === 'approved') return 'Approved';
+  if (status === 'denied') return 'Denied';
+  return 'Pending';
+}
+
+export function formatTimeOffRequestDate(ms: number): string {
+  return new Date(ms).toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}

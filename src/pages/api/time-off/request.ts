@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { sendTimeOffRequestEmail } from '../../../lib/email';
 import { formErrorRedirect } from '../../../lib/http';
+import { createTimeOffRequest } from '../../../lib/time-off-requests';
 import { parseTimeOffEntries } from '../../../lib/time-off';
 
 export const prerender = false;
@@ -16,6 +17,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const entries = parseTimeOffEntries(form);
+    await createTimeOffRequest(employee.id, entries, notes);
     await sendTimeOffRequestEmail({
       employeeName: employee.name,
       employeeEmail: employee.email,

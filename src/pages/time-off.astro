@@ -1,10 +1,18 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import { formatTimeOffEntry } from '../lib/time-off';
+import {
+  formatTimeOffRequestDate,
+  listTimeOffRequestsForUser,
+  timeOffStatusLabel,
+} from '../lib/time-off-requests';
 
 export const prerender = false;
 
+const employee = Astro.locals.employee!;
 const error = Astro.url.searchParams.get('error');
 const sent = Astro.url.searchParams.get('sent') === '1';
+const requests = await listTimeOffRequestsForUser(employee.id);
 ---
 
 <PortalLayout title="Request time off" wide>
@@ -32,7 +40,7 @@ const sent = Astro.url.searchParams.get('sent') === '1';
   {
     sent ? (
       <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
-        Your time off request was sent to admin@wovensage.com.
+        Your time off request was submitted and sent to admin@wovensage.com.
       </p>
     ) : null
   }
@@ -84,6 +92,73 @@ const sent = Astro.url.searchParams.get('sent') === '1';
       <button class="btn-primary" type="submit">Submit request</button>
     </div>
   </form>
+
+  <section class="mt-12 max-w-2xl" aria-labelledby="your-time-off-requests">
+    <h2 id="your-time-off-requests" class="font-display text-3xl text-charcoal">Your requests</h2>
+    <p class="mt-2 text-sm text-sage-dark/65">Track pending, approved, and denied time off requests.</p>
+
+    {
+      requests.length === 0 ? (
+        <p class="mt-6 text-sm text-sage-dark/65">You have not submitted any time off requests yet.</p>
+      ) : (
+        <div class="mt-6 space-y-4">
+          {
+            requests.map((request) => (
+              <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <p class="text-xs text-sage-dark/55">
+                    Submitted {formatTimeOffRequestDate(request.createdAt)}
+                  </p>
+                  <span
+                    class:list={[
+                      'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                      request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                      request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                      request.status === 'denied' && 'bg-red-100 text-red-900',
+                    ]}
+                  >
+                    {timeOffStatusLabel(request.status)}
+                  </span>
+                </div>
+
+                <ul class="mt-3 space-y-1.5 text-sm text-charcoal">
+                  {
+                    request.entries.map((entry) => (
+                      <li>
+                        {formatTimeOffEntry({
+                          date: entry.date,
+                          fullDay: entry.fullDay,
+                          startTime: entry.startTime,
+                          endTime: entry.endTime,
+                        })}
+                      </li>
+                    ))
+                  }
+                </ul>
+
+                {
+                  request.notes ? (
+                    <p class="mt-3 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm text-sage-dark/80">
+                      <span class="font-semibold text-charcoal">Notes:</span> {request.notes}
+                    </p>
+                  ) : null
+                }
+
+                {
+                  request.reviewedAt ? (
+                    <p class="mt-3 text-xs text-sage-dark/55">
+                      Reviewed {formatTimeOffRequestDate(request.reviewedAt)}
+                      {request.reviewerName ? ` by ${request.reviewerName}` : ''}
+                    </p>
+                  ) : null
+                }
+              </article>
+            ))
+          }
+        </div>
+      )
+    }
+  </section>
 </PortalLayout>
 
 <script>

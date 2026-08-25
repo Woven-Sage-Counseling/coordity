@@ -1,0 +1,109 @@
+---
+import { formatTimeOffEntry } from '../lib/time-off';
+import {
+  formatTimeOffRequestDate,
+  timeOffStatusLabel,
+  type TimeOffRequest,
+} from '../lib/time-off-requests';
+
+interface Props {
+  requests: TimeOffRequest[];
+  error?: string | null;
+}
+
+const { requests, error = null } = Astro.props;
+
+function entryLabel(entry: TimeOffRequest['entries'][number]): string {
+  return formatTimeOffEntry({
+    date: entry.date,
+    fullDay: entry.fullDay,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
+  });
+}
+---
+
+<section class="mt-10 scroll-mt-24" aria-labelledby="time-off-requests" id="time-off-requests">
+  <div>
+    <h2 id="time-off-requests" class="font-display text-3xl text-charcoal">Time off requests</h2>
+    <p class="mt-2 text-sm text-sage-dark/65">
+      Review pending requests. Approved requests stay here until the last requested date has passed.
+    </p>
+  </div>
+
+  {
+    error ? (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    ) : null
+  }
+
+  {
+    requests.length === 0 ? (
+      <p class="mt-6 text-sm text-sage-dark/65">No pending or upcoming approved requests right now.</p>
+    ) : (
+      <div class="mt-6 space-y-4">
+        {
+          requests.map((request) => (
+            <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-charcoal">{request.userName}</p>
+                  <p class="text-sm text-sage-dark/65">{request.userEmail}</p>
+                  <p class="mt-1 text-xs text-sage-dark/55">
+                    Submitted {formatTimeOffRequestDate(request.createdAt)}
+                  </p>
+                </div>
+                <span
+                  class:list={[
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                    request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                    request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                    request.status === 'denied' && 'bg-red-100 text-red-900',
+                  ]}
+                >
+                  {timeOffStatusLabel(request.status)}
+                </span>
+              </div>
+
+              <ul class="mt-4 space-y-1.5 text-sm text-charcoal">
+                {request.entries.map((entry) => (
+                  <li>{entryLabel(entry)}</li>
+                ))}
+              </ul>
+
+              {
+                request.notes ? (
+                  <p class="mt-4 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm text-sage-dark/80">
+                    <span class="font-semibold text-charcoal">Notes:</span> {request.notes}
+                  </p>
+                ) : null
+              }
+
+              {
+                request.status === 'pending' ? (
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <form method="post" action="/api/time-off/review" class="contents">
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <input type="hidden" name="action" value="approve" />
+                      <button class="btn-primary !px-3 !py-1.5" type="submit">Approve</button>
+                    </form>
+                    <form method="post" action="/api/time-off/review" class="contents">
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <input type="hidden" name="action" value="deny" />
+                      <button class="btn-secondary !px-3 !py-1.5" type="submit">Deny</button>
+                    </form>
+                  </div>
+                ) : request.reviewedAt ? (
+                  <p class="mt-4 text-xs text-sage-dark/55">
+                    Reviewed {formatTimeOffRequestDate(request.reviewedAt)}
+                    {request.reviewerName ? ` by ${request.reviewerName}` : ''}
+                  </p>
+                ) : null
+              }
+            </article>
+          ))
+        }
+      </div>
+    )
+  }
+</section>
