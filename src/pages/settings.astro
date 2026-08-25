@@ -17,15 +17,21 @@ let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection
   lastError: null,
   configured: calendarProvider.isConfigured(),
 };
-let calendarOptions: Array<{ id: string; name: string; enabled: boolean }> = [];
+let calendarOptions: Array<{ id: string; name: string; enabled: boolean; color: string | null }> = [];
 
 try {
   calendarConnection = await calendarProvider.getConnection(employee.id);
   if (calendarConnection.status === 'connected') {
+    try {
+      await calendarProvider.refreshCalendarList(employee.id);
+    } catch (error) {
+      console.error('settings calendar refresh failed', error);
+    }
     calendarOptions = (await calendarProvider.listCalendars(employee.id)).map((calendar) => ({
       id: calendar.id,
       name: calendar.name,
       enabled: calendar.enabled,
+      color: calendar.color,
     }));
   }
 } catch (error) {
@@ -194,7 +200,12 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
                         class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
                         data-calendar-option
                       />
-                      <label for={`calendar-${encodeURIComponent(calendar.id)}`} class="min-w-0 flex-1 cursor-pointer">
+                      <label for={`calendar-${encodeURIComponent(calendar.id)}`} class="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                        <span
+                          class="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
+                          style={`background-color: ${calendar.color ?? '#6b6c72'}`}
+                          aria-hidden="true"
+                        ></span>
                         <span class="block text-sm font-semibold text-charcoal">{calendar.name}</span>
                       </label>
                     </li>
