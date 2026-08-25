@@ -1,10 +1,15 @@
 ---
 import {
+  eachDayInRange,
+  easternMinutesFromMidnight,
+  formatDayNumber,
   formatScheduleEventDay,
   formatScheduleEventTime,
+  formatWeekdayShort,
   groupEventsByDay,
 } from '../lib/schedule/range';
 import { getScheduleSummary, scheduleRangeOptions } from '../lib/schedule/summary';
+import { todayEastern } from '../lib/financials/periods';
 import type { ScheduleEvent } from '../lib/schedule/types';
 
 interface Props {
@@ -30,11 +35,28 @@ const connection = summary?.connection ?? {
 };
 const range = summary?.range ?? null;
 const events = summary?.events ?? [];
-const calendars = summary?.calendars ?? [];
 const rangeOptions = scheduleRangeOptions();
+const isWeekGrid = range?.id === 'this_week';
+const today = todayEastern();
+const weekDays = range ? eachDayInRange(range.start, range.end) : [];
 const grouped = groupEventsByDay(events);
 const dayKeys = [...grouped.keys()].sort();
-const enabledCalendarCount = calendars.filter((calendar) => calendar.enabled).length;
+
+const timedEvents = events.filter((event) => !event.allDay);
+const eventMinutes = timedEvents.flatMap((event) => [
+  easternMinutesFromMidnight(event.start),
+  easternMinutesFromMidnight(event.end),
+]);
+const minHour = eventMinutes.length ? Math.max(0, Math.floor(Math.min(...eventMinutes) / 60) - 1) : 8;
+const maxHour = eventMinutes.length ? Math.min(24, Math.ceil(Math.max(...eventMinutes) / 60) + 1) : 18;
+const startHour = Math.min(minHour, 8);
+const endHour = Math.max(maxHour, startHour + 8);
+const hourHeight = 18;
+const gridHours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
+const allDayByDay = new Map(
+  weekDays.map((day) => [day, (grouped.get(day) ?? []).filter((event) => event.allDay)]),
+);
+const hasAllDay = [...allDayByDay.values()].some((list) => list.length > 0);
 
 const timeOffSubject = encodeURIComponent('Time off request');
 const timeOffBody = encodeURIComponent(
@@ -47,6 +69,23 @@ const timeOffHref = ownerEmail
 function eventTimeLabel(event: ScheduleEvent): string {
   return formatScheduleEventTime(event);
 }
+
+function eventTop(event: ScheduleEvent): number {
+  const minutes = Math.max(easternMinutesFromMidnight(event.start), startHour * 60);
+  return ((minutes - startHour * 60) / 60) * hourHeight;
+}
+
+function eventHeight(event: ScheduleEvent): number {
+  const start = Math.max(easternMinutesFromMidnight(event.start), startHour * 60);
+  const end = Math.min(easternMinutesFromMidnight(event.end), endHour * 60);
+  return Math.max(((end - start) / 60) * hourHeight, 14);
+}
+
+function hourLabel(hour: number): string {
+  const suffix = hour >= 12 ? 'p' : 'a';
+  const display = hour % 12 === 0 ? 12 : hour % 12;
+  return `${display}${suffix}`;
+}
 ---
 
 <aside
@@ -55,6 +94,8 @@ function eventTimeLabel(event: ScheduleEvent): string {
   data-schedule-card
   data-user-id={userId}
   data-connected={connection.status === 'connected' ? '1' : '0'}
+  data-range-start={range?.start ?? ''}
+  data-range-end={range?.end ?? ''}
 >
   <div class="bg-sage-dark px-3 py-2.5 text-cream">
     <div class="flex items-center gap-2">
@@ -102,50 +143,6 @@ function eventTimeLabel(event: ScheduleEvent): string {
       }
     </div>
 
-    {
-      connection.status === 'connected' ? (
-        <details class="mt-3 rounded-lg bg-white shadow-sm ring-1 ring-black/[0.06]" data-schedule-calendars>
-          <summary class="cursor-pointer list-none px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b6c72]">
-            Calendars ({enabledCalendarCount}/{calendars.length || 0})
-          </summary>
-          <div class="border-t border-[#eceef2] px-3 py-2">
-            {
-              calendars.length === 0 ? (
-                <p class="pb-1 text-[11px] text-[#6b6c72]">
-                  No calendars loaded yet. Open Settings and click Refresh list.
-                </p>
-              ) : (
-                <ul class="max-h-36 space-y-1.5 overflow-y-auto pb-1" data-schedule-calendar-list>
-                  {
-                    calendars.map((calendar) => (
-                      <li>
-                        <label class="flex cursor-pointer items-center gap-2 py-0.5">
-                          <input
-                            type="checkbox"
-                            value={calendar.id}
-                            checked={calendar.enabled}
-                            class="h-3.5 w-3.5 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-                            data-schedule-calendar-option
-                          />
-                          <span
-                            class="h-2.5 w-2.5 shrink-0 rounded-sm"
-                            style={`background-color: ${calendar.color ?? '#6b6c72'}`}
-                            aria-hidden="true"
-                          ></span>
-                          <span class="truncate text-[12px] text-[#393a3d]">{calendar.name}</span>
-                        </label>
-                      </li>
-                    ))
-                  }
-                </ul>
-              )
-            }
-            <p class="pt-1 text-[10px] text-[#8b8d93]" data-schedule-calendar-status></p>
-          </div>
-        </details>
-      ) : null
-    }
-
     <div class="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/[0.06]" data-schedule-events-shell>
       {
         connection.status !== 'connected' ? (
@@ -177,12 +174,91 @@ function eventTimeLabel(event: ScheduleEvent): string {
           <div class="p-4">
             <p class="text-sm text-red-700">{connection.lastError}</p>
           </div>
+        ) : isWeekGrid ? (
+          <div class="financials-scroll-panel max-h-[17rem] overflow-auto" data-schedule-events data-view="week">
+            <div class="sticky top-0 z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
+              <div class="border-r border-[#eceef2]"></div>
+              {
+                weekDays.map((day) => (
+                  <div class={`border-r border-[#eceef2] px-0.5 py-1.5 text-center last:border-r-0 ${day === today ? 'bg-[#eef4ff]' : ''}`}>
+                    <p class="text-[9px] font-semibold uppercase tracking-wide text-[#6b6c72]">{formatWeekdayShort(day).slice(0, 3)}</p>
+                    <p class:list={['mx-auto mt-0.5 flex h-5 w-5 items-center justify-center text-[11px] font-semibold', day === today ? 'rounded-full bg-[#1a73e8] text-white' : 'text-[#393a3d]']}>
+                      {formatDayNumber(day)}
+                    </p>
+                  </div>
+                ))
+              }
+            </div>
+            {
+              hasAllDay ? (
+                <div class="grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2]">
+                  <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
+                  {
+                    weekDays.map((day) => (
+                      <div class="min-h-[1.25rem] space-y-0.5 border-r border-[#eceef2] px-0.5 py-0.5 last:border-r-0">
+                        {
+                          (allDayByDay.get(day) ?? []).map((event) => (
+                            <div
+                              class="truncate rounded px-0.5 text-[8px] font-semibold leading-4 text-white"
+                              style={`background-color: ${event.calendarColor ?? '#6b6c72'}`}
+                              title={event.title}
+                            >
+                              {event.title}
+                            </div>
+                          ))
+                        }
+                      </div>
+                    ))
+                  }
+                </div>
+              ) : null
+            }
+            <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style={`height: ${(endHour - startHour) * hourHeight}px`}>
+              <div class="relative border-r border-[#eceef2]">
+                {
+                  gridHours.map((hour) => (
+                    <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style={`top: ${(hour - startHour) * hourHeight}px`}>
+                      {hourLabel(hour)}
+                    </div>
+                  ))
+                }
+              </div>
+              {
+                weekDays.map((day) => {
+                  const dayTimed = (grouped.get(day) ?? []).filter((event) => !event.allDay);
+                  return (
+                    <div class={`relative border-r border-[#eceef2] last:border-r-0 ${day === today ? 'bg-[#f7faff]' : ''}`}>
+                      {
+                        gridHours.map((hour) => (
+                          <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style={`top: ${(hour - startHour) * hourHeight}px`}></div>
+                        ))
+                      }
+                      {
+                        dayTimed.map((event) => (
+                          <a
+                            href={event.htmlLink ?? '#'}
+                            target={event.htmlLink ? '_blank' : undefined}
+                            rel={event.htmlLink ? 'noopener noreferrer' : undefined}
+                            class="absolute inset-x-0.5 overflow-hidden rounded px-0.5 text-[8px] font-semibold leading-tight text-white"
+                            style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; background-color: ${event.calendarColor ?? '#1a73e8'};`}
+                            title={`${event.title} · ${eventTimeLabel(event)}`}
+                          >
+                            {event.title}
+                          </a>
+                        ))
+                      }
+                    </div>
+                  );
+                })
+              }
+            </div>
+          </div>
         ) : events.length === 0 ? (
-          <div class="flex h-full items-center justify-center p-4">
+          <div class="flex h-full items-center justify-center p-4" data-schedule-events data-view="stack">
             <p class="text-sm text-[#6b6c72]">No events in this range.</p>
           </div>
         ) : (
-          <div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events>
+          <div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events data-view="stack">
             {
               dayKeys.map((dayKey) => {
                 const dayEvents = grouped.get(dayKey) ?? [];
@@ -265,14 +341,18 @@ function eventTimeLabel(event: ScheduleEvent): string {
     end: string;
     allDay: boolean;
     calendarName: string;
+    calendarColor: string | null;
     htmlLink: string | null;
   };
 
   type EventsResponse = {
-    range?: { id: string; label: string };
+    range?: { id: string; start: string; end: string; label: string };
     events?: ScheduleEventPayload[];
     connection?: { lastError?: string | null; status?: string };
   };
+
+  const TZ = 'America/New_York';
+  const HOUR_HEIGHT = 18;
 
   function rangeStorageKey(userId: string): string {
     return `portal:schedule-range:${userId}`;
@@ -294,10 +374,68 @@ function eventTimeLabel(event: ScheduleEvent): string {
     }
   }
 
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function todayEastern(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  }
+
+  function addDays(iso: string, days: number): string {
+    const [year, month, day] = iso.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  function eachDay(start: string, end: string): string[] {
+    const days: string[] = [];
+    let cursor = start;
+    for (let i = 0; i < 32; i += 1) {
+      days.push(cursor);
+      if (cursor === end) break;
+      cursor = addDays(cursor, 1);
+    }
+    return days;
+  }
+
+  function dayKeyForEvent(event: ScheduleEventPayload): string {
+    if (event.allDay) return event.start.slice(0, 10);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(event.start));
+  }
+
+  function minutesFromMidnight(iso: string): number {
+    if (!iso.includes('T')) return 0;
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: TZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date(iso));
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+    const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+    return hour * 60 + minute;
+  }
+
   function formatDay(value: string): string {
     const ms = Date.parse(value.includes('T') ? value : `${value}T12:00:00`);
     return new Date(ms).toLocaleDateString('en-US', {
-      timeZone: 'America/New_York',
+      timeZone: TZ,
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -307,63 +445,66 @@ function eventTimeLabel(event: ScheduleEvent): string {
   function formatTime(event: ScheduleEventPayload): string {
     if (event.allDay) return 'All day';
     const startLabel = new Date(event.start).toLocaleTimeString('en-US', {
-      timeZone: 'America/New_York',
+      timeZone: TZ,
       hour: 'numeric',
       minute: '2-digit',
     });
     const endLabel = new Date(event.end).toLocaleTimeString('en-US', {
-      timeZone: 'America/New_York',
+      timeZone: TZ,
       hour: 'numeric',
       minute: '2-digit',
     });
     return `${startLabel} – ${endLabel}`;
   }
 
-  function groupByDay(events: ScheduleEventPayload[]): Map<string, ScheduleEventPayload[]> {
-    const groups = new Map<string, ScheduleEventPayload[]>();
-    for (const event of events) {
-      const dayKey = event.allDay
-        ? event.start.slice(0, 10)
-        : new Intl.DateTimeFormat('en-CA', {
-            timeZone: 'America/New_York',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          }).format(new Date(event.start));
-      const bucket = groups.get(dayKey) ?? [];
-      bucket.push(event);
-      groups.set(dayKey, bucket);
-    }
-    return groups;
+  function hourLabel(hour: number): string {
+    const suffix = hour >= 12 ? 'p' : 'a';
+    const display = hour % 12 === 0 ? 12 : hour % 12;
+    return `${display}${suffix}`;
   }
 
-  function renderEvents(container: HTMLElement, events: ScheduleEventPayload[]): void {
+  function weekdayShort(iso: string): string {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' }).slice(0, 3);
+  }
+
+  function dayNumber(iso: string): string {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { timeZone: TZ, day: 'numeric' });
+  }
+
+  function renderStack(container: HTMLElement, events: ScheduleEventPayload[]): void {
+    container.dataset.view = 'stack';
+    container.className = 'financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3';
     if (events.length === 0) {
       container.innerHTML = '<div class="flex h-full items-center justify-center p-4"><p class="text-sm text-[#6b6c72]">No events in this range.</p></div>';
       return;
     }
-
-    const grouped = groupByDay(events);
-    const dayKeys = [...grouped.keys()].sort();
-    container.innerHTML = dayKeys
+    const groups = new Map<string, ScheduleEventPayload[]>();
+    for (const event of events) {
+      const key = dayKeyForEvent(event);
+      const bucket = groups.get(key) ?? [];
+      bucket.push(event);
+      groups.set(key, bucket);
+    }
+    container.innerHTML = [...groups.keys()]
+      .sort()
       .map((dayKey) => {
-        const dayEvents = grouped.get(dayKey) ?? [];
+        const dayEvents = groups.get(dayKey) ?? [];
         const items = dayEvents
           .map(
             (event) => `
               <li class="rounded-md border border-[#eceef2] px-3 py-2">
                 <div class="flex items-start justify-between gap-2">
-                  <p class="text-sm font-semibold leading-snug text-[#393a3d]">${event.title}</p>
+                  <p class="text-sm font-semibold leading-snug text-[#393a3d]">${escapeHtml(event.title)}</p>
                   ${
                     event.htmlLink
-                      ? `<a href="${event.htmlLink}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-[11px] font-medium text-sage-dark hover:text-charcoal">Open</a>`
+                      ? `<a href="${escapeHtml(event.htmlLink)}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-[11px] font-medium text-sage-dark hover:text-charcoal">Open</a>`
                       : ''
                   }
                 </div>
-                <p class="mt-1 text-[11px] text-[#6b6c72]">${formatTime(event)}</p>
+                <p class="mt-1 text-[11px] text-[#6b6c72]">${escapeHtml(formatTime(event))}</p>
                 ${
                   event.calendarName
-                    ? `<p class="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#8b8d93]">${event.calendarName}</p>`
+                    ? `<p class="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#8b8d93]">${escapeHtml(event.calendarName)}</p>`
                     : ''
                 }
               </li>
@@ -372,13 +513,125 @@ function eventTimeLabel(event: ScheduleEvent): string {
           .join('');
         return `
           <section class="mb-4 last:mb-0">
-            <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b6c72]">${formatDay(dayKey.includes('T') ? dayKey : `${dayKey}T12:00:00`)}</h3>
+            <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b6c72]">${escapeHtml(formatDay(dayKey))}</h3>
             <ul class="mt-2 space-y-2">${items}</ul>
           </section>
         `;
       })
       .join('');
-    container.classList.add('financials-scroll-panel', 'max-h-[15.5rem]', 'overflow-y-auto', 'p-3');
+  }
+
+  function renderWeek(
+    container: HTMLElement,
+    events: ScheduleEventPayload[],
+    start: string,
+    end: string,
+  ): void {
+    container.dataset.view = 'week';
+    container.className = 'financials-scroll-panel max-h-[17rem] overflow-auto';
+    const days = eachDay(start, end);
+    const today = todayEastern();
+    const timed = events.filter((event) => !event.allDay);
+    const minutes = timed.flatMap((event) => [minutesFromMidnight(event.start), minutesFromMidnight(event.end)]);
+    const minHour = minutes.length ? Math.max(0, Math.floor(Math.min(...minutes) / 60) - 1) : 8;
+    const maxHour = minutes.length ? Math.min(24, Math.ceil(Math.max(...minutes) / 60) + 1) : 18;
+    const startHour = Math.min(minHour, 8);
+    const endHour = Math.max(maxHour, startHour + 8);
+    const hours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
+    const byDay = new Map<string, ScheduleEventPayload[]>();
+    for (const day of days) byDay.set(day, []);
+    for (const event of events) {
+      const key = dayKeyForEvent(event);
+      const bucket = byDay.get(key);
+      if (bucket) bucket.push(event);
+    }
+    const hasAllDay = events.some((event) => event.allDay);
+
+    const header = `
+      <div class="sticky top-0 z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
+        <div class="border-r border-[#eceef2]"></div>
+        ${days
+          .map((day) => {
+            const isToday = day === today;
+            return `
+              <div class="border-r border-[#eceef2] px-0.5 py-1.5 text-center last:border-r-0 ${isToday ? 'bg-[#eef4ff]' : ''}">
+                <p class="text-[9px] font-semibold uppercase tracking-wide text-[#6b6c72]">${weekdayShort(day)}</p>
+                <p class="mx-auto mt-0.5 flex h-5 w-5 items-center justify-center text-[11px] font-semibold ${isToday ? 'rounded-full bg-[#1a73e8] text-white' : 'text-[#393a3d]'}">${dayNumber(day)}</p>
+              </div>
+            `;
+          })
+          .join('')}
+      </div>
+    `;
+
+    const allDayRow = hasAllDay
+      ? `
+      <div class="grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2]">
+        <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
+        ${days
+          .map((day) => {
+            const dayAllDay = (byDay.get(day) ?? []).filter((event) => event.allDay);
+            return `
+              <div class="min-h-[1.25rem] space-y-0.5 border-r border-[#eceef2] px-0.5 py-0.5 last:border-r-0">
+                ${dayAllDay
+                  .map(
+                    (event) => `
+                      <div class="truncate rounded px-0.5 text-[8px] font-semibold leading-4 text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>
+                    `,
+                  )
+                  .join('')}
+              </div>
+            `;
+          })
+          .join('')}
+      </div>
+    `
+      : '';
+
+    const body = `
+      <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style="height: ${(endHour - startHour) * HOUR_HEIGHT}px">
+        <div class="relative border-r border-[#eceef2]">
+          ${hours
+            .map(
+              (hour) => `
+              <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style="top: ${(hour - startHour) * HOUR_HEIGHT}px">${hourLabel(hour)}</div>
+            `,
+            )
+            .join('')}
+        </div>
+        ${days
+          .map((day) => {
+            const dayTimed = (byDay.get(day) ?? []).filter((event) => !event.allDay);
+            const isToday = day === today;
+            return `
+              <div class="relative border-r border-[#eceef2] last:border-r-0 ${isToday ? 'bg-[#f7faff]' : ''}">
+                ${hours
+                  .map(
+                    (hour) => `
+                    <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style="top: ${(hour - startHour) * HOUR_HEIGHT}px"></div>
+                  `,
+                  )
+                  .join('')}
+                ${dayTimed
+                  .map((event) => {
+                    const startMin = Math.max(minutesFromMidnight(event.start), startHour * 60);
+                    const endMin = Math.min(minutesFromMidnight(event.end), endHour * 60);
+                    const top = ((startMin - startHour * 60) / 60) * HOUR_HEIGHT;
+                    const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 14);
+                    const href = event.htmlLink ? escapeHtml(event.htmlLink) : '#';
+                    return `
+                      <a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute inset-x-0.5 overflow-hidden rounded px-0.5 text-[8px] font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>
+                    `;
+                  })
+                  .join('')}
+              </div>
+            `;
+          })
+          .join('')}
+      </div>
+    `;
+
+    container.innerHTML = header + allDayRow + body;
   }
 
   function updateScrollHint(shell: HTMLElement): void {
@@ -392,38 +645,43 @@ function eventTimeLabel(event: ScheduleEvent): string {
     hint.style.opacity = overflow ? '1' : '0';
   }
 
-  async function loadEvents(rangeId: string, shell: HTMLElement, labelEl: HTMLElement | null): Promise<void> {
-    const response = await fetch(`/api/google-calendar/events?range=${encodeURIComponent(rangeId)}`, {
-      headers: { accept: 'application/json' },
-    });
-    const payload = (await response.json()) as EventsResponse;
-    if (labelEl && payload.range?.label) {
-      labelEl.textContent = payload.range.label;
-    }
-
+  function ensureContainer(shell: HTMLElement): HTMLElement {
     let container = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
     if (!container) {
       shell.innerHTML =
         '<div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events></div><p class="financials-scroll-hint pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>Scroll for more</p>';
       container = shell.querySelector('[data-schedule-events]') as HTMLElement;
     }
+    return container;
+  }
+
+  async function loadEvents(
+    rangeId: string,
+    shell: HTMLElement,
+    labelEl: HTMLElement | null,
+    root: HTMLElement,
+  ): Promise<void> {
+    const response = await fetch(`/api/google-calendar/events?range=${encodeURIComponent(rangeId)}`, {
+      headers: { accept: 'application/json' },
+    });
+    const payload = (await response.json()) as EventsResponse;
+    if (labelEl && payload.range?.label) labelEl.textContent = payload.range.label;
+    if (payload.range?.start) root.dataset.rangeStart = payload.range.start;
+    if (payload.range?.end) root.dataset.rangeEnd = payload.range.end;
 
     if (payload.connection?.lastError) {
-      shell.innerHTML = `<div class="p-4"><p class="text-sm text-red-700">${payload.connection.lastError}</p></div>`;
+      shell.innerHTML = `<div class="p-4"><p class="text-sm text-red-700">${escapeHtml(payload.connection.lastError)}</p></div>`;
       return;
     }
 
-    renderEvents(container, payload.events ?? []);
+    const container = ensureContainer(shell);
+    const events = payload.events ?? [];
+    if (payload.range?.id === 'this_week' && payload.range.start && payload.range.end) {
+      renderWeek(container, events, payload.range.start, payload.range.end);
+    } else {
+      renderStack(container, events);
+    }
     updateScrollHint(shell);
-  }
-
-  function escapeHtml(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
   }
 
   function initScheduleCard(root: HTMLElement): void {
@@ -432,95 +690,6 @@ function eventTimeLabel(event: ScheduleEvent): string {
     const shell = root.querySelector('[data-schedule-events-shell]') as HTMLElement | null;
     const labelEl = root.querySelector('[data-schedule-range-label]') as HTMLElement | null;
     const rangeSelect = root.querySelector('[data-schedule-range]') as HTMLSelectElement | null;
-    const calendarStatus = root.querySelector('[data-schedule-calendar-status]') as HTMLElement | null;
-    const calendarSummary = root.querySelector('[data-schedule-calendars] > summary') as HTMLElement | null;
-
-    async function refreshAndRenderCalendars(): Promise<void> {
-      const response = await fetch('/api/google-calendar/calendars', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ refresh: true }),
-      });
-      if (!response.ok) return;
-      const payload = (await response.json()) as {
-        calendars?: Array<{ id: string; name: string; color: string | null; enabled: boolean }>;
-      };
-      const list = root.querySelector('[data-schedule-calendar-list]') as HTMLElement | null;
-      const calendars = payload.calendars ?? [];
-      if (list) {
-        list.innerHTML = calendars
-          .map(
-            (calendar) => `
-              <li>
-                <label class="flex cursor-pointer items-center gap-2 py-0.5">
-                  <input
-                    type="checkbox"
-                    value="${escapeHtml(calendar.id)}"
-                    ${calendar.enabled ? 'checked' : ''}
-                    class="h-3.5 w-3.5 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-                    data-schedule-calendar-option
-                  />
-                  <span
-                    class="h-2.5 w-2.5 shrink-0 rounded-sm"
-                    style="background-color: ${escapeHtml(calendar.color ?? '#6b6c72')}"
-                    aria-hidden="true"
-                  ></span>
-                  <span class="truncate text-[12px] text-[#393a3d]">${escapeHtml(calendar.name)}</span>
-                </label>
-              </li>
-            `,
-          )
-          .join('');
-        list.querySelectorAll('[data-schedule-calendar-option]').forEach((node) => {
-          node.addEventListener('change', () => {
-            void saveCalendarSelection();
-          });
-        });
-      }
-      if (calendarSummary) {
-        const enabled = calendars.filter((calendar) => calendar.enabled).length;
-        calendarSummary.textContent = `Calendars (${enabled}/${calendars.length})`;
-      }
-    }
-
-    async function saveCalendarSelection(): Promise<void> {
-      const options = Array.from(root.querySelectorAll('[data-schedule-calendar-option]')).filter(
-        (node): node is HTMLInputElement => node instanceof HTMLInputElement,
-      );
-      const enabledIds = options.filter((option) => option.checked).map((option) => option.value);
-      if (calendarStatus) calendarStatus.textContent = 'Saving…';
-      const response = await fetch('/api/google-calendar/calendars', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ enabledIds }),
-      });
-      if (!response.ok) {
-        if (calendarStatus) calendarStatus.textContent = 'Could not save calendars.';
-        return;
-      }
-      if (calendarSummary) {
-        calendarSummary.textContent = `Calendars (${enabledIds.length}/${options.length})`;
-      }
-      if (calendarStatus) calendarStatus.textContent = 'Saved.';
-      if (shell && rangeSelect) {
-        await loadEvents(rangeSelect.value, shell, labelEl);
-      }
-      window.setTimeout(() => {
-        if (calendarStatus) calendarStatus.textContent = '';
-      }, 1500);
-    }
-
-    root.querySelectorAll('[data-schedule-calendar-option]').forEach((node) => {
-      node.addEventListener('change', () => {
-        void saveCalendarSelection();
-      });
-    });
-
-    if (connected) {
-      void refreshAndRenderCalendars().then(() => {
-        if (shell && rangeSelect) void loadEvents(rangeSelect.value, shell, labelEl);
-      });
-    }
 
     if (!connected || !shell || !rangeSelect) {
       updateScrollHint(shell ?? root);
@@ -530,7 +699,7 @@ function eventTimeLabel(event: ScheduleEvent): string {
     const storedRange = readStoredRange(userId);
     if (storedRange && storedRange !== rangeSelect.value) {
       rangeSelect.value = storedRange;
-      void loadEvents(storedRange, shell, labelEl);
+      void loadEvents(storedRange, shell, labelEl, root);
     } else {
       updateScrollHint(shell);
     }
@@ -538,7 +707,7 @@ function eventTimeLabel(event: ScheduleEvent): string {
     rangeSelect.addEventListener('change', () => {
       const rangeId = rangeSelect.value;
       writeStoredRange(userId, rangeId);
-      void loadEvents(rangeId, shell, labelEl);
+      void loadEvents(rangeId, shell, labelEl, root);
     });
 
     shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));

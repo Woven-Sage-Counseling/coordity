@@ -172,3 +172,34 @@ export function groupEventsByDay<T extends { start: string; allDay: boolean }>(
   }
   return groups;
 }
+
+export function eachDayInRange(start: string, end: string): string[] {
+  const days: string[] = [];
+  let cursor = start;
+  for (let i = 0; i < 32; i += 1) {
+    days.push(cursor);
+    if (cursor === end) break;
+    cursor = addDays(cursor, 1);
+  }
+  return days;
+}
+
+export function easternMinutesFromMidnight(isoOrDateTime: string): number {
+  if (!isoOrDateTime.includes('T')) return 0;
+  const parts = easternParts(new Date(isoOrDateTime));
+  return parts.hour * 60 + parts.minute;
+}
+
+export function formatWeekdayShort(isoDate: string): string {
+  return new Date(easternInstant(isoDate, 12, 0, 0)).toLocaleDateString('en-US', {
+    timeZone: TZ,
+    weekday: 'short',
+  });
+}
+
+export function formatDayNumber(isoDate: string): string {
+  return new Date(easternInstant(isoDate, 12, 0, 0)).toLocaleDateString('en-US', {
+    timeZone: TZ,
+    day: 'numeric',
+  });
+}
