@@ -40,11 +40,11 @@ const ringCircumference = 2 * Math.PI * ringRadius;
 const ringOffset = ringCircumference * (1 - ringRatio);
 
 const pnlRows = [
-  { label: 'Income', cents: revenue, color: '#2CA01C', share: null as string | null },
-  { label: 'Therapist income', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist) },
-  { label: 'Management income', cents: management, color: '#6aa84f', share: shareOfIncome(management) },
-  { label: 'Software and technology', cents: software, color: '#8fbc8f', share: shareOfIncome(software) },
-  { label: 'Total expenses', cents: expenses, color: '#a8c5a0', share: shareOfIncome(expenses) },
+  { label: 'Income', cents: revenue, color: '#2CA01C', share: null as string | null, showBar: false },
+  { label: 'Therapist income', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist), showBar: true },
+  { label: 'Management income', cents: management, color: '#6aa84f', share: shareOfIncome(management), showBar: true },
+  { label: 'Software and technology', cents: software, color: '#8fbc8f', share: shareOfIncome(software), showBar: true },
+  { label: 'Total expenses', cents: expenses, color: '#a8c5a0', share: shareOfIncome(expenses), showBar: true },
 ];
 
 const incomeTransactions = summary.transactions
@@ -178,12 +178,16 @@ const periodLabel = snapshot
                     {row.share ? <span class="font-medium text-[#b0b1b6]">{row.share}</span> : null}
                   </span>
                 </div>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-                  <div
-                    class="h-full rounded-full"
-                    style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
-                  ></div>
-                </div>
+                {
+                  row.showBar && (
+                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                      <div
+                        class="h-full rounded-full"
+                        style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
+                      ></div>
+                    </div>
+                  )
+                }
               </div>
             ))
           }
