@@ -17,7 +17,6 @@ const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permi
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeAdmin = canAccessManagement(employee);
-const canOpenClinicalCalendar = hasPermission(employee, 'apps:clinical');
 const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim();
 const announcements = await listAnnouncementsForUser(employee.id);
 const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
@@ -39,7 +38,6 @@ const reportHref = ownerEmail
       <HomeWidgetCarousel
         userId={employee.id}
         canSeeFinancials={canSeeFinancials}
-        canOpenClinicalCalendar={canOpenClinicalCalendar}
         ownerEmail={ownerEmail}
         employeeName={employee.name}
       />

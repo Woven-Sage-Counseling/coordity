@@ -7,7 +7,6 @@ import { availableWidgets } from '../lib/home-widgets';
 interface Props {
   userId: string;
   canSeeFinancials: boolean;
-  canOpenClinicalCalendar: boolean;
   ownerEmail: string;
   employeeName: string;
 }
@@ -15,7 +14,6 @@ interface Props {
 const {
   userId,
   canSeeFinancials,
-  canOpenClinicalCalendar,
   ownerEmail,
   employeeName,
 } = Astro.props;
@@ -70,7 +68,6 @@ const arrowClass =
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
                 <ScheduleCard
                   userId={userId}
-                  canOpenClinicalCalendar={canOpenClinicalCalendar}
                   ownerEmail={ownerEmail}
                   employeeName={employeeName}
                 />
