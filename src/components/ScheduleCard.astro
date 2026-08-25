@@ -284,7 +284,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
                         {
                           (allDayByDay.get(day) ?? []).map((event) => (
                             <div
-                              class="min-h-3.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-inset ring-white/45"
+                              class="min-h-3.5 rounded-md border border-black/20"
                               style={`background-color: ${event.calendarColor ?? '#6b6c72'}`}
                               title={event.title}
                             ></div>
@@ -324,7 +324,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
                               href={event.htmlLink ?? '#'}
                               target={event.htmlLink ? '_blank' : undefined}
                               rel={event.htmlLink ? 'noopener noreferrer' : undefined}
-                              class="absolute overflow-hidden rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/45"
+                              class="absolute overflow-hidden rounded-md border border-black/20"
                               style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${event.calendarColor ?? '#1a73e8'};`}
                               title={`${event.title} · ${eventTimeLabel(event)}`}
                             ></a>
@@ -931,8 +931,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
                     (event) => `
                       ${
                         size === 'expanded'
-                          ? `<div class="truncate rounded-md px-0.5 ${titleSize} font-semibold leading-4 text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-inset ring-white/45" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`
-                          : `<div class="min-h-3.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-inset ring-white/45" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}"></div>`
+                          ? `<div class="truncate rounded-md px-0.5 ${titleSize} font-semibold leading-4 text-white border border-black/20" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`
+                          : `<div class="min-h-3.5 rounded-md border border-black/20" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}"></div>`
                       }
                     `,
                   )
@@ -980,8 +980,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
                     return `
                       ${
                         size === 'expanded'
-                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md px-0.5 ${titleSize} font-semibold leading-tight text-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/45" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
-                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/45" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
+                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md px-0.5 ${titleSize} font-semibold leading-tight text-white border border-black/20" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
+                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md border border-black/20" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
                       }
                     `;
                   })
@@ -1071,7 +1071,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
   }
 
   function conflictCountLabelClient(count: number): string {
-    return count === 1 ? '1 conflicting event' : `${count} conflicting events`;
+    return count === 1 ? '1 conflict' : `${count} conflicts`;
   }
 
   function conflictingEventCountClient(events: ScheduleEventPayload[]): number {
@@ -1084,7 +1084,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
       byDay.set(dayKey, bucket);
     }
 
-    const ids = new Set<string>();
+    let count = 0;
     for (const dayEvents of byDay.values()) {
       for (let index = 0; index < dayEvents.length; index += 1) {
         for (let otherIndex = index + 1; otherIndex < dayEvents.length; otherIndex += 1) {
@@ -1098,12 +1098,11 @@ const conflictLabel = conflictCountLabel(conflictCount);
             continue;
           }
           if (startA >= endB || startB >= endA) continue;
-          ids.add(eventA.id);
-          ids.add(eventB.id);
+          count += 1;
         }
       }
     }
-    return ids.size;
+    return count;
   }
 
   function updateConflictBadges(events: ScheduleEventPayload[]): void {

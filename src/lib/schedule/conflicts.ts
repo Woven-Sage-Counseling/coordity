@@ -47,16 +47,11 @@ export function findTimedConflicts(
 }
 
 export function conflictingEventCount(events: ScheduleEvent[]): number {
-  const ids = new Set<string>();
-  for (const conflict of findTimedConflicts(events, { includePast: true })) {
-    ids.add(conflict.eventA.id);
-    ids.add(conflict.eventB.id);
-  }
-  return ids.size;
+  return findTimedConflicts(events, { includePast: true }).length;
 }
 
 export function conflictCountLabel(count: number): string {
-  return count === 1 ? '1 conflicting event' : `${count} conflicting events`;
+  return count === 1 ? '1 conflict' : `${count} conflicts`;
 }
 
 export function formatConflictNotification(conflict: ScheduleConflict): { title: string; body: string } {

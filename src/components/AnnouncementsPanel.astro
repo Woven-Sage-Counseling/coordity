@@ -166,17 +166,14 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                             {formatAnnouncementDate(item.createdAt)}
                           </p>
                         </div>
-                        {
-                          item.unread ? (
-                            <button
-                              type="button"
-                              class="shrink-0 text-[11px] font-semibold text-sage-dark/65 transition hover:text-sage-dark"
-                              data-notification-hide
-                            >
-                              Hide
-                            </button>
-                          ) : null
-                        }
+                        <button
+                          type="button"
+                          class="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/20 transition hover:bg-sage/10 hover:text-charcoal"
+                          data-notification-toggle
+                          data-unread={item.unread ? '1' : '0'}
+                        >
+                          {item.unread ? 'Hide' : 'Unhide'}
+                        </button>
                       </div>
                       <p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
                     </div>
@@ -292,35 +289,64 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       if (unreadLeft === 0) clearBadge('notifications');
     };
 
-    const hideNotification = async (item: HTMLElement) => {
+    const setNotificationUnreadUi = (item: HTMLElement, unread: boolean) => {
+      item.classList.toggle('bg-white/40', unread);
+      item.dataset.unread = unread ? '1' : '0';
+      const dot = item.querySelector('[data-unread-dot]');
+      if (dot instanceof HTMLElement) {
+        dot.classList.toggle('bg-red-500', unread);
+        dot.classList.toggle('bg-transparent', !unread);
+      }
+      const toggle = item.querySelector('[data-notification-toggle]');
+      if (toggle instanceof HTMLButtonElement) {
+        toggle.dataset.unread = unread ? '1' : '0';
+        toggle.textContent = unread ? 'Hide' : 'Unhide';
+        toggle.disabled = false;
+      }
+    };
+
+    const syncNotificationBadge = () => {
+      const remaining = root.querySelectorAll('[data-notification-item] [data-unread-dot].bg-red-500').length;
+      let badge = root.querySelector('[data-unread-badge="notifications"]');
+      if (remaining === 0) {
+        clearBadge('notifications');
+      } else if (badge instanceof HTMLElement) {
+        badge.textContent = remaining > 9 ? '9+' : String(remaining);
+        requestAnimationFrame(() => moveSlider(active));
+      } else {
+        const tab = root.querySelector('[data-feed-tab="notifications"]');
+        if (tab instanceof HTMLElement) {
+          const span = document.createElement('span');
+          span.className =
+            'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white';
+          span.setAttribute('data-unread-badge', 'notifications');
+          span.textContent = remaining > 9 ? '9+' : String(remaining);
+          tab.appendChild(span);
+          requestAnimationFrame(() => moveSlider(active));
+        }
+      }
+      refreshNotificationStatus();
+    };
+
+    const toggleNotification = async (item: HTMLElement) => {
       const id = item.dataset.notificationId;
       if (!id) return;
-      const hideButton = item.querySelector('[data-notification-hide]');
-      if (hideButton instanceof HTMLButtonElement) hideButton.disabled = true;
+      const toggle = item.querySelector('[data-notification-toggle]');
+      const currentlyUnread = toggle instanceof HTMLButtonElement
+        ? toggle.dataset.unread === '1'
+        : item.querySelector('[data-unread-dot].bg-red-500') != null;
+      const nextUnread = !currentlyUnread;
+      if (toggle instanceof HTMLButtonElement) toggle.disabled = true;
       try {
         await fetch('/api/notifications/mark-read', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ ids: [id] }),
+          body: JSON.stringify({ ids: [id], unread: nextUnread }),
         });
-        item.classList.remove('bg-white/40');
-        const dot = item.querySelector('[data-unread-dot]');
-        if (dot instanceof HTMLElement) {
-          dot.classList.remove('bg-red-500');
-          dot.classList.add('bg-transparent');
-        }
-        hideButton?.remove();
-        const remaining = root.querySelectorAll('[data-notification-item] [data-unread-dot].bg-red-500').length;
-        const badge = root.querySelector('[data-unread-badge="notifications"]');
-        if (remaining === 0) {
-          clearBadge('notifications');
-        } else if (badge instanceof HTMLElement) {
-          badge.textContent = remaining > 9 ? '9+' : String(remaining);
-          requestAnimationFrame(() => moveSlider(active));
-        }
-        refreshNotificationStatus();
+        setNotificationUnreadUi(item, nextUnread);
+        syncNotificationBadge();
       } catch {
-        if (hideButton instanceof HTMLButtonElement) hideButton.disabled = false;
+        if (toggle instanceof HTMLButtonElement) toggle.disabled = false;
       }
     };
 
@@ -373,10 +399,10 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       });
     });
 
-    root.querySelectorAll('[data-notification-hide]').forEach((button) => {
+    root.querySelectorAll('[data-notification-toggle]').forEach((button) => {
       button.addEventListener('click', () => {
         const item = button.closest('[data-notification-item]');
-        if (item instanceof HTMLElement) void hideNotification(item);
+        if (item instanceof HTMLElement) void toggleNotification(item);
       });
     });
 

@@ -80,6 +80,23 @@ export async function markNotificationsRead(input: {
     .run();
 }
 
+export async function markNotificationsUnread(input: {
+  userId: string;
+  notificationIds: string[];
+}): Promise<void> {
+  if (input.notificationIds.length === 0) return;
+  const { DB } = getEnv();
+  await DB.batch(
+    input.notificationIds.map((id) =>
+      DB.prepare(
+        `UPDATE notification
+         SET read_at = NULL
+         WHERE id = ? AND user_id = ?`,
+      ).bind(id, input.userId),
+    ),
+  );
+}
+
 export async function notifyUser(input: {
   userId: string;
   title: string;
