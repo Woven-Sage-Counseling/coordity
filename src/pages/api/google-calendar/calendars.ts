@@ -19,6 +19,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     refresh?: boolean;
     hiddenTitleKeywords?: string[];
     hideOutOfOffice?: boolean;
+    coverTitles?: Record<string, string>;
   };
 
   if (body.refresh) {
@@ -28,6 +29,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (Array.isArray(body.enabledIds)) {
     const enabledIds = body.enabledIds.filter((value) => typeof value === 'string' && value.trim().length > 0);
     await provider.saveCalendarSelection(userId, enabledIds);
+  }
+
+  if (body.coverTitles && typeof body.coverTitles === 'object' && !Array.isArray(body.coverTitles)) {
+    const coverTitles: Record<string, string> = {};
+    for (const [id, value] of Object.entries(body.coverTitles)) {
+      if (typeof value === 'string') coverTitles[id] = value;
+    }
+    await provider.saveCalendarCoverTitles(userId, coverTitles);
   }
 
   if (body.hiddenTitleKeywords !== undefined || body.hideOutOfOffice !== undefined) {

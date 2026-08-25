@@ -31,6 +31,7 @@ export interface ScheduleCalendarOption {
   primary: boolean;
   enabled: boolean;
   sortOrder: number;
+  coverTitle: string | null;
 }
 
 export interface ScheduleConnection {

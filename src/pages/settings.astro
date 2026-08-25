@@ -19,7 +19,13 @@ let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection
   hiddenTitleKeywords: [],
   hideOutOfOffice: false,
 };
-let calendarOptions: Array<{ id: string; name: string; enabled: boolean; color: string | null }> = [];
+let calendarOptions: Array<{
+  id: string;
+  name: string;
+  enabled: boolean;
+  color: string | null;
+  coverTitle: string | null;
+}> = [];
 
 try {
   calendarConnection = await calendarProvider.getConnection(employee.id);
@@ -34,6 +40,7 @@ try {
       name: calendar.name,
       enabled: calendar.enabled,
       color: calendar.color,
+      coverTitle: calendar.coverTitle,
     }));
   }
 } catch (error) {
@@ -171,7 +178,7 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
             Connected as <span class="font-semibold text-charcoal">{calendarConnection.googleEmail}</span>.
           </p>
           <p class="mt-2 text-sm text-sage-dark/65">
-            Check the calendars you want on the home Schedule widget, then save. Use Refresh list if a calendar is missing.
+            Check the calendars you want on the home Schedule widget, then save. Optional cover names replace every event title from that calendar (for example, “Genesis patient” on purple blocks). Leave a cover blank to show the real titles.
           </p>
           {
             calendarConnection.lastError ? (
@@ -193,22 +200,36 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
               <ul class="mt-6 space-y-3" data-calendar-list>
                 {
                   calendarOptions.map((calendar) => (
-                    <li class="flex items-start gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3">
-                      <input
-                        type="checkbox"
-                        id={`calendar-${encodeURIComponent(calendar.id)}`}
-                        value={calendar.id}
-                        checked={calendar.enabled}
-                        class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-                        data-calendar-option
-                      />
-                      <label for={`calendar-${encodeURIComponent(calendar.id)}`} class="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                        <span
-                          class="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
-                          style={`background-color: ${calendar.color ?? '#6b6c72'}`}
-                          aria-hidden="true"
-                        ></span>
-                        <span class="block text-sm font-semibold text-charcoal">{calendar.name}</span>
+                    <li class="rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3">
+                      <div class="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          id={`calendar-${encodeURIComponent(calendar.id)}`}
+                          value={calendar.id}
+                          checked={calendar.enabled}
+                          class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+                          data-calendar-option
+                        />
+                        <label for={`calendar-${encodeURIComponent(calendar.id)}`} class="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                          <span
+                            class="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
+                            style={`background-color: ${calendar.color ?? '#6b6c72'}`}
+                            aria-hidden="true"
+                          ></span>
+                          <span class="block text-sm font-semibold text-charcoal">{calendar.name}</span>
+                        </label>
+                      </div>
+                      <label class="mt-3 block pl-7">
+                        <span class="text-xs font-medium text-sage-dark/70">Cover name</span>
+                        <input
+                          type="text"
+                          class="field mt-1"
+                          maxlength="80"
+                          placeholder="Leave blank to show real titles"
+                          value={calendar.coverTitle ?? ''}
+                          data-calendar-cover
+                          data-calendar-id={calendar.id}
+                        />
                       </label>
                     </li>
                   ))
@@ -523,10 +544,17 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
           : [];
       const hideOutOfOffice =
         hideOutOfOfficeField instanceof HTMLInputElement ? hideOutOfOfficeField.checked : false;
+      const coverTitles: Record<string, string> = {};
+      for (const node of root.querySelectorAll('[data-calendar-cover]')) {
+        if (!(node instanceof HTMLInputElement)) continue;
+        const calendarId = node.dataset.calendarId;
+        if (!calendarId) continue;
+        coverTitles[calendarId] = node.value;
+      }
       await fetch('/api/google-calendar/calendars', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ enabledIds, hiddenTitleKeywords, hideOutOfOffice }),
+        body: JSON.stringify({ enabledIds, hiddenTitleKeywords, hideOutOfOffice, coverTitles }),
       });
       if (savedEl) savedEl.classList.remove('hidden');
     });

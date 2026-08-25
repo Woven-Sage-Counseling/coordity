@@ -86,6 +86,19 @@ function normalizeKeywords(input: unknown): string[] {
   return keywords;
 }
 
+function applyTitleCovers(events: ScheduleEvent[], calendars: ScheduleCalendarOption[]): ScheduleEvent[] {
+  const covers = new Map(
+    calendars
+      .filter((calendar) => calendar.coverTitle)
+      .map((calendar) => [calendar.id, calendar.coverTitle as string]),
+  );
+  if (covers.size === 0) return events;
+  return events.map((event) => {
+    const coverTitle = covers.get(event.calendarId);
+    return coverTitle ? { ...event, title: coverTitle } : event;
+  });
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -259,30 +272,61 @@ export class GoogleCalendarProvider {
   }
 
   async listCalendars(userId: string): Promise<ScheduleCalendarOption[]> {
-    const rows = await getEnv()
-      .DB.prepare(
-        `SELECT calendar_id, calendar_name, calendar_color, enabled, sort_order
-         FROM google_calendar_selection
-         WHERE user_id = ?
-         ORDER BY sort_order ASC, calendar_name ASC`,
-      )
-      .bind(userId)
-      .all<{
-        calendar_id: string;
-        calendar_name: string;
-        calendar_color: string | null;
-        enabled: number;
-        sort_order: number;
-      }>();
+    try {
+      const rows = await getEnv()
+        .DB.prepare(
+          `SELECT calendar_id, calendar_name, calendar_color, enabled, sort_order, cover_title
+           FROM google_calendar_selection
+           WHERE user_id = ?
+           ORDER BY sort_order ASC, calendar_name ASC`,
+        )
+        .bind(userId)
+        .all<{
+          calendar_id: string;
+          calendar_name: string;
+          calendar_color: string | null;
+          enabled: number;
+          sort_order: number;
+          cover_title: string | null;
+        }>();
 
-    return (rows.results ?? []).map((row) => ({
-      id: row.calendar_id,
-      name: row.calendar_name,
-      color: row.calendar_color,
-      primary: row.sort_order === 0,
-      enabled: row.enabled === 1,
-      sortOrder: row.sort_order,
-    }));
+      return (rows.results ?? []).map((row) => ({
+        id: row.calendar_id,
+        name: row.calendar_name,
+        color: row.calendar_color,
+        primary: row.sort_order === 0,
+        enabled: row.enabled === 1,
+        sortOrder: row.sort_order,
+        coverTitle: row.cover_title?.trim() || null,
+      }));
+    } catch {
+      // If the migration adding cover_title hasn't been run yet, fall back to real titles.
+      const rows = await getEnv()
+        .DB.prepare(
+          `SELECT calendar_id, calendar_name, calendar_color, enabled, sort_order
+           FROM google_calendar_selection
+           WHERE user_id = ?
+           ORDER BY sort_order ASC, calendar_name ASC`,
+        )
+        .bind(userId)
+        .all<{
+          calendar_id: string;
+          calendar_name: string;
+          calendar_color: string | null;
+          enabled: number;
+          sort_order: number;
+        }>();
+
+      return (rows.results ?? []).map((row) => ({
+        id: row.calendar_id,
+        name: row.calendar_name,
+        color: row.calendar_color,
+        primary: row.sort_order === 0,
+        enabled: row.enabled === 1,
+        sortOrder: row.sort_order,
+        coverTitle: null,
+      }));
+    }
   }
 
   async saveCalendarSelection(userId: string, enabledIds: string[]): Promise<void> {
@@ -302,6 +346,33 @@ export class GoogleCalendarProvider {
 
     if (statements.length > 0) {
       await DB.batch(statements);
+    }
+
+    await DB.prepare(`DELETE FROM google_calendar_event_cache WHERE user_id = ?`).bind(userId).run();
+  }
+
+  async saveCalendarCoverTitles(userId: string, coverTitles: Record<string, string>): Promise<void> {
+    const { DB } = getEnv();
+    const rows = await DB.prepare(
+      `SELECT calendar_id FROM google_calendar_selection WHERE user_id = ?`,
+    )
+      .bind(userId)
+      .all<{ calendar_id: string }>();
+
+    try {
+      const statements = (rows.results ?? []).map((row) => {
+        const raw = coverTitles[row.calendar_id];
+        const coverTitle = typeof raw === 'string' && raw.trim() ? raw.trim().slice(0, 80) : null;
+        return DB.prepare(
+          `UPDATE google_calendar_selection SET cover_title = ? WHERE user_id = ? AND calendar_id = ?`,
+        ).bind(coverTitle, userId, row.calendar_id);
+      });
+
+      if (statements.length > 0) {
+        await DB.batch(statements);
+      }
+    } catch {
+      // If the migration adding cover_title hasn't been run yet, ignore writes.
     }
 
     await DB.prepare(`DELETE FROM google_calendar_event_cache WHERE user_id = ?`).bind(userId).run();
@@ -331,10 +402,13 @@ export class GoogleCalendarProvider {
   }
 
   async getEvents(userId: string, range: ResolvedScheduleRange): Promise<ScheduleEvent[]> {
+    const calendars = await this.listCalendars(userId);
     const cached = await this.readEventCache(userId, range.id);
-    if (cached) return this.applyEventFilters(userId, cached);
+    if (cached) {
+      return applyTitleCovers(await this.applyEventFilters(userId, cached), calendars);
+    }
 
-    const enabledCalendars = (await this.listCalendars(userId)).filter((calendar) => calendar.enabled);
+    const enabledCalendars = calendars.filter((calendar) => calendar.enabled);
     if (enabledCalendars.length === 0) return [];
 
     const accessToken = await this.validAccessToken(userId);
@@ -378,7 +452,7 @@ export class GoogleCalendarProvider {
       .bind(nowMs(), userId)
       .run();
 
-    return filtered;
+    return applyTitleCovers(filtered, calendars);
   }
 
   private async applyEventFilters(userId: string, events: ScheduleEvent[]): Promise<ScheduleEvent[]> {
