@@ -325,6 +325,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
                               target={event.htmlLink ? '_blank' : undefined}
                               rel={event.htmlLink ? 'noopener noreferrer' : undefined}
                               class="absolute overflow-hidden rounded-md border border-black/20"
+                              data-schedule-timed-event
                               style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${event.calendarColor ?? '#1a73e8'};`}
                               title={`${event.title} · ${eventTimeLabel(event)}`}
                             ></a>
@@ -980,8 +981,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
                     return `
                       ${
                         size === 'expanded'
-                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md px-0.5 ${titleSize} font-semibold leading-tight text-white border border-black/20" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
-                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md border border-black/20" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
+                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md px-0.5 ${titleSize} font-semibold leading-tight text-white border border-black/20" data-schedule-timed-event style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
+                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md border border-black/20" data-schedule-timed-event style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
                       }
                     `;
                   })
@@ -1184,6 +1185,27 @@ const conflictLabel = conflictCountLabel(conflictCount);
     hint.style.opacity = overflow ? '1' : '0';
   }
 
+  function scrollWeekToFirstEvent(container: HTMLElement): void {
+    if (container.dataset.view !== 'week') return;
+    const events = Array.from(container.querySelectorAll('[data-schedule-timed-event]')).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    if (events.length === 0) return;
+
+    let first = events[0]!;
+    for (const event of events) {
+      if (event.offsetTop < first.offsetTop) first = event;
+    }
+
+    const stickies = Array.from(container.querySelectorAll('.sticky')).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    const stickyBottom = stickies.reduce((max, node) => Math.max(max, node.offsetTop + node.offsetHeight), 0);
+    const grid = first.offsetParent instanceof HTMLElement ? first.offsetParent : container;
+    const target = grid.offsetTop + first.offsetTop - stickyBottom - 6;
+    container.scrollTop = Math.max(0, target);
+  }
+
   function ensureContainer(shell: HTMLElement): HTMLElement {
     let container = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
     if (!container) {
@@ -1245,11 +1267,15 @@ const conflictLabel = conflictCountLabel(conflictCount);
       const container = ensureContainer(shell);
       paint(container, payload, 'compact');
       updateConflictBadges(payload.events ?? []);
-      updateScrollHint(shell);
+      requestAnimationFrame(() => {
+        scrollWeekToFirstEvent(container);
+        updateScrollHint(shell);
+      });
       container.onscroll = () => updateScrollHint(shell);
 
       if (dialogEvents && dialog?.open) {
         paint(dialogEvents, payload, 'expanded');
+        requestAnimationFrame(() => scrollWeekToFirstEvent(dialogEvents));
       }
     }
 
@@ -1270,6 +1296,13 @@ const conflictLabel = conflictCountLabel(conflictCount);
       void loadEvents(storedRange);
     } else {
       updateScrollHint(shell);
+      const weekContainer = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
+      if (weekContainer) {
+        requestAnimationFrame(() => {
+          scrollWeekToFirstEvent(weekContainer);
+          updateScrollHint(shell);
+        });
+      }
       shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));
     }
 
@@ -1291,9 +1324,13 @@ const conflictLabel = conflictCountLabel(conflictCount);
       if (latestPayload) {
         paint(dialogEvents, latestPayload, 'expanded');
         applyHeading(latestPayload.range, labelEl, subEl, dialogLabel, knownEmail);
+        requestAnimationFrame(() => scrollWeekToFirstEvent(dialogEvents));
       } else {
         void loadEvents(rangeSelect.value).then(() => {
-          if (latestPayload) paint(dialogEvents, latestPayload, 'expanded');
+          if (latestPayload) {
+            paint(dialogEvents, latestPayload, 'expanded');
+            requestAnimationFrame(() => scrollWeekToFirstEvent(dialogEvents));
+          }
         });
       }
       dialog.showModal();

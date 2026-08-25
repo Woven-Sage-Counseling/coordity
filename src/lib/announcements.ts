@@ -48,58 +48,118 @@ export async function listAnnouncementsForUser(
   limit = 20,
 ): Promise<Announcement[]> {
   const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT
-        a.id,
-        a.title,
-        a.body,
-        a.created_by,
-        a.created_at,
-        u.name AS author_name,
-        CASE WHEN r.announcement_id IS NULL THEN 1 ELSE 0 END AS unread
-     FROM announcement a
-     JOIN user u ON u.id = a.created_by
-     LEFT JOIN announcement_read r
-       ON r.announcement_id = a.id AND r.user_id = ?
-     WHERE a.archived_at IS NULL
-     ORDER BY a.created_at DESC
-     LIMIT ?`,
-  )
-    .bind(userId, limit)
-    .all<{
-      id: string;
-      title: string;
-      body: string;
-      created_by: string;
-      created_at: number;
-      author_name: string;
-      unread: number;
-    }>();
+  try {
+    const rows = await DB.prepare(
+      `SELECT
+          a.id,
+          a.title,
+          a.body,
+          a.created_by,
+          a.created_at,
+          u.name AS author_name,
+          CASE WHEN r.announcement_id IS NULL THEN 1 ELSE 0 END AS unread
+       FROM announcement a
+       JOIN user u ON u.id = a.created_by
+       LEFT JOIN announcement_read r
+         ON r.announcement_id = a.id AND r.user_id = ?
+       LEFT JOIN announcement_dismiss d
+         ON d.announcement_id = a.id AND d.user_id = ?
+       WHERE a.archived_at IS NULL
+         AND d.announcement_id IS NULL
+       ORDER BY a.created_at DESC
+       LIMIT ?`,
+    )
+      .bind(userId, userId, limit)
+      .all<{
+        id: string;
+        title: string;
+        body: string;
+        created_by: string;
+        created_at: number;
+        author_name: string;
+        unread: number;
+      }>();
 
-  return (rows.results ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    body: row.body,
-    createdBy: row.created_by,
-    authorName: row.author_name,
-    createdAt: row.created_at,
-    unread: row.unread === 1,
-  }));
+    return (rows.results ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      body: row.body,
+      createdBy: row.created_by,
+      authorName: row.author_name,
+      createdAt: row.created_at,
+      unread: row.unread === 1,
+    }));
+  } catch {
+    const rows = await DB.prepare(
+      `SELECT
+          a.id,
+          a.title,
+          a.body,
+          a.created_by,
+          a.created_at,
+          u.name AS author_name,
+          CASE WHEN r.announcement_id IS NULL THEN 1 ELSE 0 END AS unread
+       FROM announcement a
+       JOIN user u ON u.id = a.created_by
+       LEFT JOIN announcement_read r
+         ON r.announcement_id = a.id AND r.user_id = ?
+       WHERE a.archived_at IS NULL
+       ORDER BY a.created_at DESC
+       LIMIT ?`,
+    )
+      .bind(userId, limit)
+      .all<{
+        id: string;
+        title: string;
+        body: string;
+        created_by: string;
+        created_at: number;
+        author_name: string;
+        unread: number;
+      }>();
+
+    return (rows.results ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      body: row.body,
+      createdBy: row.created_by,
+      authorName: row.author_name,
+      createdAt: row.created_at,
+      unread: row.unread === 1,
+    }));
+  }
 }
 
 export async function countUnreadAnnouncements(userId: string): Promise<number> {
   const { DB } = getEnv();
-  const row = await DB.prepare(
-    `SELECT COUNT(*) AS count
-     FROM announcement a
-     LEFT JOIN announcement_read r
-       ON r.announcement_id = a.id AND r.user_id = ?
-     WHERE a.archived_at IS NULL
-       AND r.announcement_id IS NULL`,
-  )
-    .bind(userId)
-    .first<{ count: number }>();
-  return Number(row?.count ?? 0);
+  try {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM announcement a
+       LEFT JOIN announcement_read r
+         ON r.announcement_id = a.id AND r.user_id = ?
+       LEFT JOIN announcement_dismiss d
+         ON d.announcement_id = a.id AND d.user_id = ?
+       WHERE a.archived_at IS NULL
+         AND r.announcement_id IS NULL
+         AND d.announcement_id IS NULL`,
+    )
+      .bind(userId, userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  } catch {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM announcement a
+       LEFT JOIN announcement_read r
+         ON r.announcement_id = a.id AND r.user_id = ?
+       WHERE a.archived_at IS NULL
+         AND r.announcement_id IS NULL`,
+    )
+      .bind(userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  }
 }
 
 export async function markAnnouncementsRead(input: {
@@ -111,17 +171,34 @@ export async function markAnnouncementsRead(input: {
 
   let ids = input.announcementIds;
   if (!ids) {
-    const rows = await DB.prepare(
-      `SELECT a.id
-       FROM announcement a
-       LEFT JOIN announcement_read r
-         ON r.announcement_id = a.id AND r.user_id = ?
-       WHERE a.archived_at IS NULL
-         AND r.announcement_id IS NULL`,
-    )
-      .bind(input.userId)
-      .all<{ id: string }>();
-    ids = (rows.results ?? []).map((row) => row.id);
+    try {
+      const rows = await DB.prepare(
+        `SELECT a.id
+         FROM announcement a
+         LEFT JOIN announcement_read r
+           ON r.announcement_id = a.id AND r.user_id = ?
+         LEFT JOIN announcement_dismiss d
+           ON d.announcement_id = a.id AND d.user_id = ?
+         WHERE a.archived_at IS NULL
+           AND r.announcement_id IS NULL
+           AND d.announcement_id IS NULL`,
+      )
+        .bind(input.userId, input.userId)
+        .all<{ id: string }>();
+      ids = (rows.results ?? []).map((row) => row.id);
+    } catch {
+      const rows = await DB.prepare(
+        `SELECT a.id
+         FROM announcement a
+         LEFT JOIN announcement_read r
+           ON r.announcement_id = a.id AND r.user_id = ?
+         WHERE a.archived_at IS NULL
+           AND r.announcement_id IS NULL`,
+      )
+        .bind(input.userId)
+        .all<{ id: string }>();
+      ids = (rows.results ?? []).map((row) => row.id);
+    }
   }
 
   if (ids.length === 0) return;
@@ -291,6 +368,11 @@ export async function deleteAnnouncement(input: {
 
   await deleteNotificationsBySource('announcement', input.id);
   await DB.prepare(`DELETE FROM announcement_read WHERE announcement_id = ?`).bind(input.id).run();
+  try {
+    await DB.prepare(`DELETE FROM announcement_dismiss WHERE announcement_id = ?`).bind(input.id).run();
+  } catch {
+    // dismiss table may not exist yet
+  }
   const result = await DB.prepare(`DELETE FROM announcement WHERE id = ?`).bind(input.id).run();
 
   if (!result.meta.changes) {
@@ -303,6 +385,29 @@ export async function deleteAnnouncement(input: {
     targetType: 'announcement',
     targetId: input.id,
   });
+}
+
+export async function dismissAnnouncementForUser(input: {
+  userId: string;
+  announcementId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const now = nowMs();
+  await DB.prepare(
+    `INSERT INTO announcement_dismiss (user_id, announcement_id, dismissed_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(user_id, announcement_id) DO UPDATE SET dismissed_at = excluded.dismissed_at`,
+  )
+    .bind(input.userId, input.announcementId, now)
+    .run();
+
+  await DB.prepare(
+    `INSERT INTO announcement_read (user_id, announcement_id, read_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(user_id, announcement_id) DO NOTHING`,
+  )
+    .bind(input.userId, input.announcementId, now)
+    .run();
 }
 
 export function formatAnnouncementDate(ms: number): string {

@@ -192,6 +192,19 @@ export async function clearNotifications(input: {
   }
 }
 
+export async function deleteNotificationsPermanently(input: {
+  userId: string;
+  notificationIds: string[];
+}): Promise<void> {
+  if (input.notificationIds.length === 0) return;
+  const { DB } = getEnv();
+  await DB.batch(
+    input.notificationIds.map((id) =>
+      DB.prepare(`DELETE FROM notification WHERE id = ? AND user_id = ?`).bind(id, input.userId),
+    ),
+  );
+}
+
 export async function notifyUser(input: {
   userId: string;
   title: string;
