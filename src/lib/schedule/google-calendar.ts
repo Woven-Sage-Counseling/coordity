@@ -387,8 +387,8 @@ export class GoogleCalendarProvider {
     return events.filter((event) => {
       if (connection.hideOutOfOffice && event.eventType === 'outOfOffice') return false;
       if (keywords.length === 0) return true;
-      const title = event.title.toLowerCase();
-      return !keywords.some((keyword) => title.includes(keyword));
+      const title = event.title.trim().toLowerCase();
+      return !keywords.some((keyword) => title === keyword);
     });
   }
 

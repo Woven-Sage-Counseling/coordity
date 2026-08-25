@@ -219,19 +219,22 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
           <div class="mt-8 border-t border-sage-dark/10 pt-6">
             <h3 class="text-sm font-semibold text-charcoal">Hide events</h3>
             <p class="mt-1 text-sm text-sage-dark/65">
-              Hide overlapping busy blocks from another workplace. Titles are matched case-insensitively (contains).
+              Hide specific overlapping busy blocks. Each line must match an event title exactly (case-insensitive).
             </p>
             <label for="hidden-title-keywords" class="mt-4 block text-sm font-medium text-charcoal">
-              Hide titles containing
+              Hide these exact titles
             </label>
             <textarea
               id="hidden-title-keywords"
               class="field mt-2 min-h-[6rem]"
               rows="4"
-              placeholder={'not available\nbusy'}
+              placeholder={'Not available\nBusy - Other Practice'}
               data-hidden-title-keywords
             >{calendarConnection.hiddenTitleKeywords.join('\n')}</textarea>
-            <p class="mt-1 text-xs text-sage-dark/55">One phrase per line. Example: not available</p>
+            <p class="mt-1 text-xs text-sage-dark/55">
+              One full title per line. Example: <span class="font-medium text-sage-dark/70">Not available</span> will
+              not hide <span class="font-medium text-sage-dark/70">Not available - Woven Sage</span>.
+            </p>
             <label class="mt-4 flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
