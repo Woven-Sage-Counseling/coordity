@@ -488,6 +488,23 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 </div>
               ) : null
             }
+            <div class="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+              <a
+                href="/settings#google-calendar"
+                class="text-[11px] font-medium text-sage-dark/70 hover:text-sage-dark"
+              >
+                Manage calendars
+              </a>
+              <a
+                href={timeOffHref}
+                class:list={[
+                  'text-[11px] font-medium transition',
+                  ownerEmail ? 'text-sage-dark/60 hover:text-sage-dark' : 'pointer-events-none text-sage-dark/30',
+                ]}
+              >
+                Request time off
+              </a>
+            </div>
           </div>
         </div>
       </div>
