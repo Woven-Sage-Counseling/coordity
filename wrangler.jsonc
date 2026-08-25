@@ -7,11 +7,6 @@
   "observability": {
     "enabled": true
   },
-  "send_email": [
-    {
-      "name": "EMAIL"
-    }
-  ],
   "vars": {
     "PORTAL_ENVIRONMENT": "production",
     "PORTAL_OWNER_EMAIL": "admin@wovensage.com",
