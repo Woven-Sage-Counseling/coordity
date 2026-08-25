@@ -80,6 +80,69 @@ export async function markNotificationsRead(input: {
     .run();
 }
 
+export async function notifyUser(input: {
+  userId: string;
+  title: string;
+  body: string;
+  sourceType?: string;
+  sourceId?: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(
+    `INSERT INTO notification
+       (id, user_id, title, body, created_at, read_at, source_type, source_id)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+  )
+    .bind(
+      randomToken(16),
+      input.userId,
+      input.title,
+      input.body,
+      nowMs(),
+      input.sourceType ?? null,
+      input.sourceId ?? null,
+    )
+    .run();
+}
+
+export async function listNotificationSourceIds(
+  userId: string,
+  sourceType: string,
+): Promise<Set<string>> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT source_id
+     FROM notification
+     WHERE user_id = ? AND source_type = ? AND source_id IS NOT NULL`,
+  )
+    .bind(userId, sourceType)
+    .all<{ source_id: string }>();
+
+  return new Set((rows.results ?? []).map((row) => row.source_id));
+}
+
+export async function deleteNotificationsBySourceExcept(
+  userId: string,
+  sourceType: string,
+  activeSourceIds: string[],
+): Promise<void> {
+  const { DB } = getEnv();
+  if (activeSourceIds.length === 0) {
+    await DB.prepare(`DELETE FROM notification WHERE user_id = ? AND source_type = ?`)
+      .bind(userId, sourceType)
+      .run();
+    return;
+  }
+
+  const placeholders = activeSourceIds.map(() => '?').join(', ');
+  await DB.prepare(
+    `DELETE FROM notification
+     WHERE user_id = ? AND source_type = ? AND source_id NOT IN (${placeholders})`,
+  )
+    .bind(userId, sourceType, ...activeSourceIds)
+    .run();
+}
+
 export async function notifyActiveUsers(input: {
   title: string;
   body: string;

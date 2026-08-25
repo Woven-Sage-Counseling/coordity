@@ -1,5 +1,6 @@
 import { getEnv } from '../env';
 import { nowMs } from '../crypto';
+import { syncScheduleConflictNotifications } from './conflict-notifications';
 import { isScheduleRangeId, resolveScheduleRange } from './range';
 import type {
   ResolvedScheduleRange,
@@ -405,7 +406,11 @@ export class GoogleCalendarProvider {
     const calendars = await this.listCalendars(userId);
     const cached = await this.readEventCache(userId, range.id);
     if (cached) {
-      return applyTitleCovers(await this.applyEventFilters(userId, cached), calendars);
+      const events = applyTitleCovers(await this.applyEventFilters(userId, cached), calendars);
+      if (range.id === 'today' || range.id === 'this_week') {
+        await syncScheduleConflictNotifications(userId, events);
+      }
+      return events;
     }
 
     const enabledCalendars = calendars.filter((calendar) => calendar.enabled);
@@ -452,7 +457,11 @@ export class GoogleCalendarProvider {
       .bind(nowMs(), userId)
       .run();
 
-    return applyTitleCovers(filtered, calendars);
+    const coveredEvents = applyTitleCovers(filtered, calendars);
+    if (range.id === 'today' || range.id === 'this_week') {
+      await syncScheduleConflictNotifications(userId, coveredEvents);
+    }
+    return coveredEvents;
   }
 
   private async applyEventFilters(userId: string, events: ScheduleEvent[]): Promise<ScheduleEvent[]> {
