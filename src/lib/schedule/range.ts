@@ -125,6 +125,38 @@ function lastDayOfMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
+export function formatScheduleHeading(range: { id: ScheduleRangeId; start: string; end: string }): string {
+  if (range.id === 'today') return 'Today';
+
+  if (range.id === 'this_week') {
+    const startLabel = new Date(easternInstant(range.start, 12, 0, 0)).toLocaleDateString('en-US', {
+      timeZone: TZ,
+      month: 'short',
+      day: 'numeric',
+    });
+    const endLabel = new Date(easternInstant(range.end, 12, 0, 0)).toLocaleDateString('en-US', {
+      timeZone: TZ,
+      month: 'short',
+      day: 'numeric',
+    });
+    return `${startLabel} – ${endLabel}`;
+  }
+
+  return new Date(easternInstant(range.start, 12, 0, 0)).toLocaleDateString('en-US', {
+    timeZone: TZ,
+    month: 'long',
+  });
+}
+
+export function formatScheduleTodayDate(isoDate: string): string {
+  return new Date(easternInstant(isoDate, 12, 0, 0)).toLocaleDateString('en-US', {
+    timeZone: TZ,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export function formatScheduleEventTime(event: { start: string; end: string; allDay: boolean }): string {
   if (event.allDay) return 'All day';
 

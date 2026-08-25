@@ -5,6 +5,8 @@ import {
   formatDayNumber,
   formatScheduleEventDay,
   formatScheduleEventTime,
+  formatScheduleHeading,
+  formatScheduleTodayDate,
   formatWeekdayShort,
   groupEventsByDay,
   monthGridDays,
@@ -104,6 +106,8 @@ function eventCountLabel(count: number): string {
 }
 
 const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const headingLabel = range ? formatScheduleHeading(range) : 'This week';
+const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.start) : null;
 ---
 
 <aside
@@ -114,6 +118,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   data-connected={connection.status === 'connected' ? '1' : '0'}
   data-range-start={range?.start ?? ''}
   data-range-end={range?.end ?? ''}
+  data-google-email={connection.googleEmail ?? ''}
 >
   <div class="bg-sage-dark px-3 py-2.5 text-cream">
     <div class="flex items-center justify-between gap-2">
@@ -148,12 +153,16 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Calendar</p>
         <p class="mt-1 text-base font-semibold leading-tight" data-schedule-range-label>
-          {range?.label ?? 'This week'}
+          {headingLabel}
         </p>
         {
-          connection.status === 'connected' && connection.googleEmail ? (
-            <p class="mt-1 text-[11px] text-[#6b6c72]">{connection.googleEmail}</p>
-          ) : null
+          todayDateLabel ? (
+            <p class="mt-1 text-[11px] text-[#6b6c72]" data-schedule-range-sub>{todayDateLabel}</p>
+          ) : connection.status === 'connected' && connection.googleEmail ? (
+            <p class="mt-1 text-[11px] text-[#6b6c72]" data-schedule-range-sub>{connection.googleEmail}</p>
+          ) : (
+            <p class="mt-1 hidden text-[11px] text-[#6b6c72]" data-schedule-range-sub></p>
+          )
         }
       </div>
       {
@@ -438,7 +447,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
           <div class="flex shrink-0 items-center justify-between gap-3 bg-sage-dark px-4 py-3 text-cream">
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
-              <p class="text-base font-semibold" data-schedule-dialog-label>{range?.label ?? 'This week'}</p>
+              <p class="text-base font-semibold" data-schedule-dialog-label>{headingLabel}</p>
             </div>
             <div class="flex items-center gap-2">
               <label class="shrink-0">
@@ -887,6 +896,64 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     `;
   }
 
+  function formatHeading(range: { id: string; start: string; end: string }): string {
+    if (range.id === 'today') return 'Today';
+    if (range.id === 'this_week') {
+      const startLabel = new Date(`${range.start}T12:00:00`).toLocaleDateString('en-US', {
+        timeZone: TZ,
+        month: 'short',
+        day: 'numeric',
+      });
+      const endLabel = new Date(`${range.end}T12:00:00`).toLocaleDateString('en-US', {
+        timeZone: TZ,
+        month: 'short',
+        day: 'numeric',
+      });
+      return `${startLabel} – ${endLabel}`;
+    }
+    if (range.id === 'this_month') {
+      return new Date(`${range.start}T12:00:00`).toLocaleDateString('en-US', {
+        timeZone: TZ,
+        month: 'long',
+      });
+    }
+    return range.id;
+  }
+
+  function formatTodaySub(isoDate: string): string {
+    return new Date(`${isoDate}T12:00:00`).toLocaleDateString('en-US', {
+      timeZone: TZ,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  function applyHeading(
+    range: { id: string; start: string; end: string; label?: string } | undefined,
+    labelEl: HTMLElement | null,
+    subEl: HTMLElement | null,
+    dialogLabel: HTMLElement | null,
+    googleEmail: string | null,
+  ): void {
+    if (!range) return;
+    const heading = formatHeading(range);
+    if (labelEl) labelEl.textContent = heading;
+    if (dialogLabel) dialogLabel.textContent = heading;
+    if (subEl) {
+      if (range.id === 'today') {
+        subEl.textContent = formatTodaySub(range.start);
+        subEl.classList.remove('hidden');
+      } else if (googleEmail) {
+        subEl.textContent = googleEmail;
+        subEl.classList.remove('hidden');
+      } else {
+        subEl.textContent = '';
+        subEl.classList.add('hidden');
+      }
+    }
+  }
+
   function updateScrollHint(shell: HTMLElement): void {
     const list = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
     const hint = shell.querySelector('[data-schedule-scroll-hint]') as HTMLElement | null;
@@ -928,6 +995,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const connected = root.dataset.connected === '1';
     const shell = root.querySelector('[data-schedule-events-shell]') as HTMLElement | null;
     const labelEl = root.querySelector('[data-schedule-range-label]') as HTMLElement | null;
+    const subEl = root.querySelector('[data-schedule-range-sub]') as HTMLElement | null;
     const rangeSelect = root.querySelector('[data-schedule-range]') as HTMLSelectElement | null;
     const expandButton = root.querySelector('[data-schedule-expand]') as HTMLButtonElement | null;
     const dialog = document.querySelector('[data-schedule-dialog]') as HTMLDialogElement | null;
@@ -935,6 +1003,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dialogRange = dialog?.querySelector('[data-schedule-dialog-range]') as HTMLSelectElement | null;
     const dialogEvents = dialog?.querySelector('[data-schedule-dialog-events]') as HTMLElement | null;
     const dialogClose = dialog?.querySelector('[data-schedule-dialog-close]') as HTMLButtonElement | null;
+    const knownEmail = (root.dataset.googleEmail ?? '').trim() || null;
 
     let latestPayload: EventsResponse | null = null;
 
@@ -945,8 +1014,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       });
       const payload = (await response.json()) as EventsResponse;
       latestPayload = payload;
-      if (labelEl && payload.range?.label) labelEl.textContent = payload.range.label;
-      if (dialogLabel && payload.range?.label) dialogLabel.textContent = payload.range.label;
+      applyHeading(payload.range, labelEl, subEl, dialogLabel, knownEmail);
       if (payload.range?.start) root.dataset.rangeStart = payload.range.start;
       if (payload.range?.end) root.dataset.rangeEnd = payload.range.end;
 
@@ -1002,7 +1070,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       if (dialogRange && rangeSelect) dialogRange.value = rangeSelect.value;
       if (latestPayload) {
         paint(dialogEvents, latestPayload, 'expanded');
-        if (dialogLabel && latestPayload.range?.label) dialogLabel.textContent = latestPayload.range.label;
+        applyHeading(latestPayload.range, labelEl, subEl, dialogLabel, knownEmail);
       } else {
         void loadEvents(rangeSelect.value).then(() => {
           if (latestPayload) paint(dialogEvents, latestPayload, 'expanded');
