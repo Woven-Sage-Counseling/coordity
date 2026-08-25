@@ -45,8 +45,6 @@ const monthPrefix = range?.start.slice(0, 7) ?? '';
 const grouped = groupEventsByDay(events);
 const dayKeys = [...grouped.keys()].sort();
 
-const startHour = 0;
-const endHour = 24;
 const hourHeight = 18;
 const gridHours = Array.from({ length: 24 }, (_, index) => index);
 const allDayByDay = new Map(
@@ -67,13 +65,13 @@ function eventTimeLabel(event: ScheduleEvent): string {
 }
 
 function eventTop(event: ScheduleEvent): number {
-  const minutes = Math.max(easternMinutesFromMidnight(event.start), startHour * 60);
-  return ((minutes - startHour * 60) / 60) * hourHeight;
+  const minutes = Math.max(easternMinutesFromMidnight(event.start), 0);
+  return (minutes / 60) * hourHeight;
 }
 
 function eventHeight(event: ScheduleEvent): number {
-  const start = Math.max(easternMinutesFromMidnight(event.start), startHour * 60);
-  const end = Math.min(Math.max(easternMinutesFromMidnight(event.end), start + 15), endHour * 60);
+  const start = Math.max(easternMinutesFromMidnight(event.start), 0);
+  const end = Math.min(Math.max(easternMinutesFromMidnight(event.end), start + 15), 24 * 60);
   return Math.max(((end - start) / 60) * hourHeight, 14);
 }
 
@@ -81,6 +79,23 @@ function hourLabel(hour: number): string {
   const suffix = hour >= 12 ? 'p' : 'a';
   const display = hour % 12 === 0 ? 12 : hour % 12;
   return `${display}${suffix}`;
+}
+
+function countsByCalendar(dayEvents: ScheduleEvent[]): Array<{ color: string; count: number; name: string }> {
+  const map = new Map<string, { color: string; count: number; name: string }>();
+  for (const event of dayEvents) {
+    const existing = map.get(event.calendarId);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      map.set(event.calendarId, {
+        color: event.calendarColor ?? '#1a73e8',
+        count: 1,
+        name: event.calendarName,
+      });
+    }
+  }
+  return [...map.values()];
 }
 
 const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -96,17 +111,30 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   data-range-end={range?.end ?? ''}
 >
   <div class="bg-sage-dark px-3 py-2.5 text-cream">
-    <div class="flex items-center gap-2">
-      <span
-        class="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-cream ring-1 ring-white/20"
-        aria-hidden="true"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75" />
-          <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
-        </svg>
-      </span>
-      <h2 id="home-schedule-heading" class="text-sm font-semibold leading-none">Schedule</h2>
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span
+          class="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-cream ring-1 ring-white/20"
+          aria-hidden="true"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75" />
+            <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+          </svg>
+        </span>
+        <h2 id="home-schedule-heading" class="text-sm font-semibold leading-none">Schedule</h2>
+      </div>
+      {
+        connection.status === 'connected' ? (
+          <button
+            type="button"
+            class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-cream ring-1 ring-white/20 transition hover:bg-white/25"
+            data-schedule-expand
+          >
+            Expand
+          </button>
+        ) : null
+      }
     </div>
   </div>
 
@@ -265,6 +293,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 monthDays.map((day) => {
                   const inMonth = day.startsWith(monthPrefix);
                   const dayEvents = grouped.get(day) ?? [];
+                  const counts = countsByCalendar(dayEvents);
                   const isToday = day === today;
                   return (
                     <div class:list={['min-h-[3.1rem] bg-white p-1', !inMonth && 'bg-[#f7f8fa]']}>
@@ -274,22 +303,17 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                       ]}>
                         {formatDayNumber(day)}
                       </p>
-                      <div class="space-y-0.5">
+                      <div class="flex flex-wrap gap-x-1 gap-y-0.5">
                         {
-                          dayEvents.slice(0, 2).map((event) => (
-                            <div
-                              class="truncate rounded px-0.5 text-[8px] font-semibold leading-tight text-white"
-                              style={`background-color: ${event.calendarColor ?? '#1a73e8'}`}
-                              title={event.title}
+                          counts.map((item) => (
+                            <span
+                              class="text-[11px] font-bold tabular-nums leading-none"
+                              style={`color: ${item.color}`}
+                              title={`${item.count} on ${item.name}`}
                             >
-                              {event.title}
-                            </div>
+                              {item.count}
+                            </span>
                           ))
-                        }
-                        {
-                          dayEvents.length > 2 ? (
-                            <p class="text-[8px] font-medium text-[#6b6c72]">+{dayEvents.length - 2}</p>
-                          ) : null
                         }
                       </div>
                     </div>
@@ -378,6 +402,51 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   </div>
 </aside>
 
+{
+  connection.status === 'connected' ? (
+    <dialog
+      class="schedule-expand-dialog m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-charcoal/50"
+      data-schedule-dialog
+      aria-label="Expanded schedule"
+    >
+      <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
+        <div class="flex max-h-[min(92vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#f4f5f8] shadow-2xl ring-1 ring-black/15">
+          <div class="flex items-center justify-between gap-3 bg-sage-dark px-4 py-3 text-cream">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
+              <p class="text-base font-semibold" data-schedule-dialog-label>{range?.label ?? 'This week'}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="shrink-0">
+                <span class="sr-only">Schedule range</span>
+                <select class="rounded-md border-0 bg-white/15 px-2 py-1 text-[11px] font-medium text-cream ring-1 ring-white/20" data-schedule-dialog-range>
+                  {
+                    rangeOptions.map((option) => (
+                      <option value={option.id} selected={option.id === (range?.id ?? 'this_week')} class="text-[#393a3d]">
+                        {option.label}
+                      </option>
+                    ))
+                  }
+                </select>
+              </label>
+              <button
+                type="button"
+                class="rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-cream ring-1 ring-white/20 transition hover:bg-white/25"
+                data-schedule-dialog-close
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <div class="min-h-0 flex-1 overflow-hidden p-4" data-schedule-dialog-shell>
+            <div class="h-full max-h-[min(78vh,44rem)] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]" data-schedule-dialog-events></div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+  ) : null
+}
+
 <script>
   type ScheduleEventPayload = {
     id: string;
@@ -385,6 +454,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     start: string;
     end: string;
     allDay: boolean;
+    calendarId?: string;
     calendarName: string;
     calendarColor: string | null;
     htmlLink: string | null;
@@ -396,8 +466,9 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     connection?: { lastError?: string | null; status?: string };
   };
 
+  type SizeMode = 'compact' | 'expanded';
+
   const TZ = 'America/New_York';
-  const HOUR_HEIGHT = 18;
   const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   function rangeStorageKey(userId: string): string {
@@ -542,14 +613,35 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return groups;
   }
 
-  function renderStack(container: HTMLElement, events: ScheduleEventPayload[]): void {
+  function countsByCalendar(dayEvents: ScheduleEventPayload[]): Array<{ color: string; count: number; name: string }> {
+    const map = new Map<string, { color: string; count: number; name: string }>();
+    for (const event of dayEvents) {
+      const key = event.calendarId ?? event.calendarName;
+      const existing = map.get(key);
+      if (existing) existing.count += 1;
+      else {
+        map.set(key, {
+          color: event.calendarColor ?? '#1a73e8',
+          count: 1,
+          name: event.calendarName,
+        });
+      }
+    }
+    return [...map.values()];
+  }
+
+  function renderStack(container: HTMLElement, events: ScheduleEventPayload[], size: SizeMode): void {
     container.dataset.view = 'stack';
-    container.className = 'max-h-[15.5rem] overflow-y-auto overscroll-contain p-3';
+    container.className =
+      size === 'expanded'
+        ? 'h-full max-h-[min(78vh,44rem)] overflow-y-auto overscroll-contain p-5'
+        : 'max-h-[15.5rem] overflow-y-auto overscroll-contain p-3';
     if (events.length === 0) {
       container.innerHTML = '<div class="flex h-full items-center justify-center p-4"><p class="text-sm text-[#6b6c72]">No events in this range.</p></div>';
       return;
     }
     const groups = groupByDay(events);
+    const titleClass = size === 'expanded' ? 'text-base' : 'text-sm';
     container.innerHTML = [...groups.keys()]
       .sort()
       .map((dayKey) => {
@@ -559,7 +651,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             (event) => `
               <li class="rounded-md border border-[#eceef2] px-3 py-2">
                 <div class="flex items-start justify-between gap-2">
-                  <p class="text-sm font-semibold leading-snug text-[#393a3d]">${escapeHtml(event.title)}</p>
+                  <p class="${titleClass} font-semibold leading-snug text-[#393a3d]">${escapeHtml(event.title)}</p>
                   ${
                     event.htmlLink
                       ? `<a href="${escapeHtml(event.htmlLink)}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-[11px] font-medium text-sage-dark hover:text-charcoal">Open</a>`
@@ -586,9 +678,14 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       .join('');
   }
 
-  function renderWeek(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string): void {
+  function renderWeek(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string, size: SizeMode): void {
     container.dataset.view = 'week';
-    container.className = 'max-h-[17rem] overflow-auto overscroll-contain';
+    const hourHeight = size === 'expanded' ? 32 : 18;
+    const titleSize = size === 'expanded' ? 'text-[11px]' : 'text-[8px]';
+    container.className =
+      size === 'expanded'
+        ? 'h-full max-h-[min(78vh,44rem)] overflow-auto overscroll-contain'
+        : 'max-h-[17rem] overflow-auto overscroll-contain';
     const days = eachDay(start, end);
     const today = todayEastern();
     const byDay = groupByDay(events);
@@ -596,7 +693,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const hours = Array.from({ length: 24 }, (_, index) => index);
 
     const header = `
-      <div class="sticky top-0 z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
+      <div class="sticky top-0 z-10 grid grid-cols-[2rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
         <div class="border-r border-[#eceef2]"></div>
         ${days
           .map((day) => {
@@ -614,7 +711,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const allDayRow = hasAllDay
       ? `
-      <div class="sticky top-[2.6rem] z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
+      <div class="sticky top-[2.6rem] z-10 grid grid-cols-[2rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
         <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
         ${days
           .map((day) => {
@@ -624,7 +721,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 ${dayAllDay
                   .map(
                     (event) => `
-                      <div class="truncate rounded px-0.5 text-[8px] font-semibold leading-4 text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>
+                      <div class="truncate rounded px-0.5 ${titleSize} font-semibold leading-4 text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>
                     `,
                   )
                   .join('')}
@@ -637,12 +734,12 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       : '';
 
     const body = `
-      <div class="relative grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))]" style="height: ${24 * HOUR_HEIGHT}px">
+      <div class="relative grid grid-cols-[2rem_repeat(7,minmax(0,1fr))]" style="height: ${24 * hourHeight}px">
         <div class="relative border-r border-[#eceef2]">
           ${hours
             .map(
               (hour) => `
-              <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style="top: ${hour * HOUR_HEIGHT}px">${hourLabel(hour)}</div>
+              <div class="absolute right-0.5 -translate-y-1/2 text-[8px] text-[#8b8d93]" style="top: ${hour * hourHeight}px">${hourLabel(hour)}</div>
             `,
             )
             .join('')}
@@ -656,7 +753,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 ${hours
                   .map(
                     (hour) => `
-                    <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style="top: ${hour * HOUR_HEIGHT}px"></div>
+                    <div class="absolute inset-x-0 border-t border-[#f0f1f4]" style="top: ${hour * hourHeight}px"></div>
                   `,
                   )
                   .join('')}
@@ -664,11 +761,11 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                   .map((event) => {
                     const startMin = Math.max(minutesFromMidnight(event.start), 0);
                     const endMin = Math.min(Math.max(minutesFromMidnight(event.end), startMin + 15), 24 * 60);
-                    const top = (startMin / 60) * HOUR_HEIGHT;
-                    const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 14);
+                    const top = (startMin / 60) * hourHeight;
+                    const height = Math.max(((endMin - startMin) / 60) * hourHeight, 14);
                     const href = event.htmlLink ? escapeHtml(event.htmlLink) : '#';
                     return `
-                      <a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute inset-x-0.5 overflow-hidden rounded px-0.5 text-[8px] font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>
+                      <a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute inset-x-0.5 overflow-hidden rounded px-0.5 ${titleSize} font-semibold leading-tight text-white" style="top: ${top}px; height: ${height}px; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>
                     `;
                   })
                   .join('')}
@@ -682,13 +779,18 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     container.innerHTML = header + allDayRow + body;
   }
 
-  function renderMonth(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string): void {
+  function renderMonth(container: HTMLElement, events: ScheduleEventPayload[], start: string, end: string, size: SizeMode): void {
     container.dataset.view = 'month';
-    container.className = 'max-h-[17rem] overflow-auto overscroll-contain p-2';
+    container.className =
+      size === 'expanded'
+        ? 'h-full max-h-[min(78vh,44rem)] overflow-auto overscroll-contain p-4'
+        : 'max-h-[17rem] overflow-auto overscroll-contain p-2';
     const days = monthGridDays(start, end);
     const today = todayEastern();
     const monthPrefix = start.slice(0, 7);
     const byDay = groupByDay(events);
+    const cellMin = size === 'expanded' ? 'min-h-[5.5rem]' : 'min-h-[3.1rem]';
+    const countClass = size === 'expanded' ? 'text-sm' : 'text-[11px]';
 
     container.innerHTML = `
       <div class="mb-1 grid grid-cols-7 gap-px">
@@ -699,20 +801,19 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
           .map((day) => {
             const inMonth = day.startsWith(monthPrefix);
             const dayEvents = byDay.get(day) ?? [];
+            const counts = countsByCalendar(dayEvents);
             const isToday = day === today;
             return `
-              <div class="min-h-[3.1rem] p-1 ${inMonth ? 'bg-white' : 'bg-[#f7f8fa]'}">
+              <div class="${cellMin} p-1 ${inMonth ? 'bg-white' : 'bg-[#f7f8fa]'}">
                 <p class="mb-0.5 inline-flex h-4 min-w-4 items-center justify-center px-0.5 text-[10px] font-semibold ${isToday ? 'rounded-full bg-[#1a73e8] text-white' : inMonth ? 'text-[#393a3d]' : 'text-[#b0b1b6]'}">${dayNumber(day)}</p>
-                <div class="space-y-0.5">
-                  ${dayEvents
-                    .slice(0, 2)
+                <div class="flex flex-wrap gap-x-1.5 gap-y-0.5">
+                  ${counts
                     .map(
-                      (event) => `
-                        <div class="truncate rounded px-0.5 text-[8px] font-semibold leading-tight text-white" style="background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>
+                      (item) => `
+                        <span class="${countClass} font-bold tabular-nums leading-none" style="color: ${escapeHtml(item.color)}" title="${item.count} on ${escapeHtml(item.name)}">${item.count}</span>
                       `,
                     )
                     .join('')}
-                  ${dayEvents.length > 2 ? `<p class="text-[8px] font-medium text-[#6b6c72]">+${dayEvents.length - 2}</p>` : ''}
                 </div>
               </div>
             `;
@@ -743,36 +844,19 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return container;
   }
 
-  async function loadEvents(
-    rangeId: string,
-    shell: HTMLElement,
-    labelEl: HTMLElement | null,
-    root: HTMLElement,
-  ): Promise<void> {
-    const response = await fetch(`/api/google-calendar/events?range=${encodeURIComponent(rangeId)}`, {
-      headers: { accept: 'application/json' },
-    });
-    const payload = (await response.json()) as EventsResponse;
-    if (labelEl && payload.range?.label) labelEl.textContent = payload.range.label;
-    if (payload.range?.start) root.dataset.rangeStart = payload.range.start;
-    if (payload.range?.end) root.dataset.rangeEnd = payload.range.end;
-
-    if (payload.connection?.lastError) {
-      shell.innerHTML = `<div class="p-4"><p class="text-sm text-red-700">${escapeHtml(payload.connection.lastError)}</p></div>`;
-      return;
-    }
-
-    const container = ensureContainer(shell);
+  function paint(
+    container: HTMLElement,
+    payload: EventsResponse,
+    size: SizeMode,
+  ): void {
     const events = payload.events ?? [];
     if (payload.range?.id === 'this_week' && payload.range.start && payload.range.end) {
-      renderWeek(container, events, payload.range.start, payload.range.end);
+      renderWeek(container, events, payload.range.start, payload.range.end, size);
     } else if (payload.range?.id === 'this_month' && payload.range.start && payload.range.end) {
-      renderMonth(container, events, payload.range.start, payload.range.end);
+      renderMonth(container, events, payload.range.start, payload.range.end, size);
     } else {
-      renderStack(container, events);
+      renderStack(container, events, size);
     }
-    updateScrollHint(shell);
-    container.onscroll = () => updateScrollHint(shell);
   }
 
   function initScheduleCard(root: HTMLElement): void {
@@ -781,6 +865,47 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const shell = root.querySelector('[data-schedule-events-shell]') as HTMLElement | null;
     const labelEl = root.querySelector('[data-schedule-range-label]') as HTMLElement | null;
     const rangeSelect = root.querySelector('[data-schedule-range]') as HTMLSelectElement | null;
+    const expandButton = root.querySelector('[data-schedule-expand]') as HTMLButtonElement | null;
+    const dialog = document.querySelector('[data-schedule-dialog]') as HTMLDialogElement | null;
+    const dialogLabel = dialog?.querySelector('[data-schedule-dialog-label]') as HTMLElement | null;
+    const dialogRange = dialog?.querySelector('[data-schedule-dialog-range]') as HTMLSelectElement | null;
+    const dialogEvents = dialog?.querySelector('[data-schedule-dialog-events]') as HTMLElement | null;
+    const dialogClose = dialog?.querySelector('[data-schedule-dialog-close]') as HTMLButtonElement | null;
+
+    let latestPayload: EventsResponse | null = null;
+
+    async function loadEvents(rangeId: string): Promise<void> {
+      if (!shell) return;
+      const response = await fetch(`/api/google-calendar/events?range=${encodeURIComponent(rangeId)}`, {
+        headers: { accept: 'application/json' },
+      });
+      const payload = (await response.json()) as EventsResponse;
+      latestPayload = payload;
+      if (labelEl && payload.range?.label) labelEl.textContent = payload.range.label;
+      if (dialogLabel && payload.range?.label) dialogLabel.textContent = payload.range.label;
+      if (payload.range?.start) root.dataset.rangeStart = payload.range.start;
+      if (payload.range?.end) root.dataset.rangeEnd = payload.range.end;
+
+      if (payload.connection?.lastError) {
+        shell.innerHTML = `<div class="p-4"><p class="text-sm text-red-700">${escapeHtml(payload.connection.lastError)}</p></div>`;
+        return;
+      }
+
+      const container = ensureContainer(shell);
+      paint(container, payload, 'compact');
+      updateScrollHint(shell);
+      container.onscroll = () => updateScrollHint(shell);
+
+      if (dialogEvents && dialog?.open) {
+        paint(dialogEvents, payload, 'expanded');
+      }
+    }
+
+    function syncRangeControls(rangeId: string): void {
+      if (rangeSelect) rangeSelect.value = rangeId;
+      if (dialogRange) dialogRange.value = rangeId;
+      writeStoredRange(userId, rangeId);
+    }
 
     if (!connected || !shell || !rangeSelect) {
       updateScrollHint(shell ?? root);
@@ -789,8 +914,8 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const storedRange = readStoredRange(userId);
     if (storedRange && storedRange !== rangeSelect.value) {
-      rangeSelect.value = storedRange;
-      void loadEvents(storedRange, shell, labelEl, root);
+      syncRangeControls(storedRange);
+      void loadEvents(storedRange);
     } else {
       updateScrollHint(shell);
       shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));
@@ -798,10 +923,41 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     rangeSelect.addEventListener('change', () => {
       const rangeId = rangeSelect.value;
-      writeStoredRange(userId, rangeId);
-      void loadEvents(rangeId, shell, labelEl, root);
+      syncRangeControls(rangeId);
+      void loadEvents(rangeId);
+    });
+
+    dialogRange?.addEventListener('change', () => {
+      const rangeId = dialogRange.value;
+      syncRangeControls(rangeId);
+      void loadEvents(rangeId);
+    });
+
+    expandButton?.addEventListener('click', () => {
+      if (!dialog || !dialogEvents) return;
+      if (dialogRange && rangeSelect) dialogRange.value = rangeSelect.value;
+      if (latestPayload) {
+        paint(dialogEvents, latestPayload, 'expanded');
+        if (dialogLabel && latestPayload.range?.label) dialogLabel.textContent = latestPayload.range.label;
+      } else {
+        void loadEvents(rangeSelect.value).then(() => {
+          if (latestPayload) paint(dialogEvents, latestPayload, 'expanded');
+        });
+      }
+      dialog.showModal();
+    });
+
+    dialogClose?.addEventListener('click', () => dialog?.close());
+    dialog?.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
     });
   }
 
   document.querySelectorAll('[data-schedule-card]').forEach((node) => initScheduleCard(node as HTMLElement));
 </script>
+
+<style>
+  .schedule-expand-dialog::backdrop {
+    background: rgba(26, 28, 30, 0.5);
+  }
+</style>
