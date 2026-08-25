@@ -36,6 +36,7 @@ const connection = summary?.connection ?? {
 };
 const range = summary?.range ?? null;
 const events = summary?.events ?? [];
+const calendars = (summary?.calendars ?? []).filter((calendar) => calendar.enabled);
 const rangeOptions = scheduleRangeOptions();
 const viewMode = range?.id === 'this_week' ? 'week' : range?.id === 'this_month' ? 'month' : 'stack';
 const today = todayEastern();
@@ -96,6 +97,10 @@ function countsByCalendar(dayEvents: ScheduleEvent[]): Array<{ color: string; co
     }
   }
   return [...map.values()];
+}
+
+function eventCountLabel(count: number): string {
+  return count === 1 ? '1 event' : `${count} events`;
 }
 
 const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -303,15 +308,15 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                       ]}>
                         {formatDayNumber(day)}
                       </p>
-                      <div class="flex flex-wrap gap-x-1 gap-y-0.5">
+                      <div class="flex flex-col gap-0.5">
                         {
                           counts.map((item) => (
                             <span
-                              class="text-[11px] font-bold tabular-nums leading-none"
+                              class="text-[9px] font-semibold leading-tight"
                               style={`color: ${item.color}`}
-                              title={`${item.count} on ${item.name}`}
+                              title={`${eventCountLabel(item.count)} on ${item.name}`}
                             >
-                              {item.count}
+                              {eventCountLabel(item.count)}
                             </span>
                           ))
                         }
@@ -379,6 +384,25 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       </p>
     </div>
 
+    {
+      connection.status === 'connected' && calendars.length > 0 ? (
+        <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1" data-schedule-legend aria-label="Calendar color key">
+          {
+            calendars.map((calendar) => (
+              <span class="inline-flex items-center gap-1.5 text-[10px] text-[#6b6c72]">
+                <span
+                  class="h-2 w-2 shrink-0 rounded-sm"
+                  style={`background-color: ${calendar.color ?? '#6b6c72'}`}
+                  aria-hidden="true"
+                ></span>
+                <span class="truncate">{calendar.name}</span>
+              </span>
+            ))
+          }
+        </div>
+      ) : null
+    }
+
     <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
       {
         connection.status === 'connected' ? (
@@ -440,6 +464,24 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
           </div>
           <div class="min-h-0 flex-1 overflow-hidden p-4" data-schedule-dialog-shell>
             <div class="h-full max-h-[min(78vh,44rem)] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]" data-schedule-dialog-events></div>
+            {
+              calendars.length > 0 ? (
+                <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5" data-schedule-dialog-legend aria-label="Calendar color key">
+                  {
+                    calendars.map((calendar) => (
+                      <span class="inline-flex items-center gap-1.5 text-[11px] text-[#6b6c72]">
+                        <span
+                          class="h-2.5 w-2.5 shrink-0 rounded-sm"
+                          style={`background-color: ${calendar.color ?? '#6b6c72'}`}
+                          aria-hidden="true"
+                        ></span>
+                        <span>{calendar.name}</span>
+                      </span>
+                    ))
+                  }
+                </div>
+              ) : null
+            }
           </div>
         </div>
       </div>
@@ -630,6 +672,10 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return [...map.values()];
   }
 
+  function eventCountLabel(count: number): string {
+    return count === 1 ? '1 event' : `${count} events`;
+  }
+
   function renderStack(container: HTMLElement, events: ScheduleEventPayload[], size: SizeMode): void {
     container.dataset.view = 'stack';
     container.className =
@@ -790,7 +836,7 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const monthPrefix = start.slice(0, 7);
     const byDay = groupByDay(events);
     const cellMin = size === 'expanded' ? 'min-h-[5.5rem]' : 'min-h-[3.1rem]';
-    const countClass = size === 'expanded' ? 'text-sm' : 'text-[11px]';
+    const countClass = size === 'expanded' ? 'text-[12px]' : 'text-[9px]';
 
     container.innerHTML = `
       <div class="mb-1 grid grid-cols-7 gap-px">
@@ -806,11 +852,11 @@ const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             return `
               <div class="${cellMin} p-1 ${inMonth ? 'bg-white' : 'bg-[#f7f8fa]'}">
                 <p class="mb-0.5 inline-flex h-4 min-w-4 items-center justify-center px-0.5 text-[10px] font-semibold ${isToday ? 'rounded-full bg-[#1a73e8] text-white' : inMonth ? 'text-[#393a3d]' : 'text-[#b0b1b6]'}">${dayNumber(day)}</p>
-                <div class="flex flex-wrap gap-x-1.5 gap-y-0.5">
+                <div class="flex flex-col gap-0.5">
                   ${counts
                     .map(
                       (item) => `
-                        <span class="${countClass} font-bold tabular-nums leading-none" style="color: ${escapeHtml(item.color)}" title="${item.count} on ${escapeHtml(item.name)}">${item.count}</span>
+                        <span class="${countClass} font-semibold leading-tight" style="color: ${escapeHtml(item.color)}" title="${escapeHtml(eventCountLabel(item.count))} on ${escapeHtml(item.name)}">${escapeHtml(eventCountLabel(item.count))}</span>
                       `,
                     )
                     .join('')}
