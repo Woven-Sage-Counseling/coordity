@@ -11,3 +11,7 @@ PORTAL_ENVIRONMENT=preview
 # QB_CLIENT_ID=
 # QB_CLIENT_SECRET=
 # QB_ENVIRONMENT=sandbox
+
+# Google Calendar (optional until OAuth is connected)
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

@@ -46,4 +46,6 @@ interface Env {
   QB_CLIENT_SECRET?: string;
   QB_ENVIRONMENT?: string;
   PRACTICE_OPERATIONS_START?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }

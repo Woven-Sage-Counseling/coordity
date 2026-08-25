@@ -2,12 +2,39 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import { availableWidgets, HOME_WIDGET_MAX } from '../lib/home-widgets';
 import { hasPermission } from '../lib/permissions';
+import { GoogleCalendarProvider } from '../lib/schedule/google-calendar';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const widgets = availableWidgets(canSeeFinancials);
+
+const calendarProvider = new GoogleCalendarProvider();
+let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection']>> = {
+  status: 'disconnected',
+  googleEmail: null,
+  lastError: null,
+  configured: calendarProvider.isConfigured(),
+};
+let calendarOptions: Array<{ id: string; name: string; enabled: boolean }> = [];
+
+try {
+  calendarConnection = await calendarProvider.getConnection(employee.id);
+  if (calendarConnection.status === 'connected') {
+    calendarOptions = (await calendarProvider.listCalendars(employee.id)).map((calendar) => ({
+      id: calendar.id,
+      name: calendar.name,
+      enabled: calendar.enabled,
+    }));
+  }
+} catch (error) {
+  console.error('settings calendar lookup failed', error);
+}
+
+const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
+  ? 'Google Calendar connected.'
+  : Astro.url.searchParams.get('error');
 ---
 
 <PortalLayout title="Settings">
@@ -101,6 +128,82 @@ const widgets = availableWidgets(canSeeFinancials);
       <button type="button" class="btn-primary" data-settings-save>Save preferences</button>
       <a href="/" class="text-sm text-sage-dark/70 hover:text-sage-dark">Back to home</a>
     </div>
+  </section>
+
+  <section class="card mt-8" id="google-calendar" data-calendar-settings>
+    <h2 class="font-display text-2xl text-charcoal">Google Calendar</h2>
+    <p class="mt-2 text-sm text-sage-dark/65">
+      Connect your own Google account to show event titles on the Schedule home widget. Read-only access only.
+    </p>
+
+    {
+      calendarNotice ? (
+        <p class="mt-4 rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
+          {calendarNotice}
+        </p>
+      ) : null
+    }
+
+    {
+      !calendarConnection.configured ? (
+        <p class="mt-4 text-sm text-sage-dark/65">
+          Google Calendar OAuth is not configured yet. Add <code class="text-xs">GOOGLE_CLIENT_ID</code> and{' '}
+          <code class="text-xs">GOOGLE_CLIENT_SECRET</code> to the portal environment.
+        </p>
+      ) : calendarConnection.status !== 'connected' ? (
+        <div class="mt-6">
+          <form method="post" action="/api/google-calendar/connect">
+            <input type="hidden" name="returnTo" value="/settings#google-calendar" />
+            <button type="submit" class="btn-primary">Connect Google Calendar</button>
+          </form>
+        </div>
+      ) : (
+        <>
+          <p class="mt-4 text-sm text-sage-dark/75">
+            Connected as <span class="font-semibold text-charcoal">{calendarConnection.googleEmail}</span>.
+          </p>
+          {
+            calendarConnection.lastError ? (
+              <p class="mt-3 text-sm text-red-700">{calendarConnection.lastError}</p>
+            ) : null
+          }
+          <p
+            class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
+            data-calendar-saved
+          >
+            Calendar preferences saved.
+          </p>
+          <ul class="mt-6 space-y-3" data-calendar-list>
+            {
+              calendarOptions.map((calendar) => (
+                <li class="flex items-start gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3">
+                  <input
+                    type="checkbox"
+                    id={`calendar-${calendar.id}`}
+                    value={calendar.id}
+                    checked={calendar.enabled}
+                    class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+                    data-calendar-option
+                  />
+                  <label for={`calendar-${calendar.id}`} class="min-w-0 flex-1 cursor-pointer">
+                    <span class="block text-sm font-semibold text-charcoal">{calendar.name}</span>
+                  </label>
+                </li>
+              ))
+            }
+          </ul>
+          <div class="mt-8 flex flex-wrap items-center gap-3">
+            <button type="button" class="btn-primary" data-calendar-save>Save calendars</button>
+            <button type="button" class="text-sm text-sage-dark/70 hover:text-sage-dark" data-calendar-refresh>
+              Refresh list
+            </button>
+            <button type="button" class="text-sm text-red-700 hover:text-red-800" data-calendar-disconnect>
+              Disconnect
+            </button>
+          </div>
+        </>
+      )
+    }
   </section>
 </PortalLayout>
 
@@ -339,4 +442,40 @@ const widgets = availableWidgets(canSeeFinancials);
 
   document.querySelectorAll('[data-theme-settings]').forEach((root) => setupTheme(root));
   document.querySelectorAll('[data-widget-settings]').forEach((root) => setupSettings(root));
+
+  function setupCalendarSettings(root: Element) {
+    if (!(root instanceof HTMLElement)) return;
+    const saveButton = root.querySelector('[data-calendar-save]') as HTMLButtonElement | null;
+    const refreshButton = root.querySelector('[data-calendar-refresh]') as HTMLButtonElement | null;
+    const disconnectButton = root.querySelector('[data-calendar-disconnect]') as HTMLButtonElement | null;
+    const savedEl = root.querySelector('[data-calendar-saved]') as HTMLElement | null;
+
+    saveButton?.addEventListener('click', async () => {
+      const enabledIds = Array.from(root.querySelectorAll('[data-calendar-option]'))
+        .filter((node): node is HTMLInputElement => node instanceof HTMLInputElement && node.checked)
+        .map((node) => node.value);
+      await fetch('/api/google-calendar/calendars', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ enabledIds }),
+      });
+      if (savedEl) savedEl.classList.remove('hidden');
+    });
+
+    refreshButton?.addEventListener('click', async () => {
+      await fetch('/api/google-calendar/calendars', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ refresh: true }),
+      });
+      window.location.reload();
+    });
+
+    disconnectButton?.addEventListener('click', async () => {
+      await fetch('/api/google-calendar/disconnect', { method: 'POST' });
+      window.location.reload();
+    });
+  }
+
+  document.querySelectorAll('[data-calendar-settings]').forEach((root) => setupCalendarSettings(root));
 </script>

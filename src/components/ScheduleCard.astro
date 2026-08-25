@@ -1,11 +1,39 @@
 ---
+import {
+  formatScheduleEventDay,
+  formatScheduleEventTime,
+  groupEventsByDay,
+} from '../lib/schedule/range';
+import { getScheduleSummary, scheduleRangeOptions } from '../lib/schedule/summary';
+import type { ScheduleEvent } from '../lib/schedule/types';
+
 interface Props {
+  userId: string;
   canOpenClinicalCalendar: boolean;
   ownerEmail: string;
   employeeName: string;
 }
 
-const { canOpenClinicalCalendar, ownerEmail, employeeName } = Astro.props;
+const { userId, canOpenClinicalCalendar, ownerEmail, employeeName } = Astro.props;
+
+let summary = null;
+try {
+  summary = await getScheduleSummary(userId, 'this_week');
+} catch (error) {
+  console.error('home schedule summary failed', error);
+}
+
+const connection = summary?.connection ?? {
+  status: 'disconnected' as const,
+  googleEmail: null,
+  lastError: null,
+  configured: false,
+};
+const range = summary?.range ?? null;
+const events = summary?.events ?? [];
+const rangeOptions = scheduleRangeOptions();
+const grouped = groupEventsByDay(events);
+const dayKeys = [...grouped.keys()].sort();
 
 const calendarHref = canOpenClinicalCalendar
   ? 'https://secure.simplepractice.com'
@@ -19,11 +47,18 @@ const timeOffBody = encodeURIComponent(
 const timeOffHref = ownerEmail
   ? `mailto:${ownerEmail}?subject=${timeOffSubject}&body=${timeOffBody}`
   : '#';
+
+function eventTimeLabel(event: ScheduleEvent): string {
+  return formatScheduleEventTime(event);
+}
 ---
 
 <aside
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-schedule-heading"
+  data-schedule-card
+  data-user-id={userId}
+  data-connected={connection.status === 'connected' ? '1' : '0'}
 >
   <div class="bg-sage-dark px-3 py-2.5 text-cream">
     <div class="flex items-center gap-2">
@@ -41,40 +76,349 @@ const timeOffHref = ownerEmail
   </div>
 
   <div class="flex flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
-    <div>
-      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Calendar</p>
-      <p class="mt-1 text-base font-semibold leading-tight">
-        {canOpenClinicalCalendar ? 'Clinical schedule' : 'Practice schedule'}
-      </p>
-      <p class="mt-1 text-[11px] text-[#6b6c72]">
-        {canOpenClinicalCalendar
-          ? 'Jump to your clinical calendar, or request time off.'
-          : 'Open the practice calendar, or request time off.'}
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Calendar</p>
+        <p class="mt-1 text-base font-semibold leading-tight" data-schedule-range-label>
+          {range?.label ?? 'This week'}
+        </p>
+        {
+          connection.status === 'connected' && connection.googleEmail ? (
+            <p class="mt-1 text-[11px] text-[#6b6c72]">{connection.googleEmail}</p>
+          ) : (
+            <p class="mt-1 text-[11px] text-[#6b6c72]">
+              {canOpenClinicalCalendar
+                ? 'Connect Google Calendar or open SimplePractice.'
+                : 'Connect Google Calendar to see your events here.'}
+            </p>
+          )
+        }
+      </div>
+      {
+        connection.status === 'connected' ? (
+          <label class="shrink-0">
+            <span class="sr-only">Schedule range</span>
+            <select class="rounded-md border border-[#d5d8de] bg-white px-2 py-1 text-[11px] font-medium text-[#393a3d]" data-schedule-range>
+              {
+                rangeOptions.map((option) => (
+                  <option value={option.id} selected={option.id === (range?.id ?? 'this_week')}>
+                    {option.label}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+        ) : null
+      }
+    </div>
+
+    <div class="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/[0.06]" data-schedule-events-shell>
+      {
+        connection.status !== 'connected' ? (
+          <div class="flex h-full flex-col justify-center gap-3 p-4">
+            {
+              !connection.configured ? (
+                <p class="text-sm text-[#6b6c72]">
+                  Google Calendar is not configured yet. Ask an admin to add the OAuth credentials.
+                </p>
+              ) : (
+                <>
+                  <p class="text-sm text-[#6b6c72]">
+                    Connect your Google account to see your calendar events on the home page.
+                  </p>
+                  <form method="post" action="/api/google-calendar/connect" class="contents">
+                    <input type="hidden" name="returnTo" value="/" />
+                    <button
+                      type="submit"
+                      class="inline-flex items-center justify-center rounded-lg bg-sage-dark px-3 py-2 text-sm font-semibold text-cream transition hover:bg-charcoal"
+                    >
+                      Connect Google Calendar
+                    </button>
+                  </form>
+                </>
+              )
+            }
+          </div>
+        ) : connection.lastError ? (
+          <div class="p-4">
+            <p class="text-sm text-red-700">{connection.lastError}</p>
+          </div>
+        ) : events.length === 0 ? (
+          <div class="flex h-full items-center justify-center p-4">
+            <p class="text-sm text-[#6b6c72]">No events in this range.</p>
+          </div>
+        ) : (
+          <div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events>
+            {
+              dayKeys.map((dayKey) => {
+                const dayEvents = grouped.get(dayKey) ?? [];
+                return (
+                  <section class="mb-4 last:mb-0">
+                    <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b6c72]">
+                      {formatScheduleEventDay(dayKey.includes('T') ? dayKey : `${dayKey}T12:00:00`)}
+                    </h3>
+                    <ul class="mt-2 space-y-2">
+                      {
+                        dayEvents.map((event) => (
+                          <li class="rounded-md border border-[#eceef2] px-3 py-2">
+                            <div class="flex items-start justify-between gap-2">
+                              <p class="text-sm font-semibold leading-snug text-[#393a3d]">{event.title}</p>
+                              {
+                                event.htmlLink ? (
+                                  <a
+                                    href={event.htmlLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="shrink-0 text-[11px] font-medium text-sage-dark hover:text-charcoal"
+                                  >
+                                    Open
+                                  </a>
+                                ) : null
+                              }
+                            </div>
+                            <p class="mt-1 text-[11px] text-[#6b6c72]">{eventTimeLabel(event)}</p>
+                            {
+                              event.calendarName ? (
+                                <p class="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#8b8d93]">
+                                  {event.calendarName}
+                                </p>
+                              ) : null
+                            }
+                          </li>
+                        ))
+                      }
+                    </ul>
+                  </section>
+                );
+              })
+            }
+          </div>
+        )
+      }
+      <p class="financials-scroll-hint pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>
+        Scroll for more
       </p>
     </div>
 
-    <div class="mt-4 flex flex-1 flex-col justify-end gap-2.5">
-      <div class="space-y-2.5 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
-        <a
-          href={calendarHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex w-full items-center justify-center rounded-lg bg-sage-dark px-3 py-2.5 text-sm font-semibold text-cream transition hover:bg-charcoal"
-        >
-          {calendarLabel}
-        </a>
-        <a
-          href={timeOffHref}
-          class:list={[
-            'inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition',
-            ownerEmail
-              ? 'bg-[#e8ebe7] text-sage-dark hover:bg-[#dde2dc]'
-              : 'pointer-events-none text-sage-dark/40',
-          ]}
-        >
-          Request time off
-        </a>
-      </div>
+    <div class="mt-4 space-y-2.5 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
+      <a
+        href={calendarHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex w-full items-center justify-center rounded-lg bg-sage-dark px-3 py-2.5 text-sm font-semibold text-cream transition hover:bg-charcoal"
+      >
+        {calendarLabel}
+      </a>
+      <a
+        href={timeOffHref}
+        class:list={[
+          'inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition',
+          ownerEmail
+            ? 'bg-[#e8ebe7] text-sage-dark hover:bg-[#dde2dc]'
+            : 'pointer-events-none text-sage-dark/40',
+        ]}
+      >
+        Request time off
+      </a>
+      {
+        connection.status === 'connected' ? (
+          <a href="/settings#google-calendar" class="block text-center text-[11px] font-medium text-sage-dark/70 hover:text-sage-dark">
+            Manage calendars
+          </a>
+        ) : null
+      }
     </div>
   </div>
 </aside>
+
+<script>
+  type ScheduleEventPayload = {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    allDay: boolean;
+    calendarName: string;
+    htmlLink: string | null;
+  };
+
+  type EventsResponse = {
+    range?: { id: string; label: string };
+    events?: ScheduleEventPayload[];
+    connection?: { lastError?: string | null; status?: string };
+  };
+
+  function rangeStorageKey(userId: string): string {
+    return `portal:schedule-range:${userId}`;
+  }
+
+  function readStoredRange(userId: string): string | null {
+    try {
+      return localStorage.getItem(rangeStorageKey(userId));
+    } catch {
+      return null;
+    }
+  }
+
+  function writeStoredRange(userId: string, rangeId: string): void {
+    try {
+      localStorage.setItem(rangeStorageKey(userId), rangeId);
+    } catch {
+      // ignore
+    }
+  }
+
+  function formatDay(value: string): string {
+    const ms = Date.parse(value.includes('T') ? value : `${value}T12:00:00`);
+    return new Date(ms).toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  function formatTime(event: ScheduleEventPayload): string {
+    if (event.allDay) return 'All day';
+    const startLabel = new Date(event.start).toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    const endLabel = new Date(event.end).toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return `${startLabel} – ${endLabel}`;
+  }
+
+  function groupByDay(events: ScheduleEventPayload[]): Map<string, ScheduleEventPayload[]> {
+    const groups = new Map<string, ScheduleEventPayload[]>();
+    for (const event of events) {
+      const dayKey = event.allDay
+        ? event.start.slice(0, 10)
+        : new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/New_York',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(new Date(event.start));
+      const bucket = groups.get(dayKey) ?? [];
+      bucket.push(event);
+      groups.set(dayKey, bucket);
+    }
+    return groups;
+  }
+
+  function renderEvents(container: HTMLElement, events: ScheduleEventPayload[]): void {
+    if (events.length === 0) {
+      container.innerHTML = '<div class="flex h-full items-center justify-center p-4"><p class="text-sm text-[#6b6c72]">No events in this range.</p></div>';
+      return;
+    }
+
+    const grouped = groupByDay(events);
+    const dayKeys = [...grouped.keys()].sort();
+    container.innerHTML = dayKeys
+      .map((dayKey) => {
+        const dayEvents = grouped.get(dayKey) ?? [];
+        const items = dayEvents
+          .map(
+            (event) => `
+              <li class="rounded-md border border-[#eceef2] px-3 py-2">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-sm font-semibold leading-snug text-[#393a3d]">${event.title}</p>
+                  ${
+                    event.htmlLink
+                      ? `<a href="${event.htmlLink}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-[11px] font-medium text-sage-dark hover:text-charcoal">Open</a>`
+                      : ''
+                  }
+                </div>
+                <p class="mt-1 text-[11px] text-[#6b6c72]">${formatTime(event)}</p>
+                ${
+                  event.calendarName
+                    ? `<p class="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#8b8d93]">${event.calendarName}</p>`
+                    : ''
+                }
+              </li>
+            `,
+          )
+          .join('');
+        return `
+          <section class="mb-4 last:mb-0">
+            <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b6c72]">${formatDay(dayKey.includes('T') ? dayKey : `${dayKey}T12:00:00`)}</h3>
+            <ul class="mt-2 space-y-2">${items}</ul>
+          </section>
+        `;
+      })
+      .join('');
+    container.classList.add('financials-scroll-panel', 'max-h-[15.5rem]', 'overflow-y-auto', 'p-3');
+  }
+
+  function updateScrollHint(shell: HTMLElement): void {
+    const list = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
+    const hint = shell.querySelector('[data-schedule-scroll-hint]') as HTMLElement | null;
+    if (!list || !hint) {
+      if (hint) hint.style.opacity = '0';
+      return;
+    }
+    const overflow = list.scrollHeight > list.clientHeight + 4;
+    hint.style.opacity = overflow ? '1' : '0';
+  }
+
+  async function loadEvents(rangeId: string, shell: HTMLElement, labelEl: HTMLElement | null): Promise<void> {
+    const response = await fetch(`/api/google-calendar/events?range=${encodeURIComponent(rangeId)}`, {
+      headers: { accept: 'application/json' },
+    });
+    const payload = (await response.json()) as EventsResponse;
+    if (labelEl && payload.range?.label) {
+      labelEl.textContent = payload.range.label;
+    }
+
+    let container = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
+    if (!container) {
+      shell.innerHTML =
+        '<div class="financials-scroll-panel max-h-[15.5rem] overflow-y-auto p-3" data-schedule-events></div><p class="financials-scroll-hint pointer-events-none px-3 pb-2 text-center text-[10px] uppercase tracking-[0.14em] text-[#8b8d93] opacity-0 transition-opacity" data-schedule-scroll-hint>Scroll for more</p>';
+      container = shell.querySelector('[data-schedule-events]') as HTMLElement;
+    }
+
+    if (payload.connection?.lastError) {
+      shell.innerHTML = `<div class="p-4"><p class="text-sm text-red-700">${payload.connection.lastError}</p></div>`;
+      return;
+    }
+
+    renderEvents(container, payload.events ?? []);
+    updateScrollHint(shell);
+  }
+
+  function initScheduleCard(root: HTMLElement): void {
+    const userId = root.dataset.userId ?? '';
+    const connected = root.dataset.connected === '1';
+    const shell = root.querySelector('[data-schedule-events-shell]') as HTMLElement | null;
+    const labelEl = root.querySelector('[data-schedule-range-label]') as HTMLElement | null;
+    const rangeSelect = root.querySelector('[data-schedule-range]') as HTMLSelectElement | null;
+
+    if (!connected || !shell || !rangeSelect) {
+      updateScrollHint(shell ?? root);
+      return;
+    }
+
+    const storedRange = readStoredRange(userId);
+    if (storedRange && storedRange !== rangeSelect.value) {
+      rangeSelect.value = storedRange;
+      void loadEvents(storedRange, shell, labelEl);
+    } else {
+      updateScrollHint(shell);
+    }
+
+    rangeSelect.addEventListener('change', () => {
+      const rangeId = rangeSelect.value;
+      writeStoredRange(userId, rangeId);
+      void loadEvents(rangeId, shell, labelEl);
+    });
+
+    shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));
+  }
+
+  document.querySelectorAll('[data-schedule-card]').forEach((node) => initScheduleCard(node as HTMLElement));
+</script>

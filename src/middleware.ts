@@ -49,6 +49,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (pathname === '/api/quickbooks/callback') {
       return context.redirect('/sign-in?next=/financials');
     }
+    if (pathname === '/api/google-calendar/callback') {
+      return context.redirect('/sign-in?next=/settings');
+    }
     if (pathname.startsWith('/api/')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
