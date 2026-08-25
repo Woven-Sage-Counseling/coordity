@@ -142,6 +142,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                     item.unread && 'bg-white/40',
                   ]}
                   data-notification-item
+                  data-notification-id={item.id}
                 >
                   <div class="flex items-start gap-2">
                     {item.unread ? (
@@ -157,11 +158,26 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                         data-unread-dot
                       ></span>
                     )}
-                    <div class="min-w-0">
-                      <p class="text-sm font-semibold text-charcoal">{item.title}</p>
-                      <p class="mt-0.5 text-[11px] text-sage-dark/55">
-                        {formatAnnouncementDate(item.createdAt)}
-                      </p>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="text-sm font-semibold text-charcoal">{item.title}</p>
+                          <p class="mt-0.5 text-[11px] text-sage-dark/55">
+                            {formatAnnouncementDate(item.createdAt)}
+                          </p>
+                        </div>
+                        {
+                          item.unread ? (
+                            <button
+                              type="button"
+                              class="shrink-0 text-[11px] font-semibold text-sage-dark/65 transition hover:text-sage-dark"
+                              data-notification-hide
+                            >
+                              Hide
+                            </button>
+                          ) : null
+                        }
+                      </div>
                       <p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
                     </div>
                   </div>
@@ -237,7 +253,6 @@ const hasNotificationUnread = notificationUnreadCount > 0;
 
     let active: 'announcements' | 'notifications' = 'announcements';
     let announcementsMarked = false;
-    let notificationsMarked = false;
 
     const syncViewAll = (key: 'announcements' | 'notifications') => {
       if (!(viewAll instanceof HTMLAnchorElement)) return;
@@ -270,6 +285,45 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       requestAnimationFrame(() => moveSlider(active));
     };
 
+    const refreshNotificationStatus = () => {
+      if (!(status instanceof HTMLElement) || active !== 'notifications') return;
+      const unreadLeft = root.querySelectorAll('[data-notification-item] [data-unread-dot].bg-red-500').length;
+      status.textContent = unreadLeft > 0 ? `${unreadLeft > 9 ? '9+' : unreadLeft} new` : 'You are caught up';
+      if (unreadLeft === 0) clearBadge('notifications');
+    };
+
+    const hideNotification = async (item: HTMLElement) => {
+      const id = item.dataset.notificationId;
+      if (!id) return;
+      const hideButton = item.querySelector('[data-notification-hide]');
+      if (hideButton instanceof HTMLButtonElement) hideButton.disabled = true;
+      try {
+        await fetch('/api/notifications/mark-read', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ids: [id] }),
+        });
+        item.classList.remove('bg-white/40');
+        const dot = item.querySelector('[data-unread-dot]');
+        if (dot instanceof HTMLElement) {
+          dot.classList.remove('bg-red-500');
+          dot.classList.add('bg-transparent');
+        }
+        hideButton?.remove();
+        const remaining = root.querySelectorAll('[data-notification-item] [data-unread-dot].bg-red-500').length;
+        const badge = root.querySelector('[data-unread-badge="notifications"]');
+        if (remaining === 0) {
+          clearBadge('notifications');
+        } else if (badge instanceof HTMLElement) {
+          badge.textContent = remaining > 9 ? '9+' : String(remaining);
+          requestAnimationFrame(() => moveSlider(active));
+        }
+        refreshNotificationStatus();
+      } catch {
+        if (hideButton instanceof HTMLButtonElement) hideButton.disabled = false;
+      }
+    };
+
     const markAnnouncementsRead = async () => {
       if (announcementsMarked) return;
       announcementsMarked = true;
@@ -282,29 +336,6 @@ const hasNotificationUnread = notificationUnreadCount > 0;
         clearBadge('announcements');
       } catch {
         announcementsMarked = false;
-      }
-    };
-
-    const markNotificationsRead = async () => {
-      if (notificationsMarked) return;
-      notificationsMarked = true;
-      try {
-        await fetch('/api/notifications/mark-read', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        clearBadge('notifications');
-        root.querySelectorAll('[data-notification-item]').forEach((el) => el.classList.remove('bg-white/40'));
-        root.querySelectorAll('[data-unread-dot]').forEach((el) => {
-          el.classList.remove('bg-red-500');
-          el.classList.add('bg-transparent');
-        });
-        if (status && active === 'notifications') {
-          status.textContent = 'You are caught up';
-        }
-      } catch {
-        notificationsMarked = false;
       }
     };
 
@@ -322,9 +353,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       syncViewAll(next);
       if (status instanceof HTMLElement) {
         if (next === 'notifications') {
-          const badge = root.querySelector('[data-unread-badge="notifications"]');
-          status.textContent = badge ? `${badge.textContent?.trim() ?? ''} new` : 'You are caught up';
-          void markNotificationsRead();
+          refreshNotificationStatus();
         } else {
           status.textContent = status.dataset.announcementsStatus ?? status.textContent;
           void markAnnouncementsRead();
@@ -341,6 +370,13 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       setTabStyles(tab, key === 'announcements');
       tab.addEventListener('click', () => {
         if (key === 'announcements' || key === 'notifications') setActive(key);
+      });
+    });
+
+    root.querySelectorAll('[data-notification-hide]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const item = button.closest('[data-notification-item]');
+        if (item instanceof HTMLElement) void hideNotification(item);
       });
     });
 

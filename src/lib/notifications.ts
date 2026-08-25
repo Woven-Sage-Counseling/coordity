@@ -121,26 +121,36 @@ export async function listNotificationSourceIds(
   return new Set((rows.results ?? []).map((row) => row.source_id));
 }
 
-export async function deleteNotificationsBySourceExcept(
+export async function deleteNotificationsBySourceOutsideRange(
   userId: string,
   sourceType: string,
   activeSourceIds: string[],
+  rangeStart: string,
+  rangeEnd: string,
 ): Promise<void> {
   const { DB } = getEnv();
-  if (activeSourceIds.length === 0) {
-    await DB.prepare(`DELETE FROM notification WHERE user_id = ? AND source_type = ?`)
-      .bind(userId, sourceType)
-      .run();
-    return;
-  }
+  const active = new Set(activeSourceIds);
 
-  const placeholders = activeSourceIds.map(() => '?').join(', ');
-  await DB.prepare(
-    `DELETE FROM notification
-     WHERE user_id = ? AND source_type = ? AND source_id NOT IN (${placeholders})`,
+  const rows = await DB.prepare(
+    `SELECT id, source_id
+     FROM notification
+     WHERE user_id = ? AND source_type = ? AND source_id IS NOT NULL`,
   )
-    .bind(userId, sourceType, ...activeSourceIds)
-    .run();
+    .bind(userId, sourceType)
+    .all<{ id: string; source_id: string }>();
+
+  const toDelete = (rows.results ?? []).filter((row) => {
+    const dayKey = row.source_id.slice(0, 10);
+    if (dayKey < rangeStart || dayKey > rangeEnd) return false;
+    return !active.has(row.source_id);
+  });
+
+  if (toDelete.length === 0) return;
+  await DB.batch(
+    toDelete.map((row) =>
+      DB.prepare(`DELETE FROM notification WHERE id = ? AND user_id = ?`).bind(row.id, userId),
+    ),
+  );
 }
 
 export async function notifyActiveUsers(input: {

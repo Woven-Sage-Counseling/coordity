@@ -44,7 +44,7 @@ export function weekEventColumnStyle(column: number, columnCount: number): { lef
   const widthPct = 100 / columnCount;
   const leftPct = column * widthPct;
   return {
-    left: `calc(${leftPct}% + 1px)`,
-    width: `calc(${widthPct}% - 2px)`,
+    left: `calc(${leftPct}% + 1.5px)`,
+    width: `calc(${widthPct}% - 3px)`,
   };
 }

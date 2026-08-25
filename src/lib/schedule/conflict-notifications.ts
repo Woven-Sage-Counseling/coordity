@@ -1,5 +1,5 @@
 import {
-  deleteNotificationsBySourceExcept,
+  deleteNotificationsBySourceOutsideRange,
   listNotificationSourceIds,
   notifyUser,
 } from '../notifications';
@@ -11,11 +11,18 @@ const SOURCE_TYPE = 'calendar_conflict';
 export async function syncScheduleConflictNotifications(
   userId: string,
   events: ScheduleEvent[],
+  range: { start: string; end: string },
 ): Promise<void> {
   const conflicts = findTimedConflicts(events);
   const activeSourceIds = conflicts.map((conflict) => conflict.sourceId);
 
-  await deleteNotificationsBySourceExcept(userId, SOURCE_TYPE, activeSourceIds);
+  await deleteNotificationsBySourceOutsideRange(
+    userId,
+    SOURCE_TYPE,
+    activeSourceIds,
+    range.start,
+    range.end,
+  );
 
   if (conflicts.length === 0) return;
 

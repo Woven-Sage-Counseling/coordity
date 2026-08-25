@@ -408,7 +408,7 @@ export class GoogleCalendarProvider {
     if (cached) {
       const events = applyTitleCovers(await this.applyEventFilters(userId, cached), calendars);
       if (range.id === 'today' || range.id === 'this_week') {
-        await syncScheduleConflictNotifications(userId, events);
+        await syncScheduleConflictNotifications(userId, events, range);
       }
       return events;
     }
@@ -459,7 +459,7 @@ export class GoogleCalendarProvider {
 
     const coveredEvents = applyTitleCovers(filtered, calendars);
     if (range.id === 'today' || range.id === 'this_week') {
-      await syncScheduleConflictNotifications(userId, coveredEvents);
+      await syncScheduleConflictNotifications(userId, coveredEvents, range);
     }
     return coveredEvents;
   }

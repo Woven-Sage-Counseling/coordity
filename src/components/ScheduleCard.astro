@@ -150,27 +150,34 @@ const conflictLabel = conflictCountLabel(conflictCount);
           </svg>
         </span>
         <h2 id="home-schedule-heading" class="text-sm font-semibold leading-none">Schedule</h2>
-        <span
-          class:list={[
-            'inline-flex h-6 w-6 items-center justify-center text-amber-300',
-            conflictCount === 0 && 'hidden',
-          ]}
-          data-schedule-conflict-badge
-          title={conflictLabel}
-          aria-label={conflictLabel}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
-              fill="currentColor"
-              stroke="#111"
-              stroke-width="1.2"
-              stroke-linejoin="round"
-            />
-            <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
-            <circle cx="12" cy="16.7" r="0.95" fill="#111" />
-          </svg>
-        </span>
+        <div class:list={['relative', conflictCount === 0 && 'hidden']} data-schedule-conflict-wrap>
+          <button
+            type="button"
+            class="inline-flex h-6 w-6 items-center justify-center rounded-md text-amber-300 transition hover:bg-white/10"
+            data-schedule-conflict-badge
+            aria-expanded="false"
+            aria-label={conflictLabel}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
+                fill="currentColor"
+                stroke="#111"
+                stroke-width="1.2"
+                stroke-linejoin="round"
+              />
+              <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
+              <circle cx="12" cy="16.7" r="0.95" fill="#111" />
+            </svg>
+          </button>
+          <p
+            class="absolute left-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-charcoal px-2 py-1 text-[10px] font-semibold text-cream shadow-lg"
+            data-schedule-conflict-label
+            role="status"
+          >
+            {conflictLabel}
+          </p>
+        </div>
       </div>
       {
         connection.status === 'connected' ? (
@@ -277,7 +284,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
                         {
                           (allDayByDay.get(day) ?? []).map((event) => (
                             <div
-                              class="rounded ring-1 ring-black"
+                              class="min-h-3.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-inset ring-white/45"
                               style={`background-color: ${event.calendarColor ?? '#6b6c72'}`}
                               title={event.title}
                             ></div>
@@ -317,7 +324,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
                               href={event.htmlLink ?? '#'}
                               target={event.htmlLink ? '_blank' : undefined}
                               rel={event.htmlLink ? 'noopener noreferrer' : undefined}
-                              class="absolute overflow-hidden rounded ring-1 ring-black"
+                              class="absolute overflow-hidden rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/45"
                               style={`top: ${eventTop(event)}px; height: ${eventHeight(event)}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${event.calendarColor ?? '#1a73e8'};`}
                               title={`${event.title} · ${eventTimeLabel(event)}`}
                             ></a>
@@ -489,24 +496,37 @@ const conflictLabel = conflictCountLabel(conflictCount);
               </div>
               <span
                 class:list={[
-                  'inline-flex h-6 w-6 items-center justify-center text-amber-300',
+                  'relative',
                   conflictCount === 0 && 'hidden',
                 ]}
-                data-schedule-conflict-badge
-                title={conflictLabel}
-                aria-label={conflictLabel}
+                data-schedule-conflict-wrap
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
-                    fill="currentColor"
-                    stroke="#111"
-                    stroke-width="1.2"
-                    stroke-linejoin="round"
-                  />
-                  <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
-                  <circle cx="12" cy="16.7" r="0.95" fill="#111" />
-                </svg>
+                <button
+                  type="button"
+                  class="inline-flex h-6 w-6 items-center justify-center rounded-md text-amber-300 transition hover:bg-white/10"
+                  data-schedule-conflict-badge
+                  aria-expanded="false"
+                  aria-label={conflictLabel}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
+                      fill="currentColor"
+                      stroke="#111"
+                      stroke-width="1.2"
+                      stroke-linejoin="round"
+                    />
+                    <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
+                    <circle cx="12" cy="16.7" r="0.95" fill="#111" />
+                  </svg>
+                </button>
+                <p
+                  class="absolute left-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-charcoal px-2 py-1 text-[10px] font-semibold text-cream shadow-lg"
+                  data-schedule-conflict-label
+                  role="status"
+                >
+                  {conflictLabel}
+                </p>
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -864,8 +884,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
     const widthPct = 100 / columnCount;
     const leftPct = column * widthPct;
     return {
-      left: `calc(${leftPct}% + 1px)`,
-      width: `calc(${widthPct}% - 2px)`,
+      left: `calc(${leftPct}% + 1.5px)`,
+      width: `calc(${widthPct}% - 3px)`,
     };
   }
 
@@ -911,8 +931,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
                     (event) => `
                       ${
                         size === 'expanded'
-                          ? `<div class="truncate rounded px-0.5 ${titleSize} font-semibold leading-4 text-white ring-1 ring-black" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`
-                          : `<div class="rounded ring-1 ring-black" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}"></div>`
+                          ? `<div class="truncate rounded-md px-0.5 ${titleSize} font-semibold leading-4 text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-inset ring-white/45" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`
+                          : `<div class="min-h-3.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-inset ring-white/45" style="background-color: ${escapeHtml(event.calendarColor ?? '#6b6c72')}" title="${escapeHtml(event.title)}"></div>`
                       }
                     `,
                   )
@@ -960,8 +980,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
                     return `
                       ${
                         size === 'expanded'
-                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded px-0.5 ${titleSize} font-semibold leading-tight text-white ring-1 ring-black" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
-                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded ring-1 ring-black" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
+                          ? `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md px-0.5 ${titleSize} font-semibold leading-tight text-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/45" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}">${escapeHtml(event.title)}</a>`
+                          : `<a href="${href}" ${event.htmlLink ? 'target="_blank" rel="noopener noreferrer"' : ''} class="absolute overflow-hidden rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/45" style="top: ${top}px; height: ${height}px; left: ${columnStyle.left}; width: ${columnStyle.width}; background-color: ${escapeHtml(event.calendarColor ?? '#1a73e8')}" title="${escapeHtml(event.title)} · ${escapeHtml(formatTime(event))}"></a>`
                       }
                     `;
                   })
@@ -1089,11 +1109,43 @@ const conflictLabel = conflictCountLabel(conflictCount);
   function updateConflictBadges(events: ScheduleEventPayload[]): void {
     const count = conflictingEventCountClient(events);
     const label = conflictCountLabelClient(count);
+    document.querySelectorAll('[data-schedule-conflict-wrap]').forEach((wrap) => {
+      if (!(wrap instanceof HTMLElement)) return;
+      wrap.classList.toggle('hidden', count === 0);
+      const badge = wrap.querySelector('[data-schedule-conflict-badge]');
+      const labelEl = wrap.querySelector('[data-schedule-conflict-label]');
+      if (badge instanceof HTMLElement) {
+        badge.setAttribute('aria-label', label);
+        badge.setAttribute('aria-expanded', 'false');
+      }
+      if (labelEl instanceof HTMLElement) {
+        labelEl.textContent = label;
+        labelEl.classList.add('hidden');
+      }
+    });
+  }
+
+  function bindConflictBadges(): void {
     document.querySelectorAll('[data-schedule-conflict-badge]').forEach((node) => {
-      if (!(node instanceof HTMLElement)) return;
-      node.title = label;
-      node.setAttribute('aria-label', label);
-      node.classList.toggle('hidden', count === 0);
+      if (!(node instanceof HTMLButtonElement) || node.dataset.bound === '1') return;
+      node.dataset.bound = '1';
+      node.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const wrap = node.closest('[data-schedule-conflict-wrap]');
+        const labelEl = wrap?.querySelector('[data-schedule-conflict-label]');
+        if (!(labelEl instanceof HTMLElement)) return;
+        const open = labelEl.classList.contains('hidden');
+        document.querySelectorAll('[data-schedule-conflict-label]').forEach((other) => {
+          if (other instanceof HTMLElement) other.classList.add('hidden');
+        });
+        document.querySelectorAll('[data-schedule-conflict-badge]').forEach((other) => {
+          if (other instanceof HTMLElement) other.setAttribute('aria-expanded', 'false');
+        });
+        if (open) {
+          labelEl.classList.remove('hidden');
+          node.setAttribute('aria-expanded', 'true');
+        }
+      });
     });
   }
 
@@ -1252,9 +1304,24 @@ const conflictLabel = conflictCountLabel(conflictCount);
     dialog?.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
     });
+
+    bindConflictBadges();
   }
 
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (target instanceof Element && target.closest('[data-schedule-conflict-wrap]')) return;
+    document.querySelectorAll('[data-schedule-conflict-label]').forEach((node) => {
+      if (node instanceof HTMLElement) node.classList.add('hidden');
+    });
+    document.querySelectorAll('[data-schedule-conflict-badge]').forEach((node) => {
+      if (node instanceof HTMLElement) node.setAttribute('aria-expanded', 'false');
+    });
+  });
+
   document.querySelectorAll('[data-schedule-card]').forEach((node) => initScheduleCard(node as HTMLElement));
+  bindConflictBadges();
 </script>
 
 <style>
