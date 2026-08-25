@@ -11,6 +11,7 @@ import {
   groupEventsByDay,
   monthGridDays,
 } from '../lib/schedule/range';
+import { conflictCountLabel, conflictingEventCount } from '../lib/schedule/conflicts';
 import { layoutOverlappingTimedEvents, weekEventColumnStyle } from '../lib/schedule/week-layout';
 import { getScheduleSummary, scheduleRangeOptions } from '../lib/schedule/summary';
 import { todayEastern } from '../lib/financials/periods';
@@ -122,6 +123,8 @@ function eventCountLabel(count: number): string {
 const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const headingLabel = range ? formatScheduleHeading(range) : 'This week';
 const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.start) : null;
+const conflictCount = conflictingEventCount(events);
+const conflictLabel = conflictCountLabel(conflictCount);
 ---
 
 <aside
@@ -147,6 +150,27 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
           </svg>
         </span>
         <h2 id="home-schedule-heading" class="text-sm font-semibold leading-none">Schedule</h2>
+        <span
+          class:list={[
+            'inline-flex h-6 w-6 items-center justify-center text-amber-300',
+            conflictCount === 0 && 'hidden',
+          ]}
+          data-schedule-conflict-badge
+          title={conflictLabel}
+          aria-label={conflictLabel}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
+              fill="currentColor"
+              stroke="#111"
+              stroke-width="1.2"
+              stroke-linejoin="round"
+            />
+            <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
+            <circle cx="12" cy="16.7" r="0.95" fill="#111" />
+          </svg>
+        </span>
       </div>
       {
         connection.status === 'connected' ? (
@@ -458,9 +482,32 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
       <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
         <div class="flex h-[min(92vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#f4f5f8] shadow-2xl ring-1 ring-black/15">
           <div class="flex shrink-0 items-center justify-between gap-3 bg-sage-dark px-4 py-3 text-cream">
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
-              <p class="text-base font-semibold" data-schedule-dialog-label>{headingLabel}</p>
+            <div class="flex items-center gap-2">
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
+                <p class="text-base font-semibold" data-schedule-dialog-label>{headingLabel}</p>
+              </div>
+              <span
+                class:list={[
+                  'inline-flex h-6 w-6 items-center justify-center text-amber-300',
+                  conflictCount === 0 && 'hidden',
+                ]}
+                data-schedule-conflict-badge
+                title={conflictLabel}
+                aria-label={conflictLabel}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
+                    fill="currentColor"
+                    stroke="#111"
+                    stroke-width="1.2"
+                    stroke-linejoin="round"
+                  />
+                  <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
+                  <circle cx="12" cy="16.7" r="0.95" fill="#111" />
+                </svg>
+              </span>
             </div>
             <div class="flex items-center gap-2">
               <label class="shrink-0">
@@ -1003,6 +1050,53 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
     });
   }
 
+  function conflictCountLabelClient(count: number): string {
+    return count === 1 ? '1 conflicting event' : `${count} conflicting events`;
+  }
+
+  function conflictingEventCountClient(events: ScheduleEventPayload[]): number {
+    const timed = events.filter((event) => !event.allDay);
+    const byDay = new Map<string, ScheduleEventPayload[]>();
+    for (const event of timed) {
+      const dayKey = dayKeyForEvent(event);
+      const bucket = byDay.get(dayKey) ?? [];
+      bucket.push(event);
+      byDay.set(dayKey, bucket);
+    }
+
+    const ids = new Set<string>();
+    for (const dayEvents of byDay.values()) {
+      for (let index = 0; index < dayEvents.length; index += 1) {
+        for (let otherIndex = index + 1; otherIndex < dayEvents.length; otherIndex += 1) {
+          const eventA = dayEvents[index]!;
+          const eventB = dayEvents[otherIndex]!;
+          const startA = Date.parse(eventA.start);
+          const endA = Date.parse(eventA.end);
+          const startB = Date.parse(eventB.start);
+          const endB = Date.parse(eventB.end);
+          if (Number.isNaN(startA) || Number.isNaN(endA) || Number.isNaN(startB) || Number.isNaN(endB)) {
+            continue;
+          }
+          if (startA >= endB || startB >= endA) continue;
+          ids.add(eventA.id);
+          ids.add(eventB.id);
+        }
+      }
+    }
+    return ids.size;
+  }
+
+  function updateConflictBadges(events: ScheduleEventPayload[]): void {
+    const count = conflictingEventCountClient(events);
+    const label = conflictCountLabelClient(count);
+    document.querySelectorAll('[data-schedule-conflict-badge]').forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      node.title = label;
+      node.setAttribute('aria-label', label);
+      node.classList.toggle('hidden', count === 0);
+    });
+  }
+
   function applyHeading(
     range: { id: string; start: string; end: string; label?: string } | undefined,
     labelEl: HTMLElement | null,
@@ -1099,6 +1193,7 @@ const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.sta
 
       const container = ensureContainer(shell);
       paint(container, payload, 'compact');
+      updateConflictBadges(payload.events ?? []);
       updateScrollHint(shell);
       container.onscroll = () => updateScrollHint(shell);
 
