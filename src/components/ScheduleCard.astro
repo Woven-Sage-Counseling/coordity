@@ -153,21 +153,20 @@ const conflictLabel = conflictCountLabel(conflictCount);
         <div class:list={['relative', conflictCount === 0 && 'hidden']} data-schedule-conflict-wrap>
           <button
             type="button"
-            class="inline-flex h-6 w-6 items-center justify-center rounded-md text-amber-300 transition hover:bg-white/10"
+            class="inline-flex h-7 w-7 items-center justify-center rounded-md transition hover:bg-white/10"
             data-schedule-conflict-badge
             aria-expanded="false"
             aria-label={conflictLabel}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
-                fill="currentColor"
-                stroke="#111"
-                stroke-width="1.2"
+                stroke="white"
+                stroke-width="1.75"
                 stroke-linejoin="round"
               />
-              <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
-              <circle cx="12" cy="16.7" r="0.95" fill="#111" />
+              <path d="M12 9.2v5.2" stroke="white" stroke-width="1.75" stroke-linecap="round" />
+              <circle cx="12" cy="16.7" r="1" fill="white" />
             </svg>
           </button>
           <p
@@ -497,37 +496,27 @@ const conflictLabel = conflictCountLabel(conflictCount);
               </div>
               <span
                 class:list={[
-                  'relative',
+                  'inline-flex items-center gap-1.5',
                   conflictCount === 0 && 'hidden',
                 ]}
                 data-schedule-conflict-wrap
+                data-schedule-conflict-expanded
               >
-                <button
-                  type="button"
-                  class="inline-flex h-6 w-6 items-center justify-center rounded-md text-amber-300 transition hover:bg-white/10"
-                  data-schedule-conflict-badge
-                  aria-expanded="false"
-                  aria-label={conflictLabel}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
-                      fill="currentColor"
-                      stroke="#111"
-                      stroke-width="1.2"
+                      stroke="white"
+                      stroke-width="1.75"
                       stroke-linejoin="round"
                     />
-                    <path d="M12 9.2v5.2" stroke="#111" stroke-width="1.8" stroke-linecap="round" />
-                    <circle cx="12" cy="16.7" r="0.95" fill="#111" />
+                    <path d="M12 9.2v5.2" stroke="white" stroke-width="1.75" stroke-linecap="round" />
+                    <circle cx="12" cy="16.7" r="1" fill="white" />
                   </svg>
-                </button>
-                <p
-                  class="absolute left-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-charcoal px-2 py-1 text-[10px] font-semibold text-cream shadow-lg"
-                  data-schedule-conflict-label
-                  role="status"
-                >
+                </span>
+                <span class="text-[11px] font-semibold text-cream" data-schedule-conflict-inline role="status">
                   {conflictLabel}
-                </p>
+                </span>
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -1114,6 +1103,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
       wrap.classList.toggle('hidden', count === 0);
       const badge = wrap.querySelector('[data-schedule-conflict-badge]');
       const labelEl = wrap.querySelector('[data-schedule-conflict-label]');
+      const inlineEl = wrap.querySelector('[data-schedule-conflict-inline]');
       if (badge instanceof HTMLElement) {
         badge.setAttribute('aria-label', label);
         badge.setAttribute('aria-expanded', 'false');
@@ -1121,6 +1111,9 @@ const conflictLabel = conflictCountLabel(conflictCount);
       if (labelEl instanceof HTMLElement) {
         labelEl.textContent = label;
         labelEl.classList.add('hidden');
+      }
+      if (inlineEl instanceof HTMLElement) {
+        inlineEl.textContent = label;
       }
     });
   }
@@ -1185,6 +1178,27 @@ const conflictLabel = conflictCountLabel(conflictCount);
     hint.style.opacity = overflow ? '1' : '0';
   }
 
+  function findWeekScrollContainer(container: HTMLElement): HTMLElement {
+    let node: HTMLElement | null = container;
+    while (node) {
+      const style = getComputedStyle(node);
+      if (
+        (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+        node.scrollHeight > node.clientHeight + 2
+      ) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return container;
+  }
+
+  function scheduleWeekScroll(container: HTMLElement): void {
+    const run = () => scrollWeekToFirstEvent(container);
+    requestAnimationFrame(() => requestAnimationFrame(run));
+    window.setTimeout(run, 150);
+  }
+
   function scrollWeekToFirstEvent(container: HTMLElement): void {
     if (container.dataset.view !== 'week') return;
     const events = Array.from(container.querySelectorAll('[data-schedule-timed-event]')).filter(
@@ -1192,18 +1206,24 @@ const conflictLabel = conflictCountLabel(conflictCount);
     );
     if (events.length === 0) return;
 
-    let first = events[0]!;
-    for (const event of events) {
-      if (event.offsetTop < first.offsetTop) first = event;
-    }
+    const scroller = findWeekScrollContainer(container);
+    const scrollerRect = scroller.getBoundingClientRect();
 
-    const stickies = Array.from(container.querySelectorAll('.sticky')).filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
-    );
-    const stickyBottom = stickies.reduce((max, node) => Math.max(max, node.offsetTop + node.offsetHeight), 0);
-    const grid = first.offsetParent instanceof HTMLElement ? first.offsetParent : container;
-    const target = grid.offsetTop + first.offsetTop - stickyBottom - 6;
-    container.scrollTop = Math.max(0, target);
+    let minTop = Infinity;
+    for (const event of events) {
+      const rect = event.getBoundingClientRect();
+      minTop = Math.min(minTop, rect.top - scrollerRect.top + scroller.scrollTop);
+    }
+    if (!Number.isFinite(minTop)) return;
+
+    const stickyBottom = Array.from(container.querySelectorAll('.sticky'))
+      .filter((node): node is HTMLElement => node instanceof HTMLElement)
+      .reduce((max, node) => {
+        const rect = node.getBoundingClientRect();
+        return Math.max(max, rect.bottom - scrollerRect.top + scroller.scrollTop);
+      }, 0);
+
+    scroller.scrollTop = Math.max(0, minTop - stickyBottom - 8);
   }
 
   function ensureContainer(shell: HTMLElement): HTMLElement {
@@ -1267,15 +1287,13 @@ const conflictLabel = conflictCountLabel(conflictCount);
       const container = ensureContainer(shell);
       paint(container, payload, 'compact');
       updateConflictBadges(payload.events ?? []);
-      requestAnimationFrame(() => {
-        scrollWeekToFirstEvent(container);
-        updateScrollHint(shell);
-      });
+      scheduleWeekScroll(container);
+      requestAnimationFrame(() => updateScrollHint(shell));
       container.onscroll = () => updateScrollHint(shell);
 
       if (dialogEvents && dialog?.open) {
         paint(dialogEvents, payload, 'expanded');
-        requestAnimationFrame(() => scrollWeekToFirstEvent(dialogEvents));
+        scheduleWeekScroll(dialogEvents);
       }
     }
 
@@ -1298,10 +1316,8 @@ const conflictLabel = conflictCountLabel(conflictCount);
       updateScrollHint(shell);
       const weekContainer = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
       if (weekContainer) {
-        requestAnimationFrame(() => {
-          scrollWeekToFirstEvent(weekContainer);
-          updateScrollHint(shell);
-        });
+        scheduleWeekScroll(weekContainer);
+        requestAnimationFrame(() => updateScrollHint(shell));
       }
       shell.querySelector('[data-schedule-events]')?.addEventListener('scroll', () => updateScrollHint(shell));
     }
@@ -1324,16 +1340,19 @@ const conflictLabel = conflictCountLabel(conflictCount);
       if (latestPayload) {
         paint(dialogEvents, latestPayload, 'expanded');
         applyHeading(latestPayload.range, labelEl, subEl, dialogLabel, knownEmail);
-        requestAnimationFrame(() => scrollWeekToFirstEvent(dialogEvents));
+        scheduleWeekScroll(dialogEvents);
       } else {
         void loadEvents(rangeSelect.value).then(() => {
           if (latestPayload) {
             paint(dialogEvents, latestPayload, 'expanded');
-            requestAnimationFrame(() => scrollWeekToFirstEvent(dialogEvents));
+            scheduleWeekScroll(dialogEvents);
           }
         });
       }
       dialog.showModal();
+      if (dialogEvents?.dataset.view === 'week') {
+        scheduleWeekScroll(dialogEvents);
+      }
     });
 
     dialogClose?.addEventListener('click', () => dialog?.close());
