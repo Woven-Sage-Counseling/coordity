@@ -23,36 +23,42 @@ const roleLabel = employee.roles.includes('owner')
 ---
 
 <PortalLayout title="Account">
-  <h1 class="font-display text-4xl text-charcoal">Account</h1>
-  {
-    error && (
-      <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
-    )
-  }
-  {
-    saved && (
-      <p class="mt-6 rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
-        Saved.
-      </p>
-    )
-  }
+  <div class="mx-auto max-w-lg" data-account-card>
+    <p class="text-sm text-sage-dark/65">
+      <a href="/" class="hover:text-sage-dark">Home</a>
+      <span class="mx-1.5 text-sage-dark/35">/</span>
+      Account
+    </p>
+    <h1 class="mt-3 font-display text-4xl text-charcoal">Account</h1>
 
-  <section class="card mt-8" data-account-card>
-    <div class="flex flex-wrap items-center gap-5 border-b border-sage-dark/10 pb-5">
+    {
+      error && (
+        <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+      )
+    }
+    {
+      saved && (
+        <p class="mt-6 rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
+          Saved.
+        </p>
+      )
+    }
+
+    <div class="mt-8 flex flex-col items-center text-center">
       <div class="relative">
         {
           avatarSrc ? (
             <img
               src={avatarSrc}
               alt=""
-              width="88"
-              height="88"
-              class="h-22 w-22 h-[5.5rem] w-[5.5rem] rounded-full object-cover ring-1 ring-black/10"
+              width="96"
+              height="96"
+              class="h-24 w-24 rounded-full object-cover ring-1 ring-black/10"
               data-avatar-preview
             />
           ) : (
             <div
-              class="flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-[#e8ebe7] text-xl font-semibold text-sage-dark ring-1 ring-black/10"
+              class="flex h-24 w-24 items-center justify-center rounded-full bg-[#e8ebe7] text-2xl font-semibold text-sage-dark ring-1 ring-black/10"
               data-avatar-fallback
             >
               {initials || '?'}
@@ -60,158 +66,166 @@ const roleLabel = employee.roles.includes('owner')
           )
         }
       </div>
-      <div class="min-w-0 flex-1">
-        <p class="text-sm font-medium text-charcoal">Profile picture</p>
-        <p class="mt-1 text-sm text-sage-dark/65">Shown on your account and the staff Directory.</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <label class="btn-secondary !px-3 !py-1.5 cursor-pointer">
-            Change photo
-            <input
-              class="sr-only"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              data-avatar-input
-            />
-          </label>
-          {
-            employee.hasAvatar && (
-              <form method="post" action="/api/account/avatar">
-                <input type="hidden" name="action" value="remove" />
-                <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                  Remove
+      <p class="mt-4 text-xl font-semibold tracking-tight text-charcoal">{employee.name}</p>
+      <p class="mt-0.5 text-sm text-sage-dark/65">{employee.email}</p>
+      <div class="mt-4 flex flex-wrap justify-center gap-2">
+        <label class="cursor-pointer rounded-full border border-sage-dark/20 bg-white/80 px-3.5 py-1.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/35 hover:bg-white">
+          Change photo
+          <input
+            class="sr-only"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            data-avatar-input
+          />
+        </label>
+        {
+          employee.hasAvatar && (
+            <form method="post" action="/api/account/avatar">
+              <input type="hidden" name="action" value="remove" />
+              <button
+                class="rounded-full border border-sage-dark/20 bg-white/80 px-3.5 py-1.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/35 hover:bg-white"
+                type="submit"
+              >
+                Remove
+              </button>
+            </form>
+          )
+        }
+      </div>
+      <form method="post" action="/api/account/avatar" class="hidden" data-avatar-form>
+        <input type="hidden" name="avatarData" value="" data-avatar-data />
+      </form>
+    </div>
+
+    <div class="mt-8 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+      <div class="px-4 py-3.5" data-field-row="name">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <p class="text-[13px] font-medium text-sage-dark/55">Name</p>
+            <p class="mt-0.5 text-[15px] font-medium text-charcoal" data-field-display>{employee.name}</p>
+            <form
+              method="post"
+              action="/api/account/update"
+              class="mt-2 hidden space-y-2"
+              data-field-editor
+              hidden
+            >
+              <input type="hidden" name="field" value="name" />
+              <input
+                class="field !mt-0"
+                type="text"
+                name="name"
+                value={employee.name}
+                required
+                minlength="2"
+                maxlength="80"
+              />
+              <div class="flex flex-wrap gap-2">
+                <button class="btn-primary !px-3 !py-1.5" type="submit">Save</button>
+                <button class="btn-secondary !px-3 !py-1.5" type="button" data-field-cancel>
+                  Cancel
                 </button>
-              </form>
-            )
-          }
+              </div>
+            </form>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 pt-0.5 text-sm font-medium text-sage-dark/70 transition hover:text-charcoal"
+            data-field-edit
+            aria-expanded="false"
+          >
+            Edit
+          </button>
         </div>
-        <form method="post" action="/api/account/avatar" class="hidden" data-avatar-form>
-          <input type="hidden" name="avatarData" value="" data-avatar-data />
-        </form>
+      </div>
+
+      <div class="mx-4 border-t border-sage-dark/10"></div>
+
+      <div class="px-4 py-3.5" data-field-row="phone">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <p class="text-[13px] font-medium text-sage-dark/55">Phone</p>
+            <p class="mt-0.5 text-[15px] font-medium text-charcoal" data-field-display>{employee.phone || '—'}</p>
+            <form
+              method="post"
+              action="/api/account/update"
+              class="mt-2 hidden space-y-2"
+              data-field-editor
+              hidden
+            >
+              <input type="hidden" name="field" value="phone" />
+              <input
+                class="field !mt-0"
+                type="tel"
+                name="phone"
+                value={employee.phone ?? ''}
+                maxlength="40"
+                placeholder="e.g. (555) 123-4567"
+              />
+              <div class="flex flex-wrap gap-2">
+                <button class="btn-primary !px-3 !py-1.5" type="submit">Save</button>
+                <button class="btn-secondary !px-3 !py-1.5" type="button" data-field-cancel>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 pt-0.5 text-sm font-medium text-sage-dark/70 transition hover:text-charcoal"
+            data-field-edit
+            aria-expanded="false"
+          >
+            Edit
+          </button>
+        </div>
       </div>
     </div>
 
-    <dl class="mt-2 divide-y divide-sage-dark/10 text-sm">
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4" data-field-row="name">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Name</dt>
-          <dd class="mt-1 text-charcoal" data-field-display>{employee.name}</dd>
-          <form
-            method="post"
-            action="/api/account/update"
-            class="mt-2 hidden space-y-2"
-            data-field-editor
-            hidden
-          >
-            <input type="hidden" name="field" value="name" />
-            <input
-              class="field !mt-0"
-              type="text"
-              name="name"
-              value={employee.name}
-              required
-              minlength="2"
-              maxlength="80"
-            />
-            <div class="flex flex-wrap gap-2">
-              <button class="btn-primary !px-3 !py-1.5" type="submit">Save</button>
-              <button class="btn-secondary !px-3 !py-1.5" type="button" data-field-cancel>
-                Cancel
-              </button>
-            </div>
-          </form>
+    <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+      <div class="flex items-start justify-between gap-3 px-4 py-3.5">
+        <div class="min-w-0">
+          <p class="text-[13px] font-medium text-sage-dark/55">Job title</p>
+          <p class="mt-0.5 text-[15px] font-medium text-charcoal">{employee.jobTitle || '—'}</p>
         </div>
-        <button
-          type="button"
-          class="btn-secondary !px-3 !py-1.5"
-          data-field-edit
-          aria-expanded="false"
-        >
-          Edit
-        </button>
+        <p class="shrink-0 pt-0.5 text-xs text-sage-dark/45">Set by management</p>
       </div>
-
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Job title</dt>
-          <dd class="mt-1 text-charcoal">{employee.jobTitle || '—'}</dd>
-          <p class="mt-1 text-xs text-sage-dark/50">Set by management</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Teams</dt>
-          <dd class="mt-1 text-charcoal">
+      <div class="mx-4 border-t border-sage-dark/10"></div>
+      <div class="flex items-start justify-between gap-3 px-4 py-3.5">
+        <div class="min-w-0">
+          <p class="text-[13px] font-medium text-sage-dark/55">Teams</p>
+          <p class="mt-0.5 text-[15px] font-medium text-charcoal">
             {employee.teams.length > 0 ? employee.teams.join(', ') : '—'}
-          </dd>
-          <p class="mt-1 text-xs text-sage-dark/50">Set by management</p>
+          </p>
         </div>
+        <p class="shrink-0 pt-0.5 text-xs text-sage-dark/45">Set by management</p>
       </div>
-
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Email</dt>
-          <dd class="mt-1 text-charcoal">{employee.email}</dd>
-        </div>
+      <div class="mx-4 border-t border-sage-dark/10"></div>
+      <div class="px-4 py-3.5">
+        <p class="text-[13px] font-medium text-sage-dark/55">Email</p>
+        <p class="mt-0.5 text-[15px] font-medium text-charcoal">{employee.email}</p>
       </div>
-
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4" data-field-row="phone">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Phone</dt>
-          <dd class="mt-1 text-charcoal" data-field-display>{employee.phone || '—'}</dd>
-          <form
-            method="post"
-            action="/api/account/update"
-            class="mt-2 hidden space-y-2"
-            data-field-editor
-            hidden
-          >
-            <input type="hidden" name="field" value="phone" />
-            <input
-              class="field !mt-0"
-              type="tel"
-              name="phone"
-              value={employee.phone ?? ''}
-              maxlength="40"
-              placeholder="e.g. (555) 123-4567"
-            />
-            <div class="flex flex-wrap gap-2">
-              <button class="btn-primary !px-3 !py-1.5" type="submit">Save</button>
-              <button class="btn-secondary !px-3 !py-1.5" type="button" data-field-cancel>
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-        <button
-          type="button"
-          class="btn-secondary !px-3 !py-1.5"
-          data-field-edit
-          aria-expanded="false"
-        >
-          Edit
-        </button>
+      <div class="mx-4 border-t border-sage-dark/10"></div>
+      <div class="px-4 py-3.5">
+        <p class="text-[13px] font-medium text-sage-dark/55">Roles</p>
+        <p class="mt-0.5 text-[15px] font-medium text-charcoal">{roleLabel}</p>
       </div>
-
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Roles</dt>
-          <dd class="mt-1 text-charcoal">{roleLabel}</dd>
-        </div>
+      <div class="mx-4 border-t border-sage-dark/10"></div>
+      <div class="px-4 py-3.5">
+        <p class="text-[13px] font-medium text-sage-dark/55">Status</p>
+        <p class="mt-0.5 text-[15px] font-medium capitalize text-charcoal">{employee.status}</p>
       </div>
+    </div>
 
-      <div class="flex flex-wrap items-start justify-between gap-3 py-4">
-        <div class="min-w-0 flex-1">
-          <dt class="text-sage-dark/60">Status</dt>
-          <dd class="mt-1 capitalize text-charcoal">{employee.status}</dd>
-        </div>
-      </div>
-    </dl>
-  </section>
-
-  <form method="post" action="/api/session/sign-out" class="mt-8">
-    <button class="btn-secondary" type="submit">Sign out</button>
-  </form>
+    <form method="post" action="/api/session/sign-out" class="mt-6">
+      <button
+        class="w-full rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3.5 text-[15px] font-medium text-red-700 shadow-sm transition hover:bg-red-50"
+        type="submit"
+      >
+        Sign out
+      </button>
+    </form>
+  </div>
 </PortalLayout>
 
 <script>
