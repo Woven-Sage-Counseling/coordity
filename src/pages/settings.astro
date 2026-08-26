@@ -178,12 +178,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
         data-settings-error
       ></p>
-      <p
-        class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
-        data-settings-saved
-      >
-        Saved. Your home page will use these choices next time you open it.
-      </p>
 
       <ul class="mt-6 space-y-2" data-widget-list></ul>
 
@@ -198,8 +192,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         ></select>
       </div>
 
-      <div class="mt-6">
+      <div class="mt-6 flex flex-wrap items-center gap-3">
         <button type="button" class="btn-primary" data-settings-save>Save preferences</button>
+        <span class="hidden text-sm font-medium text-sage-dark/70" data-settings-saved aria-live="polite">
+          Saved.
+        </span>
       </div>
     </section>
 
@@ -253,12 +250,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                 <p class="mt-3 text-sm text-red-700">{calendarConnection.lastError}</p>
               ) : null
             }
-            <p
-              class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
-              data-calendar-saved
-            >
-              Calendar preferences saved.
-            </p>
             {
               calendarOptions.length === 0 ? (
                 <p class="mt-6 text-sm text-sage-dark/65">
@@ -343,6 +334,9 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             </div>
             <div class="mt-6 flex flex-wrap items-center gap-3">
               <button type="button" class="btn-primary" data-calendar-save>Save calendars</button>
+              <span class="hidden text-sm font-medium text-sage-dark/70" data-calendar-saved aria-live="polite">
+                Saved.
+              </span>
               <button type="button" class="text-sm text-sage-dark/70 hover:text-sage-dark" data-calendar-refresh>
                 Refresh list
               </button>

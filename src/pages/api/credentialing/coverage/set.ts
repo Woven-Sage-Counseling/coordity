@@ -36,5 +36,5 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return credentialingAdminError(error instanceof Error ? error.message : 'Could not save coverage.');
   }
 
-  return credentialingAdminRedirect();
+  return credentialingAdminRedirect('credentialing', true);
 };

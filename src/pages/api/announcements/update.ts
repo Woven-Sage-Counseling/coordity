@@ -37,5 +37,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return formErrorRedirect('/admin', 'Could not update that announcement.');
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/admin#announcement-history' } });
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: `/admin?announcementSaved=${encodeURIComponent(id)}#announcement-history`,
+    },
+  });
 };

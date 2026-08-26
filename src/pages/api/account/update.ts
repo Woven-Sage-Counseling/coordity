@@ -34,5 +34,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return formErrorRedirect('/account', message);
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/account' } });
+  return new Response(null, {
+    status: 303,
+    headers: { Location: `/account?saved=${encodeURIComponent(field)}` },
+  });
 };

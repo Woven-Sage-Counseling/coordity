@@ -5,10 +5,11 @@ import { formatAnnouncementDate } from '../lib/announcements';
 interface Props {
   announcements: Announcement[];
   error?: string | null;
+  savedId?: string | null;
   embedded?: boolean;
 }
 
-const { announcements, error = null, embedded = false } = Astro.props;
+const { announcements, error = null, savedId = null, embedded = false } = Astro.props;
 ---
 
 <section class:list={[!embedded && 'mt-10']} aria-labelledby="announcement-history">
@@ -88,7 +89,7 @@ const { announcements, error = null, embedded = false } = Astro.props;
                     {item.body}
                   </p>
                 </div>
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     class="btn-secondary !px-3 !py-1.5"
@@ -113,6 +114,13 @@ const { announcements, error = null, embedded = false } = Astro.props;
                       Delete
                     </button>
                   </form>
+                  {
+                    savedId === item.id ? (
+                      <span class="text-sm font-medium text-sage-dark/70" aria-live="polite">
+                        Saved.
+                      </span>
+                    ) : null
+                  }
                 </div>
               </div>
 
@@ -144,7 +152,7 @@ const { announcements, error = null, embedded = false } = Astro.props;
                     required
                   >{item.body}</textarea>
                 </label>
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <button class="btn-primary" type="submit">Save changes</button>
                   <button type="button" class="btn-secondary" data-edit-cancel>
                     Cancel

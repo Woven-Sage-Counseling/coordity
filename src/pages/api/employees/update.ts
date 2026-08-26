@@ -35,7 +35,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const message = error instanceof Error ? error.message : 'Unable to update job title.';
       return formErrorRedirect('/admin', message, 'peopleError');
     }
-    return new Response(null, { status: 303, headers: { Location: '/admin#people' } });
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: `/admin?peopleSaved=${encodeURIComponent(action)}&peopleUser=${encodeURIComponent(userId)}#people`,
+      },
+    });
   }
 
   if (action === 'teams') {
@@ -56,7 +61,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const message = error instanceof Error ? error.message : 'Unable to update teams.';
       return formErrorRedirect('/admin', message, 'peopleError');
     }
-    return new Response(null, { status: 303, headers: { Location: '/admin#people' } });
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: `/admin?peopleSaved=${encodeURIComponent(action)}&peopleUser=${encodeURIComponent(userId)}#people`,
+      },
+    });
   }
 
   if (!hasPermission(actor, 'employees:manage')) {

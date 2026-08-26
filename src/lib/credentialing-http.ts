@@ -1,9 +1,12 @@
 import { formErrorRedirect } from './http';
 
-export function credentialingAdminRedirect(successHash = 'credentialing'): Response {
+export function credentialingAdminRedirect(successHash = 'credentialing', saved = false): Response {
+  const location = saved
+    ? `/admin?credentialingSaved=1#${successHash}`
+    : `/admin#${successHash}`;
   return new Response(null, {
     status: 303,
-    headers: { Location: `/admin#${successHash}` },
+    headers: { Location: location },
   });
 }
 

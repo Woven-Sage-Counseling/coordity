@@ -49,10 +49,14 @@ const linkableUsers = allPeople
   .map((person) => ({ id: person.id, name: person.name, email: person.email }));
 
 const error = Astro.url.searchParams.get('error');
+const announcementSaved = Astro.url.searchParams.get('announcementSaved');
 const inviteUrl = Astro.url.searchParams.get('inviteUrl');
 const peopleError = Astro.url.searchParams.get('peopleError');
+const peopleSaved = Astro.url.searchParams.get('peopleSaved');
+const peopleUser = Astro.url.searchParams.get('peopleUser');
 const timeOffError = Astro.url.searchParams.get('timeOffError');
 const credentialingError = Astro.url.searchParams.get('credentialingError');
+const credentialingSaved = Astro.url.searchParams.get('credentialingSaved');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -163,7 +167,12 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       <p class="mt-1 text-sm text-sage-dark/65">
         Post to every dashboard, then edit, resend, or remove from the history log.
       </p>
-      <AnnouncementManager announcements={announcements} error={error} embedded />
+      <AnnouncementManager
+        announcements={announcements}
+        error={error}
+        savedId={announcementSaved}
+        embedded
+      />
     </section>
 
     <section class="mt-6 hidden" data-admin-panel="people">
@@ -181,7 +190,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       <p class="mt-1 text-sm text-sage-dark/65">
         Invite people, set job titles and teams, and assign roles.
       </p>
-      <PeopleManager error={peopleError} inviteUrl={inviteUrl} embedded />
+      <PeopleManager
+        error={peopleError}
+        inviteUrl={inviteUrl}
+        savedAction={peopleSaved}
+        savedUserId={peopleUser}
+        embedded
+      />
     </section>
 
     <section class="mt-6 hidden" data-admin-panel="credentialing">
@@ -206,6 +221,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         coverageByProvider={coverageByProvider}
         linkableUsers={linkableUsers}
         error={credentialingError}
+        saved={credentialingSaved === '1'}
         embedded
       />
     </section>
@@ -360,15 +376,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       showPanel('time-off', false);
       return;
     }
-    if (params.has('peopleError') || params.has('inviteUrl')) {
+    if (params.has('peopleError') || params.has('inviteUrl') || params.has('peopleSaved')) {
       showPanel('people', false);
       return;
     }
-    if (params.has('credentialingError')) {
+    if (params.has('credentialingError') || params.has('credentialingSaved')) {
       showPanel('credentialing', false);
       return;
     }
-    if (params.has('error')) {
+    if (params.has('error') || params.has('announcementSaved')) {
       showPanel('announcements', false);
       return;
     }

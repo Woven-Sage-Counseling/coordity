@@ -6,10 +6,18 @@ import { hasPermission, isOwnerEmail } from '../lib/permissions';
 interface Props {
   error?: string | null;
   inviteUrl?: string | null;
+  savedAction?: string | null;
+  savedUserId?: string | null;
   embedded?: boolean;
 }
 
-const { error = null, inviteUrl = null, embedded = false } = Astro.props;
+const {
+  error = null,
+  inviteUrl = null,
+  savedAction = null,
+  savedUserId = null,
+  embedded = false,
+} = Astro.props;
 const employee = Astro.locals.employee!;
 const canManage = hasPermission(employee, 'employees:manage');
 const people = await listEmployees();
@@ -161,9 +169,18 @@ function roleLabel(keys: string[]): string {
                     placeholder="Job title"
                   />
                 </label>
-                <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                  Save title
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                    Save title
+                  </button>
+                  {
+                    savedUserId === person.id && savedAction === 'jobTitle' ? (
+                      <span class="text-sm font-medium text-sage-dark/70" aria-live="polite">
+                        Saved.
+                      </span>
+                    ) : null
+                  }
+                </div>
               </form>
 
               <form method="post" action="/api/employees/update" class="space-y-2">
@@ -183,9 +200,18 @@ function roleLabel(keys: string[]): string {
                     </label>
                   ))}
                 </div>
-                <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                  Save teams
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                    Save teams
+                  </button>
+                  {
+                    savedUserId === person.id && savedAction === 'teams' ? (
+                      <span class="text-sm font-medium text-sage-dark/70" aria-live="polite">
+                        Saved.
+                      </span>
+                    ) : null
+                  }
+                </div>
               </form>
             </div>
           </article>
