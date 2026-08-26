@@ -23,60 +23,161 @@ const error = Astro.url.searchParams.get('error');
 const inviteUrl = Astro.url.searchParams.get('inviteUrl');
 const peopleError = Astro.url.searchParams.get('peopleError');
 const timeOffError = Astro.url.searchParams.get('timeOffError');
+const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
+
+const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
 
 <PortalLayout title="Admin" wide>
-  <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Admin</h1>
-  <p class="mt-3 max-w-2xl text-sage-dark/75">
-    Post announcements, review time off, manage people, and review portal roles.
-  </p>
-
-  <TimeOffManager requests={timeOffRequests} error={timeOffError} />
-
-  <AnnouncementManager announcements={announcements} error={error} />
-
-  <PeopleManager error={peopleError} inviteUrl={inviteUrl} />
-
-  <section class="mt-14" aria-labelledby="roles-heading">
-    <h2 id="roles-heading" class="font-display text-3xl text-charcoal">Roles and permissions</h2>
-    <p class="mt-2 text-sm text-sage-dark/65">
-      A plain-language guide to what each role can and cannot do.
+  <div class="mx-auto max-w-2xl" data-admin-shell>
+    <p class="text-sm text-sage-dark/65">
+      <a href="/" class="hover:text-sage-dark">Home</a>
+      <span class="mx-1.5 text-sage-dark/35">/</span>
+      Admin
     </p>
+    <h1 class="mt-3 font-display text-4xl text-charcoal">Admin</h1>
 
-    <div class="mt-6 space-y-4">
-      {
-        roles.map((role) => {
-          const guide = plainRole(role.key);
-          return (
-            <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
-              <h3 class="font-display text-2xl text-charcoal">{role.name}</h3>
-              <p class="mt-2 text-sm text-sage-dark/75">
-                {guide?.summary ?? role.description}
-              </p>
+    <div data-admin-menu>
+      <p class="mt-3 text-sage-dark/75">Choose a category to manage.</p>
 
-              {
-                guide ? (
-                  <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#2CA01C]">Can</p>
-                      <ul class="mt-2 space-y-1.5 text-sm text-charcoal">
-                        {guide.can.map((item) => (
-                          <li class="flex gap-2">
-                            <span class="text-[#2CA01C]" aria-hidden="true">
-                              •
-                            </span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    {guide.cannot && guide.cannot.length > 0 ? (
+      <div class="mt-8 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="time-off"
+        >
+          <span class="flex min-w-0 items-center gap-2">
+            <span class="text-[15px] font-medium text-charcoal">Time off requests</span>
+            {
+              pendingTimeOff > 0 ? (
+                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                  {pendingTimeOff}
+                </span>
+              ) : null
+            }
+          </span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="announcements"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Announcements</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="people"
+        >
+          <span class="text-[15px] font-medium text-charcoal">People</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="roles"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Roles and permissions</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+      </div>
+    </div>
+
+    <section class="mt-6 hidden" data-admin-panel="time-off">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Admin
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Time off requests</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        Review pending requests. Approved requests stay here until the last requested date has passed.
+      </p>
+      <TimeOffManager requests={timeOffRequests} error={timeOffError} embedded />
+    </section>
+
+    <section class="mt-6 hidden" data-admin-panel="announcements">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Admin
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Announcements</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        Post to every dashboard, then edit, resend, or remove from the history log.
+      </p>
+      <AnnouncementManager announcements={announcements} error={error} embedded />
+    </section>
+
+    <section class="mt-6 hidden" data-admin-panel="people">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Admin
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">People</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        Invite people, set job titles and teams, and assign roles.
+      </p>
+      <PeopleManager error={peopleError} inviteUrl={inviteUrl} embedded />
+    </section>
+
+    <section class="mt-6 hidden" data-admin-panel="roles" id="roles">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Admin
+      </button>
+      <h2 id="roles-heading" class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Roles and permissions</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        A plain-language guide to what each role can and cannot do.
+      </p>
+
+      <div class="mt-6 space-y-3">
+        {
+          roles.map((role) => {
+            const guide = plainRole(role.key);
+            return (
+              <article class="overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
+                <h3 class="text-lg font-semibold tracking-tight text-charcoal">{role.name}</h3>
+                <p class="mt-2 text-sm text-sage-dark/75">
+                  {guide?.summary ?? role.description}
+                </p>
+
+                {
+                  guide ? (
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
                       <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/50">Cannot</p>
-                        <ul class="mt-2 space-y-1.5 text-sm text-sage-dark/75">
-                          {guide.cannot.map((item) => (
+                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#2CA01C]">Can</p>
+                        <ul class="mt-2 space-y-1.5 text-sm text-charcoal">
+                          {guide.can.map((item) => (
                             <li class="flex gap-2">
-                              <span class="text-sage-dark/40" aria-hidden="true">
+                              <span class="text-[#2CA01C]" aria-hidden="true">
                                 •
                               </span>
                               <span>{item}</span>
@@ -84,31 +185,124 @@ const timeOffError = Astro.url.searchParams.get('timeOffError');
                           ))}
                         </ul>
                       </div>
-                    ) : null}
-                  </div>
-                ) : null
-              }
+                      {guide.cannot && guide.cannot.length > 0 ? (
+                        <div>
+                          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/50">Cannot</p>
+                          <ul class="mt-2 space-y-1.5 text-sm text-sage-dark/75">
+                            {guide.cannot.map((item) => (
+                              <li class="flex gap-2">
+                                <span class="text-sage-dark/40" aria-hidden="true">
+                                  •
+                                </span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null
+                }
 
-              <details class="mt-5">
-                <summary class="cursor-pointer text-sm font-medium text-sage-dark/70 hover:text-charcoal">
-                  Technical permission list
-                </summary>
-                {role.permissions.length === 0 ? (
-                  <p class="mt-3 text-sm text-sage-dark/55">No permissions assigned.</p>
-                ) : (
-                  <ul class="mt-3 grid gap-2 sm:grid-cols-2">
-                    {role.permissions.map((permission) => (
-                      <li class="rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm text-charcoal">
-                        {plainPermission(permission.key, permission.description)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </details>
-            </article>
-          );
-        })
-      }
-    </div>
-  </section>
+                <details class="mt-5">
+                  <summary class="cursor-pointer text-sm font-medium text-sage-dark/70 hover:text-charcoal">
+                    Technical permission list
+                  </summary>
+                  {role.permissions.length === 0 ? (
+                    <p class="mt-3 text-sm text-sage-dark/55">No permissions assigned.</p>
+                  ) : (
+                    <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+                      {role.permissions.map((permission) => (
+                        <li class="rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm text-charcoal">
+                          {plainPermission(permission.key, permission.description)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </details>
+              </article>
+            );
+          })
+        }
+      </div>
+    </section>
+  </div>
 </PortalLayout>
+
+<script>
+  function setupAdminNav(shell: Element) {
+    if (!(shell instanceof HTMLElement)) return;
+    const menu = shell.querySelector('[data-admin-menu]');
+    const panels = Array.from(shell.querySelectorAll('[data-admin-panel]')).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+
+    const hashForPanel: Record<string, string> = {
+      'time-off': '#time-off-requests',
+      announcements: '#announcement-history',
+      people: '#people',
+      roles: '#roles',
+    };
+
+    const panelFromHash = (hash: string): string | null => {
+      if (hash === 'time-off-requests' || hash === 'time-off') return 'time-off';
+      if (hash === 'announcement-history' || hash === 'post-announcement' || hash === 'announcements') {
+        return 'announcements';
+      }
+      if (hash === 'people') return 'people';
+      if (hash === 'roles' || hash === 'roles-heading') return 'roles';
+      return null;
+    };
+
+    const showMenu = () => {
+      if (menu instanceof HTMLElement) menu.classList.remove('hidden');
+      panels.forEach((panel) => panel.classList.add('hidden'));
+      if (window.location.hash) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+
+    const showPanel = (id: string, updateHash = true) => {
+      if (menu instanceof HTMLElement) menu.classList.add('hidden');
+      panels.forEach((panel) => {
+        panel.classList.toggle('hidden', panel.dataset.adminPanel !== id);
+      });
+      if (updateHash) {
+        const hash = hashForPanel[id] ?? `#${id}`;
+        history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+      }
+    };
+
+    shell.querySelectorAll('[data-admin-open]').forEach((node) => {
+      if (!(node instanceof HTMLButtonElement)) return;
+      node.addEventListener('click', () => {
+        const id = node.dataset.adminOpen;
+        if (id) showPanel(id);
+      });
+    });
+
+    shell.querySelectorAll('[data-admin-back]').forEach((node) => {
+      node.addEventListener('click', () => showMenu());
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('timeOffError')) {
+      showPanel('time-off', false);
+      return;
+    }
+    if (params.has('peopleError') || params.has('inviteUrl')) {
+      showPanel('people', false);
+      return;
+    }
+    if (params.has('error')) {
+      showPanel('announcements', false);
+      return;
+    }
+
+    const hash = window.location.hash.replace(/^#/, '');
+    const fromHash = panelFromHash(hash);
+    if (fromHash) showPanel(fromHash, false);
+  }
+
+  document.querySelectorAll('[data-admin-shell]').forEach((root) => setupAdminNav(root));
+</script>

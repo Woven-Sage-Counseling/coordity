@@ -6,9 +6,10 @@ import { hasPermission, isOwnerEmail } from '../lib/permissions';
 interface Props {
   error?: string | null;
   inviteUrl?: string | null;
+  embedded?: boolean;
 }
 
-const { error = null, inviteUrl = null } = Astro.props;
+const { error = null, inviteUrl = null, embedded = false } = Astro.props;
 const employee = Astro.locals.employee!;
 const canManage = hasPermission(employee, 'employees:manage');
 const people = await listEmployees();
@@ -22,15 +23,23 @@ function roleLabel(keys: string[]): string {
 }
 ---
 
-<section class="mt-14" aria-labelledby="people-heading" id="people">
-  <h2 id="people-heading" class="font-display text-3xl text-charcoal">People</h2>
-  <p class="mt-2 text-sm text-sage-dark/65">
-    {
-      canManage
-        ? 'Invite people, set job titles and teams, and assign roles. Primary owner stays with admin@wovensage.com.'
-        : 'Set job titles and teams for the Directory. Only the primary owner can invite people or change roles.'
-    }
-  </p>
+<section class:list={[!embedded && 'mt-14']} aria-labelledby="people-heading" id="people">
+  {
+    !embedded ? (
+      <>
+        <h2 id="people-heading" class="font-display text-3xl text-charcoal">People</h2>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          {
+            canManage
+              ? 'Invite people, set job titles and teams, and assign roles. Primary owner stays with admin@wovensage.com.'
+              : 'Set job titles and teams for the Directory. Only the primary owner can invite people or change roles.'
+          }
+        </p>
+      </>
+    ) : (
+      <h2 id="people-heading" class="sr-only">People</h2>
+    )
+  }
 
   {
     error && (

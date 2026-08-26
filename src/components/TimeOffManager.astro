@@ -9,9 +9,10 @@ import {
 interface Props {
   requests: TimeOffRequest[];
   error?: string | null;
+  embedded?: boolean;
 }
 
-const { requests, error = null } = Astro.props;
+const { requests, error = null, embedded = false } = Astro.props;
 
 function entryLabel(entry: TimeOffRequest['entries'][number]): string {
   return formatTimeOffEntry({
@@ -23,13 +24,19 @@ function entryLabel(entry: TimeOffRequest['entries'][number]): string {
 }
 ---
 
-<section class="mt-10 scroll-mt-24" aria-labelledby="time-off-requests" id="time-off-requests">
-  <div>
-    <h2 id="time-off-requests" class="font-display text-3xl text-charcoal">Time off requests</h2>
-    <p class="mt-2 text-sm text-sage-dark/65">
-      Review pending requests. Approved requests stay here until the last requested date has passed.
-    </p>
-  </div>
+<section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} aria-labelledby="time-off-requests" id="time-off-requests">
+  {
+    !embedded ? (
+      <div>
+        <h2 id="time-off-requests" class="font-display text-3xl text-charcoal">Time off requests</h2>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          Review pending requests. Approved requests stay here until the last requested date has passed.
+        </p>
+      </div>
+    ) : (
+      <h2 id="time-off-requests" class="sr-only">Time off requests</h2>
+    )
+  }
 
   {
     error ? (

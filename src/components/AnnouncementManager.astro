@@ -5,20 +5,27 @@ import { formatAnnouncementDate } from '../lib/announcements';
 interface Props {
   announcements: Announcement[];
   error?: string | null;
+  embedded?: boolean;
 }
 
-const { announcements, error = null } = Astro.props;
+const { announcements, error = null, embedded = false } = Astro.props;
 ---
 
-<section class="mt-10" aria-labelledby="announcement-history">
-  <div class="flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h2 id="announcement-history" class="font-display text-3xl text-charcoal">Announcements</h2>
-      <p class="mt-2 text-sm text-sage-dark/65">
-        Post to every dashboard, then edit, resend, or remove from the history log.
-      </p>
-    </div>
-  </div>
+<section class:list={[!embedded && 'mt-10']} aria-labelledby="announcement-history">
+  {
+    !embedded ? (
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="announcement-history" class="font-display text-3xl text-charcoal">Announcements</h2>
+          <p class="mt-2 text-sm text-sage-dark/65">
+            Post to every dashboard, then edit, resend, or remove from the history log.
+          </p>
+        </div>
+      </div>
+    ) : (
+      <h2 id="announcement-history" class="sr-only">Announcements</h2>
+    )
+  }
 
   {
     error && (
