@@ -11,6 +11,7 @@ export interface PortalNotification {
   createdAt: number;
   unread: boolean;
   sourceType: string | null;
+  sourceId: string | null;
   cleared: boolean;
 }
 
@@ -21,6 +22,7 @@ function mapNotification(row: {
   created_at: number;
   read_at: number | null;
   source_type: string | null;
+  source_id?: string | null;
   cleared_at: number | null;
 }): PortalNotification {
   return {
@@ -30,6 +32,7 @@ function mapNotification(row: {
     createdAt: row.created_at,
     unread: row.read_at == null,
     sourceType: row.source_type,
+    sourceId: row.source_id ?? null,
     cleared: row.cleared_at != null,
   };
 }
@@ -48,7 +51,7 @@ export async function listNotificationsForUser(
 
   try {
     const rows = await DB.prepare(
-      `SELECT id, title, body, created_at, read_at, source_type, cleared_at
+      `SELECT id, title, body, created_at, read_at, source_type, source_id, cleared_at
        FROM notification
        WHERE user_id = ?
          ${clearedFilter}
@@ -63,6 +66,7 @@ export async function listNotificationsForUser(
         created_at: number;
         read_at: number | null;
         source_type: string | null;
+        source_id: string | null;
         cleared_at: number | null;
       }>();
 
@@ -87,7 +91,7 @@ export async function listNotificationsForUser(
       }>();
 
     return (rows.results ?? []).map((row) =>
-      mapNotification({ ...row, cleared_at: null }),
+      mapNotification({ ...row, source_id: null, cleared_at: null }),
     );
   }
 }

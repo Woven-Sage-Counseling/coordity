@@ -161,39 +161,34 @@ const error = Astro.url.searchParams.get('timeOffError');
                     }
                   </ul>
                   {
-                    request.status === 'pending' ? (
-                      <form
-                        method="post"
-                        action="/api/time-off/retract"
-                        class="mt-2"
-                        onsubmit="return confirm('Retract this pending request?')"
-                      >
+                    request.status === 'pending' && (
+                      <form method="post" action="/api/time-off/retract" class="mt-2">
                         <input type="hidden" name="requestId" value={request.id} />
                         <input type="hidden" name="returnTo" value="/?timeOff=retracted" />
                         <button
-                          class="text-[10px] font-semibold text-sage-dark/70 transition hover:text-charcoal"
+                          class="rounded-md bg-[#f4f5f8] px-2 py-1 text-[10px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 transition hover:bg-white"
                           type="submit"
+                          data-confirm="Retract this pending request?"
                         >
                           Retract
                         </button>
                       </form>
-                    ) : request.status === 'denied' ? (
-                      <form
-                        method="post"
-                        action="/api/time-off/delete"
-                        class="mt-2"
-                        onsubmit="return confirm('Delete this denied request?')"
-                      >
+                    )
+                  }
+                  {
+                    request.status === 'denied' && (
+                      <form method="post" action="/api/time-off/delete" class="mt-2">
                         <input type="hidden" name="requestId" value={request.id} />
                         <input type="hidden" name="returnTo" value="/?timeOff=deleted" />
                         <button
-                          class="text-[10px] font-semibold text-red-700 transition hover:text-red-800"
+                          class="rounded-md bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100"
                           type="submit"
+                          data-confirm="Delete this denied request?"
                         >
                           Delete
                         </button>
                       </form>
-                    ) : null
+                    )
                   }
                 </li>
               ))
@@ -234,6 +229,16 @@ const error = Astro.url.searchParams.get('timeOffError');
         fullDay.addEventListener('change', () => syncRow(row));
       }
       syncRow(row);
+    });
+
+    root.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const button = target.closest('button[data-confirm]');
+      if (!(button instanceof HTMLButtonElement)) return;
+      const message = button.getAttribute('data-confirm');
+      if (!message) return;
+      if (!window.confirm(message)) event.preventDefault();
     });
   });
 </script>

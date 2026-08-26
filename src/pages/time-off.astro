@@ -174,31 +174,32 @@ const requests = await listTimeOffRequestsForUser(employee.id);
                 }
 
                 {
-                  request.status === 'pending' ? (
-                    <form
-                      method="post"
-                      action="/api/time-off/retract"
-                      class="mt-4"
-                      onsubmit="return confirm('Retract this pending time off request?')"
-                    >
+                  request.status === 'pending' && (
+                    <form method="post" action="/api/time-off/retract" class="mt-4">
                       <input type="hidden" name="requestId" value={request.id} />
-                      <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                      <button
+                        class="btn-secondary !px-3 !py-1.5"
+                        type="submit"
+                        data-confirm="Retract this pending time off request?"
+                      >
                         Retract request
                       </button>
                     </form>
-                  ) : request.status === 'denied' ? (
-                    <form
-                      method="post"
-                      action="/api/time-off/delete"
-                      class="mt-4"
-                      onsubmit="return confirm('Delete this denied request from your list?')"
-                    >
+                  )
+                }
+                {
+                  request.status === 'denied' && (
+                    <form method="post" action="/api/time-off/delete" class="mt-4">
                       <input type="hidden" name="requestId" value={request.id} />
-                      <button class="btn-secondary !px-3 !py-1.5 !text-red-700" type="submit">
+                      <button
+                        class="btn-secondary !px-3 !py-1.5 !text-red-700"
+                        type="submit"
+                        data-confirm="Delete this denied request from your list?"
+                      >
                         Delete
                       </button>
                     </form>
-                  ) : null
+                  )
                 }
               </article>
             ))
@@ -303,5 +304,15 @@ const requests = await listTimeOffRequestsForUser(employee.id);
 
   document.querySelectorAll('[data-time-off-form]').forEach((node) => {
     if (node instanceof HTMLFormElement) initTimeOffForm(node);
+  });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const button = target.closest('button[data-confirm]');
+    if (!(button instanceof HTMLButtonElement)) return;
+    const message = button.getAttribute('data-confirm');
+    if (!message) return;
+    if (!window.confirm(message)) event.preventDefault();
   });
 </script>
