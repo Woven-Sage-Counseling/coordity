@@ -53,7 +53,7 @@ export async function createTimeOffRequest(
   userId: string,
   entries: TimeOffEntry[],
   notes: string,
-): Promise<string> {
+): Promise<{ id: string; createdAt: number }> {
   const { DB } = getEnv();
   const requestId = randomToken(16);
   const ts = nowMs();
@@ -81,7 +81,7 @@ export async function createTimeOffRequest(
       .run();
   }
 
-  return requestId;
+  return { id: requestId, createdAt: ts };
 }
 
 export async function listTimeOffRequestsForUser(userId: string, limit = 50): Promise<TimeOffRequest[]> {

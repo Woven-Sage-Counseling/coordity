@@ -4,9 +4,14 @@ import {
   TIME_OFF_REQUEST_SOURCE,
   notifyManagementUsers,
 } from '../../../lib/notifications';
-import { createTimeOffRequest } from '../../../lib/time-off-requests';
+import { createTimeOffRequest, formatTimeOffRequestDate } from '../../../lib/time-off-requests';
 import { buildTimeOffEmail, formatTimeOffEntry, parseTimeOffEntries } from '../../../lib/time-off';
-import { resolveTimeOffReturnTo, timeOffErrorRedirect } from '../../../lib/time-off-return';
+import {
+  resolveTimeOffReturnTo,
+  timeOffErrorResponse,
+  timeOffJsonOk,
+  wantsJson,
+} from '../../../lib/time-off-return';
 
 export const prerender = false;
 
@@ -18,15 +23,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const form = await request.formData();
   const notes = String(form.get('notes') ?? '').trim();
+  const json = wantsJson(request);
 
   let entries;
-  let requestId: string;
+  let created: { id: string; createdAt: number };
   try {
     entries = parseTimeOffEntries(form);
-    requestId = await createTimeOffRequest(employee.id, entries, notes);
+    created = await createTimeOffRequest(employee.id, entries, notes);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to submit your request.';
-    return timeOffErrorRedirect(form, message);
+    return timeOffErrorResponse(request, form, message);
   }
 
   const dateSummary = entries.map((entry) => formatTimeOffEntry(entry)).join('; ');
@@ -36,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body: `${employee.name} requested time off: ${dateSummary}`,
       excludeUserId: employee.id,
       sourceType: TIME_OFF_REQUEST_SOURCE,
-      sourceId: requestId,
+      sourceId: created.id,
     });
   } catch (error) {
     console.error('time off management notify failed', error);
@@ -50,6 +56,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       notes,
     }),
   );
+
+  if (json) {
+    return timeOffJsonOk({
+      request: {
+        id: created.id,
+        status: 'pending',
+        createdAtLabel: formatTimeOffRequestDate(created.createdAt),
+        entryLabels: entries.map((entry) => formatTimeOffEntry(entry)),
+      },
+    });
+  }
 
   return new Response(null, {
     status: 303,

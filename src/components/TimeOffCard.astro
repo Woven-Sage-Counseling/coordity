@@ -15,6 +15,17 @@ const { userId } = Astro.props;
 const requests = await listTimeOffRequestsForUser(userId, 8);
 const notice = Astro.url.searchParams.get('timeOff');
 const error = Astro.url.searchParams.get('timeOffError');
+
+const initialFlash =
+  error != null && error !== ''
+    ? { kind: 'error' as const, text: error }
+    : notice === 'sent'
+      ? { kind: 'ok' as const, text: 'Request submitted.' }
+      : notice === 'retracted'
+        ? { kind: 'ok' as const, text: 'Request retracted.' }
+        : notice === 'deleted'
+          ? { kind: 'ok' as const, text: 'Denied request deleted.' }
+          : null;
 ---
 
 <aside
@@ -52,37 +63,24 @@ const error = Astro.url.searchParams.get('timeOffError');
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
-    {
-      error ? (
-        <p class="mb-3 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[11px] text-red-800">
-          {error}
-        </p>
-      ) : null
-    }
-    {
-      notice === 'sent' ? (
-        <p class="mb-3 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80">
-          Request submitted.
-        </p>
-      ) : null
-    }
-    {
-      notice === 'retracted' ? (
-        <p class="mb-3 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80">
-          Request retracted.
-        </p>
-      ) : null
-    }
-    {
-      notice === 'deleted' ? (
-        <p class="mb-3 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80">
-          Denied request deleted.
-        </p>
-      ) : null
-    }
+    <div data-time-off-flash class="mb-3" hidden={!initialFlash}>
+      {
+        initialFlash ? (
+          <p
+            class:list={[
+              'rounded-lg border px-2.5 py-2 text-[11px]',
+              initialFlash.kind === 'error'
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-sage-dark/15 bg-white text-sage-dark/80',
+            ]}
+          >
+            {initialFlash.text}
+          </p>
+        ) : null
+      }
+    </div>
 
     <form method="post" action="/api/time-off/request" class="shrink-0" data-time-off-widget-form>
-      <input type="hidden" name="returnTo" value="/?timeOff=sent" />
       <div class="rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]" data-time-off-row>
         <label class="block text-[11px] font-semibold text-[#393a3d]">
           Date
@@ -113,8 +111,9 @@ const error = Astro.url.searchParams.get('timeOffError');
           />
         </label>
         <button
-          class="mt-3 w-full rounded-md bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-charcoal"
+          class="mt-3 w-full rounded-md bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-charcoal disabled:opacity-60"
           type="submit"
+          data-time-off-submit
         >
           Submit request
         </button>
@@ -123,84 +122,103 @@ const error = Astro.url.searchParams.get('timeOffError');
 
     <div class="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Your requests</p>
-      {
-        requests.length === 0 ? (
-          <p class="mt-2 text-[12px] text-[#6b6c72]">No requests yet.</p>
-        ) : (
-          <ul class="mt-2 space-y-2">
-            {
-              requests.map((request) => (
-                <li class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="text-[10px] text-[#6b6c72]">
-                      {formatTimeOffRequestDate(request.createdAt)}
-                    </p>
-                    <span
-                      class:list={[
-                        'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
-                        request.status === 'pending' && 'bg-amber-100 text-amber-900',
-                        request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
-                        request.status === 'denied' && 'bg-red-100 text-red-900',
-                      ]}
+      <p class="mt-2 text-[12px] text-[#6b6c72]" data-time-off-empty hidden={requests.length > 0}>
+        No requests yet.
+      </p>
+      <ul class="mt-2 space-y-2" data-time-off-list hidden={requests.length === 0}>
+        {
+          requests.map((request) => (
+            <li
+              class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
+              data-time-off-item
+              data-request-id={request.id}
+            >
+              <div class="flex items-start justify-between gap-2">
+                <p class="text-[10px] text-[#6b6c72]">
+                  {formatTimeOffRequestDate(request.createdAt)}
+                </p>
+                <span
+                  class:list={[
+                    'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                    request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                    request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                    request.status === 'denied' && 'bg-red-100 text-red-900',
+                  ]}
+                >
+                  {timeOffStatusLabel(request.status)}
+                </span>
+              </div>
+              <ul class="mt-1.5 space-y-0.5 text-[11px] leading-snug text-[#393a3d]">
+                {
+                  request.entries.map((entry) => (
+                    <li>
+                      {formatTimeOffEntry({
+                        date: entry.date,
+                        fullDay: entry.fullDay,
+                        startTime: entry.startTime,
+                        endTime: entry.endTime,
+                      })}
+                    </li>
+                  ))
+                }
+              </ul>
+              {
+                request.status === 'pending' && (
+                  <form method="post" action="/api/time-off/retract" class="mt-2" data-time-off-action="retract">
+                    <input type="hidden" name="requestId" value={request.id} />
+                    <button
+                      class="rounded-md bg-[#f4f5f8] px-2 py-1 text-[10px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 transition hover:bg-white disabled:opacity-60"
+                      type="submit"
+                      data-confirm="Retract this pending request?"
                     >
-                      {timeOffStatusLabel(request.status)}
-                    </span>
-                  </div>
-                  <ul class="mt-1.5 space-y-0.5 text-[11px] leading-snug text-[#393a3d]">
-                    {
-                      request.entries.map((entry) => (
-                        <li>
-                          {formatTimeOffEntry({
-                            date: entry.date,
-                            fullDay: entry.fullDay,
-                            startTime: entry.startTime,
-                            endTime: entry.endTime,
-                          })}
-                        </li>
-                      ))
-                    }
-                  </ul>
-                  {
-                    request.status === 'pending' && (
-                      <form method="post" action="/api/time-off/retract" class="mt-2">
-                        <input type="hidden" name="requestId" value={request.id} />
-                        <input type="hidden" name="returnTo" value="/?timeOff=retracted" />
-                        <button
-                          class="rounded-md bg-[#f4f5f8] px-2 py-1 text-[10px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 transition hover:bg-white"
-                          type="submit"
-                          data-confirm="Retract this pending request?"
-                        >
-                          Retract
-                        </button>
-                      </form>
-                    )
-                  }
-                  {
-                    request.status === 'denied' && (
-                      <form method="post" action="/api/time-off/delete" class="mt-2">
-                        <input type="hidden" name="requestId" value={request.id} />
-                        <input type="hidden" name="returnTo" value="/?timeOff=deleted" />
-                        <button
-                          class="rounded-md bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100"
-                          type="submit"
-                          data-confirm="Delete this denied request?"
-                        >
-                          Delete
-                        </button>
-                      </form>
-                    )
-                  }
-                </li>
-              ))
-            }
-          </ul>
-        )
-      }
+                      Retract
+                    </button>
+                  </form>
+                )
+              }
+              {
+                request.status === 'denied' && (
+                  <form method="post" action="/api/time-off/delete" class="mt-2" data-time-off-action="delete">
+                    <input type="hidden" name="requestId" value={request.id} />
+                    <button
+                      class="rounded-md bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60"
+                      type="submit"
+                      data-confirm="Delete this denied request?"
+                    >
+                      Delete
+                    </button>
+                  </form>
+                )
+              }
+            </li>
+          ))
+        }
+      </ul>
     </div>
   </div>
 </aside>
 
 <script>
+  type WidgetRequest = {
+    id: string;
+    status: 'pending' | 'approved' | 'denied';
+    createdAtLabel: string;
+    entryLabels: string[];
+  };
+
+  type ApiResult =
+    | { ok: true; request?: WidgetRequest; requestId?: string; error?: undefined }
+    | { ok: false; error?: string };
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
   function syncRow(row: HTMLElement): void {
     const fullDay = row.querySelector('[data-time-off-full-day]');
     const times = row.querySelector('[data-time-off-times]');
@@ -220,8 +238,141 @@ const error = Astro.url.searchParams.get('timeOffError');
     }
   }
 
+  function setFlash(root: HTMLElement, kind: 'ok' | 'error', text: string): void {
+    const flash = root.querySelector('[data-time-off-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    const classes =
+      kind === 'error'
+        ? 'rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[11px] text-red-800'
+        : 'rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80';
+    flash.innerHTML = `<p class="${classes}">${escapeHtml(text)}</p>`;
+    flash.hidden = false;
+  }
+
+  function clearFlash(root: HTMLElement): void {
+    const flash = root.querySelector('[data-time-off-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    flash.innerHTML = '';
+    flash.hidden = true;
+  }
+
+  function syncListVisibility(root: HTMLElement): void {
+    const list = root.querySelector('[data-time-off-list]');
+    const empty = root.querySelector('[data-time-off-empty]');
+    if (!(list instanceof HTMLElement) || !(empty instanceof HTMLElement)) return;
+    const hasItems = list.querySelector('[data-time-off-item]') != null;
+    list.hidden = !hasItems;
+    empty.hidden = hasItems;
+  }
+
+  function statusBadge(status: WidgetRequest['status']): string {
+    const label =
+      status === 'approved' ? 'Approved' : status === 'denied' ? 'Denied' : 'Pending';
+    const color =
+      status === 'approved'
+        ? 'bg-emerald-100 text-emerald-900'
+        : status === 'denied'
+          ? 'bg-red-100 text-red-900'
+          : 'bg-amber-100 text-amber-900';
+    return `<span class="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${color}">${label}</span>`;
+  }
+
+  function renderRequestItem(request: WidgetRequest): string {
+    const entries = request.entryLabels
+      .map((label) => `<li>${escapeHtml(label)}</li>`)
+      .join('');
+    const action =
+      request.status === 'pending'
+        ? `<form method="post" action="/api/time-off/retract" class="mt-2" data-time-off-action="retract">
+            <input type="hidden" name="requestId" value="${escapeHtml(request.id)}" />
+            <button
+              class="rounded-md bg-[#f4f5f8] px-2 py-1 text-[10px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 transition hover:bg-white disabled:opacity-60"
+              type="submit"
+              data-confirm="Retract this pending request?"
+            >
+              Retract
+            </button>
+          </form>`
+        : request.status === 'denied'
+          ? `<form method="post" action="/api/time-off/delete" class="mt-2" data-time-off-action="delete">
+              <input type="hidden" name="requestId" value="${escapeHtml(request.id)}" />
+              <button
+                class="rounded-md bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60"
+                type="submit"
+                data-confirm="Delete this denied request?"
+              >
+                Delete
+              </button>
+            </form>`
+          : '';
+
+    return `<li
+      class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
+      data-time-off-item
+      data-request-id="${escapeHtml(request.id)}"
+    >
+      <div class="flex items-start justify-between gap-2">
+        <p class="text-[10px] text-[#6b6c72]">${escapeHtml(request.createdAtLabel)}</p>
+        ${statusBadge(request.status)}
+      </div>
+      <ul class="mt-1.5 space-y-0.5 text-[11px] leading-snug text-[#393a3d]">${entries}</ul>
+      ${action}
+    </li>`;
+  }
+
+  function prependRequest(root: HTMLElement, request: WidgetRequest): void {
+    const list = root.querySelector('[data-time-off-list]');
+    if (!(list instanceof HTMLElement)) return;
+    list.insertAdjacentHTML('afterbegin', renderRequestItem(request));
+    while (list.querySelectorAll('[data-time-off-item]').length > 8) {
+      list.lastElementChild?.remove();
+    }
+    syncListVisibility(root);
+  }
+
+  function removeRequest(root: HTMLElement, requestId: string): void {
+    const item = root.querySelector(`[data-time-off-item][data-request-id="${CSS.escape(requestId)}"]`);
+    item?.remove();
+    syncListVisibility(root);
+  }
+
+  function resetSubmitForm(form: HTMLFormElement): void {
+    form.reset();
+    const row = form.querySelector('[data-time-off-row]');
+    if (row instanceof HTMLElement) syncRow(row);
+  }
+
+  async function postForm(form: HTMLFormElement): Promise<ApiResult> {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+
+    let payload: ApiResult;
+    try {
+      payload = (await response.json()) as ApiResult;
+    } catch {
+      return { ok: false, error: 'Something went wrong. Please try again.' };
+    }
+
+    if (!response.ok || !payload.ok) {
+      return { ok: false, error: payload.error || 'Something went wrong. Please try again.' };
+    }
+
+    return payload;
+  }
+
+  function setBusy(form: HTMLFormElement, busy: boolean): void {
+    form.querySelectorAll('button[type="submit"]').forEach((button) => {
+      if (button instanceof HTMLButtonElement) button.disabled = busy;
+    });
+  }
+
   document.querySelectorAll('[data-time-off-widget]').forEach((root) => {
     if (!(root instanceof HTMLElement)) return;
+
     root.querySelectorAll('[data-time-off-row]').forEach((row) => {
       if (!(row instanceof HTMLElement)) return;
       const fullDay = row.querySelector('[data-time-off-full-day]');
@@ -231,14 +382,65 @@ const error = Astro.url.searchParams.get('timeOffError');
       syncRow(row);
     });
 
-    root.addEventListener('click', (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const button = target.closest('button[data-confirm]');
-      if (!(button instanceof HTMLButtonElement)) return;
-      const message = button.getAttribute('data-confirm');
-      if (!message) return;
-      if (!window.confirm(message)) event.preventDefault();
+    const submitForm = root.querySelector('[data-time-off-widget-form]');
+    if (submitForm instanceof HTMLFormElement) {
+      submitForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void (async () => {
+          clearFlash(root);
+          setBusy(submitForm, true);
+          try {
+            const result = await postForm(submitForm);
+            if (!result.ok || !result.request) {
+              setFlash(root, 'error', result.error || 'Unable to submit your request.');
+              return;
+            }
+            prependRequest(root, result.request);
+            resetSubmitForm(submitForm);
+            setFlash(root, 'ok', 'Request submitted.');
+          } finally {
+            setBusy(submitForm, false);
+          }
+        })();
+      });
+    }
+
+    root.addEventListener('submit', (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      const action = form.getAttribute('data-time-off-action');
+      if (action !== 'retract' && action !== 'delete') return;
+
+      event.preventDefault();
+      const confirmButton = form.querySelector('button[data-confirm]');
+      const message =
+        confirmButton instanceof HTMLButtonElement
+          ? confirmButton.getAttribute('data-confirm')
+          : null;
+      if (message && !window.confirm(message)) return;
+
+      void (async () => {
+        clearFlash(root);
+        setBusy(form, true);
+        try {
+          const result = await postForm(form);
+          if (!result.ok) {
+            setFlash(root, 'error', result.error || 'Unable to update that request.');
+            return;
+          }
+          const requestId =
+            result.requestId ||
+            String(new FormData(form).get('requestId') ?? '').trim();
+          if (requestId) removeRequest(root, requestId);
+          setFlash(
+            root,
+            'ok',
+            action === 'retract' ? 'Request retracted.' : 'Denied request deleted.',
+          );
+        } finally {
+          setBusy(form, false);
+        }
+      })();
     });
   });
 </script>

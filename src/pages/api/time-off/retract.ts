@@ -6,7 +6,12 @@ import {
 } from '../../../lib/notifications';
 import { retractTimeOffRequest } from '../../../lib/time-off-requests';
 import { buildTimeOffRetractionEmail } from '../../../lib/time-off';
-import { resolveTimeOffReturnTo, timeOffErrorRedirect } from '../../../lib/time-off-return';
+import {
+  resolveTimeOffReturnTo,
+  timeOffErrorResponse,
+  timeOffJsonOk,
+  wantsJson,
+} from '../../../lib/time-off-return';
 
 export const prerender = false;
 
@@ -19,7 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const form = await request.formData();
   const requestId = String(form.get('requestId') ?? '').trim();
   if (!requestId) {
-    return timeOffErrorRedirect(form, 'Request id is required.');
+    return timeOffErrorResponse(request, form, 'Request id is required.');
   }
 
   let retracted;
@@ -28,7 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await deleteNotificationsBySource(TIME_OFF_REQUEST_SOURCE, requestId);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to retract that request.';
-    return timeOffErrorRedirect(form, message);
+    return timeOffErrorResponse(request, form, message);
   }
 
   await notifyAdminEmail(
@@ -44,6 +49,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       notes: retracted.notes ?? '',
     }),
   );
+
+  if (wantsJson(request)) {
+    return timeOffJsonOk({ requestId });
+  }
 
   return new Response(null, {
     status: 303,
