@@ -46,18 +46,20 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
           data-admin-open="time-off"
         >
-          <span class="flex min-w-0 items-center gap-2.5">
-            <span class="text-[15px] font-medium text-charcoal">Time off requests</span>
+          <span class="text-[15px] font-medium text-charcoal">Time off requests</span>
+          <span class="inline-flex shrink-0 items-center gap-2">
             {
               pendingTimeOff > 0 ? (
                 <span
-                  class="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-red-600"
+                  class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold leading-none text-white"
                   aria-label={`${pendingTimeOff} pending time off ${pendingTimeOff === 1 ? 'request' : 'requests'}`}
-                ></span>
+                >
+                  {pendingTimeOff > 9 ? '9+' : pendingTimeOff}
+                </span>
               ) : null
             }
+            <span class="text-sage-dark/40" set:html={menuChevron} />
           </span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
         <div class="mx-4 border-t border-sage-dark/10"></div>
         <button
