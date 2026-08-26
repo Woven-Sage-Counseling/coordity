@@ -94,6 +94,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
       </div>
+
+      <form method="post" action="/api/session/sign-out" class="mt-6">
+        <button
+          class="w-full rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3.5 text-[15px] font-medium text-red-700 shadow-sm transition hover:bg-red-50"
+          type="submit"
+        >
+          Sign out
+        </button>
+      </form>
     </div>
 
     <section class="mt-6 hidden" data-settings-panel="appearance" data-theme-settings data-user-id={employee.id}>
