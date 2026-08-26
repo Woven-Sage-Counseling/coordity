@@ -81,13 +81,9 @@ const hasNotificationUnread = notificationUnreadCount > 0;
           }
         </button>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <p class="text-[11px] text-sage-dark/60" data-feed-status>
-          {latest
-            ? `Posted by: ${latest.authorName} · ${formatAnnouncementDate(latest.createdAt)}`
-            : 'Nothing posted yet'}
-        </p>
-      </div>
+      <p class="text-[11px] text-sage-dark/60" data-feed-status hidden>
+        You are caught up
+      </p>
     </div>
 
     <div class="relative overflow-hidden" data-feed-stage>
@@ -101,16 +97,23 @@ const hasNotificationUnread = notificationUnreadCount > 0;
         {
           latest ? (
             <div class="min-w-0">
-              <p class="truncate text-[15px] font-medium text-charcoal">{latest.title}</p>
+              <div class="flex items-start justify-between gap-3">
+                <p class="min-w-0 flex-1 truncate text-[15px] font-medium text-charcoal">{latest.title}</p>
+                <p class="shrink-0 text-right text-[11px] leading-snug text-sage-dark/60">
+                  Posted by: {latest.authorName} · {formatAnnouncementDate(latest.createdAt)}
+                </p>
+              </div>
               <p class="mt-1 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{latest.body}</p>
               {announcements.length > 1 && (
                 <ul class="mt-4 space-y-3 border-t border-black/[0.06] pt-4">
                   {announcements.slice(1, 4).map((item) => (
                     <li class="min-w-0">
-                      <p class="truncate text-sm font-medium text-charcoal">{item.title}</p>
-                      <p class="mt-0.5 line-clamp-1 text-xs text-sage-dark/70">
-                        Posted by: {item.authorName} · {formatAnnouncementDate(item.createdAt)}
-                      </p>
+                      <div class="flex items-start justify-between gap-3">
+                        <p class="min-w-0 flex-1 truncate text-sm font-medium text-charcoal">{item.title}</p>
+                        <p class="shrink-0 text-right text-[11px] leading-snug text-sage-dark/60">
+                          Posted by: {item.authorName} · {formatAnnouncementDate(item.createdAt)}
+                        </p>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -328,6 +331,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
 
     const refreshNotificationStatus = () => {
       if (!(status instanceof HTMLElement) || active !== 'notifications') return;
+      status.hidden = false;
       const unreadLeft = root.querySelectorAll('[data-notification-item] [data-unread-dot].bg-red-500').length;
       status.textContent = unreadLeft > 0 ? `${unreadLeft > 9 ? '9+' : unreadLeft} new` : 'You are caught up';
       if (unreadLeft === 0) clearBadge('notifications');
@@ -449,17 +453,14 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       syncViewAll(next);
       if (status instanceof HTMLElement) {
         if (next === 'notifications') {
+          status.hidden = false;
           refreshNotificationStatus();
         } else {
-          status.textContent = status.dataset.announcementsStatus ?? status.textContent;
+          status.hidden = true;
           void markAnnouncementsRead();
         }
       }
     };
-
-    if (status instanceof HTMLElement) {
-      status.dataset.announcementsStatus = status.textContent ?? '';
-    }
 
     tabs.forEach((tab) => {
       const key = tab.getAttribute('data-feed-tab');
