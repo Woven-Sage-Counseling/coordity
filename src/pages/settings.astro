@@ -50,240 +50,296 @@ try {
 const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
   ? 'Google Calendar connected.'
   : Astro.url.searchParams.get('error');
+
+const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
 
 <PortalLayout title="Settings">
-  <p class="text-sm text-sage-dark/65">
-    <a href="/" class="hover:text-sage-dark">Home</a>
-    <span class="mx-1.5 text-sage-dark/35">/</span>
-    Settings
-  </p>
-  <h1 class="mt-3 font-display text-4xl text-charcoal">Settings</h1>
-  <p class="mt-3 max-w-2xl text-sage-dark/75">
-    Personalize appearance and which widgets show on your home page.
-  </p>
-
-  <section class="card mt-8" data-theme-settings data-user-id={employee.id}>
-    <h2 class="font-display text-2xl text-charcoal">Appearance</h2>
-    <p class="mt-2 text-sm text-sage-dark/65">
-      Switch between the light and dark employee portal themes.
+  <div class="mx-auto max-w-lg" data-settings-shell>
+    <p class="text-sm text-sage-dark/65">
+      <a href="/" class="hover:text-sage-dark">Home</a>
+      <span class="mx-1.5 text-sage-dark/35">/</span>
+      Settings
     </p>
+    <h1 class="mt-3 font-display text-4xl text-charcoal">Settings</h1>
 
-    <div class="mt-6 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Color theme">
-      <label
-        class="flex cursor-pointer items-start gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3 has-[:checked]:border-sage-dark/40 has-[:checked]:ring-2 has-[:checked]:ring-sage-dark/20"
-      >
-        <input
-          type="radio"
-          name="theme"
-          value="light"
-          class="mt-1 h-4 w-4 border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-          data-theme-option
-        />
-        <span>
-          <span class="block text-sm font-semibold text-charcoal">Light</span>
-          <span class="mt-0.5 block text-sm text-sage-dark/65">Cream background and soft sage accents.</span>
-        </span>
-      </label>
-      <label
-        class="flex cursor-pointer items-start gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3 has-[:checked]:border-sage-dark/40 has-[:checked]:ring-2 has-[:checked]:ring-sage-dark/20"
-      >
-        <input
-          type="radio"
-          name="theme"
-          value="dark"
-          class="mt-1 h-4 w-4 border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-          data-theme-option
-        />
-        <span>
-          <span class="block text-sm font-semibold text-charcoal">Dark</span>
-          <span class="mt-0.5 block text-sm text-sage-dark/65">Low-light surfaces with lighter text.</span>
-        </span>
-      </label>
+    <div data-settings-menu>
+      <p class="mt-3 text-sage-dark/75">Choose a category to manage.</p>
+
+      <div class="mt-8 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-settings-open="appearance"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Appearance</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-settings-open="widgets"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Home widgets</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-settings-open="google-calendar"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Google Calendar</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+      </div>
     </div>
-  </section>
 
-  <section
-    class="card mt-8"
-    data-widget-settings
-    data-user-id={employee.id}
-    data-can-financials={canSeeFinancials ? '1' : '0'}
-    data-max={HOME_WIDGET_MAX}
-    data-catalog={JSON.stringify(widgets)}
-  >
-    <h2 class="font-display text-2xl text-charcoal">Home widgets</h2>
-    <p class="mt-2 text-sm text-sage-dark/65">
-      Enable widgets, then use the arrows to set carousel order (up to {HOME_WIDGET_MAX}).
-    </p>
+    <section class="mt-6 hidden" data-settings-panel="appearance" data-theme-settings data-user-id={employee.id}>
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-settings-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Settings
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Appearance</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">Light or dark portal theme.</p>
 
-    <p
-      class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-      data-settings-error
-    ></p>
-    <p
-      class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
-      data-settings-saved
+      <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" role="radiogroup" aria-label="Color theme">
+        <label class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 has-[:checked]:bg-sage/10">
+          <span class="text-[15px] font-medium text-charcoal">Light</span>
+          <input
+            type="radio"
+            name="theme"
+            value="light"
+            class="h-4 w-4 border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+            data-theme-option
+          />
+        </label>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <label class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 has-[:checked]:bg-sage/10">
+          <span class="text-[15px] font-medium text-charcoal">Dark</span>
+          <input
+            type="radio"
+            name="theme"
+            value="dark"
+            class="h-4 w-4 border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+            data-theme-option
+          />
+        </label>
+      </div>
+    </section>
+
+    <section
+      class="mt-6 hidden"
+      data-settings-panel="widgets"
+      data-widget-settings
+      data-user-id={employee.id}
+      data-can-financials={canSeeFinancials ? '1' : '0'}
+      data-max={HOME_WIDGET_MAX}
+      data-catalog={JSON.stringify(widgets)}
     >
-      Saved. Your home page will use these choices next time you open it.
-    </p>
-
-    <ul class="mt-6 space-y-3" data-widget-list></ul>
-
-    <div class="mt-8">
-      <label for="default-widget" class="block text-sm font-semibold text-charcoal">
-        Open home to
-      </label>
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-settings-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Settings
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Home widgets</h2>
       <p class="mt-1 text-sm text-sage-dark/65">
-        This widget shows first when you land on Home after signing in.
+        Enable widgets and set carousel order (up to {HOME_WIDGET_MAX}).
       </p>
-      <select id="default-widget" class="field mt-3 max-w-sm" data-widget-default></select>
-    </div>
 
-    <div class="mt-8 flex flex-wrap items-center gap-3">
-      <button type="button" class="btn-primary" data-settings-save>Save preferences</button>
-      <a href="/" class="text-sm text-sage-dark/70 hover:text-sage-dark">Back to home</a>
-    </div>
-  </section>
+      <p
+        class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        data-settings-error
+      ></p>
+      <p
+        class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
+        data-settings-saved
+      >
+        Saved. Your home page will use these choices next time you open it.
+      </p>
 
-  <section class="card mt-8" id="google-calendar" data-calendar-settings>
-    <h2 class="font-display text-2xl text-charcoal">Google Calendar</h2>
-    <p class="mt-2 text-sm text-sage-dark/65">
-      Connect your own Google account to show event titles on the Schedule home widget. Read-only access only.
-    </p>
+      <ul class="mt-6 space-y-2" data-widget-list></ul>
 
-    {
-      calendarNotice ? (
-        <p class="mt-4 rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
-          {calendarNotice}
-        </p>
-      ) : null
-    }
+      <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+        <label for="default-widget" class="block px-4 pt-3.5 text-[13px] font-medium text-sage-dark/65">
+          Open home to
+        </label>
+        <select
+          id="default-widget"
+          class="w-full border-0 bg-transparent px-4 pb-3.5 pt-1 text-[15px] font-medium text-charcoal outline-none"
+          data-widget-default
+        ></select>
+      </div>
 
-    {
-      !calendarConnection.configured ? (
-        <p class="mt-4 text-sm text-sage-dark/65">
-          Google Calendar OAuth is not configured yet. Add <code class="text-xs">GOOGLE_CLIENT_ID</code> and{' '}
-          <code class="text-xs">GOOGLE_CLIENT_SECRET</code> to the portal environment.
-        </p>
-      ) : calendarConnection.status !== 'connected' ? (
-        <div class="mt-6">
-          <form method="post" action="/api/google-calendar/connect">
-            <input type="hidden" name="returnTo" value="/settings#google-calendar" />
-            <button type="submit" class="btn-primary">Connect Google Calendar</button>
-          </form>
-        </div>
-      ) : (
-        <>
-          <p class="mt-4 text-sm text-sage-dark/75">
-            Connected as <span class="font-semibold text-charcoal">{calendarConnection.googleEmail}</span>.
+      <div class="mt-6">
+        <button type="button" class="btn-primary" data-settings-save>Save preferences</button>
+      </div>
+    </section>
+
+    <section class="mt-6 hidden" data-settings-panel="google-calendar" id="google-calendar" data-calendar-settings>
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-settings-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Settings
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Google Calendar</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        Connect your Google account for the Schedule widget. Read-only access only.
+      </p>
+
+      {
+        calendarNotice ? (
+          <p class="mt-4 rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
+            {calendarNotice}
           </p>
-          <p class="mt-2 text-sm text-sage-dark/65">
-            Check the calendars you want on the home Schedule widget, then save. Optional cover names replace every event title from that calendar (for example, “Genesis patient” on purple blocks). Leave a cover blank to show the real titles.
+        ) : null
+      }
+
+      {
+        !calendarConnection.configured ? (
+          <p class="mt-6 text-sm text-sage-dark/65">
+            Google Calendar OAuth is not configured yet. Add <code class="text-xs">GOOGLE_CLIENT_ID</code> and{' '}
+            <code class="text-xs">GOOGLE_CLIENT_SECRET</code> to the portal environment.
           </p>
-          {
-            calendarConnection.lastError ? (
-              <p class="mt-3 text-sm text-red-700">{calendarConnection.lastError}</p>
-            ) : null
-          }
-          <p
-            class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
-            data-calendar-saved
-          >
-            Calendar preferences saved.
-          </p>
-          {
-            calendarOptions.length === 0 ? (
-              <p class="mt-6 text-sm text-sage-dark/65">
-                No calendars loaded yet. Click <span class="font-semibold text-charcoal">Refresh list</span>.
-              </p>
-            ) : (
-              <ul class="mt-6 space-y-3" data-calendar-list>
-                {
-                  calendarOptions.map((calendar) => (
-                    <li class="rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3">
-                      <div class="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          id={`calendar-${encodeURIComponent(calendar.id)}`}
-                          value={calendar.id}
-                          checked={calendar.enabled}
-                          class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-                          data-calendar-option
-                        />
-                        <label for={`calendar-${encodeURIComponent(calendar.id)}`} class="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                          <span
-                            class="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
-                            style={`background-color: ${calendar.color ?? '#6b6c72'}`}
-                            aria-hidden="true"
-                          ></span>
-                          <span class="block text-sm font-semibold text-charcoal">{calendar.name}</span>
+        ) : calendarConnection.status !== 'connected' ? (
+          <div class="mt-6">
+            <form method="post" action="/api/google-calendar/connect">
+              <input type="hidden" name="returnTo" value="/settings#google-calendar" />
+              <button type="submit" class="btn-primary">Connect Google Calendar</button>
+            </form>
+          </div>
+        ) : (
+          <>
+            <p class="mt-4 text-sm text-sage-dark/75">
+              Connected as <span class="font-semibold text-charcoal">{calendarConnection.googleEmail}</span>.
+            </p>
+            <p class="mt-2 text-sm text-sage-dark/65">
+              Check the calendars you want on the home Schedule widget, then save. Optional cover names replace every event title from that calendar.
+            </p>
+            {
+              calendarConnection.lastError ? (
+                <p class="mt-3 text-sm text-red-700">{calendarConnection.lastError}</p>
+              ) : null
+            }
+            <p
+              class="mt-4 hidden rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80"
+              data-calendar-saved
+            >
+              Calendar preferences saved.
+            </p>
+            {
+              calendarOptions.length === 0 ? (
+                <p class="mt-6 text-sm text-sage-dark/65">
+                  No calendars loaded yet. Click <span class="font-semibold text-charcoal">Refresh list</span>.
+                </p>
+              ) : (
+                <ul class="mt-6 space-y-2" data-calendar-list>
+                  {
+                    calendarOptions.map((calendar) => (
+                      <li class="overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3 shadow-sm">
+                        <div class="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id={`calendar-${encodeURIComponent(calendar.id)}`}
+                            value={calendar.id}
+                            checked={calendar.enabled}
+                            class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+                            data-calendar-option
+                          />
+                          <label for={`calendar-${encodeURIComponent(calendar.id)}`} class="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                            <span
+                              class="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
+                              style={`background-color: ${calendar.color ?? '#6b6c72'}`}
+                              aria-hidden="true"
+                            ></span>
+                            <span class="block text-[15px] font-medium text-charcoal">{calendar.name}</span>
+                          </label>
+                        </div>
+                        <label class="mt-3 block pl-7">
+                          <span class="text-xs font-medium text-sage-dark/70">Cover name</span>
+                          <input
+                            type="text"
+                            class="field mt-1"
+                            maxlength="80"
+                            placeholder="Leave blank to show real titles"
+                            value={calendar.coverTitle ?? ''}
+                            data-calendar-cover
+                            data-calendar-id={calendar.id}
+                          />
                         </label>
-                      </div>
-                      <label class="mt-3 block pl-7">
-                        <span class="text-xs font-medium text-sage-dark/70">Cover name</span>
-                        <input
-                          type="text"
-                          class="field mt-1"
-                          maxlength="80"
-                          placeholder="Leave blank to show real titles"
-                          value={calendar.coverTitle ?? ''}
-                          data-calendar-cover
-                          data-calendar-id={calendar.id}
-                        />
-                      </label>
-                    </li>
-                  ))
-                }
-              </ul>
-            )
-          }
-          <div class="mt-8 border-t border-sage-dark/10 pt-6">
-            <h3 class="text-sm font-semibold text-charcoal">Hide events</h3>
-            <p class="mt-1 text-sm text-sage-dark/65">
-              Hide specific overlapping busy blocks. Each line must match an event title exactly (case-insensitive).
-            </p>
-            <label for="hidden-title-keywords" class="mt-4 block text-sm font-medium text-charcoal">
-              Hide these exact titles
-            </label>
-            <textarea
-              id="hidden-title-keywords"
-              class="field mt-2 min-h-[6rem]"
-              rows="4"
-              placeholder={'Not available\nBusy - Other Practice'}
-              data-hidden-title-keywords
-            >{calendarConnection.hiddenTitleKeywords.join('\n')}</textarea>
-            <p class="mt-1 text-xs text-sage-dark/55">
-              One full title per line. Example: <span class="font-medium text-sage-dark/70">Not available</span> will
-              not hide <span class="font-medium text-sage-dark/70">Not available - Woven Sage</span>.
-            </p>
-            <label class="mt-4 flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
-                checked={calendarConnection.hideOutOfOffice}
-                data-hide-out-of-office
-              />
-              <span>
-                <span class="block text-sm font-medium text-charcoal">Hide Out of office events</span>
-                <span class="mt-0.5 block text-sm text-sage-dark/65">
-                  Hides Google Calendar out-of-office / unavailable blocks.
+                      </li>
+                    ))
+                  }
+                </ul>
+              )
+            }
+            <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+              <div class="px-4 py-3.5">
+                <h3 class="text-[15px] font-medium text-charcoal">Hide events</h3>
+                <p class="mt-1 text-sm text-sage-dark/65">
+                  Hide specific overlapping busy blocks. Each line must match an event title exactly (case-insensitive).
+                </p>
+                <label for="hidden-title-keywords" class="mt-4 block text-sm font-medium text-charcoal">
+                  Hide these exact titles
+                </label>
+                <textarea
+                  id="hidden-title-keywords"
+                  class="field mt-2 min-h-[6rem]"
+                  rows="4"
+                  placeholder={'Not available\nBusy - Other Practice'}
+                  data-hidden-title-keywords
+                >{calendarConnection.hiddenTitleKeywords.join('\n')}</textarea>
+                <p class="mt-1 text-xs text-sage-dark/55">
+                  One full title per line.
+                </p>
+              </div>
+              <div class="mx-4 border-t border-sage-dark/10"></div>
+              <label class="flex cursor-pointer items-start gap-3 px-4 py-3.5">
+                <input
+                  type="checkbox"
+                  class="mt-1 h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+                  checked={calendarConnection.hideOutOfOffice}
+                  data-hide-out-of-office
+                />
+                <span>
+                  <span class="block text-[15px] font-medium text-charcoal">Hide Out of office events</span>
+                  <span class="mt-0.5 block text-sm text-sage-dark/65">
+                    Hides Google Calendar out-of-office / unavailable blocks.
+                  </span>
                 </span>
-              </span>
-            </label>
-          </div>
-          <div class="mt-8 flex flex-wrap items-center gap-3">
-            <button type="button" class="btn-primary" data-calendar-save>Save calendars</button>
-            <button type="button" class="text-sm text-sage-dark/70 hover:text-sage-dark" data-calendar-refresh>
-              Refresh list
-            </button>
-            <button type="button" class="text-sm text-red-700 hover:text-red-800" data-calendar-disconnect>
-              Disconnect
-            </button>
-          </div>
-        </>
-      )
-    }
-  </section>
+              </label>
+            </div>
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <button type="button" class="btn-primary" data-calendar-save>Save calendars</button>
+              <button type="button" class="text-sm text-sage-dark/70 hover:text-sage-dark" data-calendar-refresh>
+                Refresh list
+              </button>
+              <button type="button" class="text-sm text-red-700 hover:text-red-800" data-calendar-disconnect>
+                Disconnect
+              </button>
+            </div>
+          </>
+        )
+      }
+    </section>
+  </div>
 </PortalLayout>
 
 <script>
@@ -295,6 +351,50 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
       ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
       : ['schedule', 'time_off', 'coming_soon'];
     return { enabled, defaultId: 'schedule' };
+  }
+
+  function setupSettingsNav(shell: Element) {
+    if (!(shell instanceof HTMLElement)) return;
+    const menu = shell.querySelector('[data-settings-menu]');
+    const panels = Array.from(shell.querySelectorAll('[data-settings-panel]')).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+
+    const showMenu = () => {
+      if (menu instanceof HTMLElement) menu.classList.remove('hidden');
+      panels.forEach((panel) => panel.classList.add('hidden'));
+      if (window.location.hash) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+
+    const showPanel = (id: string, updateHash = true) => {
+      if (menu instanceof HTMLElement) menu.classList.add('hidden');
+      panels.forEach((panel) => {
+        panel.classList.toggle('hidden', panel.dataset.settingsPanel !== id);
+      });
+      if (updateHash) {
+        const hash = id === 'google-calendar' ? '#google-calendar' : `#${id}`;
+        history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+      }
+    };
+
+    shell.querySelectorAll('[data-settings-open]').forEach((node) => {
+      if (!(node instanceof HTMLButtonElement)) return;
+      node.addEventListener('click', () => {
+        const id = node.dataset.settingsOpen;
+        if (id) showPanel(id);
+      });
+    });
+
+    shell.querySelectorAll('[data-settings-back]').forEach((node) => {
+      node.addEventListener('click', () => showMenu());
+    });
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash === 'google-calendar' || hash === 'appearance' || hash === 'widgets') {
+      showPanel(hash, false);
+    }
   }
 
   function applyTheme(theme: 'light' | 'dark', userId: string) {
@@ -371,7 +471,6 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
       /* keep defaults */
     }
 
-    // Ordered rows: enabled (in saved order) first, then remaining catalog items
     const orderedIds = [
       ...prefs.enabled,
       ...catalog.map((w) => w.id).filter((id) => !prefs.enabled.includes(id)),
@@ -411,7 +510,7 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
 
         const li = document.createElement('li');
         li.className =
-          'flex flex-wrap items-center gap-3 rounded-xl border border-sage-dark/10 bg-[#f7f8f6] px-4 py-3';
+          'flex flex-wrap items-center gap-3 rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3 shadow-sm';
         li.dataset.widgetId = row.id;
 
         const check = document.createElement('input');
@@ -449,7 +548,7 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
         const label = document.createElement('label');
         label.htmlFor = check.id;
         label.className = 'min-w-0 flex-1 cursor-pointer';
-        label.innerHTML = `<span class="block text-sm font-semibold text-charcoal"></span><span class="mt-0.5 block text-sm text-sage-dark/65"></span>`;
+        label.innerHTML = `<span class="block text-[15px] font-medium text-charcoal"></span><span class="mt-0.5 block text-sm text-sage-dark/65"></span>`;
         (label.children[0] as HTMLElement).textContent = widget.label;
         (label.children[1] as HTMLElement).textContent = widget.description;
 
@@ -523,6 +622,7 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
     });
   }
 
+  document.querySelectorAll('[data-settings-shell]').forEach((root) => setupSettingsNav(root));
   document.querySelectorAll('[data-theme-settings]').forEach((root) => setupTheme(root));
   document.querySelectorAll('[data-widget-settings]').forEach((root) => setupSettings(root));
 
