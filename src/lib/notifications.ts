@@ -332,35 +332,55 @@ export async function notifyManagementUsers(input: {
   const { DB } = getEnv();
   const now = nowMs();
   const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim().toLowerCase();
+  const excludeId = input.excludeUserId?.trim() || null;
+  const recipientIds = new Set<string>();
 
-  const users = await DB.prepare(
+  const byRole = await DB.prepare(
     `SELECT DISTINCT u.id
      FROM user u
      JOIN employee_profile p ON p.user_id = u.id
-     LEFT JOIN user_role ur ON ur.user_id = u.id
-     LEFT JOIN role r ON r.id = ur.role_id
+     JOIN user_role ur ON ur.user_id = u.id
+     JOIN role r ON r.id = ur.role_id
      WHERE p.status = 'active'
-       AND (
-         r.key IN ('owner', 'owner_view')
-         OR (? != '' AND lower(u.email) = ?)
-       )
-       AND (? IS NULL OR u.id != ?)`,
-  )
-    .bind(ownerEmail, ownerEmail, input.excludeUserId ?? null, input.excludeUserId ?? null)
-    .all<{ id: string }>();
+       AND r.key IN ('owner', 'owner_view')`,
+  ).all<{ id: string }>();
 
-  const recipients = users.results ?? [];
-  if (recipients.length === 0) return;
+  for (const row of byRole.results ?? []) {
+    recipientIds.add(row.id);
+  }
+
+  if (ownerEmail) {
+    const byEmail = await DB.prepare(
+      `SELECT u.id
+       FROM user u
+       JOIN employee_profile p ON p.user_id = u.id
+       WHERE p.status = 'active'
+         AND lower(trim(u.email)) = ?`,
+    )
+      .bind(ownerEmail)
+      .first<{ id: string }>();
+    if (byEmail?.id) recipientIds.add(byEmail.id);
+  }
+
+  const recipients = [...recipientIds].filter((id) => id !== excludeId);
+  if (recipients.length === 0) {
+    console.error('notifyManagementUsers: no admin recipients found', {
+      ownerEmailSet: Boolean(ownerEmail),
+      roleMatchCount: byRole.results?.length ?? 0,
+      excludeId,
+    });
+    return;
+  }
 
   await DB.batch(
-    recipients.map((user) =>
+    recipients.map((userId) =>
       DB.prepare(
         `INSERT INTO notification
            (id, user_id, title, body, created_at, read_at, source_type, source_id)
          VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
       ).bind(
         randomToken(16),
-        user.id,
+        userId,
         input.title,
         input.body,
         now,

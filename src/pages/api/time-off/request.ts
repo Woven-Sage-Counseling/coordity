@@ -30,13 +30,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const dateSummary = entries.map((entry) => formatTimeOffEntry(entry)).join('; ');
-  await notifyManagementUsers({
-    title: 'New time off request',
-    body: `${employee.name} requested time off: ${dateSummary}`,
-    excludeUserId: employee.id,
-    sourceType: TIME_OFF_REQUEST_SOURCE,
-    sourceId: requestId,
-  });
+  try {
+    await notifyManagementUsers({
+      title: 'New time off request',
+      body: `${employee.name} requested time off: ${dateSummary}`,
+      excludeUserId: employee.id,
+      sourceType: TIME_OFF_REQUEST_SOURCE,
+      sourceId: requestId,
+    });
+  } catch (error) {
+    console.error('time off management notify failed', error);
+  }
 
   await notifyAdminEmail(
     buildTimeOffEmail({

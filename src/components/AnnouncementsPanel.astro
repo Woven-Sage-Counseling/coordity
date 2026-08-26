@@ -1,7 +1,7 @@
 ---
 import type { Announcement } from '../lib/announcements';
 import { formatAnnouncementDate } from '../lib/announcements';
-import { CALENDAR_CONFLICT_SOURCE, type PortalNotification } from '../lib/notifications';
+import { CALENDAR_CONFLICT_SOURCE, TIME_OFF_REQUEST_SOURCE, type PortalNotification } from '../lib/notifications';
 
 interface Props {
   announcements: Announcement[];
@@ -137,6 +137,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
             <ul class="max-h-80 overflow-y-auto">
               {notifications.map((item) => {
                 const isConflict = item.sourceType === CALENDAR_CONFLICT_SOURCE;
+                const isTimeOff = item.sourceType === TIME_OFF_REQUEST_SOURCE;
                 return (
                   <li
                     class:list={[
@@ -191,6 +192,16 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                           }
                         </div>
                         <p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
+                        {
+                          isTimeOff && canSeeAdmin ? (
+                            <a
+                              href="/admin#time-off-requests"
+                              class="mt-2 inline-block text-[11px] font-semibold text-sage-dark/70 transition hover:text-charcoal"
+                            >
+                              Review in Admin
+                            </a>
+                          ) : null
+                        }
                       </div>
                     </div>
                   </li>
