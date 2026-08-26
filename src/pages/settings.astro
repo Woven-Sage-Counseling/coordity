@@ -357,9 +357,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
   function defaultPrefs(canFinancials: boolean): Prefs {
     const enabled = canFinancials
-      ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
-      : ['schedule', 'time_off', 'coming_soon'];
+      ? ['schedule', 'time_off', 'my_progress', 'quickbooks']
+      : ['schedule', 'time_off', 'my_progress'];
     return { enabled, defaultId: 'schedule' };
+  }
+
+  function migrateWidgetId(id: string): string {
+    return id === 'coming_soon' ? 'my_progress' : id;
   }
 
   function setupSettingsNav(shell: Element) {
@@ -466,12 +470,26 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         const parsed = JSON.parse(raw) as Prefs;
         if (Array.isArray(parsed.enabled) && parsed.enabled.length) {
           prefs = {
-            enabled: parsed.enabled.filter((id) => catalog.some((w) => w.id === id)).slice(0, max),
-            defaultId: parsed.defaultId || parsed.enabled[0]!,
+            enabled: parsed.enabled
+              .map(migrateWidgetId)
+              .filter((id) => catalog.some((w) => w.id === id))
+              .slice(0, max),
+            defaultId: migrateWidgetId(parsed.defaultId || parsed.enabled[0]!),
           };
           if (catalog.some((w) => w.id === 'time_off') && !prefs.enabled.includes('time_off') && prefs.enabled.length < max) {
             const scheduleIdx = prefs.enabled.indexOf('schedule');
             prefs.enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : prefs.enabled.length, 0, 'time_off');
+          }
+          if (
+            catalog.some((w) => w.id === 'my_progress') &&
+            !prefs.enabled.includes('my_progress') &&
+            prefs.enabled.length < max
+          ) {
+            const timeOffIdx = prefs.enabled.indexOf('time_off');
+            prefs.enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : prefs.enabled.length, 0, 'my_progress');
+          }
+          if (!prefs.enabled.includes(prefs.defaultId)) {
+            prefs.defaultId = prefs.enabled[0] || 'schedule';
           }
           if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials);
         }

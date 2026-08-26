@@ -2,7 +2,7 @@
 import FinancialSnapshotCard from './FinancialSnapshotCard.astro';
 import ScheduleCard from './ScheduleCard.astro';
 import TimeOffCard from './TimeOffCard.astro';
-import PlaceholderWidget from './PlaceholderWidget.astro';
+import MyProgressCard from './MyProgressCard.astro';
 import { availableWidgets } from '../lib/home-widgets';
 
 interface Props {
@@ -68,9 +68,9 @@ const arrowClass =
                 <TimeOffCard userId={userId} />
               </div>
             )}
-            {availableIds.includes('coming_soon') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="coming_soon">
-                <PlaceholderWidget />
+            {availableIds.includes('my_progress') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="my_progress">
+                <MyProgressCard userId={userId} />
               </div>
             )}
           </div>
@@ -188,9 +188,13 @@ const arrowClass =
 
   function defaultPrefs(canFinancials: boolean): Prefs {
     const enabled = canFinancials
-      ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
-      : ['schedule', 'time_off', 'coming_soon'];
+      ? ['schedule', 'time_off', 'my_progress', 'quickbooks']
+      : ['schedule', 'time_off', 'my_progress'];
     return { enabled, defaultId: 'schedule' };
+  }
+
+  function migrateWidgetId(id: string): string {
+    return id === 'coming_soon' ? 'my_progress' : id;
   }
 
   function readPrefs(userId: string, canFinancials: boolean, available: string[]): Prefs {
@@ -201,6 +205,7 @@ const arrowClass =
       const parsed = JSON.parse(raw) as Prefs;
       const allowed = new Set(available);
       const enabled = (parsed.enabled || [])
+        .map(migrateWidgetId)
         .filter((id) => allowed.has(id))
         .slice(0, 10);
       let mutated = false;
@@ -209,11 +214,17 @@ const arrowClass =
         enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
         mutated = true;
       }
+      if (allowed.has('my_progress') && !enabled.includes('my_progress') && enabled.length < 10) {
+        const timeOffIdx = enabled.indexOf('time_off');
+        enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+        mutated = true;
+      }
       const finalEnabled = enabled.length ? enabled : fallback.enabled.filter((id) => allowed.has(id));
-      const defaultId =
-        finalEnabled.includes(parsed.defaultId) ? parsed.defaultId : finalEnabled[0]!;
+      const defaultId = finalEnabled.includes(migrateWidgetId(parsed.defaultId || ''))
+        ? migrateWidgetId(parsed.defaultId)
+        : finalEnabled[0]!;
       const next = { enabled: finalEnabled, defaultId };
-      if (mutated) {
+      if (mutated || (parsed.enabled || []).includes('coming_soon')) {
         try {
           localStorage.setItem('portal:home-widgets:' + userId, JSON.stringify(next));
         } catch {

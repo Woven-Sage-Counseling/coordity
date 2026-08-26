@@ -1,6 +1,6 @@
 export const HOME_WIDGET_MAX = 10;
 
-export type HomeWidgetId = 'quickbooks' | 'schedule' | 'time_off' | 'coming_soon';
+export type HomeWidgetId = 'quickbooks' | 'schedule' | 'time_off' | 'my_progress';
 
 export interface HomeWidgetDef {
   id: HomeWidgetId;
@@ -23,15 +23,15 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     description: 'Submit time-off requests and track pending or approved status.',
   },
   {
+    id: 'my_progress',
+    label: 'My progress',
+    description: 'Onboarding, training, and compliance progress.',
+  },
+  {
     id: 'quickbooks',
     label: 'QuickBooks',
     description: 'Profit and loss snapshot and reserve progress.',
     requiresFinancials: true,
-  },
-  {
-    id: 'coming_soon',
-    label: 'Coming soon',
-    description: 'Placeholder for the next home widget.',
   },
 ];
 
@@ -53,11 +53,15 @@ export function availableWidgets(canSeeFinancials: boolean): HomeWidgetDef[] {
   });
 }
 
+function migrateWidgetId(id: string): string {
+  return id === 'coming_soon' ? 'my_progress' : id;
+}
+
 export function defaultPrefs(canSeeFinancials: boolean): HomeWidgetPrefs {
   const available = availableWidgets(canSeeFinancials).map((w) => w.id);
   const preferredOrder: HomeWidgetId[] = canSeeFinancials
-    ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
-    : ['schedule', 'time_off', 'coming_soon'];
+    ? ['schedule', 'time_off', 'my_progress', 'quickbooks']
+    : ['schedule', 'time_off', 'my_progress'];
   const enabled = preferredOrder.filter((id) => available.includes(id)).slice(0, HOME_WIDGET_MAX);
   return {
     enabled,
@@ -77,6 +81,7 @@ export function normalizePrefs(
 
   const enabledRaw = Array.isArray(data.enabled) ? data.enabled : [];
   const enabled = enabledRaw
+    .map((id) => (typeof id === 'string' ? migrateWidgetId(id) : id))
     .filter((id): id is HomeWidgetId => typeof id === 'string' && allowed.has(id as HomeWidgetId))
     .slice(0, HOME_WIDGET_MAX);
 
@@ -85,11 +90,21 @@ export function normalizePrefs(
     const scheduleIdx = enabled.indexOf('schedule');
     enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
   }
+  if (
+    allowed.has('my_progress') &&
+    !enabled.includes('my_progress') &&
+    enabled.length < HOME_WIDGET_MAX
+  ) {
+    const timeOffIdx = enabled.indexOf('time_off');
+    enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+  }
 
   const finalEnabled = enabled.length > 0 ? enabled : fallback.enabled;
+  const defaultRaw =
+    typeof data.defaultId === 'string' ? migrateWidgetId(data.defaultId) : data.defaultId;
   const defaultId =
-    typeof data.defaultId === 'string' && finalEnabled.includes(data.defaultId as HomeWidgetId)
-      ? (data.defaultId as HomeWidgetId)
+    typeof defaultRaw === 'string' && finalEnabled.includes(defaultRaw as HomeWidgetId)
+      ? (defaultRaw as HomeWidgetId)
       : finalEnabled[0]!;
 
   return { enabled: finalEnabled, defaultId };
