@@ -1,6 +1,6 @@
 export const HOME_WIDGET_MAX = 10;
 
-export type HomeWidgetId = 'quickbooks' | 'schedule' | 'coming_soon';
+export type HomeWidgetId = 'quickbooks' | 'schedule' | 'time_off' | 'coming_soon';
 
 export interface HomeWidgetDef {
   id: HomeWidgetId;
@@ -15,7 +15,12 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
   {
     id: 'schedule',
     label: 'Schedule',
-    description: 'Clinical or practice calendar and time-off request.',
+    description: 'Clinical or practice calendar from Google Calendar.',
+  },
+  {
+    id: 'time_off',
+    label: 'Time off',
+    description: 'Submit time-off requests and track pending or approved status.',
   },
   {
     id: 'quickbooks',
@@ -51,8 +56,8 @@ export function availableWidgets(canSeeFinancials: boolean): HomeWidgetDef[] {
 export function defaultPrefs(canSeeFinancials: boolean): HomeWidgetPrefs {
   const available = availableWidgets(canSeeFinancials).map((w) => w.id);
   const preferredOrder: HomeWidgetId[] = canSeeFinancials
-    ? ['schedule', 'quickbooks', 'coming_soon']
-    : ['schedule', 'coming_soon'];
+    ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
+    : ['schedule', 'time_off', 'coming_soon'];
   const enabled = preferredOrder.filter((id) => available.includes(id)).slice(0, HOME_WIDGET_MAX);
   return {
     enabled,
@@ -74,6 +79,12 @@ export function normalizePrefs(
   const enabled = enabledRaw
     .filter((id): id is HomeWidgetId => typeof id === 'string' && allowed.has(id as HomeWidgetId))
     .slice(0, HOME_WIDGET_MAX);
+
+  // Auto-enable brand-new catalog widgets for users with saved prefs.
+  if (allowed.has('time_off') && !enabled.includes('time_off') && enabled.length < HOME_WIDGET_MAX) {
+    const scheduleIdx = enabled.indexOf('schedule');
+    enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
+  }
 
   const finalEnabled = enabled.length > 0 ? enabled : fallback.enabled;
   const defaultId =

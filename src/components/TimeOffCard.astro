@@ -1,0 +1,216 @@
+---
+import { formatTimeOffEntry } from '../lib/time-off';
+import {
+  formatTimeOffRequestDate,
+  listTimeOffRequestsForUser,
+  timeOffStatusLabel,
+} from '../lib/time-off-requests';
+
+interface Props {
+  userId: string;
+}
+
+const { userId } = Astro.props;
+
+const requests = await listTimeOffRequestsForUser(userId, 8);
+const notice = Astro.url.searchParams.get('timeOff');
+const error = Astro.url.searchParams.get('timeOffError');
+---
+
+<aside
+  class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
+  aria-labelledby="home-time-off-heading"
+  data-time-off-widget
+>
+  <div class="bg-sage-dark px-3 py-2.5 text-cream">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span
+          class="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-cream ring-1 ring-white/20"
+          aria-hidden="true"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M8 3v3M16 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path d="M9 14h6M12 11v6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+          </svg>
+        </span>
+        <h2 id="home-time-off-heading" class="text-sm font-semibold leading-none">Time off</h2>
+      </div>
+      <a
+        href="/time-off"
+        class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-cream ring-1 ring-white/20 transition hover:bg-white/25"
+      >
+        Open
+      </a>
+    </div>
+  </div>
+
+  <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
+    {
+      error ? (
+        <p class="mb-3 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[11px] text-red-800">
+          {error}
+        </p>
+      ) : null
+    }
+    {
+      notice === 'sent' ? (
+        <p class="mb-3 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80">
+          Request submitted.
+        </p>
+      ) : null
+    }
+    {
+      notice === 'retracted' ? (
+        <p class="mb-3 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80">
+          Request retracted.
+        </p>
+      ) : null
+    }
+
+    <form method="post" action="/api/time-off/request" class="shrink-0" data-time-off-widget-form>
+      <input type="hidden" name="returnTo" value="/?timeOff=sent" />
+      <div class="rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]" data-time-off-row>
+        <label class="block text-[11px] font-semibold text-[#393a3d]">
+          Date
+          <input class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px] text-[#393a3d]" type="date" name="entry_date_0" required />
+        </label>
+        <label class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[#393a3d]">
+          <input type="checkbox" name="entry_full_day_0" checked data-time-off-full-day />
+          Full day
+        </label>
+        <div class="mt-2 grid grid-cols-2 gap-2" data-time-off-times hidden>
+          <label class="block text-[11px] font-semibold text-[#393a3d]">
+            Start
+            <input class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]" type="time" name="entry_start_0" />
+          </label>
+          <label class="block text-[11px] font-semibold text-[#393a3d]">
+            End
+            <input class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]" type="time" name="entry_end_0" />
+          </label>
+        </div>
+        <label class="mt-2 block text-[11px] font-semibold text-[#393a3d]">
+          Notes <span class="font-normal text-[#6b6c72]">(optional)</span>
+          <input
+            class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]"
+            type="text"
+            name="notes"
+            maxlength="200"
+            placeholder="Half day / appointment…"
+          />
+        </label>
+        <button
+          class="mt-3 w-full rounded-md bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-charcoal"
+          type="submit"
+        >
+          Submit request
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Your requests</p>
+      {
+        requests.length === 0 ? (
+          <p class="mt-2 text-[12px] text-[#6b6c72]">No requests yet.</p>
+        ) : (
+          <ul class="mt-2 space-y-2">
+            {
+              requests.map((request) => (
+                <li class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="text-[10px] text-[#6b6c72]">
+                      {formatTimeOffRequestDate(request.createdAt)}
+                    </p>
+                    <span
+                      class:list={[
+                        'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                        request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                        request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                        request.status === 'denied' && 'bg-red-100 text-red-900',
+                      ]}
+                    >
+                      {timeOffStatusLabel(request.status)}
+                    </span>
+                  </div>
+                  <ul class="mt-1.5 space-y-0.5 text-[11px] leading-snug text-[#393a3d]">
+                    {
+                      request.entries.map((entry) => (
+                        <li>
+                          {formatTimeOffEntry({
+                            date: entry.date,
+                            fullDay: entry.fullDay,
+                            startTime: entry.startTime,
+                            endTime: entry.endTime,
+                          })}
+                        </li>
+                      ))
+                    }
+                  </ul>
+                  {
+                    request.status === 'pending' ? (
+                      <form
+                        method="post"
+                        action="/api/time-off/retract"
+                        class="mt-2"
+                        onsubmit="return confirm('Retract this pending request?')"
+                      >
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <input type="hidden" name="returnTo" value="/?timeOff=retracted" />
+                        <button
+                          class="text-[10px] font-semibold text-sage-dark/70 transition hover:text-charcoal"
+                          type="submit"
+                        >
+                          Retract
+                        </button>
+                      </form>
+                    ) : null
+                  }
+                </li>
+              ))
+            }
+          </ul>
+        )
+      }
+    </div>
+  </div>
+</aside>
+
+<script>
+  function syncRow(row: HTMLElement): void {
+    const fullDay = row.querySelector('[data-time-off-full-day]');
+    const times = row.querySelector('[data-time-off-times]');
+    const start = row.querySelector('input[name^="entry_start_"]');
+    const end = row.querySelector('input[name^="entry_end_"]');
+    if (!(fullDay instanceof HTMLInputElement) || !(times instanceof HTMLElement)) return;
+
+    const isFullDay = fullDay.checked;
+    times.hidden = isFullDay;
+    if (start instanceof HTMLInputElement) {
+      start.required = !isFullDay;
+      if (isFullDay) start.value = '';
+    }
+    if (end instanceof HTMLInputElement) {
+      end.required = !isFullDay;
+      if (isFullDay) end.value = '';
+    }
+  }
+
+  document.querySelectorAll('[data-time-off-widget]').forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    root.querySelectorAll('[data-time-off-row]').forEach((row) => {
+      if (!(row instanceof HTMLElement)) return;
+      const fullDay = row.querySelector('[data-time-off-full-day]');
+      if (fullDay instanceof HTMLInputElement) {
+        fullDay.addEventListener('change', () => syncRow(row));
+      }
+      syncRow(row);
+    });
+  });
+</script>

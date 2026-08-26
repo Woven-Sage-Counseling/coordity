@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { notifyAdminEmail } from '../../../lib/email';
-import { formErrorRedirect } from '../../../lib/http';
 import { retractTimeOffRequest } from '../../../lib/time-off-requests';
 import { buildTimeOffRetractionEmail } from '../../../lib/time-off';
+import { resolveTimeOffReturnTo, timeOffErrorRedirect } from '../../../lib/time-off-return';
 
 export const prerender = false;
 
@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const form = await request.formData();
   const requestId = String(form.get('requestId') ?? '').trim();
   if (!requestId) {
-    return formErrorRedirect('/time-off', 'Request id is required.');
+    return timeOffErrorRedirect(form, 'Request id is required.');
   }
 
   let retracted;
@@ -23,7 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     retracted = await retractTimeOffRequest(requestId, employee.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to retract that request.';
-    return formErrorRedirect('/time-off', message);
+    return timeOffErrorRedirect(form, message);
   }
 
   await notifyAdminEmail(
@@ -42,6 +42,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return new Response(null, {
     status: 303,
-    headers: { Location: '/time-off?retracted=1' },
+    headers: { Location: resolveTimeOffReturnTo(form, '/time-off?retracted=1') },
   });
 };

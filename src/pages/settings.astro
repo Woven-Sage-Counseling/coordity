@@ -292,8 +292,8 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
 
   function defaultPrefs(canFinancials: boolean): Prefs {
     const enabled = canFinancials
-      ? ['schedule', 'quickbooks', 'coming_soon']
-      : ['schedule', 'coming_soon'];
+      ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
+      : ['schedule', 'time_off', 'coming_soon'];
     return { enabled, defaultId: 'schedule' };
   }
 
@@ -360,6 +360,10 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
             enabled: parsed.enabled.filter((id) => catalog.some((w) => w.id === id)).slice(0, max),
             defaultId: parsed.defaultId || parsed.enabled[0]!,
           };
+          if (catalog.some((w) => w.id === 'time_off') && !prefs.enabled.includes('time_off') && prefs.enabled.length < max) {
+            const scheduleIdx = prefs.enabled.indexOf('schedule');
+            prefs.enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : prefs.enabled.length, 0, 'time_off');
+          }
           if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials);
         }
       }

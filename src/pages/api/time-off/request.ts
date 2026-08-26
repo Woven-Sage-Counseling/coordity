@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { notifyAdminEmail } from '../../../lib/email';
-import { formErrorRedirect } from '../../../lib/http';
 import { createTimeOffRequest } from '../../../lib/time-off-requests';
 import { buildTimeOffEmail, parseTimeOffEntries } from '../../../lib/time-off';
+import { resolveTimeOffReturnTo, timeOffErrorRedirect } from '../../../lib/time-off-return';
 
 export const prerender = false;
 
@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await createTimeOffRequest(employee.id, entries, notes);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to submit your request.';
-    return formErrorRedirect('/time-off', message);
+    return timeOffErrorRedirect(form, message);
   }
 
   await notifyAdminEmail(
@@ -35,6 +35,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return new Response(null, {
     status: 303,
-    headers: { Location: '/time-off?sent=1' },
+    headers: { Location: resolveTimeOffReturnTo(form, '/time-off?sent=1') },
   });
 };

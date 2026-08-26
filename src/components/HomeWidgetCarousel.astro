@@ -1,6 +1,7 @@
 ---
 import FinancialSnapshotCard from './FinancialSnapshotCard.astro';
 import ScheduleCard from './ScheduleCard.astro';
+import TimeOffCard from './TimeOffCard.astro';
 import PlaceholderWidget from './PlaceholderWidget.astro';
 import { availableWidgets } from '../lib/home-widgets';
 
@@ -60,6 +61,11 @@ const arrowClass =
             {availableIds.includes('schedule') && (
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
                 <ScheduleCard userId={userId} />
+              </div>
+            )}
+            {availableIds.includes('time_off') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="time_off">
+                <TimeOffCard userId={userId} />
               </div>
             )}
             {availableIds.includes('coming_soon') && (
@@ -182,8 +188,8 @@ const arrowClass =
 
   function defaultPrefs(canFinancials: boolean): Prefs {
     const enabled = canFinancials
-      ? ['schedule', 'quickbooks', 'coming_soon']
-      : ['schedule', 'coming_soon'];
+      ? ['schedule', 'time_off', 'quickbooks', 'coming_soon']
+      : ['schedule', 'time_off', 'coming_soon'];
     return { enabled, defaultId: 'schedule' };
   }
 
@@ -197,10 +203,24 @@ const arrowClass =
       const enabled = (parsed.enabled || [])
         .filter((id) => allowed.has(id))
         .slice(0, 10);
+      let mutated = false;
+      if (allowed.has('time_off') && !enabled.includes('time_off') && enabled.length < 10) {
+        const scheduleIdx = enabled.indexOf('schedule');
+        enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
+        mutated = true;
+      }
       const finalEnabled = enabled.length ? enabled : fallback.enabled.filter((id) => allowed.has(id));
       const defaultId =
         finalEnabled.includes(parsed.defaultId) ? parsed.defaultId : finalEnabled[0]!;
-      return { enabled: finalEnabled, defaultId };
+      const next = { enabled: finalEnabled, defaultId };
+      if (mutated) {
+        try {
+          localStorage.setItem('portal:home-widgets:' + userId, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
     } catch {
       return fallback;
     }
