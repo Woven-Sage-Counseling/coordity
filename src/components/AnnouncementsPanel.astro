@@ -138,6 +138,10 @@ const hasNotificationUnread = notificationUnreadCount > 0;
               {notifications.map((item) => {
                 const isConflict = item.sourceType === CALENDAR_CONFLICT_SOURCE;
                 const isTimeOff = item.sourceType === TIME_OFF_REQUEST_SOURCE;
+                const isTimeOffDecision =
+                  isTimeOff &&
+                  typeof item.sourceId === 'string' &&
+                  (item.sourceId.endsWith(':approved') || item.sourceId.endsWith(':denied'));
                 return (
                   <li
                     class:list={[
@@ -193,7 +197,14 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                         </div>
                         <p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
                         {
-                          isTimeOff && canSeeAdmin ? (
+                          isTimeOffDecision ? (
+                            <a
+                              href="/time-off"
+                              class="mt-2 inline-block text-[11px] font-semibold text-sage-dark/70 transition hover:text-charcoal"
+                            >
+                              View time off
+                            </a>
+                          ) : isTimeOff && canSeeAdmin ? (
                             <a
                               href="/admin#time-off-requests"
                               class="mt-2 inline-block text-[11px] font-semibold text-sage-dark/70 transition hover:text-charcoal"

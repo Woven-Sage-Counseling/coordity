@@ -196,12 +196,29 @@ export async function reviewTimeOffRequest(
   requestId: string,
   reviewerId: string,
   status: 'approved' | 'denied',
-): Promise<void> {
+): Promise<TimeOffRequest> {
   const { DB } = getEnv();
-  const existing = await DB.prepare(`SELECT id, status FROM time_off_request WHERE id = ?`)
+  const rows = await DB.prepare(
+    `SELECT
+        r.id,
+        r.user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        r.status,
+        r.notes,
+        r.reviewed_by,
+        reviewer.name AS reviewer_name,
+        r.reviewed_at,
+        r.created_at
+     FROM time_off_request r
+     JOIN user u ON u.id = r.user_id
+     LEFT JOIN user reviewer ON reviewer.id = r.reviewed_by
+     WHERE r.id = ?`,
+  )
     .bind(requestId)
-    .first<{ id: string; status: TimeOffRequestStatus }>();
+    .all<RequestRow>();
 
+  const [existing] = await attachEntries(rows.results ?? []);
   if (!existing) {
     throw new Error('That time off request was not found.');
   }
@@ -209,16 +226,55 @@ export async function reviewTimeOffRequest(
     throw new Error('That request has already been reviewed.');
   }
 
+  const reviewedAt = nowMs();
   const result = await DB.prepare(
     `UPDATE time_off_request
      SET status = ?, reviewed_by = ?, reviewed_at = ?
      WHERE id = ? AND status = 'pending'`,
   )
-    .bind(status, reviewerId, nowMs(), requestId)
+    .bind(status, reviewerId, reviewedAt, requestId)
     .run();
 
   if ((result.meta.changes ?? 0) === 0) {
     throw new Error('Could not update that request.');
+  }
+
+  const reviewer = await DB.prepare(`SELECT name FROM user WHERE id = ?`)
+    .bind(reviewerId)
+    .first<{ name: string }>();
+
+  return {
+    ...existing,
+    status,
+    reviewedBy: reviewerId,
+    reviewerName: reviewer?.name ?? null,
+    reviewedAt,
+  };
+}
+
+export async function deleteDeniedTimeOffRequest(requestId: string, userId: string): Promise<void> {
+  const { DB } = getEnv();
+  const existing = await DB.prepare(
+    `SELECT id, status FROM time_off_request WHERE id = ? AND user_id = ?`,
+  )
+    .bind(requestId, userId)
+    .first<{ id: string; status: TimeOffRequestStatus }>();
+
+  if (!existing) {
+    throw new Error('That request was not found.');
+  }
+  if (existing.status !== 'denied') {
+    throw new Error('Only denied requests can be deleted.');
+  }
+
+  const result = await DB.prepare(
+    `DELETE FROM time_off_request WHERE id = ? AND user_id = ? AND status = 'denied'`,
+  )
+    .bind(requestId, userId)
+    .run();
+
+  if ((result.meta.changes ?? 0) === 0) {
+    throw new Error('Could not delete that request.');
   }
 }
 

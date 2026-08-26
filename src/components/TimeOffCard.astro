@@ -73,6 +73,13 @@ const error = Astro.url.searchParams.get('timeOffError');
         </p>
       ) : null
     }
+    {
+      notice === 'deleted' ? (
+        <p class="mb-3 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80">
+          Denied request deleted.
+        </p>
+      ) : null
+    }
 
     <form method="post" action="/api/time-off/request" class="shrink-0" data-time-off-widget-form>
       <input type="hidden" name="returnTo" value="/?timeOff=sent" />
@@ -168,6 +175,22 @@ const error = Astro.url.searchParams.get('timeOffError');
                           type="submit"
                         >
                           Retract
+                        </button>
+                      </form>
+                    ) : request.status === 'denied' ? (
+                      <form
+                        method="post"
+                        action="/api/time-off/delete"
+                        class="mt-2"
+                        onsubmit="return confirm('Delete this denied request?')"
+                      >
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <input type="hidden" name="returnTo" value="/?timeOff=deleted" />
+                        <button
+                          class="text-[10px] font-semibold text-red-700 transition hover:text-red-800"
+                          type="submit"
+                        >
+                          Delete
                         </button>
                       </form>
                     ) : null

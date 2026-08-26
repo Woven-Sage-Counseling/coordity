@@ -13,6 +13,7 @@ const employee = Astro.locals.employee!;
 const error = Astro.url.searchParams.get('error');
 const sent = Astro.url.searchParams.get('sent') === '1';
 const retracted = Astro.url.searchParams.get('retracted') === '1';
+const deleted = Astro.url.searchParams.get('deleted') === '1';
 const requests = await listTimeOffRequestsForUser(employee.id);
 ---
 
@@ -50,6 +51,14 @@ const requests = await listTimeOffRequestsForUser(employee.id);
     retracted ? (
       <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
         Your pending time off request was retracted.
+      </p>
+    ) : null
+  }
+
+  {
+    deleted ? (
+      <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
+        Denied request removed from your list.
       </p>
     ) : null
   }
@@ -104,7 +113,9 @@ const requests = await listTimeOffRequestsForUser(employee.id);
 
   <section class="mt-12 max-w-2xl" aria-labelledby="your-time-off-requests">
     <h2 id="your-time-off-requests" class="font-display text-3xl text-charcoal">Your requests</h2>
-    <p class="mt-2 text-sm text-sage-dark/65">Track pending, approved, and denied time off requests. Pending requests can be retracted.</p>
+    <p class="mt-2 text-sm text-sage-dark/65">
+      Track pending, approved, and denied time off requests. Pending requests can be retracted; denied ones can be deleted.
+    </p>
 
     {
       requests.length === 0 ? (
@@ -173,6 +184,18 @@ const requests = await listTimeOffRequestsForUser(employee.id);
                       <input type="hidden" name="requestId" value={request.id} />
                       <button class="btn-secondary !px-3 !py-1.5" type="submit">
                         Retract request
+                      </button>
+                    </form>
+                  ) : request.status === 'denied' ? (
+                    <form
+                      method="post"
+                      action="/api/time-off/delete"
+                      class="mt-4"
+                      onsubmit="return confirm('Delete this denied request from your list?')"
+                    >
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <button class="btn-secondary !px-3 !py-1.5 !text-red-700" type="submit">
+                        Delete
                       </button>
                     </form>
                   ) : null
