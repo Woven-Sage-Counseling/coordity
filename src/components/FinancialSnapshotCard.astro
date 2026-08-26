@@ -61,17 +61,25 @@ const periodLabel = snapshot
   aria-labelledby="home-financials-heading"
 >
   <div class="bg-[#2CA01C] px-3 py-2.5 text-white">
-    <div class="flex items-center gap-2">
-      <img
-        src="/app-icons/quickbooks.png"
-        alt=""
-        width="28"
-        height="28"
-        class="h-7 w-7 rounded-md bg-white shadow-sm ring-1 ring-black/10"
-      />
-      <h2 id="home-financials-heading" class="text-sm font-semibold leading-none">
-        QuickBooks
-      </h2>
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <img
+          src="/app-icons/quickbooks.png"
+          alt=""
+          width="28"
+          height="28"
+          class="h-7 w-7 rounded-md bg-white shadow-sm ring-1 ring-black/10"
+        />
+        <h2 id="home-financials-heading" class="text-sm font-semibold leading-none">
+          QuickBooks
+        </h2>
+      </div>
+      <a
+        href={`/financials${periodQuery(period)}`}
+        class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white ring-1 ring-white/25 transition hover:bg-white/25"
+      >
+        Open
+      </a>
     </div>
   </div>
 
@@ -175,12 +183,6 @@ const periodLabel = snapshot
           {percent == null ? '—' : `${percent}%`}
         </p>
       </div>
-    </div>
-
-    <div class="mt-auto pt-3 text-[11px]">
-      <a href={`/financials${periodQuery(period)}`} class="font-semibold text-[#2CA01C] hover:underline">
-        Open financials
-      </a>
     </div>
   </div>
 </aside>
