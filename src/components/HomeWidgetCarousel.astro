@@ -3,16 +3,19 @@ import FinancialSnapshotCard from './FinancialSnapshotCard.astro';
 import ScheduleCard from './ScheduleCard.astro';
 import TimeOffCard from './TimeOffCard.astro';
 import MyProgressCard from './MyProgressCard.astro';
+import CredentialingCard from './CredentialingCard.astro';
 import { availableWidgets } from '../lib/home-widgets';
 
 interface Props {
   userId: string;
+  employee: PortalEmployee;
   canSeeFinancials: boolean;
+  canSeeCredentialing: boolean;
 }
 
-const { userId, canSeeFinancials } = Astro.props;
+const { userId, employee, canSeeFinancials, canSeeCredentialing } = Astro.props;
 
-const available = availableWidgets(canSeeFinancials);
+const available = availableWidgets({ canSeeFinancials, canSeeCredentialing });
 const availableIds = available.map((w) => w.id);
 
 const arrowClass =
@@ -29,6 +32,7 @@ const arrowClass =
       data-user-id={userId}
       data-available={JSON.stringify(availableIds)}
       data-can-financials={canSeeFinancials ? '1' : '0'}
+      data-can-credentialing={canSeeCredentialing ? '1' : '0'}
     >
       <div class="relative" data-carousel-shell>
         <button
@@ -71,6 +75,11 @@ const arrowClass =
             {availableIds.includes('my_progress') && (
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="my_progress">
                 <MyProgressCard userId={userId} />
+              </div>
+            )}
+            {availableIds.includes('credentialing') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="credentialing">
+                <CredentialingCard employee={employee} />
               </div>
             )}
           </div>
@@ -186,10 +195,10 @@ const arrowClass =
 <script>
   type Prefs = { enabled: string[]; defaultId: string };
 
-  function defaultPrefs(canFinancials: boolean): Prefs {
-    const enabled = canFinancials
-      ? ['schedule', 'time_off', 'my_progress', 'quickbooks']
-      : ['schedule', 'time_off', 'my_progress'];
+  function defaultPrefs(canFinancials: boolean, canCredentialing: boolean): Prefs {
+    const enabled = ['schedule', 'time_off', 'my_progress'];
+    if (canCredentialing) enabled.push('credentialing');
+    if (canFinancials) enabled.push('quickbooks');
     return { enabled, defaultId: 'schedule' };
   }
 
@@ -197,8 +206,13 @@ const arrowClass =
     return id === 'coming_soon' ? 'my_progress' : id;
   }
 
-  function readPrefs(userId: string, canFinancials: boolean, available: string[]): Prefs {
-    const fallback = defaultPrefs(canFinancials);
+  function readPrefs(
+    userId: string,
+    canFinancials: boolean,
+    canCredentialing: boolean,
+    available: string[],
+  ): Prefs {
+    const fallback = defaultPrefs(canFinancials, canCredentialing);
     try {
       const raw = localStorage.getItem('portal:home-widgets:' + userId);
       if (!raw) return fallback;
@@ -217,6 +231,11 @@ const arrowClass =
       if (allowed.has('my_progress') && !enabled.includes('my_progress') && enabled.length < 10) {
         const timeOffIdx = enabled.indexOf('time_off');
         enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+        mutated = true;
+      }
+      if (allowed.has('credentialing') && !enabled.includes('credentialing') && enabled.length < 10) {
+        const progressIdx = enabled.indexOf('my_progress');
+        enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'credentialing');
         mutated = true;
       }
       const finalEnabled = enabled.length ? enabled : fallback.enabled.filter((id) => allowed.has(id));
@@ -241,6 +260,7 @@ const arrowClass =
     if (!(root instanceof HTMLElement)) return;
     const userId = root.dataset.userId ?? '';
     const canFinancials = root.dataset.canFinancials === '1';
+    const canCredentialing = root.dataset.canCredentialing === '1';
     let available: string[] = [];
     try {
       available = JSON.parse(root.dataset.available || '[]') as string[];
@@ -248,7 +268,7 @@ const arrowClass =
       available = [];
     }
 
-    const prefs = readPrefs(userId, canFinancials, available);
+    const prefs = readPrefs(userId, canFinancials, canCredentialing, available);
     const viewport = root.querySelector('[data-carousel-viewport]');
     const track = root.querySelector('[data-carousel-track]');
     if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement)) return;

@@ -1,10 +1,16 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AnnouncementManager from '../components/AnnouncementManager.astro';
+import CredentialingManager from '../components/CredentialingManager.astro';
 import PeopleManager from '../components/PeopleManager.astro';
 import TimeOffManager from '../components/TimeOffManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
-import { listRolesWithPermissions } from '../lib/employees';
+import {
+  listCredentialingProviders,
+  listInsuranceCatalog,
+  listProviderCoverage,
+} from '../lib/credentialing';
+import { listEmployees, listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
 import { plainPermission, plainRole } from '../lib/role-plain-language';
 import { listTimeOffRequestsForAdmin } from '../lib/time-off-requests';
@@ -19,10 +25,34 @@ if (!canAccessManagement(employee)) {
 const announcements = await listActiveAnnouncements(50);
 const timeOffRequests = await listTimeOffRequestsForAdmin();
 const roles = await listRolesWithPermissions();
+const credentialingProviders = await listCredentialingProviders();
+const insuranceCatalog = await listInsuranceCatalog();
+const coverageByProvider: Record<
+  string,
+  Array<{ planId: string; planName: string; groupName: string; status: 'accepted' | 'credentialing' }>
+> = {};
+for (const provider of credentialingProviders) {
+  const rows = await listProviderCoverage(provider.id);
+  coverageByProvider[provider.id] = rows.map((row) => ({
+    planId: row.planId,
+    planName: row.planName,
+    groupName: row.groupName,
+    status: row.status,
+  }));
+}
+const allPeople = await listEmployees();
+const linkedUserIds = new Set(
+  credentialingProviders.map((provider) => provider.userId).filter((id): id is string => Boolean(id)),
+);
+const linkableUsers = allPeople
+  .filter((person) => person.status === 'active' && !linkedUserIds.has(person.id))
+  .map((person) => ({ id: person.id, name: person.name, email: person.email }));
+
 const error = Astro.url.searchParams.get('error');
 const inviteUrl = Astro.url.searchParams.get('inviteUrl');
 const peopleError = Astro.url.searchParams.get('peopleError');
 const timeOffError = Astro.url.searchParams.get('timeOffError');
+const credentialingError = Astro.url.searchParams.get('credentialingError');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -77,6 +107,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           data-admin-open="people"
         >
           <span class="text-[15px] font-medium text-charcoal">People</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="credentialing"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Credentialing</span>
           <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
         <div class="mx-4 border-t border-sage-dark/10"></div>
@@ -143,6 +182,31 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         Invite people, set job titles and teams, and assign roles.
       </p>
       <PeopleManager error={peopleError} inviteUrl={inviteUrl} embedded />
+    </section>
+
+    <section class="mt-6 hidden" data-admin-panel="credentialing">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm font-medium text-sage-dark/70 transition hover:text-sage-dark"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Admin
+      </button>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Credentialing</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">
+        Manage providers, insurance groups, plans, and accepted vs in-progress coverage.
+      </p>
+      <CredentialingManager
+        providers={credentialingProviders}
+        catalog={insuranceCatalog}
+        coverageByProvider={coverageByProvider}
+        linkableUsers={linkableUsers}
+        error={credentialingError}
+        embedded
+      />
     </section>
 
     <section class="mt-6 hidden" data-admin-panel="roles" id="roles">
@@ -244,6 +308,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       'time-off': '#time-off-requests',
       announcements: '#announcement-history',
       people: '#people',
+      credentialing: '#credentialing',
       roles: '#roles',
     };
 
@@ -253,6 +318,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         return 'announcements';
       }
       if (hash === 'people') return 'people';
+      if (hash === 'credentialing' || hash === 'credentialing-admin') return 'credentialing';
       if (hash === 'roles' || hash === 'roles-heading') return 'roles';
       return null;
     };
@@ -295,6 +361,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     }
     if (params.has('peopleError') || params.has('inviteUrl')) {
       showPanel('people', false);
+      return;
+    }
+    if (params.has('credentialingError')) {
+      showPanel('credentialing', false);
       return;
     }
     if (params.has('error')) {

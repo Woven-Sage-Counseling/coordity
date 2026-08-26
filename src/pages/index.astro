@@ -9,6 +9,7 @@ import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/annou
 import { getEnv } from '../lib/env';
 import { listNotificationsForUser, countUnreadNotifications } from '../lib/notifications';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
+import { canSeeCredentialing } from '../lib/credentialing';
 
 export const prerender = false;
 
@@ -16,6 +17,7 @@ const employee = Astro.locals.employee!;
 const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permission));
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
+const canSeeCredentialingWidget = canSeeCredentialing(employee);
 const canSeeAdmin = canAccessManagement(employee);
 const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim();
 const announcements = await listAnnouncementsForUser(employee.id);
@@ -35,7 +37,12 @@ const reportHref = ownerEmail
 <PortalLayout title="Home" wide>
   <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-8">
     <div class="order-1 mb-10 lg:order-2 lg:mb-0">
-      <HomeWidgetCarousel userId={employee.id} canSeeFinancials={canSeeFinancials} />
+      <HomeWidgetCarousel
+        userId={employee.id}
+        employee={employee}
+        canSeeFinancials={canSeeFinancials}
+        canSeeCredentialing={canSeeCredentialingWidget}
+      />
     </div>
 
     <div class="order-2 lg:order-1">

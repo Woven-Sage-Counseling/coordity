@@ -11,7 +11,9 @@ type PortalPermission =
   | 'financials:view'
   | 'financials:manage'
   | 'employees:view'
-  | 'employees:manage';
+  | 'employees:manage'
+  | 'credentialing:view'
+  | 'credentialing:manage';
 
 interface PortalEmployee {
   id: string;

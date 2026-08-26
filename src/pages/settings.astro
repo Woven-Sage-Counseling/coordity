@@ -1,5 +1,6 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import { canSeeCredentialing } from '../lib/credentialing';
 import { availableWidgets, HOME_WIDGET_MAX } from '../lib/home-widgets';
 import { hasPermission } from '../lib/permissions';
 import { GoogleCalendarProvider } from '../lib/schedule/google-calendar';
@@ -8,7 +9,11 @@ export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
-const widgets = availableWidgets(canSeeFinancials);
+const canSeeCredentialingWidget = canSeeCredentialing(employee);
+const widgets = availableWidgets({
+  canSeeFinancials,
+  canSeeCredentialing: canSeeCredentialingWidget,
+});
 
 const calendarProvider = new GoogleCalendarProvider();
 let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection']>> = {
@@ -150,6 +155,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       data-widget-settings
       data-user-id={employee.id}
       data-can-financials={canSeeFinancials ? '1' : '0'}
+      data-can-credentialing={canSeeCredentialingWidget ? '1' : '0'}
       data-max={HOME_WIDGET_MAX}
       data-catalog={JSON.stringify(widgets)}
     >
@@ -355,10 +361,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   type Prefs = { enabled: string[]; defaultId: string };
   type CatalogItem = { id: string; label: string; description: string };
 
-  function defaultPrefs(canFinancials: boolean): Prefs {
-    const enabled = canFinancials
-      ? ['schedule', 'time_off', 'my_progress', 'quickbooks']
-      : ['schedule', 'time_off', 'my_progress'];
+  function defaultPrefs(canFinancials: boolean, canCredentialing: boolean): Prefs {
+    const enabled = ['schedule', 'time_off', 'my_progress'];
+    if (canCredentialing) enabled.push('credentialing');
+    if (canFinancials) enabled.push('quickbooks');
     return { enabled, defaultId: 'schedule' };
   }
 
@@ -447,6 +453,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     if (!(root instanceof HTMLElement)) return;
     const userId = root.dataset.userId ?? '';
     const canFinancials = root.dataset.canFinancials === '1';
+    const canCredentialing = root.dataset.canCredentialing === '1';
     const max = Number(root.dataset.max || 10);
     const list = root.querySelector('[data-widget-list]');
     const select = root.querySelector('[data-widget-default]');
@@ -463,7 +470,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     }
 
     const key = 'portal:home-widgets:' + userId;
-    let prefs = defaultPrefs(canFinancials);
+    let prefs = defaultPrefs(canFinancials, canCredentialing);
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
@@ -488,10 +495,22 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             const timeOffIdx = prefs.enabled.indexOf('time_off');
             prefs.enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : prefs.enabled.length, 0, 'my_progress');
           }
+          if (
+            catalog.some((w) => w.id === 'credentialing') &&
+            !prefs.enabled.includes('credentialing') &&
+            prefs.enabled.length < max
+          ) {
+            const progressIdx = prefs.enabled.indexOf('my_progress');
+            prefs.enabled.splice(
+              progressIdx >= 0 ? progressIdx + 1 : prefs.enabled.length,
+              0,
+              'credentialing',
+            );
+          }
           if (!prefs.enabled.includes(prefs.defaultId)) {
             prefs.defaultId = prefs.enabled[0] || 'schedule';
           }
-          if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials);
+          if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials, canCredentialing);
         }
       }
     } catch {

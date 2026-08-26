@@ -1,6 +1,6 @@
 export const HOME_WIDGET_MAX = 10;
 
-export type HomeWidgetId = 'quickbooks' | 'schedule' | 'time_off' | 'my_progress';
+export type HomeWidgetId = 'quickbooks' | 'schedule' | 'time_off' | 'my_progress' | 'credentialing';
 
 export interface HomeWidgetDef {
   id: HomeWidgetId;
@@ -8,6 +8,12 @@ export interface HomeWidgetDef {
   description: string;
   /** Permission gate; omit if available to everyone with portal access. */
   requiresFinancials?: boolean;
+  requiresCredentialing?: boolean;
+}
+
+export interface HomeWidgetAccess {
+  canSeeFinancials: boolean;
+  canSeeCredentialing: boolean;
 }
 
 /** Registry of home widgets. Add new widgets here as they are built. */
@@ -28,6 +34,12 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     description: 'Onboarding, training, and compliance progress.',
   },
   {
+    id: 'credentialing',
+    label: 'Credentialing',
+    description: 'Look up accepted and in-progress insurance coverage by provider.',
+    requiresCredentialing: true,
+  },
+  {
     id: 'quickbooks',
     label: 'QuickBooks',
     description: 'Profit and loss snapshot and reserve progress.',
@@ -46,9 +58,10 @@ export function widgetPrefsKey(userId: string): string {
   return `portal:home-widgets:${userId}`;
 }
 
-export function availableWidgets(canSeeFinancials: boolean): HomeWidgetDef[] {
+export function availableWidgets(access: HomeWidgetAccess): HomeWidgetDef[] {
   return HOME_WIDGET_CATALOG.filter((widget) => {
-    if (widget.requiresFinancials && !canSeeFinancials) return false;
+    if (widget.requiresFinancials && !access.canSeeFinancials) return false;
+    if (widget.requiresCredentialing && !access.canSeeCredentialing) return false;
     return true;
   });
 }
@@ -57,11 +70,15 @@ function migrateWidgetId(id: string): string {
   return id === 'coming_soon' ? 'my_progress' : id;
 }
 
-export function defaultPrefs(canSeeFinancials: boolean): HomeWidgetPrefs {
-  const available = availableWidgets(canSeeFinancials).map((w) => w.id);
-  const preferredOrder: HomeWidgetId[] = canSeeFinancials
-    ? ['schedule', 'time_off', 'my_progress', 'quickbooks']
-    : ['schedule', 'time_off', 'my_progress'];
+export function defaultPrefs(access: HomeWidgetAccess): HomeWidgetPrefs {
+  const available = availableWidgets(access).map((w) => w.id);
+  const preferredOrder: HomeWidgetId[] = [
+    'schedule',
+    'time_off',
+    'my_progress',
+    'credentialing',
+    'quickbooks',
+  ];
   const enabled = preferredOrder.filter((id) => available.includes(id)).slice(0, HOME_WIDGET_MAX);
   return {
     enabled,
@@ -69,12 +86,9 @@ export function defaultPrefs(canSeeFinancials: boolean): HomeWidgetPrefs {
   };
 }
 
-export function normalizePrefs(
-  raw: unknown,
-  canSeeFinancials: boolean,
-): HomeWidgetPrefs {
-  const fallback = defaultPrefs(canSeeFinancials);
-  const allowed = new Set(availableWidgets(canSeeFinancials).map((w) => w.id));
+export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidgetPrefs {
+  const fallback = defaultPrefs(access);
+  const allowed = new Set(availableWidgets(access).map((w) => w.id));
 
   if (!raw || typeof raw !== 'object') return fallback;
   const data = raw as { enabled?: unknown; defaultId?: unknown };
@@ -97,6 +111,14 @@ export function normalizePrefs(
   ) {
     const timeOffIdx = enabled.indexOf('time_off');
     enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+  }
+  if (
+    allowed.has('credentialing') &&
+    !enabled.includes('credentialing') &&
+    enabled.length < HOME_WIDGET_MAX
+  ) {
+    const progressIdx = enabled.indexOf('my_progress');
+    enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'credentialing');
   }
 
   const finalEnabled = enabled.length > 0 ? enabled : fallback.enabled;

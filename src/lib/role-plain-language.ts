@@ -11,6 +11,8 @@ export const permissionPlainLanguage: Record<string, string> = {
   'financials:manage': 'Can connect QuickBooks and sync financial data',
   'employees:view': 'Can see staff roles on the Admin people list',
   'employees:manage': 'Can invite people, change roles, and disable accounts',
+  'credentialing:view': 'Can look up accepted and in-progress insurance coverage',
+  'credentialing:manage': 'Can manage insurance groups, plans, providers, and coverage',
 };
 
 export const rolePlainLanguage: Record<string, { summary: string; can: string[]; cannot?: string[] }> = {
@@ -43,6 +45,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
       'Sign in and open clinical and billing apps',
       'View the financial dashboard',
       'Open the staff Directory',
+      'Look up and manage provider insurance credentialing',
     ],
     cannot: [
       'Manage people',
@@ -56,6 +59,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
       'Sign in and open clinical and billing apps',
       'Open business tools like Quo and Dropbox Fax',
       'Open the staff Directory',
+      'Look up and manage provider insurance credentialing',
     ],
     cannot: [
       'View financials',
@@ -69,6 +73,7 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
       'Sign in',
       'Open clinical and billing apps',
       'Open the staff Directory',
+      'Look up their own insurance coverage and credentialing status',
     ],
     cannot: [
       'View financials',
