@@ -6,7 +6,7 @@ import PeopleManager from '../components/PeopleManager.astro';
 import TimeOffManager from '../components/TimeOffManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import {
-  listCredentialingProviders,
+  listProvidersForLookup,
   listInsuranceCatalog,
   listProviderCoverage,
 } from '../lib/credentialing';
@@ -25,7 +25,7 @@ if (!canAccessManagement(employee)) {
 const announcements = await listActiveAnnouncements(50);
 const timeOffRequests = await listTimeOffRequestsForAdmin();
 const roles = await listRolesWithPermissions();
-const credentialingProviders = await listCredentialingProviders();
+const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
 const coverageByProvider: Record<
   string,
@@ -40,10 +40,10 @@ for (const provider of credentialingProviders) {
     status: row.status,
   }));
 }
-const allPeople = await listEmployees();
 const linkedUserIds = new Set(
   credentialingProviders.map((provider) => provider.userId).filter((id): id is string => Boolean(id)),
 );
+const allPeople = await listEmployees();
 const linkableUsers = allPeople
   .filter((person) => person.status === 'active' && !linkedUserIds.has(person.id))
   .map((person) => ({ id: person.id, name: person.name, email: person.email }));
@@ -197,7 +197,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </button>
       <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Credentialing</h2>
       <p class="mt-1 text-sm text-sage-dark/65">
-        Manage providers, insurance groups, plans, and accepted vs in-progress coverage.
+        Directory clinicians appear automatically. Manage insurance groups, plans, and accepted vs
+        in-progress coverage.
       </p>
       <CredentialingManager
         providers={credentialingProviders}

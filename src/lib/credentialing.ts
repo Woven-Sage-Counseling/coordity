@@ -1,5 +1,6 @@
 import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
+import { listDirectoryClinicians } from './employees';
 import { hasPermission, isOwnerEmail } from './permissions';
 
 export type CoverageStatus = 'accepted' | 'credentialing';
@@ -8,6 +9,8 @@ export interface CredentialingProvider {
   id: string;
   name: string;
   userId: string | null;
+  /** True when this row was synced from a directory clinician. */
+  fromDirectory?: boolean;
 }
 
 export interface InsuranceGroup {
@@ -68,6 +71,62 @@ export async function listCredentialingProviders(): Promise<CredentialingProvide
   }));
 }
 
+/**
+ * Ensures directory clinicians have credentialing provider rows, then returns
+ * the full provider list (directory-backed + any manually added names).
+ */
+export async function listProvidersForLookup(): Promise<CredentialingProvider[]> {
+  await syncProvidersFromDirectory();
+  const providers = await listCredentialingProviders();
+  const clinicians = await listDirectoryClinicians();
+  const clinicianIds = new Set(clinicians.map((person) => person.id));
+
+  return providers.map((provider) => ({
+    ...provider,
+    fromDirectory: Boolean(provider.userId && clinicianIds.has(provider.userId)),
+  }));
+}
+
+async function ensureProviderForUser(userId: string, name: string): Promise<CredentialingProvider> {
+  const { DB } = getEnv();
+  const existing = await DB.prepare(
+    `SELECT id, name, user_id
+     FROM credentialing_provider
+     WHERE user_id = ?
+     LIMIT 1`,
+  )
+    .bind(userId)
+    .first<{ id: string; name: string; user_id: string | null }>();
+
+  if (existing) {
+    if (existing.name !== name.trim() && name.trim()) {
+      await DB.prepare(`UPDATE credentialing_provider SET name = ? WHERE id = ?`)
+        .bind(name.trim(), existing.id)
+        .run();
+      return { id: existing.id, name: name.trim(), userId: existing.user_id };
+    }
+    return { id: existing.id, name: existing.name, userId: existing.user_id };
+  }
+
+  const id = randomToken(16);
+  await DB.prepare(
+    `INSERT INTO credentialing_provider (id, name, user_id, created_at)
+     VALUES (?, ?, ?, ?)`,
+  )
+    .bind(id, name.trim(), userId, nowMs())
+    .run();
+
+  return { id, name: name.trim(), userId };
+}
+
+/** Create/update credentialing providers for everyone on the Clinical directory team or clinician role. */
+export async function syncProvidersFromDirectory(): Promise<void> {
+  const clinicians = await listDirectoryClinicians();
+  for (const person of clinicians) {
+    await ensureProviderForUser(person.id, person.name);
+  }
+}
+
 export async function getProviderForUser(userId: string): Promise<CredentialingProvider | null> {
   const { DB } = getEnv();
   const row = await DB.prepare(
@@ -79,8 +138,15 @@ export async function getProviderForUser(userId: string): Promise<CredentialingP
     .bind(userId)
     .first<{ id: string; name: string; user_id: string | null }>();
 
-  if (!row) return null;
-  return { id: row.id, name: row.name, userId: row.user_id };
+  if (row) {
+    return { id: row.id, name: row.name, userId: row.user_id };
+  }
+
+  // Auto-link if this person is a directory clinician.
+  const clinicians = await listDirectoryClinicians();
+  const match = clinicians.find((person) => person.id === userId);
+  if (!match) return null;
+  return ensureProviderForUser(match.id, match.name);
 }
 
 export async function getProviderById(providerId: string): Promise<CredentialingProvider | null> {

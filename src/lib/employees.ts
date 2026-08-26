@@ -145,6 +145,57 @@ export async function listDirectory(): Promise<DirectoryPerson[]> {
   }));
 }
 
+/** Active directory people who are clinicians by role or Clinical team membership. */
+export async function listDirectoryClinicians(): Promise<DirectoryPerson[]> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT
+        u.id,
+        u.name,
+        u.email,
+        p.job_title AS jobTitle,
+        p.phone,
+        CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
+     FROM user u
+     JOIN employee_profile p ON p.user_id = u.id
+     WHERE p.status = 'active'
+       AND (
+         EXISTS (
+           SELECT 1
+           FROM user_role ur
+           JOIN role r ON r.id = ur.role_id
+           WHERE ur.user_id = u.id AND r.key = 'clinician'
+         )
+         OR EXISTS (
+           SELECT 1
+           FROM user_team ut
+           WHERE ut.user_id = u.id AND ut.team_id = 'team_clinical'
+         )
+       )
+     ORDER BY u.name COLLATE NOCASE, u.email`,
+  ).all<{
+    id: string;
+    name: string;
+    email: string;
+    jobTitle: string | null;
+    phone: string | null;
+    hasAvatar: number;
+  }>();
+
+  const people = rows.results ?? [];
+  const teams = await teamsByUser(people.map((row) => row.id));
+
+  return people.map((row) => ({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    jobTitle: row.jobTitle,
+    phone: row.phone,
+    hasAvatar: row.hasAvatar === 1,
+    teams: teams.get(row.id) ?? [],
+  }));
+}
+
 export function groupDirectoryByTeam(people: DirectoryPerson[]) {
   const groups = DIRECTORY_TEAMS.map((team) => ({
     id: team.id,
