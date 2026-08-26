@@ -132,7 +132,12 @@ const roleLabel = employee.roles.includes('owner')
         </div>
         {
           savedField === 'name' ? (
-            <p class="mt-2 text-sm font-medium text-sage-dark/70" data-field-saved aria-live="polite">
+            <p
+              class="mt-2 text-sm font-semibold text-charcoal transition-opacity duration-300"
+              data-field-saved
+              data-save-flash
+              aria-live="polite"
+            >
               Saved.
             </p>
           ) : null
@@ -181,7 +186,12 @@ const roleLabel = employee.roles.includes('owner')
         </div>
         {
           savedField === 'phone' ? (
-            <p class="mt-2 text-sm font-medium text-sage-dark/70" data-field-saved aria-live="polite">
+            <p
+              class="mt-2 text-sm font-semibold text-charcoal transition-opacity duration-300"
+              data-field-saved
+              data-save-flash
+              aria-live="polite"
+            >
               Saved.
             </p>
           ) : null

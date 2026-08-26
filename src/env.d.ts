@@ -36,6 +36,10 @@ declare namespace App {
   }
 }
 
+interface Window {
+  showSaveFlash?: (el: HTMLElement) => void;
+}
+
 interface Env {
   DB: D1Database;
   SESSION: KVNamespace;

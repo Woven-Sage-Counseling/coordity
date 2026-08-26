@@ -116,7 +116,11 @@ const { announcements, error = null, savedId = null, embedded = false } = Astro.
                   </form>
                   {
                     savedId === item.id ? (
-                      <span class="text-sm font-medium text-sage-dark/70" aria-live="polite">
+                      <span
+                        class="text-sm font-semibold text-charcoal transition-opacity duration-300"
+                        data-save-flash
+                        aria-live="polite"
+                      >
                         Saved.
                       </span>
                     ) : null

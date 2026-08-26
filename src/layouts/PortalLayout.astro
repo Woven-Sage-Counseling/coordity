@@ -110,6 +110,63 @@ const canSeeManagement = canAccessManagement(employee);
         <slot />
       </div>
     </main>
+    <script is:inline>
+      (function () {
+        function showSaveFlash(el) {
+          if (!(el instanceof HTMLElement)) return;
+          el.hidden = false;
+          el.classList.remove('hidden');
+          el.classList.remove('opacity-0');
+          el.classList.add('opacity-100');
+          var prev = Number(el.getAttribute('data-save-flash-timer') || 0);
+          var prevHide = Number(el.getAttribute('data-save-flash-hide') || 0);
+          if (prev) window.clearTimeout(prev);
+          if (prevHide) window.clearTimeout(prevHide);
+          var timer = window.setTimeout(function () {
+            el.classList.remove('opacity-100');
+            el.classList.add('opacity-0');
+            var hide = window.setTimeout(function () {
+              el.classList.add('hidden');
+              el.hidden = true;
+              el.classList.remove('opacity-0');
+            }, 280);
+            el.setAttribute('data-save-flash-hide', String(hide));
+          }, 1600);
+          el.setAttribute('data-save-flash-timer', String(timer));
+        }
+
+        window.showSaveFlash = showSaveFlash;
+
+        document.querySelectorAll('[data-save-flash]').forEach(function (node) {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.classList.contains('hidden') || node.hidden) return;
+          showSaveFlash(node);
+        });
+
+        try {
+          var url = new URL(window.location.href);
+          var keys = [
+            'saved',
+            'peopleSaved',
+            'peopleUser',
+            'credentialingSaved',
+            'announcementSaved',
+          ];
+          var changed = false;
+          keys.forEach(function (key) {
+            if (url.searchParams.has(key)) {
+              url.searchParams.delete(key);
+              changed = true;
+            }
+          });
+          if (changed) {
+            window.setTimeout(function () {
+              history.replaceState(null, '', url.pathname + url.search + url.hash);
+            }, 2200);
+          }
+        } catch (e) {}
+      })();
+    </script>
     {
       employee?.status === 'active' && (
         <script
