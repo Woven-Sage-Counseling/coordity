@@ -37,9 +37,7 @@ declare namespace App {
 interface Env {
   DB: D1Database;
   SESSION: KVNamespace;
-  EMAIL?: SendEmail;
-  CLOUDFLARE_ACCOUNT_ID?: string;
-  CLOUDFLARE_EMAIL_API_TOKEN?: string;
+  RESEND_API_KEY?: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   PORTAL_BOOTSTRAP_TOKEN: string;

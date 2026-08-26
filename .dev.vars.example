@@ -5,7 +5,11 @@ BETTER_AUTH_SECRET=replace-with-a-long-random-string
 BETTER_AUTH_URL=http://localhost:4321
 PORTAL_BOOTSTRAP_TOKEN=replace-with-a-long-random-string
 PORTAL_OWNER_EMAIL=admin@wovensage.com
+PORTAL_FROM_EMAIL=portal@wovensage.com
 PORTAL_ENVIRONMENT=preview
+
+# Resend (time-off request emails)
+# RESEND_API_KEY=
 
 # QuickBooks (optional until OAuth is connected)
 # QB_CLIENT_ID=

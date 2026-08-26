@@ -11,53 +11,36 @@ export type AdminEmailPayload = {
 
 async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
   const env = getEnv();
-  const fromEmail = (env.PORTAL_FROM_EMAIL ?? 'portal@wovensage.com').trim();
-
-  if (env.EMAIL) {
-    await env.EMAIL.send({
-      to: TIME_OFF_RECIPIENT,
-      from: { email: fromEmail, name: 'Woven Sage Portal' },
-      replyTo: payload.replyTo,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
-    });
-    return;
-  }
-
-  const accountId = env.CLOUDFLARE_ACCOUNT_ID?.trim();
-  const token = env.CLOUDFLARE_EMAIL_API_TOKEN?.trim();
-  if (!accountId || !token) {
+  const apiKey = env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
     throw new Error('Email is not configured for this portal yet.');
   }
 
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/email/sending/send`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: TIME_OFF_RECIPIENT,
-        from: { address: fromEmail, name: 'Woven Sage Portal' },
-        reply_to: payload.replyTo,
-        subject: payload.subject,
-        text: payload.text,
-        html: payload.html,
-      }),
+  const fromEmail = (env.PORTAL_FROM_EMAIL ?? 'portal@wovensage.com').trim();
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify({
+      from: `Woven Sage Portal <${fromEmail}>`,
+      to: [TIME_OFF_RECIPIENT],
+      reply_to: payload.replyTo,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
+    }),
+  });
 
   const body = (await response.json()) as {
-    success?: boolean;
-    errors?: Array<{ message?: string }>;
+    id?: string;
+    message?: string;
+    name?: string;
   };
 
-  if (!response.ok || !body.success) {
-    const message = body.errors?.[0]?.message ?? 'Unable to send email.';
-    throw new Error(message);
+  if (!response.ok) {
+    throw new Error(body.message ?? 'Unable to send email.');
   }
 }
 
