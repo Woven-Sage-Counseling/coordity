@@ -445,16 +445,6 @@ const conflictLabel = conflictCountLabel(conflictCount);
         </div>
       ) : null
     }
-
-    <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-      {
-        connection.status === 'connected' ? (
-          <a href="/settings#google-calendar" class="text-[10px] font-medium text-sage-dark/70 hover:text-sage-dark">
-            Manage calendars
-          </a>
-        ) : null
-      }
-    </div>
   </div>
 </aside>
 
@@ -552,11 +542,14 @@ const conflictLabel = conflictCountLabel(conflictCount);
             <div class="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <a
                 href="/settings#google-calendar"
-                class="text-[11px] font-medium text-sage-dark/70 hover:text-sage-dark"
+                class="rounded-full border border-sage-dark/25 bg-transparent px-3 py-1.5 text-[11px] font-medium text-sage-dark/80 transition hover:border-sage-dark/40 hover:bg-white hover:text-charcoal"
               >
                 Manage calendars
               </a>
-              <a href="/time-off" class="text-[11px] font-medium text-sage-dark/60 transition hover:text-sage-dark">
+              <a
+                href="/time-off"
+                class="rounded-full border border-sage-dark/25 bg-transparent px-3 py-1.5 text-[11px] font-medium text-sage-dark/80 transition hover:border-sage-dark/40 hover:bg-white hover:text-charcoal"
+              >
                 Request time off
               </a>
             </div>
