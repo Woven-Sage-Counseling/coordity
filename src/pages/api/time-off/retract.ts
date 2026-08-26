@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
 import { notifyAdminEmail } from '../../../lib/email';
+import {
+  TIME_OFF_REQUEST_SOURCE,
+  deleteNotificationsBySource,
+} from '../../../lib/notifications';
 import { retractTimeOffRequest } from '../../../lib/time-off-requests';
 import { buildTimeOffRetractionEmail } from '../../../lib/time-off';
 import { resolveTimeOffReturnTo, timeOffErrorRedirect } from '../../../lib/time-off-return';
@@ -21,6 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let retracted;
   try {
     retracted = await retractTimeOffRequest(requestId, employee.id);
+    await deleteNotificationsBySource(TIME_OFF_REQUEST_SOURCE, requestId);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to retract that request.';
     return timeOffErrorRedirect(form, message);

@@ -46,12 +46,18 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
           data-admin-open="time-off"
         >
-          <span class="flex min-w-0 items-center gap-2">
+          <span class="flex min-w-0 items-center gap-2.5">
             <span class="text-[15px] font-medium text-charcoal">Time off requests</span>
             {
               pendingTimeOff > 0 ? (
-                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
-                  {pendingTimeOff}
+                <span
+                  class="relative inline-flex h-5 w-5 shrink-0 items-center justify-center text-red-600"
+                  aria-label={`${pendingTimeOff} pending time off ${pendingTimeOff === 1 ? 'request' : 'requests'}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 1 0-14 0v4.8L3 17.8v1.1h18v-1.1l-2-2Z" />
+                  </svg>
+                  <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-600 ring-2 ring-white"></span>
                 </span>
               ) : null
             }

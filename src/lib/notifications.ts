@@ -2,6 +2,7 @@ import { getEnv } from './env';
 import { randomToken, nowMs } from './crypto';
 
 export const CALENDAR_CONFLICT_SOURCE = 'calendar_conflict';
+export const TIME_OFF_REQUEST_SOURCE = 'time_off_request';
 
 export interface PortalNotification {
   id: string;
@@ -296,6 +297,56 @@ export async function notifyActiveUsers(input: {
        AND (? IS NULL OR u.id != ?)`,
   )
     .bind(input.excludeUserId ?? null, input.excludeUserId ?? null)
+    .all<{ id: string }>();
+
+  const recipients = users.results ?? [];
+  if (recipients.length === 0) return;
+
+  await DB.batch(
+    recipients.map((user) =>
+      DB.prepare(
+        `INSERT INTO notification
+           (id, user_id, title, body, created_at, read_at, source_type, source_id)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+      ).bind(
+        randomToken(16),
+        user.id,
+        input.title,
+        input.body,
+        now,
+        input.sourceType ?? null,
+        input.sourceId ?? null,
+      ),
+    ),
+  );
+}
+
+/** Notify primary owner + Owner (view) accounts with admin access. */
+export async function notifyManagementUsers(input: {
+  title: string;
+  body: string;
+  excludeUserId?: string;
+  sourceType?: string;
+  sourceId?: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const now = nowMs();
+  const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim().toLowerCase();
+
+  const users = await DB.prepare(
+    `SELECT DISTINCT u.id
+     FROM user u
+     JOIN employee_profile p ON p.user_id = u.id
+     LEFT JOIN user_role ur ON ur.user_id = u.id
+     LEFT JOIN role r ON r.id = ur.role_id
+     WHERE p.status = 'active'
+       AND (
+         r.key IN ('owner', 'owner_view')
+         OR (? != '' AND lower(u.email) = ?)
+       )
+       AND (? IS NULL OR u.id != ?)`,
+  )
+    .bind(ownerEmail, ownerEmail, input.excludeUserId ?? null, input.excludeUserId ?? null)
     .all<{ id: string }>();
 
   const recipients = users.results ?? [];
