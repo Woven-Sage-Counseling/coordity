@@ -250,6 +250,139 @@ export async function listCoverageMatrix(): Promise<Record<string, CoverageStatu
   return map;
 }
 
+export interface PublicInsurancePlan {
+  planId: string;
+  planName: string;
+  sortOrder: number;
+}
+
+export interface PublicInsuranceGroup {
+  groupId: string;
+  groupName: string;
+  sortOrder: number;
+  inNetworkPlans: PublicInsurancePlan[];
+  comingSoonPlans: PublicInsurancePlan[];
+}
+
+/** Practice-wide insurance list for the public credentialing page (no provider names or internal statuses). */
+export async function listPublicInsuranceDisplay(): Promise<PublicInsuranceGroup[]> {
+  const providers = await listProvidersForLookup();
+  if (providers.length === 0) return [];
+
+  const providerIds = providers.map((provider) => provider.id);
+  const placeholders = providerIds.map(() => '?').join(', ');
+
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT
+        p.id AS plan_id,
+        p.name AS plan_name,
+        p.sort_order AS plan_sort_order,
+        g.id AS group_id,
+        g.name AS group_name,
+        g.sort_order AS group_sort_order,
+        c.status
+     FROM provider_plan_coverage c
+     JOIN insurance_plan p ON p.id = c.plan_id
+     JOIN insurance_group g ON g.id = p.group_id
+     WHERE c.provider_id IN (${placeholders})
+       AND c.status IN ('in_network', 'credentialing', 'accepted')`,
+  )
+    .bind(...providerIds)
+    .all<{
+      plan_id: string;
+      plan_name: string;
+      plan_sort_order: number;
+      group_id: string;
+      group_name: string;
+      group_sort_order: number;
+      status: string;
+    }>();
+
+  const planBuckets = new Map<
+    string,
+    {
+      planId: string;
+      planName: string;
+      sortOrder: number;
+      groupId: string;
+      groupName: string;
+      groupSortOrder: number;
+      hasInNetwork: boolean;
+      hasCredentialing: boolean;
+    }
+  >();
+
+  for (const row of rows.results ?? []) {
+    const status = normalizeCoverageStatus(row.status);
+    if (status !== 'in_network' && status !== 'credentialing') continue;
+
+    const existing = planBuckets.get(row.plan_id);
+    if (existing) {
+      if (status === 'in_network') existing.hasInNetwork = true;
+      if (status === 'credentialing') existing.hasCredentialing = true;
+      continue;
+    }
+
+    planBuckets.set(row.plan_id, {
+      planId: row.plan_id,
+      planName: row.plan_name,
+      sortOrder: row.plan_sort_order,
+      groupId: row.group_id,
+      groupName: row.group_name,
+      groupSortOrder: row.group_sort_order,
+      hasInNetwork: status === 'in_network',
+      hasCredentialing: status === 'credentialing',
+    });
+  }
+
+  const groups = new Map<string, PublicInsuranceGroup>();
+  for (const plan of planBuckets.values()) {
+    let group = groups.get(plan.groupId);
+    if (!group) {
+      group = {
+        groupId: plan.groupId,
+        groupName: plan.groupName,
+        sortOrder: plan.groupSortOrder,
+        inNetworkPlans: [],
+        comingSoonPlans: [],
+      };
+      groups.set(plan.groupId, group);
+    }
+
+    const entry = {
+      planId: plan.planId,
+      planName: plan.planName,
+      sortOrder: plan.sortOrder,
+    };
+
+    if (plan.hasInNetwork) {
+      if (!group.inNetworkPlans.some((item) => item.planId === plan.planId)) {
+        group.inNetworkPlans.push(entry);
+      }
+      continue;
+    }
+
+    if (plan.hasCredentialing) {
+      if (!group.comingSoonPlans.some((item) => item.planId === plan.planId)) {
+        group.comingSoonPlans.push(entry);
+      }
+    }
+  }
+
+  const sortPlans = (left: PublicInsurancePlan, right: PublicInsurancePlan) =>
+    left.sortOrder - right.sortOrder || left.planName.localeCompare(right.planName);
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      inNetworkPlans: [...group.inNetworkPlans].sort(sortPlans),
+      comingSoonPlans: [...group.comingSoonPlans].sort(sortPlans),
+    }))
+    .filter((group) => group.inNetworkPlans.length > 0 || group.comingSoonPlans.length > 0)
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.groupName.localeCompare(right.groupName));
+}
+
 export async function listInsuranceCatalog(): Promise<InsuranceGroup[]> {
   const { DB } = getEnv();
   const groups = await DB.prepare(
