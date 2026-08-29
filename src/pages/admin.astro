@@ -9,7 +9,7 @@ import { listActiveAnnouncements } from '../lib/announcements';
 import {
   listProvidersForLookup,
   listInsuranceCatalog,
-  listProviderCoverage,
+  listCoverageMatrix,
 } from '../lib/credentialing';
 import { listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
@@ -28,19 +28,7 @@ const timeOffRequests = await listTimeOffRequestsForAdmin();
 const roles = await listRolesWithPermissions();
 const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
-const coverageByProvider: Record<
-  string,
-  Array<{ planId: string; planName: string; groupName: string; status: 'accepted' | 'credentialing' }>
-> = {};
-for (const provider of credentialingProviders) {
-  const rows = await listProviderCoverage(provider.id);
-  coverageByProvider[provider.id] = rows.map((row) => ({
-    planId: row.planId,
-    planName: row.planName,
-    groupName: row.groupName,
-    status: row.status,
-  }));
-}
+const coverageMap = await listCoverageMatrix();
 
 const error = Astro.url.searchParams.get('error');
 const announcementSaved = Astro.url.searchParams.get('announcementSaved');
@@ -50,7 +38,6 @@ const peopleSaved = Astro.url.searchParams.get('peopleSaved');
 const peopleUser = Astro.url.searchParams.get('peopleUser');
 const timeOffError = Astro.url.searchParams.get('timeOffError');
 const credentialingError = Astro.url.searchParams.get('credentialingError');
-const credentialingSaved = Astro.url.searchParams.get('credentialingSaved');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -213,9 +200,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       <CredentialingManager
         providers={credentialingProviders}
         catalog={insuranceCatalog}
-        coverageByProvider={coverageByProvider}
+        coverageMap={coverageMap}
         error={credentialingError}
-        saved={credentialingSaved === '1'}
         embedded
       />
     </section>

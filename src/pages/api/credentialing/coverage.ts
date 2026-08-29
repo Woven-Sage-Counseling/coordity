@@ -44,7 +44,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
   }
 
-  const coverage = await listProviderCoverage(providerId);
+  const coverage = await listProviderCoverage(providerId, { publicOnly: true });
   return new Response(JSON.stringify({ ok: true, coverage }), {
     status: 200,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

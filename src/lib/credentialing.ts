@@ -2,8 +2,26 @@ import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
 import { listDirectoryClinicians } from './employees';
 import { hasPermission, isOwnerEmail } from './permissions';
+import {
+  COVERAGE_STATUS_VALUES,
+  coverageCellKey,
+  isPublicCoverageStatus,
+  normalizeCoverageStatus,
+  type CoverageStatus,
+  type CoverageStatusKey,
+} from './credentialing-status';
 
-export type CoverageStatus = 'accepted' | 'credentialing';
+export {
+  COVERAGE_STATUS_OPTIONS,
+  COVERAGE_STATUS_VALUES,
+  coverageCellKey,
+  coverageStatusLabel,
+  coverageStatusPillClass,
+  isPublicCoverageStatus,
+  normalizeCoverageStatus,
+  type CoverageStatus,
+  type CoverageStatusKey,
+} from './credentialing-status';
 
 export interface CredentialingProvider {
   id: string;
@@ -166,7 +184,10 @@ export async function getProviderById(providerId: string): Promise<Credentialing
   return { id: row.id, name: row.name, userId: row.user_id };
 }
 
-export async function listProviderCoverage(providerId: string): Promise<ProviderCoverageRow[]> {
+export async function listProviderCoverage(
+  providerId: string,
+  options: { publicOnly?: boolean } = {},
+): Promise<ProviderCoverageRow[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -189,17 +210,44 @@ export async function listProviderCoverage(providerId: string): Promise<Provider
       plan_name: string;
       group_id: string;
       group_name: string;
-      status: CoverageStatus;
+      status: string;
     }>();
 
-  return (rows.results ?? []).map((row) => ({
-    coverageId: row.coverage_id,
-    planId: row.plan_id,
-    planName: row.plan_name,
-    groupId: row.group_id,
-    groupName: row.group_name,
-    status: row.status,
-  }));
+  const mapped = (rows.results ?? [])
+    .map((row) => {
+      const status = normalizeCoverageStatus(row.status);
+      if (!status) return null;
+      return {
+        coverageId: row.coverage_id,
+        planId: row.plan_id,
+        planName: row.plan_name,
+        groupId: row.group_id,
+        groupName: row.group_name,
+        status,
+      };
+    })
+    .filter((row): row is ProviderCoverageRow => row !== null);
+
+  if (options.publicOnly) {
+    return mapped.filter((row) => isPublicCoverageStatus(row.status));
+  }
+
+  return mapped;
+}
+
+export async function listCoverageMatrix(): Promise<Record<string, CoverageStatus>> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT provider_id, plan_id, status FROM provider_plan_coverage`,
+  ).all<{ provider_id: string; plan_id: string; status: string }>();
+
+  const map: Record<string, CoverageStatus> = {};
+  for (const row of rows.results ?? []) {
+    const status = normalizeCoverageStatus(row.status);
+    if (!status) continue;
+    map[coverageCellKey(row.provider_id, row.plan_id)] = status;
+  }
+  return map;
 }
 
 export async function listInsuranceCatalog(): Promise<InsuranceGroup[]> {
@@ -308,7 +356,7 @@ export async function updateInsurancePlan(planId: string, name: string): Promise
 export async function setProviderPlanCoverage(input: {
   providerId: string;
   planId: string;
-  status: CoverageStatus | 'none';
+  status: CoverageStatusKey;
   actorId: string;
 }): Promise<void> {
   const { DB } = getEnv();
@@ -322,11 +370,15 @@ export async function setProviderPlanCoverage(input: {
     .first<{ id: string }>();
   if (!plan) throw new Error('That plan was not found.');
 
-  if (input.status === 'none') {
+  if (input.status === 'not_started') {
     await DB.prepare(`DELETE FROM provider_plan_coverage WHERE provider_id = ? AND plan_id = ?`)
       .bind(input.providerId, input.planId)
       .run();
     return;
+  }
+
+  if (!COVERAGE_STATUS_VALUES.includes(input.status)) {
+    throw new Error('Choose a valid coverage status.');
   }
 
   const existing = await DB.prepare(
@@ -355,6 +407,59 @@ export async function setProviderPlanCoverage(input: {
     .run();
 }
 
+export async function countBulkGroupOverwrite(input: {
+  providerId: string;
+  groupId: string;
+}): Promise<{ planCount: number; overwritten: number }> {
+  const { DB } = getEnv();
+  const plans = await DB.prepare(`SELECT id FROM insurance_plan WHERE group_id = ?`)
+    .bind(input.groupId)
+    .all<{ id: string }>();
+
+  const planIds = (plans.results ?? []).map((row) => row.id);
+  if (planIds.length === 0) throw new Error('That insurance company has no plans.');
+
+  let overwritten = 0;
+  for (const planId of planIds) {
+    const existing = await DB.prepare(
+      `SELECT status FROM provider_plan_coverage WHERE provider_id = ? AND plan_id = ?`,
+    )
+      .bind(input.providerId, planId)
+      .first<{ status: string }>();
+    if (existing) overwritten += 1;
+  }
+
+  return { planCount: planIds.length, overwritten };
+}
+
+export async function bulkSetProviderGroupCoverage(input: {
+  providerId: string;
+  groupId: string;
+  status: CoverageStatusKey;
+  actorId: string;
+}): Promise<{ updated: number }> {
+  const { DB } = getEnv();
+  const plans = await DB.prepare(
+    `SELECT id FROM insurance_plan WHERE group_id = ? ORDER BY sort_order, name COLLATE NOCASE`,
+  )
+    .bind(input.groupId)
+    .all<{ id: string }>();
+
+  const planIds = (plans.results ?? []).map((row) => row.id);
+  if (planIds.length === 0) throw new Error('That insurance company has no plans.');
+
+  for (const planId of planIds) {
+    await setProviderPlanCoverage({
+      providerId: input.providerId,
+      planId,
+      status: input.status,
+      actorId: input.actorId,
+    });
+  }
+
+  return { updated: planIds.length };
+}
+
 export async function deleteInsuranceGroup(groupId: string): Promise<void> {
   const { DB } = getEnv();
   const result = await DB.prepare(`DELETE FROM insurance_group WHERE id = ?`).bind(groupId).run();
@@ -365,8 +470,4 @@ export async function deleteInsurancePlan(planId: string): Promise<void> {
   const { DB } = getEnv();
   const result = await DB.prepare(`DELETE FROM insurance_plan WHERE id = ?`).bind(planId).run();
   if ((result.meta.changes ?? 0) === 0) throw new Error('That plan was not found.');
-}
-
-export function coverageStatusLabel(status: CoverageStatus): string {
-  return status === 'accepted' ? 'Accepted' : 'Credentialing';
 }
