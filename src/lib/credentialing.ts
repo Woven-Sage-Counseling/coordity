@@ -73,7 +73,7 @@ export async function listCredentialingProviders(): Promise<CredentialingProvide
 
 /**
  * Ensures directory clinicians have credentialing provider rows, then returns
- * the full provider list (directory-backed + any manually added names).
+ * only directory-backed providers.
  */
 export async function listProvidersForLookup(): Promise<CredentialingProvider[]> {
   await syncProvidersFromDirectory();
@@ -81,10 +81,12 @@ export async function listProvidersForLookup(): Promise<CredentialingProvider[]>
   const clinicians = await listDirectoryClinicians();
   const clinicianIds = new Set(clinicians.map((person) => person.id));
 
-  return providers.map((provider) => ({
-    ...provider,
-    fromDirectory: Boolean(provider.userId && clinicianIds.has(provider.userId)),
-  }));
+  return providers
+    .filter((provider) => provider.userId && clinicianIds.has(provider.userId))
+    .map((provider) => ({
+      ...provider,
+      fromDirectory: true,
+    }));
 }
 
 async function ensureProviderForUser(userId: string, name: string): Promise<CredentialingProvider> {
@@ -281,30 +283,6 @@ export async function createInsurancePlan(groupId: string, name: string): Promis
   return id;
 }
 
-export async function createCredentialingProvider(name: string, userId?: string | null): Promise<string> {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error('Provider name is required.');
-
-  const { DB } = getEnv();
-  const linkedUserId = userId?.trim() || null;
-  if (linkedUserId) {
-    const existing = await DB.prepare(`SELECT id FROM credentialing_provider WHERE user_id = ?`)
-      .bind(linkedUserId)
-      .first<{ id: string }>();
-    if (existing) throw new Error('That person is already linked to a provider.');
-  }
-
-  const id = randomToken(16);
-  await DB.prepare(
-    `INSERT INTO credentialing_provider (id, name, user_id, created_at)
-     VALUES (?, ?, ?, ?)`,
-  )
-    .bind(id, trimmed, linkedUserId, nowMs())
-    .run();
-
-  return id;
-}
-
 export async function setProviderPlanCoverage(input: {
   providerId: string;
   planId: string;
@@ -365,12 +343,6 @@ export async function deleteInsurancePlan(planId: string): Promise<void> {
   const { DB } = getEnv();
   const result = await DB.prepare(`DELETE FROM insurance_plan WHERE id = ?`).bind(planId).run();
   if ((result.meta.changes ?? 0) === 0) throw new Error('That plan was not found.');
-}
-
-export async function deleteCredentialingProvider(providerId: string): Promise<void> {
-  const { DB } = getEnv();
-  const result = await DB.prepare(`DELETE FROM credentialing_provider WHERE id = ?`).bind(providerId).run();
-  if ((result.meta.changes ?? 0) === 0) throw new Error('That provider was not found.');
 }
 
 export function coverageStatusLabel(status: CoverageStatus): string {

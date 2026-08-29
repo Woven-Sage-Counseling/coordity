@@ -10,7 +10,7 @@ import {
   listInsuranceCatalog,
   listProviderCoverage,
 } from '../lib/credentialing';
-import { listEmployees, listRolesWithPermissions } from '../lib/employees';
+import { listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
 import { plainPermission, plainRole } from '../lib/role-plain-language';
 import { listTimeOffRequestsForAdmin } from '../lib/time-off-requests';
@@ -40,13 +40,6 @@ for (const provider of credentialingProviders) {
     status: row.status,
   }));
 }
-const linkedUserIds = new Set(
-  credentialingProviders.map((provider) => provider.userId).filter((id): id is string => Boolean(id)),
-);
-const allPeople = await listEmployees();
-const linkableUsers = allPeople
-  .filter((person) => person.status === 'active' && !linkedUserIds.has(person.id))
-  .map((person) => ({ id: person.id, name: person.name, email: person.email }));
 
 const error = Astro.url.searchParams.get('error');
 const announcementSaved = Astro.url.searchParams.get('announcementSaved');
@@ -221,7 +214,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         providers={credentialingProviders}
         catalog={insuranceCatalog}
         coverageByProvider={coverageByProvider}
-        linkableUsers={linkableUsers}
         error={credentialingError}
         saved={credentialingSaved === '1'}
         embedded
