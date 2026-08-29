@@ -61,12 +61,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
 <PortalLayout title="Settings">
   <div class="mx-auto max-w-lg" data-settings-shell>
-    <p class="text-sm text-sage-dark/65">
-      <a href="/" class="hover:text-sage-dark">Home</a>
-      <span class="mx-1.5 text-sage-dark/35">/</span>
-      Settings
-    </p>
-    <h1 class="mt-3 font-display text-4xl text-charcoal">Settings</h1>
+    <div data-settings-header>
+      <p class="text-sm text-sage-dark/65">
+        <a href="/" class="hover:text-sage-dark">Home</a>
+        <span class="mx-1.5 text-sage-dark/35">/</span>
+        Settings
+      </p>
+      <h1 class="mt-3 font-display text-4xl text-charcoal">Settings</h1>
+    </div>
 
     <div data-settings-menu>
       <p class="mt-3 text-sage-dark/75">Choose a category to manage.</p>
@@ -110,7 +112,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </form>
     </div>
 
-    <section class="mt-6 hidden" data-settings-panel="appearance" data-theme-settings data-user-id={employee.id}>
+    <section class="hidden" data-settings-panel="appearance" data-theme-settings data-user-id={employee.id}>
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -150,7 +152,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section
-      class="mt-6 hidden"
+      class="hidden"
       data-settings-panel="widgets"
       data-widget-settings
       data-user-id={employee.id}
@@ -205,7 +207,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </div>
     </section>
 
-    <section class="mt-6 hidden" data-settings-panel="google-calendar" id="google-calendar" data-calendar-settings>
+    <section class="hidden" data-settings-panel="google-calendar" id="google-calendar" data-calendar-settings>
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -379,11 +381,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   function setupSettingsNav(shell: Element) {
     if (!(shell instanceof HTMLElement)) return;
     const menu = shell.querySelector('[data-settings-menu]');
+    const header = shell.querySelector('[data-settings-header]');
     const panels = Array.from(shell.querySelectorAll('[data-settings-panel]')).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     );
 
     const showMenu = () => {
+      if (header instanceof HTMLElement) header.classList.remove('hidden');
       if (menu instanceof HTMLElement) menu.classList.remove('hidden');
       panels.forEach((panel) => panel.classList.add('hidden'));
       if (window.location.hash) {
@@ -392,6 +396,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     };
 
     const showPanel = (id: string, updateHash = true) => {
+      if (header instanceof HTMLElement) header.classList.add('hidden');
       if (menu instanceof HTMLElement) menu.classList.add('hidden');
       panels.forEach((panel) => {
         panel.classList.toggle('hidden', panel.dataset.settingsPanel !== id);

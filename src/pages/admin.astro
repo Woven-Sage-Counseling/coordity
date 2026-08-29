@@ -64,12 +64,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
 <PortalLayout title="Admin" wide>
   <div class="mx-auto max-w-2xl" data-admin-shell>
-    <p class="text-sm text-sage-dark/65">
-      <a href="/" class="hover:text-sage-dark">Home</a>
-      <span class="mx-1.5 text-sage-dark/35">/</span>
-      Admin
-    </p>
-    <h1 class="mt-3 font-display text-4xl text-charcoal">Admin</h1>
+    <div data-admin-header>
+      <p class="text-sm text-sage-dark/65">
+        <a href="/" class="hover:text-sage-dark">Home</a>
+        <span class="mx-1.5 text-sage-dark/35">/</span>
+        Admin
+      </p>
+      <h1 class="mt-3 font-display text-4xl text-charcoal">Admin</h1>
+    </div>
 
     <div data-admin-menu>
       <p class="mt-3 text-sage-dark/75">Choose a category to manage.</p>
@@ -134,7 +136,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </div>
     </div>
 
-    <section class="mt-6 hidden" data-admin-panel="time-off">
+    <section class="hidden" data-admin-panel="time-off">
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -152,7 +154,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       <TimeOffManager requests={timeOffRequests} error={timeOffError} embedded />
     </section>
 
-    <section class="mt-6 hidden" data-admin-panel="announcements">
+    <section class="hidden" data-admin-panel="announcements">
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -175,7 +177,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
     </section>
 
-    <section class="mt-6 hidden" data-admin-panel="people">
+    <section class="hidden" data-admin-panel="people">
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -199,7 +201,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
     </section>
 
-    <section class="mt-6 hidden" data-admin-panel="credentialing">
+    <section class="hidden" data-admin-panel="credentialing">
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -226,7 +228,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
     </section>
 
-    <section class="mt-6 hidden" data-admin-panel="roles" id="roles">
+    <section class="hidden" data-admin-panel="roles" id="roles">
       <button
         type="button"
         class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
@@ -317,6 +319,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   function setupAdminNav(shell: Element) {
     if (!(shell instanceof HTMLElement)) return;
     const menu = shell.querySelector('[data-admin-menu]');
+    const header = shell.querySelector('[data-admin-header]');
     const panels = Array.from(shell.querySelectorAll('[data-admin-panel]')).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     );
@@ -341,6 +344,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     };
 
     const showMenu = () => {
+      if (header instanceof HTMLElement) header.classList.remove('hidden');
       if (menu instanceof HTMLElement) menu.classList.remove('hidden');
       panels.forEach((panel) => panel.classList.add('hidden'));
       if (window.location.hash) {
@@ -349,6 +353,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     };
 
     const showPanel = (id: string, updateHash = true) => {
+      if (header instanceof HTMLElement) header.classList.add('hidden');
       if (menu instanceof HTMLElement) menu.classList.add('hidden');
       panels.forEach((panel) => {
         panel.classList.toggle('hidden', panel.dataset.adminPanel !== id);
