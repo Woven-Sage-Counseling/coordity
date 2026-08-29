@@ -283,6 +283,28 @@ export async function createInsurancePlan(groupId: string, name: string): Promis
   return id;
 }
 
+export async function updateInsuranceGroup(groupId: string, name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Insurance group name is required.');
+
+  const { DB } = getEnv();
+  const result = await DB.prepare(`UPDATE insurance_group SET name = ? WHERE id = ?`)
+    .bind(trimmed, groupId)
+    .run();
+  if ((result.meta.changes ?? 0) === 0) throw new Error('That insurance group was not found.');
+}
+
+export async function updateInsurancePlan(planId: string, name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Plan name is required.');
+
+  const { DB } = getEnv();
+  const result = await DB.prepare(`UPDATE insurance_plan SET name = ? WHERE id = ?`)
+    .bind(trimmed, planId)
+    .run();
+  if ((result.meta.changes ?? 0) === 0) throw new Error('That plan was not found.');
+}
+
 export async function setProviderPlanCoverage(input: {
   providerId: string;
   planId: string;
