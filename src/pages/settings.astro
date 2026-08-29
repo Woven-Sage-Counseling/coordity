@@ -1,4 +1,5 @@
 ---
+import PanelHeading from '../components/PanelHeading.astro';
 import PortalLayout from '../layouts/PortalLayout.astro';
 import { canSeeCredentialing } from '../lib/credentialing';
 import { availableWidgets, HOME_WIDGET_MAX } from '../lib/home-widgets';
@@ -123,8 +124,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Appearance</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">Light or dark portal theme.</p>
+      <PanelHeading title="Appearance" description="Light or dark portal theme." />
 
       <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" role="radiogroup" aria-label="Color theme">
         <label class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 has-[:checked]:bg-sage/10">
@@ -171,10 +171,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Home widgets</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        Enable widgets and set carousel order (up to {HOME_WIDGET_MAX}).
-      </p>
+      <PanelHeading
+        title="Home widgets"
+        description={`Enable widgets and set carousel order (up to ${HOME_WIDGET_MAX}).`}
+      />
 
       <p
         class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
@@ -218,10 +218,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Google Calendar</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        Connect your Google account for the Schedule widget. Read-only access only.
-      </p>
+      <PanelHeading
+        title="Google Calendar"
+        description="Connect your Google account for the Schedule widget. Read-only access only."
+      />
 
       {
         calendarNotice ? (

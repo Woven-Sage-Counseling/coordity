@@ -2,6 +2,7 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AnnouncementManager from '../components/AnnouncementManager.astro';
 import CredentialingManager from '../components/CredentialingManager.astro';
+import PanelHeading from '../components/PanelHeading.astro';
 import PeopleManager from '../components/PeopleManager.astro';
 import TimeOffManager from '../components/TimeOffManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
@@ -140,10 +141,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Time off requests</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        Review pending requests. Approved requests stay here until the last requested date has passed.
-      </p>
+      <PanelHeading
+        title="Time off requests"
+        description="Review pending requests. Approved requests stay here until the last requested date has passed."
+      />
       <TimeOffManager requests={timeOffRequests} error={timeOffError} embedded />
     </section>
 
@@ -158,10 +159,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Announcements</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        Post to every dashboard, then edit, resend, or remove from the history log.
-      </p>
+      <PanelHeading
+        title="Announcements"
+        description="Post to every dashboard, then edit, resend, or remove from the history log."
+      />
       <AnnouncementManager
         announcements={announcements}
         error={error}
@@ -181,10 +182,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">People</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        Invite people, set job titles and teams, and assign roles.
-      </p>
+      <PanelHeading
+        title="People"
+        description="Invite people, set job titles and teams, and assign roles."
+      />
       <PeopleManager
         error={peopleError}
         inviteUrl={inviteUrl}
@@ -205,11 +206,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Credentialing</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        Directory clinicians appear automatically. Manage insurance groups, plans, and accepted vs
-        in-progress coverage.
-      </p>
+      <PanelHeading
+        title="Credentialing"
+        description="Directory clinicians appear automatically. Manage insurance groups, plans, and accepted vs in-progress coverage."
+      />
       <CredentialingManager
         providers={credentialingProviders}
         catalog={insuranceCatalog}
@@ -231,10 +231,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         </svg>
         Back
       </button>
-      <h2 id="roles-heading" class="mt-4 text-2xl font-semibold tracking-tight text-charcoal">Roles and permissions</h2>
-      <p class="mt-1 text-sm text-sage-dark/65">
-        A plain-language guide to what each role can and cannot do.
-      </p>
+      <PanelHeading
+        id="roles-heading"
+        title="Roles and permissions"
+        description="A plain-language guide to what each role can and cannot do."
+      />
 
       <div class="mt-6 space-y-3">
         {
