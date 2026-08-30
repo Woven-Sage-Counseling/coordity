@@ -368,7 +368,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   type CatalogItem = { id: string; label: string; description: string };
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean): Prefs {
-    const enabled = ['schedule', 'time_off', 'my_progress', 'tasks'];
+    const enabled = ['schedule', 'time_off', 'timesheet', 'my_progress', 'tasks'];
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
     return { enabled, defaultId: 'schedule' };
@@ -503,6 +503,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           ) {
             const timeOffIdx = prefs.enabled.indexOf('time_off');
             prefs.enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : prefs.enabled.length, 0, 'my_progress');
+          }
+          if (
+            catalog.some((w) => w.id === 'timesheet') &&
+            !prefs.enabled.includes('timesheet') &&
+            prefs.enabled.length < max
+          ) {
+            const timeOffIdx = prefs.enabled.indexOf('time_off');
+            prefs.enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : prefs.enabled.length, 0, 'timesheet');
           }
           if (
             catalog.some((w) => w.id === 'tasks') &&

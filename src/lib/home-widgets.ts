@@ -4,6 +4,7 @@ export type HomeWidgetId =
   | 'quickbooks'
   | 'schedule'
   | 'time_off'
+  | 'timesheet'
   | 'my_progress'
   | 'tasks'
   | 'credentialing';
@@ -33,6 +34,11 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     id: 'time_off',
     label: 'Time off',
     description: 'Submit time-off requests and track pending or approved status.',
+  },
+  {
+    id: 'timesheet',
+    label: 'Hours worked',
+    description: 'Log daily hours and track your weekly total.',
   },
   {
     id: 'my_progress',
@@ -86,6 +92,7 @@ export function defaultPrefs(access: HomeWidgetAccess): HomeWidgetPrefs {
   const preferredOrder: HomeWidgetId[] = [
     'schedule',
     'time_off',
+    'timesheet',
     'my_progress',
     'tasks',
     'credentialing',
@@ -123,6 +130,10 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
   ) {
     const timeOffIdx = enabled.indexOf('time_off');
     enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+  }
+  if (allowed.has('timesheet') && !enabled.includes('timesheet') && enabled.length < HOME_WIDGET_MAX) {
+    const timeOffIdx = enabled.indexOf('time_off');
+    enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'timesheet');
   }
   if (allowed.has('tasks') && !enabled.includes('tasks') && enabled.length < HOME_WIDGET_MAX) {
     const progressIdx = enabled.indexOf('my_progress');

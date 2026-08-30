@@ -1,0 +1,384 @@
+---
+import {
+  getWeekSummary,
+  serializeTimesheetEntry,
+} from '../lib/timesheet-entries';
+import { currentWeekRange, formatHours, formatWeekLabel } from '../lib/timesheet';
+import { todayEastern } from '../lib/financials/periods';
+
+interface Props {
+  userId: string;
+}
+
+const { userId } = Astro.props;
+
+let week = {
+  start: currentWeekRange().start,
+  end: currentWeekRange().end,
+  totalMinutes: 0,
+  entries: [] as Awaited<ReturnType<typeof getWeekSummary>>['entries'],
+};
+let timesheetLoadError: string | null = null;
+
+try {
+  week = await getWeekSummary(userId);
+} catch (error) {
+  console.error('timesheet widget load failed', error);
+  timesheetLoadError = 'Timesheet is temporarily unavailable.';
+}
+
+const notice = Astro.url.searchParams.get('timesheet');
+const error = Astro.url.searchParams.get('timesheetError');
+const today = todayEastern();
+
+const initialFlash =
+  error != null && error !== ''
+    ? { kind: 'error' as const, text: error }
+    : notice === 'saved'
+      ? { kind: 'ok' as const, text: 'Hours saved.' }
+      : notice === 'deleted'
+        ? { kind: 'ok' as const, text: 'Entry removed.' }
+        : null;
+---
+
+<aside
+  class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
+  aria-labelledby="home-timesheet-heading"
+  data-timesheet-widget
+>
+  <div class="bg-sage-dark px-3 py-2.5 text-cream">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span
+          class="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-cream ring-1 ring-white/20"
+          aria-hidden="true"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <h2 id="home-timesheet-heading" class="text-sm font-semibold leading-none">Hours worked</h2>
+      </div>
+      <a
+        href="/timesheet"
+        class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-cream ring-1 ring-white/20 transition hover:bg-white/25"
+      >
+        Open
+      </a>
+    </div>
+  </div>
+
+  <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
+    <div data-timesheet-flash hidden={!initialFlash}>
+      {
+        initialFlash ? (
+          <p
+            class:list={[
+              'rounded-lg border px-2.5 py-2 text-[11px]',
+              initialFlash.kind === 'error'
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-sage-dark/15 bg-white text-sage-dark/80',
+            ]}
+          >
+            {initialFlash.text}
+          </p>
+        ) : null
+      }
+    </div>
+
+    <div class="mt-2 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">This week</p>
+      <p class="mt-1 text-2xl font-semibold leading-none text-charcoal" data-timesheet-week-total>
+        {formatHours(week.totalMinutes)}
+      </p>
+      <p class="mt-1 text-[10px] text-[#6b6c72]" data-timesheet-week-label>
+        {formatWeekLabel(week.start, week.end)}
+      </p>
+    </div>
+
+    <form
+      method="post"
+      action="/api/timesheet/upsert"
+      class="mt-3 space-y-2"
+      data-timesheet-add-form
+    >
+      <input type="hidden" name="returnTo" value="/" />
+      <div class="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2">
+        <label class="block text-[11px]">
+          <span class="font-semibold text-[#6b6c72]">Date</span>
+          <input
+            name="workDate"
+            type="date"
+            required
+            value={today}
+            class="mt-1 w-full rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[12px] text-charcoal shadow-sm"
+          />
+        </label>
+        <label class="block text-[11px]">
+          <span class="font-semibold text-[#6b6c72]">Hours</span>
+          <input
+            name="hours"
+            type="text"
+            inputmode="decimal"
+            required
+            placeholder="7.5"
+            class="mt-1 w-full rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[12px] text-charcoal shadow-sm placeholder:text-[#6b6c72]"
+          />
+        </label>
+      </div>
+      <label class="block text-[11px]">
+        <span class="font-semibold text-[#6b6c72]">Notes (optional)</span>
+        <input
+          name="notes"
+          type="text"
+          maxlength="500"
+          placeholder="What did you work on?"
+          class="mt-1 w-full rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[12px] text-charcoal shadow-sm placeholder:text-[#6b6c72]"
+        />
+      </label>
+      <button
+        type="submit"
+        class="w-full rounded-lg bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-sage-dark/90 disabled:opacity-60"
+      >
+        Save hours
+      </button>
+    </form>
+
+    <div class="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">This week</p>
+      {
+        timesheetLoadError ? (
+          <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
+            {timesheetLoadError}
+          </p>
+        ) : null
+      }
+      <p
+        class="mt-2 text-[12px] text-[#6b6c72]"
+        data-timesheet-empty
+        hidden={week.entries.length > 0 || timesheetLoadError != null}
+      >
+        No hours logged this week yet.
+      </p>
+      <ul class="mt-2 space-y-2" data-timesheet-list hidden={week.entries.length === 0}>
+        {
+          week.entries.map((entry) => {
+            const serialized = serializeTimesheetEntry(entry);
+            return (
+              <li
+                class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
+                data-timesheet-item
+                data-entry-id={entry.id}
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[12px] font-semibold text-charcoal">{serialized.dateLabel}</p>
+                    <p class="mt-0.5 text-[12px] text-sage-dark/80">{serialized.hoursLabel}</p>
+                    {entry.notes ? (
+                      <p class="mt-1 line-clamp-2 text-[10px] leading-snug text-[#6b6c72]">{entry.notes}</p>
+                    ) : null}
+                  </div>
+                  <form method="post" action="/api/timesheet/delete" data-timesheet-action="delete">
+                    <input type="hidden" name="entryId" value={entry.id} />
+                    <input type="hidden" name="returnTo" value="/" />
+                    <button
+                      type="submit"
+                      class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-red-700 disabled:opacity-60"
+                      aria-label={`Delete hours for ${serialized.dateLabel}`}
+                    >
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </div>
+</aside>
+
+<script>
+  type WidgetEntry = {
+    id: string;
+    workDate: string;
+    dateLabel: string;
+    hoursLabel: string;
+    minutes: number;
+    notes: string | null;
+  };
+
+  type WidgetWeek = {
+    start: string;
+    end: string;
+    totalMinutes: number;
+    totalLabel: string;
+    entries: WidgetEntry[];
+  };
+
+  type ApiResult =
+    | { ok: true; entry?: WidgetEntry; entryId?: string; week?: WidgetWeek; error?: undefined }
+    | { ok: false; error?: string };
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function setFlash(root: HTMLElement, kind: 'ok' | 'error', text: string): void {
+    const flash = root.querySelector('[data-timesheet-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    const classes =
+      kind === 'error'
+        ? 'rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[11px] text-red-800'
+        : 'rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80';
+    flash.innerHTML = `<p class="${classes}">${escapeHtml(text)}</p>`;
+    flash.hidden = false;
+  }
+
+  function clearFlash(root: HTMLElement): void {
+    const flash = root.querySelector('[data-timesheet-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    flash.innerHTML = '';
+    flash.hidden = true;
+  }
+
+  function renderEntry(entry: WidgetEntry): string {
+    const notes = entry.notes
+      ? `<p class="mt-1 line-clamp-2 text-[10px] leading-snug text-[#6b6c72]">${escapeHtml(entry.notes)}</p>`
+      : '';
+    return `<li
+      class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
+      data-timesheet-item
+      data-entry-id="${escapeHtml(entry.id)}"
+    >
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="text-[12px] font-semibold text-charcoal">${escapeHtml(entry.dateLabel)}</p>
+          <p class="mt-0.5 text-[12px] text-sage-dark/80">${escapeHtml(entry.hoursLabel)}</p>
+          ${notes}
+        </div>
+        <form method="post" action="/api/timesheet/delete" data-timesheet-action="delete">
+          <input type="hidden" name="entryId" value="${escapeHtml(entry.id)}" />
+          <input type="hidden" name="returnTo" value="/" />
+          <button
+            type="submit"
+            class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-red-700 disabled:opacity-60"
+            aria-label="Delete entry"
+          >
+            Delete
+          </button>
+        </form>
+      </div>
+    </li>`;
+  }
+
+  function syncWeek(root: HTMLElement, week: WidgetWeek): void {
+    const total = root.querySelector('[data-timesheet-week-total]');
+    if (total instanceof HTMLElement) total.textContent = week.totalLabel;
+
+    const list = root.querySelector('[data-timesheet-list]');
+    const empty = root.querySelector('[data-timesheet-empty]');
+    if (!(list instanceof HTMLElement) || !(empty instanceof HTMLElement)) return;
+
+    list.innerHTML = week.entries.map(renderEntry).join('');
+    const hasItems = week.entries.length > 0;
+    list.hidden = !hasItems;
+    empty.hidden = hasItems;
+  }
+
+  async function postForm(form: HTMLFormElement): Promise<ApiResult> {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+
+    let payload: ApiResult;
+    try {
+      payload = (await response.json()) as ApiResult;
+    } catch {
+      return { ok: false, error: 'Something went wrong. Please try again.' };
+    }
+
+    if (!response.ok || !payload.ok) {
+      return { ok: false, error: payload.error || 'Something went wrong. Please try again.' };
+    }
+
+    return payload;
+  }
+
+  function setBusy(form: HTMLFormElement, busy: boolean): void {
+    form.querySelectorAll('button[type="submit"]').forEach((button) => {
+      if (button instanceof HTMLButtonElement) button.disabled = busy;
+    });
+  }
+
+  document.querySelectorAll('[data-timesheet-widget]').forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+
+    const addForm = root.querySelector('[data-timesheet-add-form]');
+    if (addForm instanceof HTMLFormElement) {
+      addForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void (async () => {
+          clearFlash(root);
+          setBusy(addForm, true);
+          try {
+            const result = await postForm(addForm);
+            if (!result.ok || !result.week) {
+              setFlash(root, 'error', result.error || 'Unable to save those hours.');
+              return;
+            }
+            syncWeek(root, result.week);
+            addForm.reset();
+            const dateInput = addForm.querySelector('input[name="workDate"]');
+            if (dateInput instanceof HTMLInputElement) {
+              dateInput.value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+            }
+            setFlash(root, 'ok', 'Hours saved.');
+          } finally {
+            setBusy(addForm, false);
+          }
+        })();
+      });
+    }
+
+    root.addEventListener('submit', (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if (form.getAttribute('data-timesheet-action') !== 'delete') return;
+
+      event.preventDefault();
+      if (!window.confirm('Remove this entry?')) return;
+
+      void (async () => {
+        clearFlash(root);
+        setBusy(form, true);
+        try {
+          const result = await postForm(form);
+          if (!result.ok || !result.week) {
+            setFlash(root, 'error', result.error || 'Unable to delete that entry.');
+            return;
+          }
+          syncWeek(root, result.week);
+          setFlash(root, 'ok', 'Entry removed.');
+        } finally {
+          setBusy(form, false);
+        }
+      })();
+    });
+  });
+</script>
