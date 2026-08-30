@@ -177,7 +177,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </button>
       <PanelHeading
         title="Home widgets"
-        description={`Enable widgets and set carousel order (up to ${HOME_WIDGET_MAX}).`}
+        description={`Enable widgets, set carousel order (up to ${HOME_WIDGET_MAX}), and customize header colors.`}
       />
 
       <p
@@ -368,8 +368,25 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 </PortalLayout>
 
 <script>
-  type Prefs = { enabled: string[]; defaultId: string };
-  type CatalogItem = { id: string; label: string; description: string };
+  type Prefs = { enabled: string[]; defaultId: string; headerColors?: Record<string, string> };
+  type CatalogItem = { id: string; label: string; description: string; brandHeaderColor?: string };
+
+  const DEFAULT_WIDGET_HEADER_COLOR = '#535f51';
+
+  function defaultHeaderColor(widget: CatalogItem): string {
+    return widget.brandHeaderColor ?? DEFAULT_WIDGET_HEADER_COLOR;
+  }
+
+  function sanitizeHeaderColors(raw: unknown): Record<string, string> {
+    if (!raw || typeof raw !== 'object') return {};
+    const colors: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) {
+        colors[key] = value;
+      }
+    }
+    return colors;
+  }
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean, canClinical: boolean): Prefs {
     const enabled = ['schedule', 'time_off', 'timesheet', 'my_progress', 'tasks'];
@@ -486,10 +503,12 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
     const key = 'portal:home-widgets:' + userId;
     let prefs = defaultPrefs(canFinancials, canCredentialing, canClinical);
+    let headerColors: Record<string, string> = {};
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw) as Prefs;
+        headerColors = sanitizeHeaderColors(parsed.headerColors);
         if (Array.isArray(parsed.enabled) && parsed.enabled.length) {
           prefs = {
             enabled: parsed.enabled
@@ -497,6 +516,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               .filter((id) => catalog.some((w) => w.id === id))
               .slice(0, max),
             defaultId: migrateWidgetId(parsed.defaultId || parsed.enabled[0]!),
+            ...(Object.keys(headerColors).length ? { headerColors } : {}),
           };
           if (catalog.some((w) => w.id === 'time_off') && !prefs.enabled.includes('time_off') && prefs.enabled.length < max) {
             const scheduleIdx = prefs.enabled.indexOf('schedule');
@@ -570,6 +590,22 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const moveBtnClass =
       'inline-flex h-8 w-8 items-center justify-center rounded-lg text-sage-dark/70 ring-1 ring-sage-dark/15 transition hover:bg-white hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-30';
 
+    const resolveHeaderColor = (widgetId: string): string => {
+      const widget = catalog.find((w) => w.id === widgetId);
+      if (!widget) return DEFAULT_WIDGET_HEADER_COLOR;
+      return headerColors[widgetId] ?? defaultHeaderColor(widget);
+    };
+
+    const setHeaderColor = (widgetId: string, value: string) => {
+      const widget = catalog.find((w) => w.id === widgetId);
+      const fallback = widget ? defaultHeaderColor(widget) : DEFAULT_WIDGET_HEADER_COLOR;
+      if (value === fallback) {
+        delete headerColors[widgetId];
+      } else {
+        headerColors[widgetId] = value;
+      }
+    };
+
     const syncSelect = () => {
       const enabled = rows.filter((r) => r.enabled).map((r) => r.id);
       select.innerHTML = '';
@@ -637,6 +673,35 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         (label.children[0] as HTMLElement).textContent = widget.label;
         (label.children[1] as HTMLElement).textContent = widget.description;
 
+        const colorWrap = document.createElement('div');
+        colorWrap.className = 'flex shrink-0 items-center gap-2';
+        const colorLabel = document.createElement('span');
+        colorLabel.className = 'text-[11px] font-medium text-sage-dark/55';
+        colorLabel.textContent = 'Header';
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = resolveHeaderColor(row.id);
+        colorInput.setAttribute('aria-label', `${widget.label} header color`);
+        colorInput.className =
+          'h-8 w-10 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-0.5';
+        colorInput.addEventListener('input', () => {
+          setHeaderColor(row.id, colorInput.value);
+          if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+        });
+        const resetColor = document.createElement('button');
+        resetColor.type = 'button';
+        resetColor.className =
+          'text-[11px] font-medium text-sage-dark/55 underline decoration-sage-dark/25 underline-offset-2 hover:text-charcoal';
+        resetColor.textContent = 'Reset';
+        resetColor.addEventListener('click', () => {
+          setHeaderColor(row.id, defaultHeaderColor(widget));
+          colorInput.value = resolveHeaderColor(row.id);
+          if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+        });
+        colorWrap.appendChild(colorLabel);
+        colorWrap.appendChild(colorInput);
+        colorWrap.appendChild(resetColor);
+
         const controls = document.createElement('div');
         controls.className = 'flex items-center gap-1';
 
@@ -678,6 +743,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         controls.appendChild(down);
         li.appendChild(check);
         li.appendChild(label);
+        li.appendChild(colorWrap);
         li.appendChild(controls);
         list.appendChild(li);
       });
@@ -699,9 +765,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         return;
       }
       const defaultId = enabled.includes(select.value) ? select.value : enabled[0]!;
-      const next: Prefs = { enabled, defaultId };
+      const next: Prefs = {
+        enabled,
+        defaultId,
+        ...(Object.keys(headerColors).length ? { headerColors: { ...headerColors } } : {}),
+      };
       localStorage.setItem(key, JSON.stringify(next));
       prefs = next;
+      window.dispatchEvent(new CustomEvent('portal:widget-prefs-changed', { detail: next }));
       if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
       if (savedEl instanceof HTMLElement) {
         const flash =

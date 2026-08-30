@@ -213,7 +213,9 @@ const arrowClass =
 </style>
 
 <script>
-  type Prefs = { enabled: string[]; defaultId: string };
+  import { applyWidgetHeaderColors } from '../lib/home-widget-header';
+
+  type Prefs = { enabled: string[]; defaultId: string; headerColors?: Record<string, string> };
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean, canClinical: boolean): Prefs {
     const enabled = ['schedule', 'time_off', 'timesheet', 'my_progress', 'tasks'];
@@ -225,6 +227,17 @@ const arrowClass =
 
   function migrateWidgetId(id: string): string {
     return id === 'coming_soon' ? 'my_progress' : id;
+  }
+
+  function sanitizeHeaderColors(raw: unknown): Record<string, string> {
+    if (!raw || typeof raw !== 'object') return {};
+    const colors: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) {
+        colors[key] = value;
+      }
+    }
+    return colors;
   }
 
   function readPrefs(
@@ -279,7 +292,12 @@ const arrowClass =
       const defaultId = finalEnabled.includes(migrateWidgetId(parsed.defaultId || ''))
         ? migrateWidgetId(parsed.defaultId)
         : finalEnabled[0]!;
-      const next = { enabled: finalEnabled, defaultId };
+      const headerColors = sanitizeHeaderColors(parsed.headerColors);
+      const next: Prefs = {
+        enabled: finalEnabled,
+        defaultId,
+        ...(Object.keys(headerColors).length ? { headerColors } : {}),
+      };
       if (mutated || (parsed.enabled || []).includes('coming_soon')) {
         try {
           localStorage.setItem('portal:home-widgets:' + userId, JSON.stringify(next));
@@ -307,6 +325,12 @@ const arrowClass =
     }
 
     const prefs = readPrefs(userId, canFinancials, canCredentialing, canClinical, available);
+    applyWidgetHeaderColors(root, prefs.headerColors);
+    window.addEventListener('portal:widget-prefs-changed', () => {
+      const fresh = readPrefs(userId, canFinancials, canCredentialing, canClinical, available);
+      applyWidgetHeaderColors(root, fresh.headerColors);
+    });
+
     const viewport = root.querySelector('[data-carousel-viewport]');
     const track = root.querySelector('[data-carousel-track]');
     if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement)) return;

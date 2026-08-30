@@ -3,6 +3,7 @@ import { formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { periodQuery, resolvePeriodFromSearch } from '../lib/financials/periods';
 import type { FinancialSummary } from '../lib/financials/types';
 import PeriodPicker from './PeriodPicker.astro';
+import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 let summary: FinancialSummary | null = null;
 try {
@@ -60,28 +61,21 @@ const periodLabel = snapshot
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-financials-heading"
 >
-  <div class="bg-[#2CA01C] px-3 py-2.5 text-white">
-    <div class="flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <img
-          src="/app-icons/quickbooks.png"
-          alt=""
-          width="28"
-          height="28"
-          class="h-7 w-7 rounded-md bg-white shadow-sm ring-1 ring-black/10"
-        />
-        <h2 id="home-financials-heading" class="text-sm font-semibold leading-none">
-          QuickBooks
-        </h2>
-      </div>
-      <a
-        href={`/financials${periodQuery(period)}`}
-        class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white ring-1 ring-white/25 transition hover:bg-white/25"
-      >
-        Open
-      </a>
-    </div>
-  </div>
+  <WidgetHeaderBar
+    widgetId="quickbooks"
+    title="QuickBooks"
+    headingId="home-financials-heading"
+    openHref={`/financials${periodQuery(period)}`}
+  >
+    <img
+      slot="icon"
+      src="/app-icons/quickbooks.png"
+      alt=""
+      width="28"
+      height="28"
+      class="h-7 w-7 rounded-md bg-white shadow-sm ring-1 ring-black/10"
+    />
+  </WidgetHeaderBar>
 
   <div class="flex flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
     <div class="flex items-start justify-between gap-2">

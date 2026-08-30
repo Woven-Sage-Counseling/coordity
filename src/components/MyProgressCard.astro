@@ -1,5 +1,6 @@
 ---
 import { listProgressTracksForUser, overallProgress } from '../lib/progress';
+import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
   userId: string;
@@ -14,33 +15,24 @@ const overall = overallProgress(tracks);
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-my-progress-heading"
 >
-  <div class="bg-sage-dark px-3 py-2.5 text-cream">
-    <div class="flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <span
-          class="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-cream ring-1 ring-white/20"
-          aria-hidden="true"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 19V5M4 19h16M8 15l3-3 2 2 5-5"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
-        <h2 id="home-my-progress-heading" class="text-sm font-semibold leading-none">My progress</h2>
-      </div>
-      <a
-        href="/progress"
-        class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-cream ring-1 ring-white/20 transition hover:bg-white/25"
-      >
-        Open
-      </a>
-    </div>
-  </div>
+  <WidgetHeaderBar
+    widgetId="my_progress"
+    title="My progress"
+    headingId="home-my-progress-heading"
+    openHref="/progress"
+  >
+    <span slot="icon" class="widget-header-icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M4 19V5M4 19h16M8 15l3-3 2 2 5-5"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+  </WidgetHeaderBar>
 
   <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
     <div class="rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">

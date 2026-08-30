@@ -1,3 +1,5 @@
+import { sanitizeHeaderColors } from './home-widget-header';
+
 export const HOME_WIDGET_MAX = 10;
 
 export type HomeWidgetId =
@@ -14,6 +16,8 @@ export interface HomeWidgetDef {
   id: HomeWidgetId;
   label: string;
   description: string;
+  /** Default header bar color; app-branded widgets set their brand color here. */
+  brandHeaderColor?: string;
   /** Permission gate; omit if available to everyone with portal access. */
   requiresFinancials?: boolean;
   requiresCredentialing?: boolean;
@@ -69,6 +73,7 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     id: 'quickbooks',
     label: 'QuickBooks',
     description: 'Profit and loss snapshot and reserve progress.',
+    brandHeaderColor: '#2CA01C',
     requiresFinancials: true,
   },
 ];
@@ -78,6 +83,8 @@ export interface HomeWidgetPrefs {
   enabled: HomeWidgetId[];
   /** Widget shown when opening Home. */
   defaultId: HomeWidgetId;
+  /** Per-widget header bar overrides (hex colors). */
+  headerColors?: Partial<Record<HomeWidgetId, string>>;
 }
 
 export function widgetPrefsKey(userId: string): string {
@@ -121,7 +128,7 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
   const allowed = new Set(availableWidgets(access).map((w) => w.id));
 
   if (!raw || typeof raw !== 'object') return fallback;
-  const data = raw as { enabled?: unknown; defaultId?: unknown };
+  const data = raw as { enabled?: unknown; defaultId?: unknown; headerColors?: unknown };
 
   const enabledRaw = Array.isArray(data.enabled) ? data.enabled : [];
   const enabled = enabledRaw
@@ -171,5 +178,12 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
       ? (defaultRaw as HomeWidgetId)
       : finalEnabled[0]!;
 
-  return { enabled: finalEnabled, defaultId };
+  const headerColors = sanitizeHeaderColors(data.headerColors, allowed);
+  const hasHeaderColors = Object.keys(headerColors).length > 0;
+
+  return {
+    enabled: finalEnabled,
+    defaultId,
+    ...(hasHeaderColors ? { headerColors } : {}),
+  };
 }
