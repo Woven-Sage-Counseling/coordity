@@ -3,6 +3,7 @@ import {
   caseloadUtilizationPercent,
   getCaseloadSnapshot,
 } from '../lib/caseload';
+import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
@@ -17,6 +18,9 @@ const utilization = caseloadUtilizationPercent(snapshot);
 <aside
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-caseload-heading"
+  data-widget-card
+  data-widget-id="caseload"
+  style={widgetAccentVarsStyle('caseload')}
 >
   <WidgetHeaderBar
     widgetId="caseload"

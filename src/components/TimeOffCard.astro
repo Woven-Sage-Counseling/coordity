@@ -5,6 +5,7 @@ import {
   listTimeOffRequestsForUser,
   timeOffStatusLabel,
 } from '../lib/time-off-requests';
+import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
@@ -33,6 +34,9 @@ const initialFlash =
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-time-off-heading"
   data-time-off-widget
+  data-widget-card
+  data-widget-id="time_off"
+  style={widgetAccentVarsStyle('time_off')}
 >
   <WidgetHeaderBar
     widgetId="time_off"
@@ -90,7 +94,7 @@ const initialFlash =
           />
         </label>
         <button
-          class="mt-3 w-full rounded-md bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-charcoal disabled:opacity-60"
+          class="widget-accent-btn mt-3 w-full rounded-md px-3 py-2 text-[11px] font-semibold"
           type="submit"
           data-time-off-submit
         >

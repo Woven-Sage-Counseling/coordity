@@ -1,6 +1,5 @@
 ---
 import type { HomeWidgetId } from '../lib/home-widgets';
-import { resolveWidgetHeaderColor, widgetHeaderForeground } from '../lib/home-widget-header';
 import WidgetHeaderIcon from './WidgetHeaderIcon.astro';
 
 interface Props {
@@ -12,15 +11,12 @@ interface Props {
 }
 
 const { widgetId, title, headingId, openHref, openLabel = 'Open' } = Astro.props;
-const background = resolveWidgetHeaderColor(widgetId);
-const foreground = widgetHeaderForeground(background);
 ---
 
 <div
   class="widget-header-bar px-3 py-2.5"
   data-widget-header
   data-widget-id={widgetId}
-  style={`--widget-header-bg: ${background}; --widget-header-fg: ${foreground};`}
 >
   <div class="flex items-center justify-between gap-2">
     <div class="flex min-w-0 items-center gap-2">
@@ -45,12 +41,12 @@ const foreground = widgetHeaderForeground(background);
 
 <style is:global>
   .widget-header-bar {
-    background-color: var(--widget-header-bg, #535f51);
-    color: var(--widget-header-fg, #f7f4ee);
+    background-color: var(--widget-accent-bg, #535f51);
+    color: var(--widget-accent-fg, #f7f4ee);
   }
 
   .widget-header-title {
-    color: var(--widget-header-fg, #f7f4ee);
+    color: var(--widget-accent-fg, #f7f4ee);
   }
 
   .widget-header-brand-icon {
@@ -65,9 +61,9 @@ const foreground = widgetHeaderForeground(background);
     align-items: center;
     justify-content: center;
     border-radius: 0.375rem;
-    background-color: color-mix(in srgb, var(--widget-header-fg, #f7f4ee) 15%, transparent);
-    color: var(--widget-header-fg, #f7f4ee);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--widget-header-fg, #f7f4ee) 20%, transparent);
+    background-color: color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 15%, transparent);
+    color: var(--widget-accent-fg, #f7f4ee);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 20%, transparent);
   }
 
   .widget-header-action {
@@ -77,25 +73,48 @@ const foreground = widgetHeaderForeground(background);
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--widget-header-fg, #f7f4ee);
-    background-color: color-mix(in srgb, var(--widget-header-fg, #f7f4ee) 15%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--widget-header-fg, #f7f4ee) 25%, transparent);
+    color: var(--widget-accent-fg, #f7f4ee);
+    background-color: color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 15%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 25%, transparent);
     transition: background-color 150ms ease;
   }
 
   .widget-header-action:hover {
-    background-color: color-mix(in srgb, var(--widget-header-fg, #f7f4ee) 25%, transparent);
+    background-color: color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 25%, transparent);
   }
+
   .widget-header-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 0.375rem;
-    color: var(--widget-header-fg, #f7f4ee);
+    color: var(--widget-accent-fg, #f7f4ee);
     transition: background-color 150ms ease;
   }
 
   .widget-header-icon-btn:hover {
-    background-color: color-mix(in srgb, var(--widget-header-fg, #f7f4ee) 15%, transparent);
+    background-color: color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 15%, transparent);
+  }
+
+  .widget-accent-btn {
+    background-color: var(--widget-accent-bg, #535f51);
+    color: var(--widget-accent-fg, #f7f4ee);
+    transition:
+      background-color 150ms ease,
+      filter 150ms ease;
+  }
+
+  .widget-accent-btn:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+
+  .widget-accent-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .widget-accent-bar {
+    background-color: var(--widget-accent-bg, #535f51);
+    color: var(--widget-accent-fg, #f7f4ee);
   }
 </style>

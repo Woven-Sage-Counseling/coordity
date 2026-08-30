@@ -50,19 +50,40 @@ export function sanitizeHeaderColors(
   return colors;
 }
 
+export function widgetAccentVarsStyle(widgetId: HomeWidgetId): string {
+  const background = resolveWidgetHeaderColor(widgetId);
+  const foreground = widgetHeaderForeground(background);
+  return `--widget-accent-bg: ${background}; --widget-accent-fg: ${foreground};`;
+}
+
+function setWidgetAccentVars(
+  element: HTMLElement,
+  widgetId: HomeWidgetId,
+  headerColors?: Partial<Record<HomeWidgetId, string>>,
+): void {
+  const background = resolveWidgetHeaderColor(widgetId, headerColors);
+  const foreground = widgetHeaderForeground(background);
+  element.style.setProperty('--widget-accent-bg', background);
+  element.style.setProperty('--widget-accent-fg', foreground);
+}
+
+export function applyWidgetAccentColors(
+  root: Element | Document,
+  headerColors?: Partial<Record<HomeWidgetId, string>>,
+): void {
+  root.querySelectorAll('[data-widget-card]').forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    const widgetId = node.dataset.widgetId;
+    if (!widgetId) return;
+    setWidgetAccentVars(node, widgetId as HomeWidgetId, headerColors);
+  });
+}
+
 export function applyWidgetHeaderColors(
   root: Element | Document,
   headerColors?: Partial<Record<HomeWidgetId, string>>,
 ): void {
-  root.querySelectorAll('[data-widget-header]').forEach((node) => {
-    if (!(node instanceof HTMLElement)) return;
-    const widgetId = node.dataset.widgetId;
-    if (!widgetId) return;
-
-    const background = resolveWidgetHeaderColor(widgetId as HomeWidgetId, headerColors);
-    node.style.setProperty('--widget-header-bg', background);
-    node.style.setProperty('--widget-header-fg', widgetHeaderForeground(background));
-  });
+  applyWidgetAccentColors(root, headerColors);
 }
 
 export function applyWidgetHeaderPrefs(

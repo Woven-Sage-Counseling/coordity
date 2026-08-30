@@ -1,5 +1,6 @@
 ---
 import { listProgressTracksForUser, overallProgress } from '../lib/progress';
+import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
@@ -14,6 +15,9 @@ const overall = overallProgress(tracks);
 <aside
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-my-progress-heading"
+  data-widget-card
+  data-widget-id="my_progress"
+  style={widgetAccentVarsStyle('my_progress')}
 >
   <WidgetHeaderBar
     widgetId="my_progress"

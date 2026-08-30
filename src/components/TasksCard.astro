@@ -1,5 +1,6 @@
 ---
 import { listTasksForUser, serializeTask, type UserTask } from '../lib/tasks';
+import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
@@ -31,6 +32,9 @@ const initialFlash =
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-tasks-heading"
   data-tasks-widget
+  data-widget-card
+  data-widget-id="tasks"
+  style={widgetAccentVarsStyle('tasks')}
 >
   <WidgetHeaderBar widgetId="tasks" title="Tasks" headingId="home-tasks-heading" />
 
@@ -72,7 +76,7 @@ const initialFlash =
       />
       <button
         type="submit"
-        class="shrink-0 rounded-lg bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-sage-dark/90 disabled:opacity-60"
+        class="widget-accent-btn shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold"
       >
         Add
       </button>

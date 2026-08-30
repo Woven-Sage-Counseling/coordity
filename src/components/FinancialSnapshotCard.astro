@@ -3,6 +3,7 @@ import { formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { periodQuery, resolvePeriodFromSearch } from '../lib/financials/periods';
 import type { FinancialSummary } from '../lib/financials/types';
 import PeriodPicker from './PeriodPicker.astro';
+import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 let summary: FinancialSummary | null = null;
@@ -60,6 +61,9 @@ const periodLabel = snapshot
 <aside
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-financials-heading"
+  data-widget-card
+  data-widget-id="quickbooks"
+  style={widgetAccentVarsStyle('quickbooks')}
 >
   <WidgetHeaderBar
     widgetId="quickbooks"

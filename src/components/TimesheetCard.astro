@@ -5,6 +5,7 @@ import {
 } from '../lib/timesheet-entries';
 import { currentWeekRange, formatHours, formatWeekLabel } from '../lib/timesheet';
 import { todayEastern } from '../lib/financials/periods';
+import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
@@ -46,6 +47,9 @@ const initialFlash =
   class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-timesheet-heading"
   data-timesheet-widget
+  data-widget-card
+  data-widget-id="timesheet"
+  style={widgetAccentVarsStyle('timesheet')}
 >
   <WidgetHeaderBar
     widgetId="timesheet"
@@ -124,7 +128,7 @@ const initialFlash =
       </label>
       <button
         type="submit"
-        class="w-full rounded-lg bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-sage-dark/90 disabled:opacity-60"
+        class="widget-accent-btn w-full rounded-lg px-3 py-2 text-[11px] font-semibold"
       >
         Save hours
       </button>
