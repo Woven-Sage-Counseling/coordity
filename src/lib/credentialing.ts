@@ -12,6 +12,11 @@ import {
   type CoverageStatusKey,
 } from './credentialing-status';
 
+function isMissingProviderGroupCoverageTable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('no such table') && message.includes('provider_group_coverage');
+}
+
 export {
   COVERAGE_STATUS_OPTIONS,
   COVERAGE_STATUS_VALUES,
@@ -254,17 +259,25 @@ export async function listCoverageMatrix(): Promise<Record<string, CoverageStatu
 
 export async function listGroupCoverageMatrix(): Promise<Record<string, CoverageStatus>> {
   const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT provider_id, group_id, status FROM provider_group_coverage`,
-  ).all<{ provider_id: string; group_id: string; status: string }>();
+  try {
+    const rows = await DB.prepare(
+      `SELECT provider_id, group_id, status FROM provider_group_coverage`,
+    ).all<{ provider_id: string; group_id: string; status: string }>();
 
-  const map: Record<string, CoverageStatus> = {};
-  for (const row of rows.results ?? []) {
-    const status = normalizeCoverageStatus(row.status);
-    if (!status) continue;
-    map[groupCoverageCellKey(row.provider_id, row.group_id)] = status;
+    const map: Record<string, CoverageStatus> = {};
+    for (const row of rows.results ?? []) {
+      const status = normalizeCoverageStatus(row.status);
+      if (!status) continue;
+      map[groupCoverageCellKey(row.provider_id, row.group_id)] = status;
+    }
+    return map;
+  } catch (error) {
+    if (isMissingProviderGroupCoverageTable(error)) {
+      console.warn('provider_group_coverage table missing; run D1 migrations');
+      return {};
+    }
+    throw error;
   }
-  return map;
 }
 
 export interface PublicInsurancePlan {
@@ -331,24 +344,38 @@ async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupSta
 
   const { DB } = getEnv();
 
-  const groupCoverageRows = await DB.prepare(
-    `SELECT
-        g.id AS group_id,
-        g.name AS group_name,
-        g.sort_order AS group_sort_order,
-        c.status
-     FROM provider_group_coverage c
-     JOIN insurance_group g ON g.id = c.group_id
-     WHERE c.provider_id IN (${placeholders})
-       AND c.status IN ('in_network', 'credentialing')`,
-  )
-    .bind(...providerIds)
-    .all<{
+  let groupCoverageRows: {
+    results?: Array<{
       group_id: string;
       group_name: string;
       group_sort_order: number;
       status: string;
-    }>();
+    }>;
+  } = { results: [] };
+
+  try {
+    groupCoverageRows = await DB.prepare(
+      `SELECT
+          g.id AS group_id,
+          g.name AS group_name,
+          g.sort_order AS group_sort_order,
+          c.status
+       FROM provider_group_coverage c
+       JOIN insurance_group g ON g.id = c.group_id
+       WHERE c.provider_id IN (${placeholders})
+         AND c.status IN ('in_network', 'credentialing')`,
+    )
+      .bind(...providerIds)
+      .all<{
+        group_id: string;
+        group_name: string;
+        group_sort_order: number;
+        status: string;
+      }>();
+  } catch (error) {
+    if (!isMissingProviderGroupCoverageTable(error)) throw error;
+    console.warn('provider_group_coverage table missing; run D1 migrations');
+  }
 
   const groups = new Map<string, PublicInsuranceGroupState>();
   for (const row of groupCoverageRows.results ?? []) {
