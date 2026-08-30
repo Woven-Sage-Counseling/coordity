@@ -6,6 +6,7 @@ import MyProgressCard from './MyProgressCard.astro';
 import CredentialingCard from './CredentialingCard.astro';
 import TasksCard from './TasksCard.astro';
 import TimesheetCard from './TimesheetCard.astro';
+import CaseloadCard from './CaseloadCard.astro';
 import { availableWidgets } from '../lib/home-widgets';
 
 interface Props {
@@ -13,11 +14,12 @@ interface Props {
   employee: PortalEmployee;
   canSeeFinancials: boolean;
   canSeeCredentialing: boolean;
+  canSeeClinical: boolean;
 }
 
-const { userId, employee, canSeeFinancials, canSeeCredentialing } = Astro.props;
+const { userId, employee, canSeeFinancials, canSeeCredentialing, canSeeClinical } = Astro.props;
 
-const available = availableWidgets({ canSeeFinancials, canSeeCredentialing });
+const available = availableWidgets({ canSeeFinancials, canSeeCredentialing, canSeeClinical });
 const availableIds = available.map((w) => w.id);
 
 const arrowClass =
@@ -35,6 +37,7 @@ const arrowClass =
       data-available={JSON.stringify(availableIds)}
       data-can-financials={canSeeFinancials ? '1' : '0'}
       data-can-credentialing={canSeeCredentialing ? '1' : '0'}
+      data-can-clinical={canSeeClinical ? '1' : '0'}
     >
       <div class="relative" data-carousel-shell>
         <button
@@ -67,6 +70,11 @@ const arrowClass =
             {availableIds.includes('schedule') && (
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
                 <ScheduleCard userId={userId} />
+              </div>
+            )}
+            {availableIds.includes('caseload') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="caseload">
+                <CaseloadCard userId={userId} />
               </div>
             )}
             {availableIds.includes('time_off') && (
@@ -207,8 +215,9 @@ const arrowClass =
 <script>
   type Prefs = { enabled: string[]; defaultId: string };
 
-  function defaultPrefs(canFinancials: boolean, canCredentialing: boolean): Prefs {
+  function defaultPrefs(canFinancials: boolean, canCredentialing: boolean, canClinical: boolean): Prefs {
     const enabled = ['schedule', 'time_off', 'timesheet', 'my_progress', 'tasks'];
+    if (canClinical) enabled.splice(1, 0, 'caseload');
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
     return { enabled, defaultId: 'schedule' };
@@ -222,9 +231,10 @@ const arrowClass =
     userId: string,
     canFinancials: boolean,
     canCredentialing: boolean,
+    canClinical: boolean,
     available: string[],
   ): Prefs {
-    const fallback = defaultPrefs(canFinancials, canCredentialing);
+    const fallback = defaultPrefs(canFinancials, canCredentialing, canClinical);
     try {
       const raw = localStorage.getItem('portal:home-widgets:' + userId);
       if (!raw) return fallback;
@@ -238,6 +248,11 @@ const arrowClass =
       if (allowed.has('time_off') && !enabled.includes('time_off') && enabled.length < 10) {
         const scheduleIdx = enabled.indexOf('schedule');
         enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
+        mutated = true;
+      }
+      if (allowed.has('caseload') && !enabled.includes('caseload') && enabled.length < 10) {
+        const scheduleIdx = enabled.indexOf('schedule');
+        enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'caseload');
         mutated = true;
       }
       if (allowed.has('my_progress') && !enabled.includes('my_progress') && enabled.length < 10) {
@@ -283,6 +298,7 @@ const arrowClass =
     const userId = root.dataset.userId ?? '';
     const canFinancials = root.dataset.canFinancials === '1';
     const canCredentialing = root.dataset.canCredentialing === '1';
+    const canClinical = root.dataset.canClinical === '1';
     let available: string[] = [];
     try {
       available = JSON.parse(root.dataset.available || '[]') as string[];
@@ -290,7 +306,7 @@ const arrowClass =
       available = [];
     }
 
-    const prefs = readPrefs(userId, canFinancials, canCredentialing, available);
+    const prefs = readPrefs(userId, canFinancials, canCredentialing, canClinical, available);
     const viewport = root.querySelector('[data-carousel-viewport]');
     const track = root.querySelector('[data-carousel-track]');
     if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement)) return;

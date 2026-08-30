@@ -3,6 +3,7 @@ export const HOME_WIDGET_MAX = 10;
 export type HomeWidgetId =
   | 'quickbooks'
   | 'schedule'
+  | 'caseload'
   | 'time_off'
   | 'timesheet'
   | 'my_progress'
@@ -16,11 +17,13 @@ export interface HomeWidgetDef {
   /** Permission gate; omit if available to everyone with portal access. */
   requiresFinancials?: boolean;
   requiresCredentialing?: boolean;
+  requiresClinical?: boolean;
 }
 
 export interface HomeWidgetAccess {
   canSeeFinancials: boolean;
   canSeeCredentialing: boolean;
+  canSeeClinical: boolean;
 }
 
 /** Registry of home widgets. Add new widgets here as they are built. */
@@ -29,6 +32,12 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     id: 'schedule',
     label: 'Schedule',
     description: 'Clinical or practice calendar from Google Calendar.',
+  },
+  {
+    id: 'caseload',
+    label: 'Caseload',
+    description: 'Sessions this week, active clients, and caseload fill (preview).',
+    requiresClinical: true,
   },
   {
     id: 'time_off',
@@ -79,6 +88,7 @@ export function availableWidgets(access: HomeWidgetAccess): HomeWidgetDef[] {
   return HOME_WIDGET_CATALOG.filter((widget) => {
     if (widget.requiresFinancials && !access.canSeeFinancials) return false;
     if (widget.requiresCredentialing && !access.canSeeCredentialing) return false;
+    if (widget.requiresClinical && !access.canSeeClinical) return false;
     return true;
   });
 }
@@ -91,6 +101,7 @@ export function defaultPrefs(access: HomeWidgetAccess): HomeWidgetPrefs {
   const available = availableWidgets(access).map((w) => w.id);
   const preferredOrder: HomeWidgetId[] = [
     'schedule',
+    'caseload',
     'time_off',
     'timesheet',
     'my_progress',
@@ -130,6 +141,10 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
   ) {
     const timeOffIdx = enabled.indexOf('time_off');
     enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+  }
+  if (allowed.has('caseload') && !enabled.includes('caseload') && enabled.length < HOME_WIDGET_MAX) {
+    const scheduleIdx = enabled.indexOf('schedule');
+    enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'caseload');
   }
   if (allowed.has('timesheet') && !enabled.includes('timesheet') && enabled.length < HOME_WIDGET_MAX) {
     const timeOffIdx = enabled.indexOf('time_off');

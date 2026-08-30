@@ -1,0 +1,103 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import { canSeeCaseload, caseloadUtilizationPercent, getCaseloadSnapshot } from '../lib/caseload';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+if (!canSeeCaseload(employee)) {
+  return new Response('Forbidden', { status: 403 });
+}
+
+const snapshot = getCaseloadSnapshot(employee.id);
+const utilization = caseloadUtilizationPercent(snapshot);
+---
+
+<PortalLayout title="Caseload" wide>
+  <p class="text-sm text-sage-dark/65">
+    <a href="/" class="hover:text-sage-dark">Home</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Caseload
+  </p>
+
+  <div class="mt-3">
+    <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Caseload</h1>
+    <p class="mt-3 max-w-2xl text-sage-dark/75">
+      Track sessions and client counts at a glance. This page is a preview while we decide how to connect your EHR.
+    </p>
+  </div>
+
+  <p class="mt-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    Preview only — the numbers below are placeholders, not pulled from SimplePractice or Headway yet.
+  </p>
+
+  <section class="mt-8 max-w-3xl">
+    <p class="text-sm text-sage-dark/65">{snapshot.weekLabel}</p>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Sessions this week</p>
+        <p class="mt-2 text-3xl font-semibold text-charcoal">{snapshot.sessionsThisWeek}</p>
+      </article>
+      <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Sessions remaining</p>
+        <p class="mt-2 text-3xl font-semibold text-charcoal">{snapshot.sessionsRemainingThisWeek}</p>
+      </article>
+      <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Active clients</p>
+        <p class="mt-2 text-3xl font-semibold text-charcoal">{snapshot.activeClients}</p>
+      </article>
+      <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">New this month</p>
+        <p class="mt-2 text-3xl font-semibold text-charcoal">{snapshot.newClientsThisMonth}</p>
+      </article>
+    </div>
+
+    {
+      utilization != null ? (
+        <article class="mt-6 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Caseload fill</p>
+              <p class="mt-2 text-2xl font-semibold text-charcoal">
+                {snapshot.activeClients} of {snapshot.caseloadTarget} clients
+              </p>
+            </div>
+            <p class="text-sm font-semibold text-sage-dark/80">{utilization}%</p>
+          </div>
+          <div
+            class="mt-4 h-2.5 overflow-hidden rounded-full bg-[#e3e5e8]"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={utilization}
+            aria-label="Caseload utilization"
+          >
+            <div class="h-full rounded-full bg-sage-dark" style={`width: ${utilization}%`}></div>
+          </div>
+        </article>
+      ) : null
+    }
+
+    <article class="mt-6 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+      <h2 class="text-sm font-semibold text-charcoal">Pipeline</h2>
+      <ul class="mt-4 space-y-3 text-sm text-sage-dark/80">
+        <li class="flex items-center justify-between gap-3 rounded-xl bg-[#f4f5f8] px-3 py-2.5">
+          <span>Intakes pending</span>
+          <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+            {snapshot.intakesPending}
+          </span>
+        </li>
+      </ul>
+    </article>
+
+    <article class="mt-6 rounded-2xl border border-dashed border-sage-dark/20 bg-sage/5 p-5">
+      <h2 class="text-sm font-semibold text-charcoal">Coming next</h2>
+      <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-sage-dark/75">
+        <li>Live session counts from your calendar or EHR</li>
+        <li>Active client totals synced from SimplePractice or Headway</li>
+        <li>Intake and discharge tracking</li>
+      </ul>
+    </article>
+  </section>
+</PortalLayout>
