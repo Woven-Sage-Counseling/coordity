@@ -264,8 +264,26 @@ export interface PublicInsuranceGroup {
   comingSoonPlans: PublicInsurancePlan[];
 }
 
-/** Practice-wide insurance list for the public credentialing page (no provider names or internal statuses). */
-export async function listPublicInsuranceDisplay(): Promise<PublicInsuranceGroup[]> {
+export interface PublicInsuranceNetwork {
+  groupId: string;
+  groupName: string;
+  sortOrder: number;
+}
+
+export interface PublicInsuranceNetworks {
+  inNetwork: PublicInsuranceNetwork[];
+  comingSoon: PublicInsuranceNetwork[];
+}
+
+interface PublicInsuranceGroupState {
+  groupId: string;
+  groupName: string;
+  sortOrder: number;
+  inNetworkPlans: PublicInsurancePlan[];
+  comingSoonPlans: PublicInsurancePlan[];
+}
+
+async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupState[]> {
   const providers = await listProvidersForLookup();
   if (providers.length === 0) return [];
 
@@ -336,7 +354,7 @@ export async function listPublicInsuranceDisplay(): Promise<PublicInsuranceGroup
     });
   }
 
-  const groups = new Map<string, PublicInsuranceGroup>();
+  const groups = new Map<string, PublicInsuranceGroupState>();
   for (const plan of planBuckets.values()) {
     let group = groups.get(plan.groupId);
     if (!group) {
@@ -381,6 +399,41 @@ export async function listPublicInsuranceDisplay(): Promise<PublicInsuranceGroup
     }))
     .filter((group) => group.inNetworkPlans.length > 0 || group.comingSoonPlans.length > 0)
     .sort((left, right) => left.sortOrder - right.sortOrder || left.groupName.localeCompare(right.groupName));
+}
+
+/** Practice-wide insurance list for the employee credentialing page (includes plans). */
+export async function listPublicInsuranceDisplay(): Promise<PublicInsuranceGroup[]> {
+  return loadPublicInsuranceGroupStates();
+}
+
+/** Practice-wide insurance networks for the public marketing site (companies only). */
+export async function listPublicInsuranceNetworks(): Promise<PublicInsuranceNetworks> {
+  const states = await loadPublicInsuranceGroupStates();
+  const inNetwork: PublicInsuranceNetwork[] = [];
+  const comingSoon: PublicInsuranceNetwork[] = [];
+
+  for (const state of states) {
+    const network = {
+      groupId: state.groupId,
+      groupName: state.groupName,
+      sortOrder: state.sortOrder,
+    };
+    if (state.inNetworkPlans.length > 0) {
+      inNetwork.push(network);
+      continue;
+    }
+    if (state.comingSoonPlans.length > 0) {
+      comingSoon.push(network);
+    }
+  }
+
+  const sortNetworks = (left: PublicInsuranceNetwork, right: PublicInsuranceNetwork) =>
+    left.sortOrder - right.sortOrder || left.groupName.localeCompare(right.groupName);
+
+  return {
+    inNetwork: inNetwork.sort(sortNetworks),
+    comingSoon: comingSoon.sort(sortNetworks),
+  };
 }
 
 export async function listInsuranceCatalog(): Promise<InsuranceGroup[]> {

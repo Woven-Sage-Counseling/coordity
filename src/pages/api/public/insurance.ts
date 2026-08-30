@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { listPublicInsuranceDisplay } from '../../../lib/credentialing';
+import { listPublicInsuranceNetworks } from '../../../lib/credentialing';
 import { publicApiCorsHeaders } from '../../../lib/public-api-cors';
 
 export const prerender = false;
@@ -10,8 +10,8 @@ export const OPTIONS: APIRoute = async ({ request }) => {
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    const groups = await listPublicInsuranceDisplay();
-    return new Response(JSON.stringify({ ok: true, groups }), {
+    const { inNetwork, comingSoon } = await listPublicInsuranceNetworks();
+    return new Response(JSON.stringify({ ok: true, inNetwork, comingSoon }), {
       status: 200,
       headers: publicApiCorsHeaders(request, { 'cache-control': 'public, max-age=300' }),
     });
