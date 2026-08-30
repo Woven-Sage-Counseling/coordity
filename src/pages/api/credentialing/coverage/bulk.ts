@@ -2,7 +2,6 @@ import type { APIRoute } from 'astro';
 import {
   bulkSetProviderGroupCoverage,
   canManageCredentialing,
-  countBulkGroupOverwrite,
 } from '../../../../lib/credentialing';
 import { isCoverageStatusKey } from '../../../../lib/credentialing-status';
 
@@ -21,7 +20,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     providerId?: string;
     groupId?: string;
     status?: string;
-    confirmOverwrite?: boolean;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -51,23 +49,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const preview = await countBulkGroupOverwrite({ providerId, groupId, status: statusRaw });
-    if (preview.overwritten > 0 && !body.confirmOverwrite) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          needsConfirmation: true,
-          overwritten: preview.overwritten,
-          updated: preview.planCount,
-          error: `This will overwrite ${preview.overwritten} existing status${preview.overwritten === 1 ? '' : 'es'}.`,
-        }),
-        {
-          status: 409,
-          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-        },
-      );
-    }
-
     const result = await bulkSetProviderGroupCoverage({
       providerId,
       groupId,

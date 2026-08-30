@@ -745,44 +745,6 @@ export async function setProviderPlanCoverage(input: {
     .run();
 }
 
-export async function countBulkGroupOverwrite(input: {
-  providerId: string;
-  groupId: string;
-  status: CoverageStatusKey;
-}): Promise<{ planCount: number; overwritten: number }> {
-  const { DB } = getEnv();
-  const plans = await DB.prepare(`SELECT id FROM insurance_plan WHERE group_id = ?`)
-    .bind(input.groupId)
-    .all<{ id: string }>();
-
-  const planIds = (plans.results ?? []).map((row) => row.id);
-  let overwritten = 0;
-
-  const needsConfirmation = (existingRaw: string): boolean => {
-    const existing = normalizeCoverageStatus(existingRaw);
-    if (!existing || existing === input.status) return false;
-    if (input.status === 'not_started') return false;
-    if (
-      (input.status === 'in_network' || input.status === 'credentialing') &&
-      (existing === 'in_network' || existing === 'credentialing')
-    ) {
-      return false;
-    }
-    return true;
-  };
-
-  for (const planId of planIds) {
-    const existing = await DB.prepare(
-      `SELECT status FROM provider_plan_coverage WHERE provider_id = ? AND plan_id = ?`,
-    )
-      .bind(input.providerId, planId)
-      .first<{ status: string }>();
-    if (existing && needsConfirmation(existing.status)) overwritten += 1;
-  }
-
-  return { planCount: Math.max(planIds.length, 1), overwritten };
-}
-
 export async function bulkSetProviderGroupCoverage(input: {
   providerId: string;
   groupId: string;
