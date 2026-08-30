@@ -213,9 +213,15 @@ const arrowClass =
 </style>
 
 <script>
-  import { applyWidgetHeaderColors } from '../lib/home-widget-header';
+  import { applyWidgetHeaderPrefs } from '../lib/home-widget-header';
+  import type { WidgetIconId } from '../lib/home-widget-icons';
 
-  type Prefs = { enabled: string[]; defaultId: string; headerColors?: Record<string, string> };
+  type Prefs = {
+    enabled: string[];
+    defaultId: string;
+    headerColors?: Record<string, string>;
+    headerIcons?: Record<string, WidgetIconId>;
+  };
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean, canClinical: boolean): Prefs {
     const enabled = ['schedule', 'time_off', 'timesheet', 'my_progress', 'tasks'];
@@ -238,6 +244,34 @@ const arrowClass =
       }
     }
     return colors;
+  }
+
+  function sanitizeHeaderIcons(raw: unknown): Record<string, WidgetIconId> {
+    if (!raw || typeof raw !== 'object') return {};
+    const icons: Record<string, WidgetIconId> = {};
+    const allowed = new Set([
+      'calendar',
+      'calendar_plus',
+      'clock',
+      'chart',
+      'checklist',
+      'users',
+      'badge',
+      'star',
+      'bell',
+      'bookmark',
+      'briefcase',
+      'folder',
+      'heart',
+      'home',
+      'clipboard',
+    ]);
+    for (const [key, value] of Object.entries(raw)) {
+      if (typeof value === 'string' && allowed.has(value)) {
+        icons[key] = value as WidgetIconId;
+      }
+    }
+    return icons;
   }
 
   function readPrefs(
@@ -293,10 +327,12 @@ const arrowClass =
         ? migrateWidgetId(parsed.defaultId)
         : finalEnabled[0]!;
       const headerColors = sanitizeHeaderColors(parsed.headerColors);
+      const headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
       const next: Prefs = {
         enabled: finalEnabled,
         defaultId,
         ...(Object.keys(headerColors).length ? { headerColors } : {}),
+        ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
       };
       if (mutated || (parsed.enabled || []).includes('coming_soon')) {
         try {
@@ -325,10 +361,10 @@ const arrowClass =
     }
 
     const prefs = readPrefs(userId, canFinancials, canCredentialing, canClinical, available);
-    applyWidgetHeaderColors(root, prefs.headerColors);
+    applyWidgetHeaderPrefs(root, prefs);
     window.addEventListener('portal:widget-prefs-changed', () => {
       const fresh = readPrefs(userId, canFinancials, canCredentialing, canClinical, available);
-      applyWidgetHeaderColors(root, fresh.headerColors);
+      applyWidgetHeaderPrefs(root, fresh);
     });
 
     const viewport = root.querySelector('[data-carousel-viewport]');

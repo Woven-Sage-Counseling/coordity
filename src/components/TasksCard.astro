@@ -32,19 +32,7 @@ const initialFlash =
   aria-labelledby="home-tasks-heading"
   data-tasks-widget
 >
-  <WidgetHeaderBar widgetId="tasks" title="Tasks" headingId="home-tasks-heading">
-    <span slot="icon" class="widget-header-icon" aria-hidden="true">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </span>
-  </WidgetHeaderBar>
+  <WidgetHeaderBar widgetId="tasks" title="Tasks" headingId="home-tasks-heading" />
 
   <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
     <div data-tasks-flash hidden={!initialFlash}>

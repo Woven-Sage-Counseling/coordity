@@ -1,4 +1,5 @@
 import { HOME_WIDGET_CATALOG, type HomeWidgetId } from './home-widgets';
+import { applyWidgetHeaderIcons, type WidgetIconId } from './home-widget-icons';
 
 export const DEFAULT_WIDGET_HEADER_COLOR = '#535f51';
 
@@ -62,4 +63,15 @@ export function applyWidgetHeaderColors(
     node.style.setProperty('--widget-header-bg', background);
     node.style.setProperty('--widget-header-fg', widgetHeaderForeground(background));
   });
+}
+
+export function applyWidgetHeaderPrefs(
+  root: Element | Document,
+  prefs?: {
+    headerColors?: Partial<Record<HomeWidgetId, string>>;
+    headerIcons?: Partial<Record<HomeWidgetId, WidgetIconId>>;
+  },
+): void {
+  applyWidgetHeaderColors(root, prefs?.headerColors);
+  applyWidgetHeaderIcons(root, prefs?.headerIcons);
 }

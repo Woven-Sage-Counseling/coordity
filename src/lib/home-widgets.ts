@@ -1,4 +1,5 @@
 import { sanitizeHeaderColors } from './home-widget-header';
+import { sanitizeHeaderIcons, type WidgetIconId } from './home-widget-icons';
 
 export const HOME_WIDGET_MAX = 10;
 
@@ -18,6 +19,8 @@ export interface HomeWidgetDef {
   description: string;
   /** Default header bar color; app-branded widgets set their brand color here. */
   brandHeaderColor?: string;
+  /** Fixed app logo; when set the widget icon cannot be customized. */
+  brandIconSrc?: string;
   /** Permission gate; omit if available to everyone with portal access. */
   requiresFinancials?: boolean;
   requiresCredentialing?: boolean;
@@ -74,6 +77,7 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     label: 'QuickBooks',
     description: 'Profit and loss snapshot and reserve progress.',
     brandHeaderColor: '#2CA01C',
+    brandIconSrc: '/app-icons/quickbooks.png',
     requiresFinancials: true,
   },
 ];
@@ -85,6 +89,8 @@ export interface HomeWidgetPrefs {
   defaultId: HomeWidgetId;
   /** Per-widget header bar overrides (hex colors). */
   headerColors?: Partial<Record<HomeWidgetId, string>>;
+  /** Per-widget icon overrides (preset ids). */
+  headerIcons?: Partial<Record<HomeWidgetId, WidgetIconId>>;
 }
 
 export function widgetPrefsKey(userId: string): string {
@@ -128,7 +134,12 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
   const allowed = new Set(availableWidgets(access).map((w) => w.id));
 
   if (!raw || typeof raw !== 'object') return fallback;
-  const data = raw as { enabled?: unknown; defaultId?: unknown; headerColors?: unknown };
+  const data = raw as {
+    enabled?: unknown;
+    defaultId?: unknown;
+    headerColors?: unknown;
+    headerIcons?: unknown;
+  };
 
   const enabledRaw = Array.isArray(data.enabled) ? data.enabled : [];
   const enabled = enabledRaw
@@ -179,11 +190,14 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
       : finalEnabled[0]!;
 
   const headerColors = sanitizeHeaderColors(data.headerColors, allowed);
+  const headerIcons = sanitizeHeaderIcons(data.headerIcons, allowed);
   const hasHeaderColors = Object.keys(headerColors).length > 0;
+  const hasHeaderIcons = Object.keys(headerIcons).length > 0;
 
   return {
     enabled: finalEnabled,
     defaultId,
     ...(hasHeaderColors ? { headerColors } : {}),
+    ...(hasHeaderIcons ? { headerIcons } : {}),
   };
 }

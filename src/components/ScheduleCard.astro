@@ -129,12 +129,6 @@ const conflictLabel = conflictCountLabel(conflictCount);
   data-google-email={connection.googleEmail ?? ''}
 >
   <WidgetHeaderBar widgetId="schedule" title="Schedule" headingId="home-schedule-heading">
-    <span slot="icon" class="widget-header-icon" aria-hidden="true">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75" />
-        <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
-      </svg>
-    </span>
     <div slot="title-extra" class:list={['relative', conflictCount === 0 && 'hidden']} data-schedule-conflict-wrap>
       <button
         type="button"

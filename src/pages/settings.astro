@@ -177,7 +177,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </button>
       <PanelHeading
         title="Home widgets"
-        description={`Enable widgets, set carousel order (up to ${HOME_WIDGET_MAX}), and customize header colors.`}
+        description={`Enable widgets, set carousel order (up to ${HOME_WIDGET_MAX}), and customize header colors and icons.`}
       />
 
       <p
@@ -368,8 +368,25 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 </PortalLayout>
 
 <script>
-  type Prefs = { enabled: string[]; defaultId: string; headerColors?: Record<string, string> };
-  type CatalogItem = { id: string; label: string; description: string; brandHeaderColor?: string };
+  import {
+    DEFAULT_WIDGET_ICONS,
+    WIDGET_ICON_OPTIONS,
+    type WidgetIconId,
+  } from '../lib/home-widget-icons';
+
+  type Prefs = {
+    enabled: string[];
+    defaultId: string;
+    headerColors?: Record<string, string>;
+    headerIcons?: Record<string, WidgetIconId>;
+  };
+  type CatalogItem = {
+    id: string;
+    label: string;
+    description: string;
+    brandHeaderColor?: string;
+    brandIconSrc?: string;
+  };
 
   const DEFAULT_WIDGET_HEADER_COLOR = '#535f51';
 
@@ -386,6 +403,18 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       }
     }
     return colors;
+  }
+
+  function sanitizeHeaderIcons(raw: unknown): Record<string, WidgetIconId> {
+    if (!raw || typeof raw !== 'object') return {};
+    const icons: Record<string, WidgetIconId> = {};
+    const allowed = new Set(WIDGET_ICON_OPTIONS.map((option) => option.id));
+    for (const [key, value] of Object.entries(raw)) {
+      if (typeof value === 'string' && allowed.has(value as WidgetIconId)) {
+        icons[key] = value as WidgetIconId;
+      }
+    }
+    return icons;
   }
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean, canClinical: boolean): Prefs {
@@ -504,11 +533,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const key = 'portal:home-widgets:' + userId;
     let prefs = defaultPrefs(canFinancials, canCredentialing, canClinical);
     let headerColors: Record<string, string> = {};
+    let headerIcons: Record<string, WidgetIconId> = {};
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw) as Prefs;
         headerColors = sanitizeHeaderColors(parsed.headerColors);
+        headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
         if (Array.isArray(parsed.enabled) && parsed.enabled.length) {
           prefs = {
             enabled: parsed.enabled
@@ -517,6 +548,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               .slice(0, max),
             defaultId: migrateWidgetId(parsed.defaultId || parsed.enabled[0]!),
             ...(Object.keys(headerColors).length ? { headerColors } : {}),
+            ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
           };
           if (catalog.some((w) => w.id === 'time_off') && !prefs.enabled.includes('time_off') && prefs.enabled.length < max) {
             const scheduleIdx = prefs.enabled.indexOf('schedule');
@@ -603,6 +635,22 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         delete headerColors[widgetId];
       } else {
         headerColors[widgetId] = value;
+      }
+    };
+
+    const resolveHeaderIcon = (widgetId: string): WidgetIconId => {
+      return headerIcons[widgetId] ?? DEFAULT_WIDGET_ICONS[widgetId as keyof typeof DEFAULT_WIDGET_ICONS] ?? 'calendar';
+    };
+
+    const defaultHeaderIcon = (widgetId: string): WidgetIconId => {
+      return DEFAULT_WIDGET_ICONS[widgetId as keyof typeof DEFAULT_WIDGET_ICONS] ?? 'calendar';
+    };
+
+    const setHeaderIcon = (widgetId: string, value: WidgetIconId) => {
+      if (value === defaultHeaderIcon(widgetId)) {
+        delete headerIcons[widgetId];
+      } else {
+        headerIcons[widgetId] = value;
       }
     };
 
@@ -702,6 +750,43 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         colorWrap.appendChild(colorInput);
         colorWrap.appendChild(resetColor);
 
+        let iconWrap: HTMLElement | null = null;
+        if (!widget.brandIconSrc) {
+          iconWrap = document.createElement('div');
+          iconWrap.className = 'flex shrink-0 items-center gap-2';
+          const iconLabel = document.createElement('span');
+          iconLabel.className = 'text-[11px] font-medium text-sage-dark/55';
+          iconLabel.textContent = 'Icon';
+          const iconSelect = document.createElement('select');
+          iconSelect.className =
+            'h-8 max-w-[8.5rem] rounded-lg border border-sage-dark/15 bg-white px-2 text-[12px] text-charcoal';
+          iconSelect.setAttribute('aria-label', `${widget.label} header icon`);
+          WIDGET_ICON_OPTIONS.forEach((option) => {
+            const opt = document.createElement('option');
+            opt.value = option.id;
+            opt.textContent = option.label;
+            iconSelect.appendChild(opt);
+          });
+          iconSelect.value = resolveHeaderIcon(row.id);
+          iconSelect.addEventListener('change', () => {
+            setHeaderIcon(row.id, iconSelect.value as WidgetIconId);
+            if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+          });
+          const resetIcon = document.createElement('button');
+          resetIcon.type = 'button';
+          resetIcon.className =
+            'text-[11px] font-medium text-sage-dark/55 underline decoration-sage-dark/25 underline-offset-2 hover:text-charcoal';
+          resetIcon.textContent = 'Reset';
+          resetIcon.addEventListener('click', () => {
+            setHeaderIcon(row.id, defaultHeaderIcon(row.id));
+            iconSelect.value = resolveHeaderIcon(row.id);
+            if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+          });
+          iconWrap.appendChild(iconLabel);
+          iconWrap.appendChild(iconSelect);
+          iconWrap.appendChild(resetIcon);
+        }
+
         const controls = document.createElement('div');
         controls.className = 'flex items-center gap-1';
 
@@ -744,6 +829,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         li.appendChild(check);
         li.appendChild(label);
         li.appendChild(colorWrap);
+        if (iconWrap) li.appendChild(iconWrap);
         li.appendChild(controls);
         list.appendChild(li);
       });
@@ -769,6 +855,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         enabled,
         defaultId,
         ...(Object.keys(headerColors).length ? { headerColors: { ...headerColors } } : {}),
+        ...(Object.keys(headerIcons).length ? { headerIcons: { ...headerIcons } } : {}),
       };
       localStorage.setItem(key, JSON.stringify(next));
       prefs = next;

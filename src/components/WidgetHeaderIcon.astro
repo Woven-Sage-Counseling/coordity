@@ -1,0 +1,27 @@
+---
+import type { HomeWidgetId } from '../lib/home-widgets';
+import { WIDGET_BRAND_ICON_SRC, resolveWidgetHeaderIcon, widgetIconMarkup } from '../lib/home-widget-icons';
+
+interface Props {
+  widgetId: HomeWidgetId;
+}
+
+const { widgetId } = Astro.props;
+const brandIconSrc = WIDGET_BRAND_ICON_SRC[widgetId];
+const iconId = resolveWidgetHeaderIcon(widgetId);
+---
+
+{
+  brandIconSrc ? (
+    <img
+      src={brandIconSrc}
+      alt=""
+      width="28"
+      height="28"
+      class="widget-header-brand-icon h-7 w-7 rounded-md bg-white shadow-sm ring-1 ring-black/10"
+      data-widget-brand-icon
+    />
+  ) : (
+    <span class="widget-header-icon" data-widget-icon data-icon-id={iconId} aria-hidden="true" set:html={widgetIconMarkup(iconId)} />
+  )
+}

@@ -1,6 +1,7 @@
 ---
 import type { HomeWidgetId } from '../lib/home-widgets';
 import { resolveWidgetHeaderColor, widgetHeaderForeground } from '../lib/home-widget-header';
+import WidgetHeaderIcon from './WidgetHeaderIcon.astro';
 
 interface Props {
   widgetId: HomeWidgetId;
@@ -23,7 +24,7 @@ const foreground = widgetHeaderForeground(background);
 >
   <div class="flex items-center justify-between gap-2">
     <div class="flex min-w-0 items-center gap-2">
-      <slot name="icon" />
+      <WidgetHeaderIcon widgetId={widgetId} />
       <h2 id={headingId} class="widget-header-title truncate text-sm font-semibold leading-none">
         {title}
       </h2>
@@ -50,6 +51,10 @@ const foreground = widgetHeaderForeground(background);
 
   .widget-header-title {
     color: var(--widget-header-fg, #f7f4ee);
+  }
+
+  .widget-header-brand-icon {
+    flex-shrink: 0;
   }
 
   .widget-header-icon {
