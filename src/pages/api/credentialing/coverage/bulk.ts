@@ -51,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const preview = await countBulkGroupOverwrite({ providerId, groupId });
+    const preview = await countBulkGroupOverwrite({ providerId, groupId, status: statusRaw });
     if (preview.overwritten > 0 && !body.confirmOverwrite) {
       return new Response(
         JSON.stringify({
