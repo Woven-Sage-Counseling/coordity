@@ -286,7 +286,7 @@ export async function listPublicInsuranceDisplay(): Promise<PublicInsuranceGroup
      JOIN insurance_plan p ON p.id = c.plan_id
      JOIN insurance_group g ON g.id = p.group_id
      WHERE c.provider_id IN (${placeholders})
-       AND c.status IN ('in_network', 'credentialing', 'accepted')`,
+       AND c.status IN ('in_network', 'credentialing')`,
   )
     .bind(...providerIds)
     .all<{
