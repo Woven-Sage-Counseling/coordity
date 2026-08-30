@@ -6,7 +6,6 @@ import {
   formatScheduleEventDay,
   formatScheduleEventTime,
   formatScheduleHeading,
-  formatScheduleTodayDate,
   formatWeekdayShort,
   groupEventsByDay,
   monthGridDays,
@@ -114,7 +113,6 @@ function eventCountLabel(count: number): string {
 
 const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const headingLabel = range ? formatScheduleHeading(range) : 'This week';
-const todayDateLabel = range?.id === 'today' ? formatScheduleTodayDate(range.start) : null;
 const conflictCount = conflictingEventCount(events);
 const conflictLabel = conflictCountLabel(conflictCount);
 ---
@@ -220,9 +218,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
         }
       </div>
       {
-        todayDateLabel ? (
-          <p class="text-center text-[11px] text-[#6b6c72]" data-schedule-range-sub>{todayDateLabel}</p>
-        ) : connection.status === 'connected' && connection.googleEmail ? (
+        connection.status === 'connected' && connection.googleEmail ? (
           <p class="truncate text-center text-[11px] text-[#6b6c72]" data-schedule-range-sub>{connection.googleEmail}</p>
         ) : (
           <p class="hidden text-[11px] text-[#6b6c72]" data-schedule-range-sub></p>
@@ -1086,7 +1082,6 @@ const conflictLabel = conflictCountLabel(conflictCount);
 
   function formatHeading(range: { id: string; start: string; end: string }): string {
     if (range.id === 'today') {
-      if (range.start === todayEastern()) return 'Today';
       return formatTodaySub(range.start);
     }
     if (range.id === 'this_week') {
@@ -1214,10 +1209,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
     if (labelEl) labelEl.textContent = heading;
     if (dialogLabel) dialogLabel.textContent = heading;
     if (subEl) {
-      if (range.id === 'today') {
-        subEl.textContent = formatTodaySub(range.start);
-        subEl.classList.remove('hidden');
-      } else if (googleEmail) {
+      if (googleEmail) {
         subEl.textContent = googleEmail;
         subEl.classList.remove('hidden');
       } else {

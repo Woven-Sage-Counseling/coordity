@@ -107,7 +107,7 @@ export function resolveScheduleRangeAt(id: ScheduleRangeId, anchorDate: string):
 
   if (id === 'today') {
     const bounds = boundsForRange(anchor, anchor);
-    const label = anchor === todayEastern() ? 'Today' : formatScheduleTodayDate(anchor);
+    const label = formatScheduleTodayDate(anchor);
     return { id, start: anchor, end: anchor, label, ...bounds };
   }
 
@@ -158,7 +158,6 @@ function lastDayOfMonth(year: number, month: number): number {
 
 export function formatScheduleHeading(range: { id: ScheduleRangeId; start: string; end: string }): string {
   if (range.id === 'today') {
-    if (range.start === todayEastern()) return 'Today';
     return formatScheduleTodayDate(range.start);
   }
 
