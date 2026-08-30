@@ -37,7 +37,7 @@ export interface HomeWidgetAccess {
 export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
   {
     id: 'schedule',
-    label: 'Schedule',
+    label: 'Calendar',
     description: 'Clinical or practice calendar from Google Calendar.',
   },
   {
