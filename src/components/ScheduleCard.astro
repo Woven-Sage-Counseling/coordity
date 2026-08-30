@@ -543,6 +543,13 @@ const conflictLabel = conflictCountLabel(conflictCount);
               </label>
               <button
                 type="button"
+                class="rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-cream ring-1 ring-white/20 transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+                data-schedule-dialog-sync
+              >
+                Sync
+              </button>
+              <button
+                type="button"
                 class="rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-cream ring-1 ring-white/20 transition hover:bg-white/25"
                 data-schedule-dialog-close
               >
@@ -1324,6 +1331,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
     const dialogNext = dialog?.querySelector('[data-schedule-dialog-next]') as HTMLButtonElement | null;
     const dialogEvents = dialog?.querySelector('[data-schedule-dialog-events]') as HTMLElement | null;
     const dialogClose = dialog?.querySelector('[data-schedule-dialog-close]') as HTMLButtonElement | null;
+    const dialogSync = dialog?.querySelector('[data-schedule-dialog-sync]') as HTMLButtonElement | null;
     const knownEmail = (root.dataset.googleEmail ?? '').trim() || null;
 
     let latestPayload: EventsResponse | null = null;
@@ -1338,14 +1346,19 @@ const conflictLabel = conflictCountLabel(conflictCount);
       dialogNext?.setAttribute('aria-label', nextLabel);
     }
 
-    async function loadEvents(rangeId: string, anchor = currentAnchor): Promise<void> {
+    async function loadEvents(
+      rangeId: string,
+      anchor = currentAnchor,
+      options?: { refresh?: boolean },
+    ): Promise<void> {
       if (!shell) return;
       currentAnchor = anchor;
       writeStoredView(userId, rangeId, anchor);
       updateNavLabels(rangeId);
 
+      const refreshQuery = options?.refresh ? '&refresh=1' : '';
       const response = await fetch(
-        `/api/google-calendar/events?range=${encodeURIComponent(rangeId)}&anchor=${encodeURIComponent(anchor)}`,
+        `/api/google-calendar/events?range=${encodeURIComponent(rangeId)}&anchor=${encodeURIComponent(anchor)}${refreshQuery}`,
         {
           headers: { accept: 'application/json' },
         },
@@ -1427,6 +1440,18 @@ const conflictLabel = conflictCountLabel(conflictCount);
     nextButton?.addEventListener('click', () => navigate(1));
     dialogPrev?.addEventListener('click', () => navigate(-1));
     dialogNext?.addEventListener('click', () => navigate(1));
+
+    dialogSync?.addEventListener('click', () => {
+      if (!rangeSelect) return;
+      const button = dialogSync;
+      const previousLabel = button.textContent ?? 'Sync';
+      button.disabled = true;
+      button.textContent = 'Syncing…';
+      void loadEvents(rangeSelect.value, currentAnchor, { refresh: true }).finally(() => {
+        button.disabled = false;
+        button.textContent = previousLabel;
+      });
+    });
 
     expandButton?.addEventListener('click', () => {
       if (!dialog || !dialogEvents) return;

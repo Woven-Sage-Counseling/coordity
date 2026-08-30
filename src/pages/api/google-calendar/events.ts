@@ -20,6 +20,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const anchorParam = parseScheduleAnchorParam(url.searchParams.get('anchor'));
   const anchor = anchorParam ?? anchorDateForRange(rangeId, todayEastern());
   const range = resolveScheduleRangeAt(rangeId, anchor);
+  const refresh = url.searchParams.get('refresh') === '1';
   const connection = await provider.getConnection(userId);
 
   if (connection.status !== 'connected') {
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   }
 
   try {
-    const events = await provider.getEvents(userId, range);
+    const events = await provider.getEvents(userId, range, { refresh });
     return jsonResponse({ connection, range, events });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to load calendar events.';

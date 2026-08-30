@@ -19,6 +19,10 @@ const OAUTH_STATE_PREFIX = 'gcal-oauth:';
 const READONLY_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 const EVENT_CACHE_MS = 5 * 60 * 1000;
 
+function eventCacheKey(range: ResolvedScheduleRange): string {
+  return `${range.id}:${range.start}:${range.end}`;
+}
+
 interface TokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -402,9 +406,17 @@ export class GoogleCalendarProvider {
     }
   }
 
-  async getEvents(userId: string, range: ResolvedScheduleRange): Promise<ScheduleEvent[]> {
+  async getEvents(
+    userId: string,
+    range: ResolvedScheduleRange,
+    options?: { refresh?: boolean },
+  ): Promise<ScheduleEvent[]> {
     const calendars = await this.listCalendars(userId);
-    const cached = await this.readEventCache(userId, range.id);
+    const cacheKey = eventCacheKey(range);
+    if (options?.refresh) {
+      await this.clearEventCache(userId);
+    }
+    const cached = options?.refresh ? null : await this.readEventCache(userId, cacheKey);
     if (cached) {
       const events = applyTitleCovers(await this.applyEventFilters(userId, cached), calendars);
       if (range.id === 'today' || range.id === 'this_week') {
@@ -447,7 +459,7 @@ export class GoogleCalendarProvider {
       .sort((left, right) => Date.parse(left.start) - Date.parse(right.start));
 
     const filtered = await this.applyEventFilters(userId, events);
-    await this.writeEventCache(userId, range.id, filtered);
+    await this.writeEventCache(userId, cacheKey, filtered);
     await getEnv()
       .DB.prepare(
         `UPDATE google_calendar_connection
@@ -462,6 +474,10 @@ export class GoogleCalendarProvider {
       await syncScheduleConflictNotifications(userId, coveredEvents, range);
     }
     return coveredEvents;
+  }
+
+  async clearEventCache(userId: string): Promise<void> {
+    await getEnv().DB.prepare(`DELETE FROM google_calendar_event_cache WHERE user_id = ?`).bind(userId).run();
   }
 
   private async applyEventFilters(userId: string, events: ScheduleEvent[]): Promise<ScheduleEvent[]> {
