@@ -99,26 +99,57 @@ export function isScheduleRangeId(value: string): value is ScheduleRangeId {
 }
 
 export function resolveScheduleRange(id: ScheduleRangeId, now = new Date()): ResolvedScheduleRange {
-  const today = todayEastern(now);
+  return resolveScheduleRangeAt(id, todayEastern(now));
+}
+
+export function resolveScheduleRangeAt(id: ScheduleRangeId, anchorDate: string): ResolvedScheduleRange {
+  const anchor = parseIso(anchorDate) ? anchorDate : todayEastern();
 
   if (id === 'today') {
-    const bounds = boundsForRange(today, today);
-    return { id, start: today, end: today, label: 'Today', ...bounds };
+    const bounds = boundsForRange(anchor, anchor);
+    const label = anchor === todayEastern() ? 'Today' : formatScheduleTodayDate(anchor);
+    return { id, start: anchor, end: anchor, label, ...bounds };
   }
 
   if (id === 'this_week') {
-    const weekday = easternWeekdayIndex(today);
-    const start = addDays(today, -weekday);
+    const weekday = easternWeekdayIndex(anchor);
+    const start = addDays(anchor, -weekday);
     const end = addDays(start, 6);
     const bounds = boundsForRange(start, end);
     return { id, start, end, label: 'This week', ...bounds };
   }
 
-  const { year, month } = parseIso(today)!;
+  const { year, month } = parseIso(anchor)!;
   const start = toIso(year, month, 1);
   const end = toIso(year, month, lastDayOfMonth(year, month));
   const bounds = boundsForRange(start, end);
   return { id, start, end, label: 'This month', ...bounds };
+}
+
+export function parseScheduleAnchorParam(value: string | null | undefined): string | null {
+  if (!value || !ISO_DATE.test(value)) return null;
+  return value;
+}
+
+export function anchorDateForRange(id: ScheduleRangeId, referenceDate = todayEastern()): string {
+  if (id === 'today') return referenceDate;
+  if (id === 'this_week') {
+    const weekday = easternWeekdayIndex(referenceDate);
+    return addDays(referenceDate, -weekday);
+  }
+  const parsed = parseIso(referenceDate);
+  if (!parsed) return referenceDate;
+  return toIso(parsed.year, parsed.month, 1);
+}
+
+export function shiftScheduleAnchor(id: ScheduleRangeId, anchorDate: string, direction: -1 | 1): string {
+  const anchor = parseIso(anchorDate) ? anchorDate : todayEastern();
+  if (id === 'today') return addDays(anchor, direction);
+  if (id === 'this_week') return addDays(anchor, direction * 7);
+  const parsed = parseIso(anchor);
+  if (!parsed) return anchor;
+  const shifted = new Date(Date.UTC(parsed.year, parsed.month - 1 + direction, 1));
+  return toIso(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, 1);
 }
 
 function lastDayOfMonth(year: number, month: number): number {
@@ -126,7 +157,10 @@ function lastDayOfMonth(year: number, month: number): number {
 }
 
 export function formatScheduleHeading(range: { id: ScheduleRangeId; start: string; end: string }): string {
-  if (range.id === 'today') return 'Today';
+  if (range.id === 'today') {
+    if (range.start === todayEastern()) return 'Today';
+    return formatScheduleTodayDate(range.start);
+  }
 
   if (range.id === 'this_week') {
     const startLabel = new Date(easternInstant(range.start, 12, 0, 0)).toLocaleDateString('en-US', {

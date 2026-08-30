@@ -1,6 +1,15 @@
 import type { APIRoute } from 'astro';
-import { GoogleCalendarProvider, jsonResponse, parseScheduleRangeParam } from '../../../lib/schedule/google-calendar';
-import { resolveScheduleRange } from '../../../lib/schedule/range';
+import { todayEastern } from '../../../lib/financials/periods';
+import {
+  GoogleCalendarProvider,
+  jsonResponse,
+  parseScheduleRangeParam,
+} from '../../../lib/schedule/google-calendar';
+import {
+  anchorDateForRange,
+  parseScheduleAnchorParam,
+  resolveScheduleRangeAt,
+} from '../../../lib/schedule/range';
 
 export const prerender = false;
 
@@ -8,7 +17,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const provider = new GoogleCalendarProvider();
   const userId = locals.employee!.id;
   const rangeId = parseScheduleRangeParam(url.searchParams.get('range'));
-  const range = resolveScheduleRange(rangeId);
+  const anchorParam = parseScheduleAnchorParam(url.searchParams.get('anchor'));
+  const anchor = anchorParam ?? anchorDateForRange(rangeId, todayEastern());
+  const range = resolveScheduleRangeAt(rangeId, anchor);
   const connection = await provider.getConnection(userId);
 
   if (connection.status !== 'connected') {

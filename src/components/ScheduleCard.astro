@@ -176,20 +176,44 @@ const conflictLabel = conflictCountLabel(conflictCount);
 
   <div class="flex flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
     <div class="flex items-start justify-between gap-3">
-      <div>
+      <div class="min-w-0 flex-1">
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Calendar</p>
-        <p class="mt-1 text-base font-semibold leading-tight" data-schedule-range-label>
-          {headingLabel}
-        </p>
-        {
-          todayDateLabel ? (
-            <p class="mt-1 text-[11px] text-[#6b6c72]" data-schedule-range-sub>{todayDateLabel}</p>
-          ) : connection.status === 'connected' && connection.googleEmail ? (
-            <p class="mt-1 text-[11px] text-[#6b6c72]" data-schedule-range-sub>{connection.googleEmail}</p>
-          ) : (
-            <p class="mt-1 hidden text-[11px] text-[#6b6c72]" data-schedule-range-sub></p>
-          )
-        }
+        <div class="mt-1 flex items-center gap-1">
+          <button
+            type="button"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#6b6c72] shadow-sm ring-1 ring-[#d5d8de] transition hover:bg-[#eef4ff] hover:text-charcoal"
+            data-schedule-prev
+            aria-label="Previous period"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <div class="min-w-0 flex-1 px-0.5 text-center">
+            <p class="text-base font-semibold leading-tight" data-schedule-range-label>
+              {headingLabel}
+            </p>
+            {
+              todayDateLabel ? (
+                <p class="mt-1 text-[11px] text-[#6b6c72]" data-schedule-range-sub>{todayDateLabel}</p>
+              ) : connection.status === 'connected' && connection.googleEmail ? (
+                <p class="mt-1 text-[11px] text-[#6b6c72]" data-schedule-range-sub>{connection.googleEmail}</p>
+              ) : (
+                <p class="mt-1 hidden text-[11px] text-[#6b6c72]" data-schedule-range-sub></p>
+              )
+            }
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#6b6c72] shadow-sm ring-1 ring-[#d5d8de] transition hover:bg-[#eef4ff] hover:text-charcoal"
+            data-schedule-next
+            aria-label="Next period"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
       {
         connection.status === 'connected' ? (
@@ -450,35 +474,59 @@ const conflictLabel = conflictCountLabel(conflictCount);
       <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
         <div class="flex h-[min(92vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#f4f5f8] shadow-2xl ring-1 ring-black/15">
           <div class="widget-accent-bar flex shrink-0 items-center justify-between gap-3 px-4 py-3">
-            <div class="flex items-center gap-2">
-              <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
-                <p class="text-base font-semibold" data-schedule-dialog-label>{headingLabel}</p>
-              </div>
-              <span
-                class:list={[
-                  'inline-flex items-center gap-1.5',
-                  conflictCount === 0 && 'hidden',
-                ]}
-                data-schedule-conflict-wrap
-                data-schedule-conflict-expanded
+            <div class="flex min-w-0 flex-1 items-center gap-2">
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-cream ring-1 ring-white/20 transition hover:bg-white/25"
+                data-schedule-dialog-prev
+                aria-label="Previous period"
               >
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden="true">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
-                      stroke="white"
-                      stroke-width="1.75"
-                      stroke-linejoin="round"
-                    />
-                    <path d="M12 9.2v5.2" stroke="white" stroke-width="1.75" stroke-linecap="round" />
-                    <circle cx="12" cy="16.7" r="1" fill="white" />
-                  </svg>
-                </span>
-                <span class="text-[11px] font-semibold text-cream" data-schedule-conflict-inline role="status">
-                  {conflictLabel}
-                </span>
-              </span>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Schedule</p>
+                    <p class="text-base font-semibold" data-schedule-dialog-label>{headingLabel}</p>
+                  </div>
+                  <span
+                    class:list={[
+                      'inline-flex items-center gap-1.5',
+                      conflictCount === 0 && 'hidden',
+                    ]}
+                    data-schedule-conflict-wrap
+                    data-schedule-conflict-expanded
+                  >
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden="true">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
+                          stroke="white"
+                          stroke-width="1.75"
+                          stroke-linejoin="round"
+                        />
+                        <path d="M12 9.2v5.2" stroke="white" stroke-width="1.75" stroke-linecap="round" />
+                        <circle cx="12" cy="16.7" r="1" fill="white" />
+                      </svg>
+                    </span>
+                    <span class="text-[11px] font-semibold text-cream" data-schedule-conflict-inline role="status">
+                      {conflictLabel}
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-cream ring-1 ring-white/20 transition hover:bg-white/25"
+                data-schedule-dialog-next
+                aria-label="Next period"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
             </div>
             <div class="flex items-center gap-2">
               <label class="shrink-0">
@@ -580,22 +628,69 @@ const conflictLabel = conflictCountLabel(conflictCount);
     return `portal:schedule-range:${userId}`;
   }
 
-  function readStoredRange(userId: string): string | null {
-    try {
-      const value = localStorage.getItem(rangeStorageKey(userId));
-      if (value === 'today' || value === 'this_week' || value === 'this_month') return value;
-      return null;
-    } catch {
-      return null;
-    }
+  function viewStorageKey(userId: string): string {
+    return `portal:schedule-view:${userId}`;
   }
 
-  function writeStoredRange(userId: string, rangeId: string): void {
+  type StoredScheduleView = { rangeId: string; anchor: string };
+
+  function anchorForRange(rangeId: string, referenceDate = todayEastern()): string {
+    if (rangeId === 'today') return referenceDate;
+    if (rangeId === 'this_week') return addDays(referenceDate, -weekdayIndex(referenceDate));
+    const [year, month] = referenceDate.split('-').map(Number);
+    return `${year}-${String(month).padStart(2, '0')}-01`;
+  }
+
+  function shiftAnchor(rangeId: string, anchorDate: string, direction: -1 | 1): string {
+    if (rangeId === 'today') return addDays(anchorDate, direction);
+    if (rangeId === 'this_week') return addDays(anchorDate, direction * 7);
+    const [year, month] = anchorDate.split('-').map(Number);
+    const shifted = new Date(Date.UTC(year, month - 1 + direction, 1));
+    return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  function rangeNavLabel(rangeId: string, direction: 'prev' | 'next'): string {
+    const unit = rangeId === 'today' ? 'day' : rangeId === 'this_week' ? 'week' : 'month';
+    return direction === 'prev' ? `Previous ${unit}` : `Next ${unit}`;
+  }
+
+  function readStoredView(userId: string): StoredScheduleView | null {
     try {
+      const raw = localStorage.getItem(viewStorageKey(userId));
+      if (raw) {
+        const parsed = JSON.parse(raw) as StoredScheduleView;
+        if (
+          (parsed.rangeId === 'today' || parsed.rangeId === 'this_week' || parsed.rangeId === 'this_month') &&
+          /^\d{4}-\d{2}-\d{2}$/.test(parsed.anchor)
+        ) {
+          return parsed;
+        }
+      }
+      const legacy = localStorage.getItem(rangeStorageKey(userId));
+      if (legacy === 'today' || legacy === 'this_week' || legacy === 'this_month') {
+        return { rangeId: legacy, anchor: anchorForRange(legacy) };
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  function readStoredRange(userId: string): string | null {
+    return readStoredView(userId)?.rangeId ?? null;
+  }
+
+  function writeStoredView(userId: string, rangeId: string, anchor: string): void {
+    try {
+      localStorage.setItem(viewStorageKey(userId), JSON.stringify({ rangeId, anchor }));
       localStorage.setItem(rangeStorageKey(userId), rangeId);
     } catch {
       // ignore
     }
+  }
+
+  function writeStoredRange(userId: string, rangeId: string): void {
+    writeStoredView(userId, rangeId, anchorForRange(rangeId));
   }
 
   function escapeHtml(value: string): string {
@@ -986,7 +1081,10 @@ const conflictLabel = conflictCountLabel(conflictCount);
   }
 
   function formatHeading(range: { id: string; start: string; end: string }): string {
-    if (range.id === 'today') return 'Today';
+    if (range.id === 'today') {
+      if (range.start === todayEastern()) return 'Today';
+      return formatTodaySub(range.start);
+    }
     if (range.id === 'this_week') {
       const startLabel = new Date(`${range.start}T12:00:00`).toLocaleDateString('en-US', {
         timeZone: TZ,
@@ -1216,21 +1314,42 @@ const conflictLabel = conflictCountLabel(conflictCount);
     const labelEl = root.querySelector('[data-schedule-range-label]') as HTMLElement | null;
     const subEl = root.querySelector('[data-schedule-range-sub]') as HTMLElement | null;
     const rangeSelect = root.querySelector('[data-schedule-range]') as HTMLSelectElement | null;
+    const prevButton = root.querySelector('[data-schedule-prev]') as HTMLButtonElement | null;
+    const nextButton = root.querySelector('[data-schedule-next]') as HTMLButtonElement | null;
     const expandButton = root.querySelector('[data-schedule-expand]') as HTMLButtonElement | null;
     const dialog = document.querySelector('[data-schedule-dialog]') as HTMLDialogElement | null;
     const dialogLabel = dialog?.querySelector('[data-schedule-dialog-label]') as HTMLElement | null;
     const dialogRange = dialog?.querySelector('[data-schedule-dialog-range]') as HTMLSelectElement | null;
+    const dialogPrev = dialog?.querySelector('[data-schedule-dialog-prev]') as HTMLButtonElement | null;
+    const dialogNext = dialog?.querySelector('[data-schedule-dialog-next]') as HTMLButtonElement | null;
     const dialogEvents = dialog?.querySelector('[data-schedule-dialog-events]') as HTMLElement | null;
     const dialogClose = dialog?.querySelector('[data-schedule-dialog-close]') as HTMLButtonElement | null;
     const knownEmail = (root.dataset.googleEmail ?? '').trim() || null;
 
     let latestPayload: EventsResponse | null = null;
+    let currentAnchor = anchorForRange(rangeSelect?.value ?? 'this_week');
 
-    async function loadEvents(rangeId: string): Promise<void> {
+    function updateNavLabels(rangeId: string): void {
+      const prevLabel = rangeNavLabel(rangeId, 'prev');
+      const nextLabel = rangeNavLabel(rangeId, 'next');
+      prevButton?.setAttribute('aria-label', prevLabel);
+      nextButton?.setAttribute('aria-label', nextLabel);
+      dialogPrev?.setAttribute('aria-label', prevLabel);
+      dialogNext?.setAttribute('aria-label', nextLabel);
+    }
+
+    async function loadEvents(rangeId: string, anchor = currentAnchor): Promise<void> {
       if (!shell) return;
-      const response = await fetch(`/api/google-calendar/events?range=${encodeURIComponent(rangeId)}`, {
-        headers: { accept: 'application/json' },
-      });
+      currentAnchor = anchor;
+      writeStoredView(userId, rangeId, anchor);
+      updateNavLabels(rangeId);
+
+      const response = await fetch(
+        `/api/google-calendar/events?range=${encodeURIComponent(rangeId)}&anchor=${encodeURIComponent(anchor)}`,
+        {
+          headers: { accept: 'application/json' },
+        },
+      );
       const payload = (await response.json()) as EventsResponse;
       latestPayload = payload;
       applyHeading(payload.range, labelEl, subEl, dialogLabel, knownEmail);
@@ -1258,7 +1377,15 @@ const conflictLabel = conflictCountLabel(conflictCount);
     function syncRangeControls(rangeId: string): void {
       if (rangeSelect) rangeSelect.value = rangeId;
       if (dialogRange) dialogRange.value = rangeId;
-      writeStoredRange(userId, rangeId);
+      updateNavLabels(rangeId);
+    }
+
+    function navigate(direction: -1 | 1): void {
+      if (!rangeSelect) return;
+      const rangeId = rangeSelect.value;
+      const nextAnchor = shiftAnchor(rangeId, currentAnchor, direction);
+      syncRangeControls(rangeId);
+      void loadEvents(rangeId, nextAnchor);
     }
 
     if (!connected || !shell || !rangeSelect) {
@@ -1266,11 +1393,13 @@ const conflictLabel = conflictCountLabel(conflictCount);
       return;
     }
 
-    const storedRange = readStoredRange(userId);
-    if (storedRange && storedRange !== rangeSelect.value) {
-      syncRangeControls(storedRange);
-      void loadEvents(storedRange);
+    const storedView = readStoredView(userId);
+    if (storedView) {
+      syncRangeControls(storedView.rangeId);
+      currentAnchor = storedView.anchor;
+      void loadEvents(storedView.rangeId, storedView.anchor);
     } else {
+      updateNavLabels(rangeSelect.value);
       updateScrollHint(shell);
       const weekContainer = shell.querySelector('[data-schedule-events]') as HTMLElement | null;
       if (weekContainer) {
@@ -1282,15 +1411,22 @@ const conflictLabel = conflictCountLabel(conflictCount);
 
     rangeSelect.addEventListener('change', () => {
       const rangeId = rangeSelect.value;
+      const nextAnchor = anchorForRange(rangeId);
       syncRangeControls(rangeId);
-      void loadEvents(rangeId);
+      void loadEvents(rangeId, nextAnchor);
     });
 
     dialogRange?.addEventListener('change', () => {
       const rangeId = dialogRange.value;
+      const nextAnchor = anchorForRange(rangeId);
       syncRangeControls(rangeId);
-      void loadEvents(rangeId);
+      void loadEvents(rangeId, nextAnchor);
     });
+
+    prevButton?.addEventListener('click', () => navigate(-1));
+    nextButton?.addEventListener('click', () => navigate(1));
+    dialogPrev?.addEventListener('click', () => navigate(-1));
+    dialogNext?.addEventListener('click', () => navigate(1));
 
     expandButton?.addEventListener('click', () => {
       if (!dialog || !dialogEvents) return;
@@ -1300,7 +1436,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
         applyHeading(latestPayload.range, labelEl, subEl, dialogLabel, knownEmail);
         scheduleWeekScroll(dialogEvents);
       } else {
-        void loadEvents(rangeSelect.value).then(() => {
+        void loadEvents(rangeSelect.value, currentAnchor).then(() => {
           if (latestPayload) {
             paint(dialogEvents, latestPayload, 'expanded');
             scheduleWeekScroll(dialogEvents);
