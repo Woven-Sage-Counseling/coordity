@@ -131,7 +131,6 @@ const arrowClass =
 <style is:global>
   .widget-carousel-viewport {
     width: 100%;
-    container-type: inline-size;
     /* Leave room below so card drop-shadows are not hard-clipped */
     padding-bottom: 2.75rem;
     /* Fade only the extreme edges so peeks stay readable */
@@ -151,8 +150,7 @@ const arrowClass =
     );
   }
 
-  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport,
-  [data-widget-carousel][data-compact='true'] .widget-carousel-viewport {
+  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport {
     -webkit-mask-image: none;
     mask-image: none;
   }
@@ -186,19 +184,6 @@ const arrowClass =
     width: 100%;
     transform: scale(1);
     opacity: 1;
-  }
-
-  @container (max-width: 36rem) {
-    .widget-carousel-slide {
-      width: 100%;
-      transform: scale(1);
-      opacity: 1;
-    }
-
-    .widget-carousel-slide:not([data-active='true']) {
-      opacity: 0.45;
-      transform: scale(0.98);
-    }
   }
 
   .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) {
@@ -327,11 +312,6 @@ const arrowClass =
       enabledSlides.findIndex((el) => el.dataset.widgetId === prefs.defaultId),
     );
 
-    const isCompact = () => viewport.clientWidth <= 576;
-    const syncCompact = () => {
-      root.dataset.compact = isCompact() && !solo ? 'true' : 'false';
-    };
-
     enabledSlides.forEach((slide) => {
       slide.dataset.solo = solo ? 'true' : 'false';
       slide.addEventListener(
@@ -367,9 +347,6 @@ const arrowClass =
     };
 
     const layout = () => {
-      syncCompact();
-      const compact = isCompact() && !solo;
-
       if (solo) {
         track.style.transform = 'translate3d(0,0,0)';
         enabledSlides[0]!.dataset.active = 'true';
@@ -377,20 +354,12 @@ const arrowClass =
       }
 
       const viewportWidth = viewport.clientWidth;
-      const slideWidth = compact
-        ? viewportWidth
-        : enabledSlides[index]?.offsetWidth || viewportWidth * 0.7;
+      const slideWidth = enabledSlides[index]?.offsetWidth || viewportWidth * 0.7;
       const styles = getComputedStyle(track);
       const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
-
-      if (compact) {
-        const offset = -index * (slideWidth + gap);
-        track.style.transform = `translate3d(${offset}px, 0, 0)`;
-      } else {
-        const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
-        const offset = peek - index * (slideWidth + gap);
-        track.style.transform = `translate3d(${offset}px, 0, 0)`;
-      }
+      const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
+      const offset = peek - index * (slideWidth + gap);
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
 
       enabledSlides.forEach((el, i) => {
         el.dataset.active = i === index ? 'true' : 'false';
