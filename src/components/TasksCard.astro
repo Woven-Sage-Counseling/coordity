@@ -572,7 +572,6 @@ const taskDeletePillClass = `${taskActionPillBase} bg-red-50 text-red-800 ring-r
       if (form.getAttribute('data-tasks-action') !== 'delete') return;
 
       event.preventDefault();
-      if (!window.confirm('Delete this task?')) return;
 
       void (async () => {
         clearFlash(root);
