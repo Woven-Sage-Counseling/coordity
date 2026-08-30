@@ -5,6 +5,7 @@ import { hasPermission, isOwnerEmail } from './permissions';
 import {
   COVERAGE_STATUS_VALUES,
   coverageCellKey,
+  groupCoverageCellKey,
   isPublicCoverageStatus,
   normalizeCoverageStatus,
   type CoverageStatus,
@@ -15,6 +16,7 @@ export {
   COVERAGE_STATUS_OPTIONS,
   COVERAGE_STATUS_VALUES,
   coverageCellKey,
+  groupCoverageCellKey,
   coverageStatusLabel,
   coverageStatusPillClass,
   isPublicCoverageStatus,
@@ -250,6 +252,21 @@ export async function listCoverageMatrix(): Promise<Record<string, CoverageStatu
   return map;
 }
 
+export async function listGroupCoverageMatrix(): Promise<Record<string, CoverageStatus>> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT provider_id, group_id, status FROM provider_group_coverage`,
+  ).all<{ provider_id: string; group_id: string; status: string }>();
+
+  const map: Record<string, CoverageStatus> = {};
+  for (const row of rows.results ?? []) {
+    const status = normalizeCoverageStatus(row.status);
+    if (!status) continue;
+    map[groupCoverageCellKey(row.provider_id, row.group_id)] = status;
+  }
+  return map;
+}
+
 export interface PublicInsurancePlan {
   planId: string;
   planName: string;
@@ -262,6 +279,10 @@ export interface PublicInsuranceGroup {
   sortOrder: number;
   inNetworkPlans: PublicInsurancePlan[];
   comingSoonPlans: PublicInsurancePlan[];
+  /** In-network at the insurance company level without plan rows. */
+  inNetworkAtNetworkLevel?: boolean;
+  /** Credentialing at the insurance company level without plan rows. */
+  credentialingAtNetworkLevel?: boolean;
 }
 
 export interface PublicInsuranceNetwork {
@@ -281,6 +302,24 @@ interface PublicInsuranceGroupState {
   sortOrder: number;
   inNetworkPlans: PublicInsurancePlan[];
   comingSoonPlans: PublicInsurancePlan[];
+  inNetworkAtNetworkLevel: boolean;
+  credentialingAtNetworkLevel: boolean;
+}
+
+function emptyPublicInsuranceGroupState(
+  groupId: string,
+  groupName: string,
+  sortOrder: number,
+): PublicInsuranceGroupState {
+  return {
+    groupId,
+    groupName,
+    sortOrder,
+    inNetworkPlans: [],
+    comingSoonPlans: [],
+    inNetworkAtNetworkLevel: false,
+    credentialingAtNetworkLevel: false,
+  };
 }
 
 async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupState[]> {
@@ -291,6 +330,39 @@ async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupSta
   const placeholders = providerIds.map(() => '?').join(', ');
 
   const { DB } = getEnv();
+
+  const groupCoverageRows = await DB.prepare(
+    `SELECT
+        g.id AS group_id,
+        g.name AS group_name,
+        g.sort_order AS group_sort_order,
+        c.status
+     FROM provider_group_coverage c
+     JOIN insurance_group g ON g.id = c.group_id
+     WHERE c.provider_id IN (${placeholders})
+       AND c.status IN ('in_network', 'credentialing')`,
+  )
+    .bind(...providerIds)
+    .all<{
+      group_id: string;
+      group_name: string;
+      group_sort_order: number;
+      status: string;
+    }>();
+
+  const groups = new Map<string, PublicInsuranceGroupState>();
+  for (const row of groupCoverageRows.results ?? []) {
+    const status = normalizeCoverageStatus(row.status);
+    if (status !== 'in_network' && status !== 'credentialing') continue;
+
+    let group =
+      groups.get(row.group_id) ??
+      emptyPublicInsuranceGroupState(row.group_id, row.group_name, row.group_sort_order);
+    if (status === 'in_network') group.inNetworkAtNetworkLevel = true;
+    if (status === 'credentialing') group.credentialingAtNetworkLevel = true;
+    groups.set(row.group_id, group);
+  }
+
   const rows = await DB.prepare(
     `SELECT
         p.id AS plan_id,
@@ -354,19 +426,10 @@ async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupSta
     });
   }
 
-  const groups = new Map<string, PublicInsuranceGroupState>();
   for (const plan of planBuckets.values()) {
-    let group = groups.get(plan.groupId);
-    if (!group) {
-      group = {
-        groupId: plan.groupId,
-        groupName: plan.groupName,
-        sortOrder: plan.groupSortOrder,
-        inNetworkPlans: [],
-        comingSoonPlans: [],
-      };
-      groups.set(plan.groupId, group);
-    }
+    let group =
+      groups.get(plan.groupId) ??
+      emptyPublicInsuranceGroupState(plan.groupId, plan.groupName, plan.groupSortOrder);
 
     const entry = {
       planId: plan.planId,
@@ -378,6 +441,7 @@ async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupSta
       if (!group.inNetworkPlans.some((item) => item.planId === plan.planId)) {
         group.inNetworkPlans.push(entry);
       }
+      groups.set(plan.groupId, group);
       continue;
     }
 
@@ -385,6 +449,7 @@ async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupSta
       if (!group.comingSoonPlans.some((item) => item.planId === plan.planId)) {
         group.comingSoonPlans.push(entry);
       }
+      groups.set(plan.groupId, group);
     }
   }
 
@@ -397,7 +462,13 @@ async function loadPublicInsuranceGroupStates(): Promise<PublicInsuranceGroupSta
       inNetworkPlans: [...group.inNetworkPlans].sort(sortPlans),
       comingSoonPlans: [...group.comingSoonPlans].sort(sortPlans),
     }))
-    .filter((group) => group.inNetworkPlans.length > 0 || group.comingSoonPlans.length > 0)
+    .filter(
+      (group) =>
+        group.inNetworkPlans.length > 0 ||
+        group.comingSoonPlans.length > 0 ||
+        group.inNetworkAtNetworkLevel ||
+        group.credentialingAtNetworkLevel,
+    )
     .sort((left, right) => left.sortOrder - right.sortOrder || left.groupName.localeCompare(right.groupName));
 }
 
@@ -418,11 +489,11 @@ export async function listPublicInsuranceNetworks(): Promise<PublicInsuranceNetw
       groupName: state.groupName,
       sortOrder: state.sortOrder,
     };
-    if (state.inNetworkPlans.length > 0) {
+    if (state.inNetworkPlans.length > 0 || state.inNetworkAtNetworkLevel) {
       inNetwork.push(network);
       continue;
     }
-    if (state.comingSoonPlans.length > 0) {
+    if (state.comingSoonPlans.length > 0 || state.credentialingAtNetworkLevel) {
       comingSoon.push(network);
     }
   }
@@ -539,6 +610,60 @@ export async function updateInsurancePlan(planId: string, name: string): Promise
   if ((result.meta.changes ?? 0) === 0) throw new Error('That plan was not found.');
 }
 
+export async function setProviderGroupCoverage(input: {
+  providerId: string;
+  groupId: string;
+  status: CoverageStatusKey;
+  actorId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const provider = await DB.prepare(`SELECT id FROM credentialing_provider WHERE id = ?`)
+    .bind(input.providerId)
+    .first<{ id: string }>();
+  if (!provider) throw new Error('That provider was not found.');
+
+  const group = await DB.prepare(`SELECT id FROM insurance_group WHERE id = ?`)
+    .bind(input.groupId)
+    .first<{ id: string }>();
+  if (!group) throw new Error('That insurance company was not found.');
+
+  if (input.status === 'not_started') {
+    await DB.prepare(`DELETE FROM provider_group_coverage WHERE provider_id = ? AND group_id = ?`)
+      .bind(input.providerId, input.groupId)
+      .run();
+    return;
+  }
+
+  if (!COVERAGE_STATUS_VALUES.includes(input.status)) {
+    throw new Error('Choose a valid coverage status.');
+  }
+
+  const existing = await DB.prepare(
+    `SELECT id FROM provider_group_coverage WHERE provider_id = ? AND group_id = ?`,
+  )
+    .bind(input.providerId, input.groupId)
+    .first<{ id: string }>();
+
+  const ts = nowMs();
+  if (existing) {
+    await DB.prepare(
+      `UPDATE provider_group_coverage
+       SET status = ?, updated_at = ?, updated_by = ?
+       WHERE id = ?`,
+    )
+      .bind(input.status, ts, input.actorId, existing.id)
+      .run();
+    return;
+  }
+
+  await DB.prepare(
+    `INSERT INTO provider_group_coverage (id, provider_id, group_id, status, updated_at, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(randomToken(16), input.providerId, input.groupId, input.status, ts, input.actorId)
+    .run();
+}
+
 export async function setProviderPlanCoverage(input: {
   providerId: string;
   planId: string;
@@ -603,9 +728,15 @@ export async function countBulkGroupOverwrite(input: {
     .all<{ id: string }>();
 
   const planIds = (plans.results ?? []).map((row) => row.id);
-  if (planIds.length === 0) throw new Error('That insurance company has no plans.');
-
   let overwritten = 0;
+
+  const existingGroup = await DB.prepare(
+    `SELECT id FROM provider_group_coverage WHERE provider_id = ? AND group_id = ?`,
+  )
+    .bind(input.providerId, input.groupId)
+    .first<{ id: string }>();
+  if (existingGroup) overwritten += 1;
+
   for (const planId of planIds) {
     const existing = await DB.prepare(
       `SELECT status FROM provider_plan_coverage WHERE provider_id = ? AND plan_id = ?`,
@@ -615,7 +746,7 @@ export async function countBulkGroupOverwrite(input: {
     if (existing) overwritten += 1;
   }
 
-  return { planCount: planIds.length, overwritten };
+  return { planCount: Math.max(planIds.length, 1), overwritten };
 }
 
 export async function bulkSetProviderGroupCoverage(input: {
@@ -632,7 +763,25 @@ export async function bulkSetProviderGroupCoverage(input: {
     .all<{ id: string }>();
 
   const planIds = (plans.results ?? []).map((row) => row.id);
-  if (planIds.length === 0) throw new Error('That insurance company has no plans.');
+
+  await setProviderGroupCoverage({
+    providerId: input.providerId,
+    groupId: input.groupId,
+    status: input.status,
+    actorId: input.actorId,
+  });
+
+  if (input.status === 'not_started') {
+    for (const planId of planIds) {
+      await setProviderPlanCoverage({
+        providerId: input.providerId,
+        planId,
+        status: 'not_started',
+        actorId: input.actorId,
+      });
+    }
+    return { updated: Math.max(planIds.length, 1) };
+  }
 
   for (const planId of planIds) {
     await setProviderPlanCoverage({
@@ -643,7 +792,7 @@ export async function bulkSetProviderGroupCoverage(input: {
     });
   }
 
-  return { updated: planIds.length };
+  return { updated: Math.max(planIds.length, 1) };
 }
 
 export async function deleteInsuranceGroup(groupId: string): Promise<void> {

@@ -58,3 +58,7 @@ export function coverageStatusPillClass(status: CoverageStatusKey): string {
 export function coverageCellKey(providerId: string, planId: string): string {
   return `${providerId}:${planId}`;
 }
+
+export function groupCoverageCellKey(providerId: string, groupId: string): string {
+  return `${providerId}:${groupId}`;
+}

@@ -11,6 +11,7 @@ import {
   listProvidersForLookup,
   listInsuranceCatalog,
   listCoverageMatrix,
+  listGroupCoverageMatrix,
 } from '../lib/credentialing';
 import { listEmployees, listRolesWithPermissions } from '../lib/employees';
 import { canAccessManagement } from '../lib/permissions';
@@ -31,6 +32,7 @@ const roles = await listRolesWithPermissions();
 const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
 const coverageMap = await listCoverageMatrix();
+const groupCoverageMap = await listGroupCoverageMatrix();
 const employees = await listEmployees();
 let assignedTasks: Awaited<ReturnType<typeof listAssignedTasksForAdmin>> = [];
 let tasksLoadError: string | null = Astro.url.searchParams.get('tasksError');
@@ -262,6 +264,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         providers={credentialingProviders}
         catalog={insuranceCatalog}
         coverageMap={coverageMap}
+        groupCoverageMap={groupCoverageMap}
         error={credentialingError}
         embedded
       />
