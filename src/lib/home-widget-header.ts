@@ -71,7 +71,7 @@ export function applyWidgetAccentColors(
   root: Element | Document,
   headerColors?: Partial<Record<HomeWidgetId, string>>,
 ): void {
-  root.querySelectorAll('[data-widget-card]').forEach((node) => {
+  root.querySelectorAll('[data-widget-card], [data-schedule-dialog][data-widget-id]').forEach((node) => {
     if (!(node instanceof HTMLElement)) return;
     const widgetId = node.dataset.widgetId;
     if (!widgetId) return;

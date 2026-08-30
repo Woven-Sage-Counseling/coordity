@@ -17,6 +17,7 @@ import { todayEastern } from '../lib/financials/periods';
 import type { ScheduleEvent } from '../lib/schedule/types';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
+import WidgetHeaderIcon from './WidgetHeaderIcon.astro';
 
 interface Props {
   userId: string;
@@ -462,69 +463,74 @@ const conflictLabel = conflictCountLabel(conflictCount);
     <dialog
       class="schedule-expand-dialog m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-charcoal/50"
       data-schedule-dialog
+      data-widget-id="schedule"
+      style={widgetAccentVarsStyle('schedule')}
       aria-label="Expanded calendar"
     >
       <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
         <div class="flex h-[min(92vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#f4f5f8] shadow-2xl ring-1 ring-black/15">
           <div class="widget-accent-bar flex shrink-0 items-center justify-between gap-3 px-4 py-3">
             <div class="flex min-w-0 flex-1 items-center gap-2">
-              <button
-                type="button"
-                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-cream ring-1 ring-white/20 transition hover:bg-white/25"
-                data-schedule-dialog-prev
-                aria-label="Previous period"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </button>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <div class="min-w-0">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/70">Calendar</p>
-                    <p class="text-base font-semibold" data-schedule-dialog-label>{headingLabel}</p>
-                  </div>
-                  <span
-                    class:list={[
-                      'inline-flex items-center gap-1.5',
-                      conflictCount === 0 && 'hidden',
-                    ]}
-                    data-schedule-conflict-wrap
-                    data-schedule-conflict-expanded
+              <WidgetHeaderIcon widgetId="schedule" />
+              <div class="flex min-w-0 items-center gap-2">
+                <div class="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    class="widget-accent-nav-btn h-8 w-8 shrink-0"
+                    data-schedule-dialog-prev
+                    aria-label="Previous period"
                   >
-                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden="true">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
-                          stroke="white"
-                          stroke-width="1.75"
-                          stroke-linejoin="round"
-                        />
-                        <path d="M12 9.2v5.2" stroke="white" stroke-width="1.75" stroke-linecap="round" />
-                        <circle cx="12" cy="16.7" r="1" fill="white" />
-                      </svg>
-                    </span>
-                    <span class="text-[11px] font-semibold text-cream" data-schedule-conflict-inline role="status">
-                      {conflictLabel}
-                    </span>
-                  </span>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </button>
+                  <p
+                    class="widget-accent-dialog-label max-w-[14rem] truncate px-0.5 text-sm font-semibold leading-none whitespace-nowrap sm:max-w-none"
+                    data-schedule-dialog-label
+                  >
+                    {headingLabel}
+                  </p>
+                  <button
+                    type="button"
+                    class="widget-accent-nav-btn h-8 w-8 shrink-0"
+                    data-schedule-dialog-next
+                    aria-label="Next period"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </button>
                 </div>
+                <span
+                  class:list={[
+                    'inline-flex items-center gap-1.5',
+                    conflictCount === 0 && 'hidden',
+                  ]}
+                  data-schedule-conflict-wrap
+                  data-schedule-conflict-expanded
+                >
+                  <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 3.2 2.6 20.2h18.8L12 3.2Z"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M12 9.2v5.2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+                      <circle cx="12" cy="16.7" r="1" fill="currentColor" />
+                    </svg>
+                  </span>
+                  <span class="text-[11px] font-semibold" data-schedule-conflict-inline role="status">
+                    {conflictLabel}
+                  </span>
+                </span>
               </div>
-              <button
-                type="button"
-                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-cream ring-1 ring-white/20 transition hover:bg-white/25"
-                data-schedule-dialog-next
-                aria-label="Next period"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </button>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex shrink-0 items-center gap-2">
               <label class="shrink-0">
                 <span class="sr-only">Calendar range</span>
-                <select class="rounded-md border-0 bg-white/15 px-2 py-1 text-[11px] font-medium text-cream ring-1 ring-white/20" data-schedule-dialog-range>
+                <select class="widget-header-action" data-schedule-dialog-range>
                   {
                     rangeOptions.map((option) => (
                       <option value={option.id} selected={option.id === (range?.id ?? 'this_week')} class="text-[#393a3d]">
@@ -536,16 +542,12 @@ const conflictLabel = conflictCountLabel(conflictCount);
               </label>
               <button
                 type="button"
-                class="rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-cream ring-1 ring-white/20 transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+                class="widget-header-action disabled:cursor-not-allowed disabled:opacity-60"
                 data-schedule-dialog-sync
               >
                 Sync
               </button>
-              <button
-                type="button"
-                class="rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-cream ring-1 ring-white/20 transition hover:bg-white/25"
-                data-schedule-dialog-close
-              >
+              <button type="button" class="widget-header-action" data-schedule-dialog-close>
                 Close
               </button>
             </div>
@@ -1442,8 +1444,18 @@ const conflictLabel = conflictCountLabel(conflictCount);
       });
     });
 
+    function syncDialogAccent(): void {
+      if (!dialog) return;
+      const styles = getComputedStyle(root);
+      const background = styles.getPropertyValue('--widget-accent-bg').trim();
+      const foreground = styles.getPropertyValue('--widget-accent-fg').trim();
+      if (background) dialog.style.setProperty('--widget-accent-bg', background);
+      if (foreground) dialog.style.setProperty('--widget-accent-fg', foreground);
+    }
+
     expandButton?.addEventListener('click', () => {
       if (!dialog || !dialogEvents) return;
+      syncDialogAccent();
       if (dialogRange && rangeSelect) dialogRange.value = rangeSelect.value;
       if (latestPayload) {
         paint(dialogEvents, latestPayload, 'expanded');

@@ -117,4 +117,23 @@ const { widgetId, title, headingId, openHref, openLabel = 'Open' } = Astro.props
     background-color: var(--widget-accent-bg, #535f51);
     color: var(--widget-accent-fg, #f7f4ee);
   }
+
+  .widget-accent-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: var(--widget-accent-fg, #f7f4ee);
+    background-color: color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 15%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 20%, transparent);
+    transition: background-color 150ms ease;
+  }
+
+  .widget-accent-nav-btn:hover {
+    background-color: color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 25%, transparent);
+  }
+
+  .widget-accent-dialog-label {
+    color: var(--widget-accent-fg, #f7f4ee);
+  }
 </style>
