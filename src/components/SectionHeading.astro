@@ -1,0 +1,27 @@
+---
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<div class="flex items-center gap-2">
+  <h3 class="text-sm font-semibold text-charcoal">{title}</h3>
+  <span class="group/info relative inline-flex shrink-0">
+    <button
+      type="button"
+      class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-sage-dark/30 text-[11px] font-semibold leading-none text-sage-dark/50 transition hover:border-sage-dark/45 hover:text-sage-dark/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25"
+      aria-label="More information"
+    >
+      i
+    </button>
+    <span
+      role="tooltip"
+      class="pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-20 w-72 max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-sage-dark/10 bg-white px-3.5 py-2.5 text-left text-sm font-normal leading-snug text-sage-dark/75 opacity-0 shadow-lg transition-opacity duration-150 group-hover/info:opacity-100 group-focus-within/info:opacity-100"
+    >
+      {description}
+    </span>
+  </span>
+</div>
