@@ -273,3 +273,32 @@ html.dark .financials-scroll-fade {
     rgb(var(--portal-surface) / 98%) 100%
   ) !important;
 }
+
+/* Schedule widget calendar — remap Google Calendar light palette in dark mode */
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .bg-\[\#eef4ff\] {
+  background-color: rgb(42 90 160 / 0.28) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .bg-\[\#f7faff\] {
+  background-color: rgb(42 90 160 / 0.14) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .bg-\[\#f7f8fa\] {
+  background-color: rgb(var(--portal-muted) / 0.55) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .bg-\[\#eceef2\] {
+  background-color: rgb(var(--portal-soft) / 0.85) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .border-\[\#eceef2\] {
+  border-color: rgb(255 255 255 / 0.08) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .ring-\[\#eceef2\] {
+  --tw-ring-color: rgb(255 255 255 / 0.08) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .border-\[\#f0f1f4\] {
+  border-color: rgb(255 255 255 / 0.06) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .border-\[\#d5d8de\] {
+  border-color: rgb(255 255 255 / 0.12) !important;
+}
+html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
+  color: rgb(var(--portal-sage-dark) / 0.58) !important;
+}
