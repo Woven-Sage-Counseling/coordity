@@ -23,6 +23,11 @@ const initialFlash =
   error != null && error !== ''
     ? { kind: 'error' as const, text: error }
     : null;
+
+const taskEditPillClass =
+  'rounded-full bg-[#f4f5f8] px-2.5 py-1 text-[10px] font-semibold text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
+const taskDeletePillClass =
+  'rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
 ---
 
 <aside
@@ -132,6 +137,27 @@ const initialFlash =
                           </p>
                         ) : null
                       }
+                      <div class="mt-1.5 flex flex-wrap items-center gap-1.5" data-task-actions>
+                        <button
+                          type="button"
+                          class={taskEditPillClass}
+                          data-task-edit-open
+                          aria-label={`Edit "${task.title}"`}
+                        >
+                          Edit
+                        </button>
+                        <form method="post" action="/api/tasks/delete" class="inline" data-tasks-action="delete">
+                          <input type="hidden" name="taskId" value={task.id} />
+                          <input type="hidden" name="returnTo" value="/" />
+                          <button
+                            type="submit"
+                            class={taskDeletePillClass}
+                            aria-label={`Delete "${task.title}"`}
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      </div>
                     </div>
                     <form
                       method="post"
@@ -150,43 +176,22 @@ const initialFlash =
                         class="w-full rounded-md border border-sage-dark/15 bg-white px-2 py-1.5 text-[12px] text-charcoal outline-none focus:border-sage-dark/30"
                         data-task-edit-input
                       />
-                      <div class="flex gap-2">
+                      <div class="flex flex-wrap gap-1.5">
                         <button
                           type="submit"
-                          class="rounded-md bg-sage-dark/10 px-2 py-1 text-[10px] font-semibold text-charcoal transition hover:bg-sage-dark/15"
+                          class="rounded-full bg-sage-dark/10 px-2.5 py-1 text-[10px] font-semibold text-charcoal transition hover:bg-sage-dark/15"
                         >
                           Save
                         </button>
                         <button
                           type="button"
-                          class="rounded-md px-2 py-1 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8]"
+                          class="rounded-full bg-[#f4f5f8] px-2.5 py-1 text-[10px] font-semibold text-[#6b6c72] ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10"
                           data-task-edit-cancel
                         >
                           Cancel
                         </button>
                       </div>
                     </form>
-                  </div>
-                  <div class="flex shrink-0 items-start gap-0.5">
-                    <button
-                      type="button"
-                      class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-charcoal disabled:opacity-60"
-                      data-task-edit-open
-                      aria-label={`Edit "${task.title}"`}
-                    >
-                      Edit
-                    </button>
-                    <form method="post" action="/api/tasks/delete" class="shrink-0" data-tasks-action="delete">
-                    <input type="hidden" name="taskId" value={task.id} />
-                    <input type="hidden" name="returnTo" value="/" />
-                    <button
-                      type="submit"
-                      class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-red-700 disabled:opacity-60"
-                      aria-label={`Delete "${task.title}"`}
-                    >
-                      Delete
-                    </button>
-                  </form>
                   </div>
                 </div>
               </li>
@@ -255,6 +260,10 @@ const initialFlash =
     const titleClass = task.completed
       ? 'text-[12px] leading-snug text-[#6b6c72] line-through'
       : 'text-[12px] leading-snug text-charcoal';
+    const editPillClass =
+      'rounded-full bg-[#f4f5f8] px-2.5 py-1 text-[10px] font-semibold text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
+    const deletePillClass =
+      'rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
 
     return `<li
       class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
@@ -277,6 +286,23 @@ const initialFlash =
           <div data-task-display>
             <p class="${titleClass}" data-task-title>${escapeHtml(task.title)}</p>
             ${assignedMeta}
+            <div class="mt-1.5 flex flex-wrap items-center gap-1.5" data-task-actions>
+              <button
+                type="button"
+                class="${editPillClass}"
+                data-task-edit-open
+                aria-label="Edit task"
+              >
+                Edit
+              </button>
+              <form method="post" action="/api/tasks/delete" class="inline" data-tasks-action="delete">
+                <input type="hidden" name="taskId" value="${escapeHtml(task.id)}" />
+                <input type="hidden" name="returnTo" value="/" />
+                <button type="submit" class="${deletePillClass}" aria-label="Delete task">
+                  Delete
+                </button>
+              </form>
+            </div>
           </div>
           <form method="post" action="/api/tasks/update" class="mt-1 hidden flex-col gap-1.5" data-tasks-action="edit">
             <input type="hidden" name="taskId" value="${escapeHtml(task.id)}" />
@@ -290,42 +316,21 @@ const initialFlash =
               class="w-full rounded-md border border-sage-dark/15 bg-white px-2 py-1.5 text-[12px] text-charcoal outline-none focus:border-sage-dark/30"
               data-task-edit-input
             />
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-1.5">
               <button
                 type="submit"
-                class="rounded-md bg-sage-dark/10 px-2 py-1 text-[10px] font-semibold text-charcoal transition hover:bg-sage-dark/15"
+                class="rounded-full bg-sage-dark/10 px-2.5 py-1 text-[10px] font-semibold text-charcoal transition hover:bg-sage-dark/15"
               >
                 Save
               </button>
               <button
                 type="button"
-                class="rounded-md px-2 py-1 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8]"
+                class="rounded-full bg-[#f4f5f8] px-2.5 py-1 text-[10px] font-semibold text-[#6b6c72] ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10"
                 data-task-edit-cancel
               >
                 Cancel
               </button>
             </div>
-          </form>
-        </div>
-        <div class="flex shrink-0 items-start gap-0.5">
-          <button
-            type="button"
-            class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-charcoal disabled:opacity-60"
-            data-task-edit-open
-            aria-label="Edit task"
-          >
-            Edit
-          </button>
-          <form method="post" action="/api/tasks/delete" class="shrink-0" data-tasks-action="delete">
-            <input type="hidden" name="taskId" value="${escapeHtml(task.id)}" />
-            <input type="hidden" name="returnTo" value="/" />
-            <button
-              type="submit"
-              class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-red-700 disabled:opacity-60"
-              aria-label="Delete task"
-            >
-              Delete
-            </button>
           </form>
         </div>
       </div>
