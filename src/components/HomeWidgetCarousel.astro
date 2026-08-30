@@ -61,7 +61,7 @@ const arrowClass =
           class="widget-carousel-viewport overflow-hidden px-0 pt-2"
           data-carousel-viewport
         >
-          <div class="widget-carousel-track flex items-stretch" data-carousel-track>
+          <div class="widget-carousel-track flex items-start" data-carousel-track>
             {availableIds.includes('quickbooks') && (
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="quickbooks">
                 <FinancialSnapshotCard />
@@ -175,10 +175,15 @@ const arrowClass =
     will-change: transform;
   }
 
+  [data-widget-carousel] {
+    --widget-max-height: 28rem;
+  }
+
   .widget-carousel-slide {
     box-sizing: border-box;
     flex: 0 0 auto;
-    min-height: 28rem;
+    height: var(--widget-max-height);
+    max-height: var(--widget-max-height);
     width: 70%;
     transform: scale(0.92);
     opacity: 0.72;
@@ -198,6 +203,12 @@ const arrowClass =
     width: 100%;
     transform: scale(1);
     opacity: 1;
+  }
+
+  .widget-carousel-slide > :where([data-widget-card]) {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
   }
 
   .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) {
