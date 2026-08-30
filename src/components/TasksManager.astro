@@ -1,0 +1,158 @@
+---
+import { formatTaskDate, type UserTask } from '../lib/tasks';
+
+interface Props {
+  tasks: UserTask[];
+  employees: Array<{ id: string; name: string; email: string; status: string }>;
+  error?: string | null;
+  saved?: boolean;
+  embedded?: boolean;
+}
+
+const { tasks, employees, error = null, saved = false, embedded = false } = Astro.props;
+
+const activeEmployees = employees.filter((employee) => employee.status === 'active');
+const openAssigned = tasks.filter((task) => task.completedAt == null).length;
+---
+
+<section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} aria-labelledby="tasks-admin" id="tasks">
+  {
+    !embedded ? (
+      <div>
+        <h2 id="tasks-admin" class="font-display text-3xl text-charcoal">Tasks</h2>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          Assign tasks to team members. They appear in each person&apos;s Tasks widget on Home.
+        </p>
+      </div>
+    ) : (
+      <h2 id="tasks-admin" class="sr-only">Tasks</h2>
+    )
+  }
+
+  {
+    error ? (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    ) : null
+  }
+  {
+    saved ? (
+      <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">
+        Task assigned.
+      </p>
+    ) : null
+  }
+
+  <form method="post" action="/api/tasks/create" class="mt-6 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+    <input type="hidden" name="returnTo" value="/admin#tasks" />
+    <h3 class="text-sm font-semibold text-charcoal">Assign a task</h3>
+    <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] sm:items-end">
+      <label class="block text-sm">
+        <span class="font-medium text-charcoal">Assign to</span>
+        <select
+          name="assigneeId"
+          required
+          class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal"
+        >
+          {
+            activeEmployees.map((employee) => (
+              <option value={employee.id}>
+                {employee.name} ({employee.email})
+              </option>
+            ))
+          }
+        </select>
+      </label>
+      <label class="block text-sm">
+        <span class="font-medium text-charcoal">Task</span>
+        <input
+          name="title"
+          type="text"
+          maxlength="500"
+          required
+          placeholder="What needs to be done?"
+          class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-sage-dark/45"
+        />
+      </label>
+      <button class="btn-primary !px-4 !py-2" type="submit">Assign</button>
+    </div>
+  </form>
+
+  <div class="mt-8">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h3 class="text-sm font-semibold text-charcoal">Assigned tasks</h3>
+      {
+        openAssigned > 0 ? (
+          <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-900">
+            {openAssigned} open
+          </span>
+        ) : null
+      }
+    </div>
+
+    {
+      tasks.length === 0 ? (
+        <p class="mt-4 text-sm text-sage-dark/65">No assigned tasks yet.</p>
+      ) : (
+        <div class="mt-4 space-y-3">
+          {
+            tasks.map((task) => (
+              <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-charcoal">{task.assigneeName}</p>
+                    <p
+                      class:list={[
+                        'mt-1 text-sm text-charcoal',
+                        task.completedAt != null && 'text-sage-dark/60 line-through',
+                      ]}
+                    >
+                      {task.title}
+                    </p>
+                    <p class="mt-1 text-xs text-sage-dark/55">
+                      Assigned {formatTaskDate(task.createdAt)} by {task.createdByName}
+                    </p>
+                  </div>
+                  <span
+                    class:list={[
+                      'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                      task.completedAt == null
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-emerald-100 text-emerald-900',
+                    ]}
+                  >
+                    {task.completedAt == null ? 'Open' : 'Done'}
+                  </span>
+                </div>
+                <form method="post" action="/api/tasks/delete" class="mt-3">
+                  <input type="hidden" name="taskId" value={task.id} />
+                  <input type="hidden" name="returnTo" value="/admin#tasks" />
+                  <button
+                    class="rounded-md bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100"
+                    type="submit"
+                    data-confirm="Remove this assigned task?"
+                  >
+                    Remove
+                  </button>
+                </form>
+              </article>
+            ))
+          }
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll('[data-confirm]').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const form = button.form;
+    if (!(form instanceof HTMLFormElement)) return;
+    form.addEventListener('submit', (event) => {
+      const message = button.getAttribute('data-confirm');
+      if (message && !window.confirm(message)) {
+        event.preventDefault();
+      }
+    });
+  });
+</script>

@@ -1,0 +1,410 @@
+---
+import { listTasksForUser, serializeTask } from '../lib/tasks';
+
+interface Props {
+  userId: string;
+}
+
+const { userId } = Astro.props;
+
+const tasks = await listTasksForUser(userId, 50);
+const notice = Astro.url.searchParams.get('tasks');
+const error = Astro.url.searchParams.get('tasksError');
+
+const initialFlash =
+  error != null && error !== ''
+    ? { kind: 'error' as const, text: error }
+    : notice === 'created'
+      ? { kind: 'ok' as const, text: 'Task added.' }
+      : null;
+---
+
+<aside
+  class="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
+  aria-labelledby="home-tasks-heading"
+  data-tasks-widget
+>
+  <div class="bg-sage-dark px-3 py-2.5 text-cream">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span
+          class="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-cream ring-1 ring-white/20"
+          aria-hidden="true"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <h2 id="home-tasks-heading" class="text-sm font-semibold leading-none">Tasks</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]">
+    <div data-tasks-flash hidden={!initialFlash}>
+      {
+        initialFlash ? (
+          <p
+            class:list={[
+              'rounded-lg border px-2.5 py-2 text-[11px]',
+              initialFlash.kind === 'error'
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-sage-dark/15 bg-white text-sage-dark/80',
+            ]}
+          >
+            {initialFlash.text}
+          </p>
+        ) : null
+      }
+    </div>
+
+    <form
+      method="post"
+      action="/api/tasks/create"
+      class="mt-2 flex gap-2"
+      data-tasks-add-form
+    >
+      <input type="hidden" name="returnTo" value="/" />
+      <label class="sr-only" for="home-task-title">New task</label>
+      <input
+        id="home-task-title"
+        name="title"
+        type="text"
+        maxlength="500"
+        required
+        placeholder="Add a task…"
+        class="min-w-0 flex-1 rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[12px] text-charcoal shadow-sm outline-none ring-0 placeholder:text-[#6b6c72] focus:border-sage-dark/30"
+        autocomplete="off"
+      />
+      <button
+        type="submit"
+        class="shrink-0 rounded-lg bg-sage-dark px-3 py-2 text-[11px] font-semibold text-cream transition hover:bg-sage-dark/90 disabled:opacity-60"
+      >
+        Add
+      </button>
+    </form>
+
+    <div class="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Your tasks</p>
+      <p class="mt-2 text-[12px] text-[#6b6c72]" data-tasks-empty hidden={tasks.length > 0}>
+        No tasks yet.
+      </p>
+      <ul class="mt-2 space-y-2" data-tasks-list hidden={tasks.length === 0}>
+        {
+          tasks.map((task) => {
+            const serialized = serializeTask(task);
+            const completed = serialized.completed;
+            return (
+              <li
+                class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
+                data-tasks-item
+                data-task-id={task.id}
+                data-completed={completed ? '1' : '0'}
+              >
+                <div class="flex items-start gap-2">
+                  <form method="post" action="/api/tasks/toggle" class="mt-0.5 shrink-0" data-tasks-action="toggle">
+                    <input type="hidden" name="taskId" value={task.id} />
+                    <input type="hidden" name="completed" value={completed ? '0' : '1'} />
+                    <input
+                      type="checkbox"
+                      class="h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+                      checked={completed}
+                      aria-label={completed ? `Mark "${task.title}" incomplete` : `Mark "${task.title}" complete`}
+                    />
+                  </form>
+                  <div class="min-w-0 flex-1">
+                    <p
+                      class:list={[
+                        'text-[12px] leading-snug text-charcoal',
+                        completed && 'text-[#6b6c72] line-through',
+                      ]}
+                      data-task-title
+                    >
+                      {task.title}
+                    </p>
+                    {
+                      serialized.assigned ? (
+                        <p class="mt-0.5 text-[10px] text-sage-dark/70">
+                          Assigned by {serialized.createdByName}
+                        </p>
+                      ) : null
+                    }
+                  </div>
+                  <form method="post" action="/api/tasks/delete" class="shrink-0" data-tasks-action="delete">
+                    <input type="hidden" name="taskId" value={task.id} />
+                    <input type="hidden" name="returnTo" value="/" />
+                    <button
+                      type="submit"
+                      class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-red-700 disabled:opacity-60"
+                      aria-label={`Delete "${task.title}"`}
+                    >
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </div>
+</aside>
+
+<script>
+  type WidgetTask = {
+    id: string;
+    title: string;
+    completed: boolean;
+    assigned: boolean;
+    createdByName: string;
+    createdAtLabel: string;
+  };
+
+  type ApiResult =
+    | { ok: true; task?: WidgetTask; taskId?: string; error?: undefined }
+    | { ok: false; error?: string };
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function setFlash(root: HTMLElement, kind: 'ok' | 'error', text: string): void {
+    const flash = root.querySelector('[data-tasks-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    const classes =
+      kind === 'error'
+        ? 'rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[11px] text-red-800'
+        : 'rounded-lg border border-sage-dark/15 bg-white px-2.5 py-2 text-[11px] text-sage-dark/80';
+    flash.innerHTML = `<p class="${classes}">${escapeHtml(text)}</p>`;
+    flash.hidden = false;
+  }
+
+  function clearFlash(root: HTMLElement): void {
+    const flash = root.querySelector('[data-tasks-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    flash.innerHTML = '';
+    flash.hidden = true;
+  }
+
+  function syncListVisibility(root: HTMLElement): void {
+    const list = root.querySelector('[data-tasks-list]');
+    const empty = root.querySelector('[data-tasks-empty]');
+    if (!(list instanceof HTMLElement) || !(empty instanceof HTMLElement)) return;
+    const hasItems = list.querySelector('[data-tasks-item]') != null;
+    list.hidden = !hasItems;
+    empty.hidden = hasItems;
+  }
+
+  function renderTaskItem(task: WidgetTask): string {
+    const assignedMeta = task.assigned
+      ? `<p class="mt-0.5 text-[10px] text-sage-dark/70">Assigned by ${escapeHtml(task.createdByName)}</p>`
+      : '';
+    const titleClass = task.completed
+      ? 'text-[12px] leading-snug text-[#6b6c72] line-through'
+      : 'text-[12px] leading-snug text-charcoal';
+
+    return `<li
+      class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
+      data-tasks-item
+      data-task-id="${escapeHtml(task.id)}"
+      data-completed="${task.completed ? '1' : '0'}"
+    >
+      <div class="flex items-start gap-2">
+        <form method="post" action="/api/tasks/toggle" class="mt-0.5 shrink-0" data-tasks-action="toggle">
+          <input type="hidden" name="taskId" value="${escapeHtml(task.id)}" />
+          <input type="hidden" name="completed" value="${task.completed ? '0' : '1'}" />
+          <input
+            type="checkbox"
+            class="h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+            ${task.completed ? 'checked' : ''}
+            aria-label="${task.completed ? 'Mark incomplete' : 'Mark complete'}"
+          />
+        </form>
+        <div class="min-w-0 flex-1">
+          <p class="${titleClass}" data-task-title>${escapeHtml(task.title)}</p>
+          ${assignedMeta}
+        </div>
+        <form method="post" action="/api/tasks/delete" class="shrink-0" data-tasks-action="delete">
+          <input type="hidden" name="taskId" value="${escapeHtml(task.id)}" />
+          <input type="hidden" name="returnTo" value="/" />
+          <button
+            type="submit"
+            class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-[#6b6c72] transition hover:bg-[#f4f5f8] hover:text-red-700 disabled:opacity-60"
+            aria-label="Delete task"
+          >
+            Delete
+          </button>
+        </form>
+      </div>
+    </li>`;
+  }
+
+  function prependTask(root: HTMLElement, task: WidgetTask): void {
+    const list = root.querySelector('[data-tasks-list]');
+    if (!(list instanceof HTMLElement)) return;
+    list.insertAdjacentHTML('afterbegin', renderTaskItem(task));
+    syncListVisibility(root);
+  }
+
+  function updateTaskItem(root: HTMLElement, item: HTMLElement, task: WidgetTask): void {
+    item.dataset.completed = task.completed ? '1' : '0';
+    const title = item.querySelector('[data-task-title]');
+    if (title instanceof HTMLElement) {
+      title.textContent = task.title;
+      title.classList.toggle('line-through', task.completed);
+      title.classList.toggle('text-[#6b6c72]', task.completed);
+      title.classList.toggle('text-charcoal', !task.completed);
+    }
+    const toggleForm = item.querySelector('[data-tasks-action="toggle"]');
+    if (toggleForm instanceof HTMLFormElement) {
+      const completedInput = toggleForm.querySelector('input[name="completed"]');
+      const checkbox = toggleForm.querySelector('input[type="checkbox"]');
+      if (completedInput instanceof HTMLInputElement) {
+        completedInput.value = task.completed ? '0' : '1';
+      }
+      if (checkbox instanceof HTMLInputElement) {
+        checkbox.checked = task.completed;
+      }
+    }
+    reorderTasks(root);
+  }
+
+  function removeTask(root: HTMLElement, taskId: string): void {
+    const item = root.querySelector(`[data-tasks-item][data-task-id="${CSS.escape(taskId)}"]`);
+    item?.remove();
+    syncListVisibility(root);
+  }
+
+  function reorderTasks(root: HTMLElement): void {
+    const list = root.querySelector('[data-tasks-list]');
+    if (!(list instanceof HTMLElement)) return;
+    const items = Array.from(list.querySelectorAll('[data-tasks-item]')).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    items.sort((a, b) => {
+      const aDone = a.dataset.completed === '1';
+      const bDone = b.dataset.completed === '1';
+      if (aDone !== bDone) return aDone ? 1 : -1;
+      return 0;
+    });
+    items.forEach((item) => list.appendChild(item));
+  }
+
+  async function postForm(form: HTMLFormElement): Promise<ApiResult> {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+
+    let payload: ApiResult;
+    try {
+      payload = (await response.json()) as ApiResult;
+    } catch {
+      return { ok: false, error: 'Something went wrong. Please try again.' };
+    }
+
+    if (!response.ok || !payload.ok) {
+      return { ok: false, error: payload.error || 'Something went wrong. Please try again.' };
+    }
+
+    return payload;
+  }
+
+  function setBusy(form: HTMLFormElement, busy: boolean): void {
+    form.querySelectorAll('button[type="submit"]').forEach((button) => {
+      if (button instanceof HTMLButtonElement) button.disabled = busy;
+    });
+  }
+
+  document.querySelectorAll('[data-tasks-widget]').forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+
+    const addForm = root.querySelector('[data-tasks-add-form]');
+    if (addForm instanceof HTMLFormElement) {
+      addForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void (async () => {
+          clearFlash(root);
+          setBusy(addForm, true);
+          try {
+            const result = await postForm(addForm);
+            if (!result.ok || !result.task) {
+              setFlash(root, 'error', result.error || 'Unable to add that task.');
+              return;
+            }
+            prependTask(root, result.task);
+            addForm.reset();
+            setFlash(root, 'ok', 'Task added.');
+          } finally {
+            setBusy(addForm, false);
+          }
+        })();
+      });
+    }
+
+    root.addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+      const form = target.form;
+      if (!(form instanceof HTMLFormElement)) return;
+      if (form.getAttribute('data-tasks-action') !== 'toggle') return;
+
+      void (async () => {
+        clearFlash(root);
+        setBusy(form, true);
+        try {
+          const result = await postForm(form);
+          if (!result.ok || !result.task) {
+            target.checked = !target.checked;
+            setFlash(root, 'error', result.error || 'Unable to update that task.');
+            return;
+          }
+          const item = form.closest('[data-tasks-item]');
+          if (item instanceof HTMLElement) updateTaskItem(root, item, result.task);
+        } finally {
+          setBusy(form, false);
+        }
+      })();
+    });
+
+    root.addEventListener('submit', (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if (form.getAttribute('data-tasks-action') !== 'delete') return;
+
+      event.preventDefault();
+      if (!window.confirm('Delete this task?')) return;
+
+      void (async () => {
+        clearFlash(root);
+        setBusy(form, true);
+        try {
+          const result = await postForm(form);
+          if (!result.ok) {
+            setFlash(root, 'error', result.error || 'Unable to delete that task.');
+            return;
+          }
+          const taskId =
+            result.taskId || String(new FormData(form).get('taskId') ?? '').trim();
+          if (taskId) removeTask(root, taskId);
+        } finally {
+          setBusy(form, false);
+        }
+      })();
+    });
+  });
+</script>

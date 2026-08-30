@@ -4,6 +4,7 @@ import ScheduleCard from './ScheduleCard.astro';
 import TimeOffCard from './TimeOffCard.astro';
 import MyProgressCard from './MyProgressCard.astro';
 import CredentialingCard from './CredentialingCard.astro';
+import TasksCard from './TasksCard.astro';
 import { availableWidgets } from '../lib/home-widgets';
 
 interface Props {
@@ -75,6 +76,11 @@ const arrowClass =
             {availableIds.includes('my_progress') && (
               <div class="widget-carousel-slide" data-carousel-slide data-widget-id="my_progress">
                 <MyProgressCard userId={userId} />
+              </div>
+            )}
+            {availableIds.includes('tasks') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="tasks">
+                <TasksCard userId={userId} />
               </div>
             )}
             {availableIds.includes('credentialing') && (
@@ -196,7 +202,7 @@ const arrowClass =
   type Prefs = { enabled: string[]; defaultId: string };
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean): Prefs {
-    const enabled = ['schedule', 'time_off', 'my_progress'];
+    const enabled = ['schedule', 'time_off', 'my_progress', 'tasks'];
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
     return { enabled, defaultId: 'schedule' };
@@ -233,9 +239,14 @@ const arrowClass =
         enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
         mutated = true;
       }
-      if (allowed.has('credentialing') && !enabled.includes('credentialing') && enabled.length < 10) {
+      if (allowed.has('tasks') && !enabled.includes('tasks') && enabled.length < 10) {
         const progressIdx = enabled.indexOf('my_progress');
-        enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'credentialing');
+        enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'tasks');
+        mutated = true;
+      }
+      if (allowed.has('credentialing') && !enabled.includes('credentialing') && enabled.length < 10) {
+        const tasksIdx = enabled.indexOf('tasks');
+        enabled.splice(tasksIdx >= 0 ? tasksIdx + 1 : enabled.length, 0, 'credentialing');
         mutated = true;
       }
       const finalEnabled = enabled.length ? enabled : fallback.enabled.filter((id) => allowed.has(id));

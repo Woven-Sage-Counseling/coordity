@@ -1,6 +1,12 @@
 export const HOME_WIDGET_MAX = 10;
 
-export type HomeWidgetId = 'quickbooks' | 'schedule' | 'time_off' | 'my_progress' | 'credentialing';
+export type HomeWidgetId =
+  | 'quickbooks'
+  | 'schedule'
+  | 'time_off'
+  | 'my_progress'
+  | 'tasks'
+  | 'credentialing';
 
 export interface HomeWidgetDef {
   id: HomeWidgetId;
@@ -32,6 +38,11 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     id: 'my_progress',
     label: 'My progress',
     description: 'Onboarding, training, and compliance progress.',
+  },
+  {
+    id: 'tasks',
+    label: 'Tasks',
+    description: 'Personal to-dos and tasks assigned by admins.',
   },
   {
     id: 'credentialing',
@@ -76,6 +87,7 @@ export function defaultPrefs(access: HomeWidgetAccess): HomeWidgetPrefs {
     'schedule',
     'time_off',
     'my_progress',
+    'tasks',
     'credentialing',
     'quickbooks',
   ];
@@ -112,13 +124,17 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
     const timeOffIdx = enabled.indexOf('time_off');
     enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
   }
+  if (allowed.has('tasks') && !enabled.includes('tasks') && enabled.length < HOME_WIDGET_MAX) {
+    const progressIdx = enabled.indexOf('my_progress');
+    enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'tasks');
+  }
   if (
     allowed.has('credentialing') &&
     !enabled.includes('credentialing') &&
     enabled.length < HOME_WIDGET_MAX
   ) {
-    const progressIdx = enabled.indexOf('my_progress');
-    enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'credentialing');
+    const tasksIdx = enabled.indexOf('tasks');
+    enabled.splice(tasksIdx >= 0 ? tasksIdx + 1 : enabled.length, 0, 'credentialing');
   }
 
   const finalEnabled = enabled.length > 0 ? enabled : fallback.enabled;

@@ -368,7 +368,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   type CatalogItem = { id: string; label: string; description: string };
 
   function defaultPrefs(canFinancials: boolean, canCredentialing: boolean): Prefs {
-    const enabled = ['schedule', 'time_off', 'my_progress'];
+    const enabled = ['schedule', 'time_off', 'my_progress', 'tasks'];
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
     return { enabled, defaultId: 'schedule' };
@@ -505,13 +505,21 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             prefs.enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : prefs.enabled.length, 0, 'my_progress');
           }
           if (
+            catalog.some((w) => w.id === 'tasks') &&
+            !prefs.enabled.includes('tasks') &&
+            prefs.enabled.length < max
+          ) {
+            const progressIdx = prefs.enabled.indexOf('my_progress');
+            prefs.enabled.splice(progressIdx >= 0 ? progressIdx + 1 : prefs.enabled.length, 0, 'tasks');
+          }
+          if (
             catalog.some((w) => w.id === 'credentialing') &&
             !prefs.enabled.includes('credentialing') &&
             prefs.enabled.length < max
           ) {
-            const progressIdx = prefs.enabled.indexOf('my_progress');
+            const tasksIdx = prefs.enabled.indexOf('tasks');
             prefs.enabled.splice(
-              progressIdx >= 0 ? progressIdx + 1 : prefs.enabled.length,
+              tasksIdx >= 0 ? tasksIdx + 1 : prefs.enabled.length,
               0,
               'credentialing',
             );
