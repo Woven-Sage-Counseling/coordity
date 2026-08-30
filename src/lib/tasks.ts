@@ -182,6 +182,35 @@ export async function setTaskCompleted(
   return mapTask(row);
 }
 
+export async function updateTaskTitle(
+  taskId: string,
+  userId: string,
+  title: string,
+): Promise<UserTask> {
+  const trimmed = title.trim();
+  if (!trimmed) throw new Error('Enter a task description.');
+  if (trimmed.length > TASK_TITLE_MAX) {
+    throw new Error(`Tasks must be ${TASK_TITLE_MAX} characters or fewer.`);
+  }
+
+  const { DB } = getEnv();
+  const existing = await DB.prepare(`SELECT assignee_id FROM user_task WHERE id = ?`)
+    .bind(taskId)
+    .first<{ assignee_id: string }>();
+
+  if (!existing) throw new Error('Task not found.');
+  if (existing.assignee_id !== userId) {
+    throw new Error('You can only update your own tasks.');
+  }
+
+  await DB.prepare(`UPDATE user_task SET title = ? WHERE id = ?`).bind(trimmed, taskId).run();
+
+  const rows = await DB.prepare(`${TASK_SELECT} WHERE t.id = ?`).bind(taskId).all<TaskRow>();
+  const row = rows.results?.[0];
+  if (!row) throw new Error('Task not found.');
+  return mapTask(row);
+}
+
 export async function deleteTask(
   taskId: string,
   actorId: string,
