@@ -24,10 +24,10 @@ const initialFlash =
     ? { kind: 'error' as const, text: error }
     : null;
 
-const taskEditPillClass =
-  'rounded-full bg-[#f4f5f8] px-2 py-0.5 text-[9px] font-semibold leading-none text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
-const taskDeletePillClass =
-  'rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold leading-none text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
+const taskActionPillBase =
+  'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold leading-none ring-1 transition disabled:opacity-60';
+const taskEditPillClass = `${taskActionPillBase} bg-stone-100 text-stone-700 ring-stone-200 hover:bg-stone-200`;
+const taskDeletePillClass = `${taskActionPillBase} bg-red-50 text-red-800 ring-red-200 hover:bg-red-100`;
 ---
 
 <aside
@@ -146,7 +146,7 @@ const taskDeletePillClass =
                         >
                           Edit
                         </button>
-                        <form method="post" action="/api/tasks/delete" class="inline" data-tasks-action="delete">
+                        <form method="post" action="/api/tasks/delete" class="inline-flex" data-tasks-action="delete">
                           <input type="hidden" name="taskId" value={task.id} />
                           <input type="hidden" name="returnTo" value="/" />
                           <button
@@ -260,10 +260,10 @@ const taskDeletePillClass =
     const titleClass = task.completed
       ? 'text-[12px] leading-snug text-[#6b6c72] line-through'
       : 'text-[12px] leading-snug text-charcoal';
-    const editPillClass =
-      'rounded-full bg-[#f4f5f8] px-2 py-0.5 text-[9px] font-semibold leading-none text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
-    const deletePillClass =
-      'rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold leading-none text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
+    const actionPillBase =
+      'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold leading-none ring-1 transition disabled:opacity-60';
+    const editPillClass = `${actionPillBase} bg-stone-100 text-stone-700 ring-stone-200 hover:bg-stone-200`;
+    const deletePillClass = `${actionPillBase} bg-red-50 text-red-800 ring-red-200 hover:bg-red-100`;
 
     return `<li
       class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
@@ -295,7 +295,7 @@ const taskDeletePillClass =
               >
                 Edit
               </button>
-              <form method="post" action="/api/tasks/delete" class="inline" data-tasks-action="delete">
+              <form method="post" action="/api/tasks/delete" class="inline-flex" data-tasks-action="delete">
                 <input type="hidden" name="taskId" value="${escapeHtml(task.id)}" />
                 <input type="hidden" name="returnTo" value="/" />
                 <button type="submit" class="${deletePillClass}" aria-label="Delete task">
