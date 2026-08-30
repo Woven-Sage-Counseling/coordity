@@ -270,10 +270,12 @@ const conflictLabel = conflictCountLabel(conflictCount);
               <div class="border-r border-[#eceef2]"></div>
               {
                 weekDays.map((day) => (
-                  <div class={`border-r border-[#eceef2] px-0.5 py-1.5 text-center last:border-r-0 ${day === today ? 'bg-[#eef4ff]' : ''}`}>
-                    <p class="text-[9px] font-semibold uppercase tracking-wide text-[#6b6c72]">{formatWeekdayShort(day).slice(0, 3)}</p>
-                    <p class:list={['mx-auto mt-0.5 flex h-5 w-5 items-center justify-center text-[11px] font-semibold', day === today ? 'rounded-full bg-[#1a73e8] text-white' : 'text-[#393a3d]']}>
-                      {formatDayNumber(day)}
+                  <div class={`border-r border-[#eceef2] px-0.5 py-1 text-center last:border-r-0 ${day === today ? 'bg-[#eef4ff]' : ''}`}>
+                    <p class="flex items-center justify-center gap-0.5 whitespace-nowrap leading-none">
+                      <span class="text-[7px] font-semibold uppercase tracking-wide text-[#6b6c72]">{formatWeekdayShort(day).slice(0, 3)}</span>
+                      <span class:list={['inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[8px] font-semibold', day === today ? 'rounded-full bg-[#1a73e8] text-white' : 'text-[#393a3d]']}>
+                        {formatDayNumber(day)}
+                      </span>
                     </p>
                   </div>
                 ))
@@ -281,7 +283,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
             </div>
             {
               hasAllDay ? (
-                <div class="sticky top-[2.6rem] z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
+                <div class="sticky top-[1.4rem] z-10 grid grid-cols-[1.6rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
                   <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
                   {
                     weekDays.map((day) => (
@@ -950,6 +952,11 @@ const conflictLabel = conflictCountLabel(conflictCount);
     const hasAllDay = events.some((event) => event.allDay);
     const hours = Array.from({ length: 24 }, (_, index) => index);
 
+    const weekdayLabelClass = size === 'expanded' ? 'text-[8px]' : 'text-[7px]';
+    const dayNumberClass = size === 'expanded' ? 'text-[9px]' : 'text-[8px]';
+    const dayNumberSize = size === 'expanded' ? 'h-4 w-4' : 'h-3.5 w-3.5';
+    const allDayStickyTop = size === 'expanded' ? 'top-[1.6rem]' : 'top-[1.4rem]';
+
     const header = `
       <div class="sticky top-0 z-10 grid grid-cols-[2rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
         <div class="border-r border-[#eceef2]"></div>
@@ -957,9 +964,11 @@ const conflictLabel = conflictCountLabel(conflictCount);
           .map((day) => {
             const isToday = day === today;
             return `
-              <div class="border-r border-[#eceef2] px-0.5 py-1.5 text-center last:border-r-0 ${isToday ? 'bg-[#eef4ff]' : ''}">
-                <p class="text-[9px] font-semibold uppercase tracking-wide text-[#6b6c72]">${weekdayShort(day)}</p>
-                <p class="mx-auto mt-0.5 flex h-5 w-5 items-center justify-center text-[11px] font-semibold ${isToday ? 'rounded-full bg-[#1a73e8] text-white' : 'text-[#393a3d]'}">${dayNumber(day)}</p>
+              <div class="border-r border-[#eceef2] px-0.5 py-1 text-center last:border-r-0 ${isToday ? 'bg-[#eef4ff]' : ''}">
+                <p class="flex items-center justify-center gap-0.5 whitespace-nowrap leading-none">
+                  <span class="${weekdayLabelClass} font-semibold uppercase tracking-wide text-[#6b6c72]">${weekdayShort(day)}</span>
+                  <span class="inline-flex ${dayNumberSize} shrink-0 items-center justify-center ${dayNumberClass} font-semibold ${isToday ? 'rounded-full bg-[#1a73e8] text-white' : 'text-[#393a3d]'}">${dayNumber(day)}</span>
+                </p>
               </div>
             `;
           })
@@ -969,7 +978,7 @@ const conflictLabel = conflictCountLabel(conflictCount);
 
     const allDayRow = hasAllDay
       ? `
-      <div class="sticky top-[2.6rem] z-10 grid grid-cols-[2rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
+      <div class="sticky ${allDayStickyTop} z-10 grid grid-cols-[2rem_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-white">
         <div class="border-r border-[#eceef2] px-0.5 py-1 text-[8px] text-[#8b8d93]">All</div>
         ${days
           .map((day) => {
