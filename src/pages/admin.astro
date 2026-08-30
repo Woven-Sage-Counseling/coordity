@@ -32,7 +32,16 @@ const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
 const coverageMap = await listCoverageMatrix();
 const employees = await listEmployees();
-const assignedTasks = await listAssignedTasksForAdmin();
+let assignedTasks: Awaited<ReturnType<typeof listAssignedTasksForAdmin>> = [];
+let tasksLoadError: string | null = Astro.url.searchParams.get('tasksError');
+try {
+  assignedTasks = await listAssignedTasksForAdmin();
+} catch (error) {
+  console.error('admin tasks load failed', error);
+  if (!tasksLoadError) {
+    tasksLoadError = 'Tasks are temporarily unavailable. Database migration may still be pending.';
+  }
+}
 
 const error = Astro.url.searchParams.get('error');
 const announcementSaved = Astro.url.searchParams.get('announcementSaved');
@@ -42,7 +51,7 @@ const peopleSaved = Astro.url.searchParams.get('peopleSaved');
 const peopleUser = Astro.url.searchParams.get('peopleUser');
 const timeOffError = Astro.url.searchParams.get('timeOffError');
 const credentialingError = Astro.url.searchParams.get('credentialingError');
-const tasksError = Astro.url.searchParams.get('tasksError');
+const tasksError = tasksLoadError;
 const tasksSaved = Astro.url.searchParams.get('tasksSaved');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 const openAssignedTasks = assignedTasks.filter((task) => task.completedAt == null).length;

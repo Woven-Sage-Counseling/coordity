@@ -1,5 +1,5 @@
 ---
-import { listTasksForUser, serializeTask } from '../lib/tasks';
+import { listTasksForUser, serializeTask, type UserTask } from '../lib/tasks';
 
 interface Props {
   userId: string;
@@ -7,7 +7,14 @@ interface Props {
 
 const { userId } = Astro.props;
 
-const tasks = await listTasksForUser(userId, 50);
+let tasks: UserTask[] = [];
+let tasksLoadError: string | null = null;
+try {
+  tasks = await listTasksForUser(userId, 50);
+} catch (error) {
+  console.error('tasks widget load failed', error);
+  tasksLoadError = 'Tasks are temporarily unavailable.';
+}
 const notice = Astro.url.searchParams.get('tasks');
 const error = Astro.url.searchParams.get('tasksError');
 
@@ -92,7 +99,14 @@ const initialFlash =
 
     <div class="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Your tasks</p>
-      <p class="mt-2 text-[12px] text-[#6b6c72]" data-tasks-empty hidden={tasks.length > 0}>
+      {
+        tasksLoadError ? (
+          <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
+            {tasksLoadError}
+          </p>
+        ) : null
+      }
+      <p class="mt-2 text-[12px] text-[#6b6c72]" data-tasks-empty hidden={tasks.length > 0 || tasksLoadError != null}>
         No tasks yet.
       </p>
       <ul class="mt-2 space-y-2" data-tasks-list hidden={tasks.length === 0}>
