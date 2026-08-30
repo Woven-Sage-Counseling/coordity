@@ -17,15 +17,12 @@ try {
   console.error('tasks widget load failed', error);
   tasksLoadError = 'Tasks are temporarily unavailable.';
 }
-const notice = Astro.url.searchParams.get('tasks');
 const error = Astro.url.searchParams.get('tasksError');
 
 const initialFlash =
   error != null && error !== ''
     ? { kind: 'error' as const, text: error }
-    : notice === 'created'
-      ? { kind: 'ok' as const, text: 'Task added.' }
-      : null;
+    : null;
 ---
 
 <aside
@@ -347,7 +344,6 @@ const initialFlash =
             }
             prependTask(root, result.task);
             addForm.reset();
-            setFlash(root, 'ok', 'Task added.');
           } finally {
             setBusy(addForm, false);
           }
