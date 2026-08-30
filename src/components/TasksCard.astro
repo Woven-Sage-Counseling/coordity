@@ -25,9 +25,9 @@ const initialFlash =
     : null;
 
 const taskEditPillClass =
-  'rounded-full bg-[#f4f5f8] px-2.5 py-1 text-[10px] font-semibold text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
+  'rounded-full bg-[#f4f5f8] px-2 py-0.5 text-[9px] font-semibold leading-none text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
 const taskDeletePillClass =
-  'rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
+  'rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold leading-none text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
 ---
 
 <aside
@@ -137,7 +137,7 @@ const taskDeletePillClass =
                           </p>
                         ) : null
                       }
-                      <div class="mt-1.5 flex flex-wrap items-center gap-1.5" data-task-actions>
+                      <div class="mt-1 flex justify-end gap-1" data-task-actions>
                         <button
                           type="button"
                           class={taskEditPillClass}
@@ -261,9 +261,9 @@ const taskDeletePillClass =
       ? 'text-[12px] leading-snug text-[#6b6c72] line-through'
       : 'text-[12px] leading-snug text-charcoal';
     const editPillClass =
-      'rounded-full bg-[#f4f5f8] px-2.5 py-1 text-[10px] font-semibold text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
+      'rounded-full bg-[#f4f5f8] px-2 py-0.5 text-[9px] font-semibold leading-none text-charcoal ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10 disabled:opacity-60';
     const deletePillClass =
-      'rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
+      'rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold leading-none text-red-800 ring-1 ring-red-200 transition hover:bg-red-100 disabled:opacity-60';
 
     return `<li
       class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]"
@@ -286,7 +286,7 @@ const taskDeletePillClass =
           <div data-task-display>
             <p class="${titleClass}" data-task-title>${escapeHtml(task.title)}</p>
             ${assignedMeta}
-            <div class="mt-1.5 flex flex-wrap items-center gap-1.5" data-task-actions>
+            <div class="mt-1 flex justify-end gap-1" data-task-actions>
               <button
                 type="button"
                 class="${editPillClass}"
