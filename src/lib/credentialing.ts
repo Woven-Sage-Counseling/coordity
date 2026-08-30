@@ -257,6 +257,23 @@ export async function listCoverageMatrix(): Promise<Record<string, CoverageStatu
   return map;
 }
 
+function deriveNetworkStatusFromPlanStatuses(
+  statuses: Array<CoverageStatus | null>,
+): CoverageStatus | null {
+  const active = statuses.filter((status): status is CoverageStatus => status !== null);
+  if (active.length === 0) return null;
+
+  const unique = new Set(active);
+  if (unique.size === 1) {
+    const [status] = [...unique];
+    if (status === 'in_network' || status === 'credentialing') return status;
+  }
+
+  if (active.some((status) => status === 'in_network')) return 'in_network';
+  if (active.some((status) => status === 'credentialing')) return 'credentialing';
+  return null;
+}
+
 export async function listGroupCoverageMatrix(): Promise<Record<string, CoverageStatus>> {
   const { DB } = getEnv();
   try {
@@ -270,6 +287,27 @@ export async function listGroupCoverageMatrix(): Promise<Record<string, Coverage
       if (!status) continue;
       map[groupCoverageCellKey(row.provider_id, row.group_id)] = status;
     }
+
+    const planRows = await DB.prepare(
+      `SELECT c.provider_id, p.group_id, c.status
+       FROM provider_plan_coverage c
+       JOIN insurance_plan p ON p.id = c.plan_id`,
+    ).all<{ provider_id: string; group_id: string; status: string }>();
+
+    const plansByCell = new Map<string, Array<CoverageStatus | null>>();
+    for (const row of planRows.results ?? []) {
+      const key = groupCoverageCellKey(row.provider_id, row.group_id);
+      if (map[key]) continue;
+      const bucket = plansByCell.get(key) ?? [];
+      bucket.push(normalizeCoverageStatus(row.status));
+      plansByCell.set(key, bucket);
+    }
+
+    for (const [key, statuses] of plansByCell) {
+      const derived = deriveNetworkStatusFromPlanStatuses(statuses);
+      if (derived) map[key] = derived;
+    }
+
     return map;
   } catch (error) {
     if (isMissingProviderGroupCoverageTable(error)) {
@@ -799,6 +837,39 @@ export async function deleteInsuranceGroup(groupId: string): Promise<void> {
 
 export async function deleteInsurancePlan(planId: string): Promise<void> {
   const { DB } = getEnv();
+  const plan = await DB.prepare(`SELECT id, group_id FROM insurance_plan WHERE id = ?`)
+    .bind(planId)
+    .first<{ id: string; group_id: string }>();
+  if (!plan) throw new Error('That plan was not found.');
+
+  const coverageRows = await DB.prepare(
+    `SELECT provider_id, status, updated_by
+     FROM provider_plan_coverage
+     WHERE plan_id = ?`,
+  )
+    .bind(planId)
+    .all<{ provider_id: string; status: string; updated_by: string | null }>();
+
+  for (const row of coverageRows.results ?? []) {
+    const status = normalizeCoverageStatus(row.status);
+    if (status !== 'in_network' && status !== 'credentialing') continue;
+
+    const existing = await DB.prepare(
+      `SELECT id FROM provider_group_coverage WHERE provider_id = ? AND group_id = ?`,
+    )
+      .bind(row.provider_id, plan.group_id)
+      .first<{ id: string }>();
+
+    if (existing) continue;
+
+    await setProviderGroupCoverage({
+      providerId: row.provider_id,
+      groupId: plan.group_id,
+      status,
+      actorId: row.updated_by ?? row.provider_id,
+    });
+  }
+
   const result = await DB.prepare(`DELETE FROM insurance_plan WHERE id = ?`).bind(planId).run();
   if ((result.meta.changes ?? 0) === 0) throw new Error('That plan was not found.');
 }
