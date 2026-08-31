@@ -5,6 +5,8 @@ import {
   buildTimesheetBacklogEmail,
   createTimesheetBacklogRequest,
   formatBacklogRequestDate,
+  listTimesheetBacklogForUser,
+  serializeBacklogRequest,
 } from '../../../lib/timesheet-backlog';
 import { parseBacklogTimeRange } from '../../../lib/timesheet-entries';
 import {
@@ -71,6 +73,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
 
   if (wantsJson(request)) {
+    const pendingRequests = (await listTimesheetBacklogForUser(employee.id, 10))
+      .filter((request) => request.status === 'pending')
+      .map(serializeBacklogRequest);
+
     return timesheetJsonOk({
       request: {
         id: created.id,
@@ -78,7 +84,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         dateLabel,
         hoursLabel,
         timeLabel,
+        status: 'pending',
+        statusLabel: 'Pending',
       },
+      requests: pendingRequests,
     });
   }
 

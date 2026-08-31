@@ -22,6 +22,9 @@ const backlogSent = Astro.url.searchParams.get('backlog') === '1';
 
 const summary = await getTimesheetSummary(employee.id);
 const backlogRequests = await listTimesheetBacklogForUser(employee.id, 10);
+const pendingBacklogRequests = backlogRequests
+  .filter((request) => request.status === 'pending')
+  .map(serializeBacklogRequest);
 const serialized = serializeTimesheetSummary(summary);
 const activeShift = summary.activeShift;
 ---
@@ -47,6 +50,7 @@ const activeShift = summary.activeShift;
     data-timesheet-page
     data-summary={JSON.stringify(serialized)}
     data-work-categories={JSON.stringify(TIMESHEET_WORK_CATEGORIES)}
+    data-backlog-requests={JSON.stringify(pendingBacklogRequests)}
   >
     {
       error ? (
@@ -251,40 +255,33 @@ const activeShift = summary.activeShift;
           </div>
         </form>
 
-        {
-          backlogRequests.length > 0 ? (
-            <div class="mt-6 border-t border-sage-dark/10 pt-5">
-              <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Your backlog requests</h3>
-              <ul class="mt-3 space-y-2">
-                {
-                  backlogRequests.map((request) => {
-                    const item = serializeBacklogRequest(request);
-                    return (
-                      <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
-                        <span class="text-charcoal">
-                          {item.dateLabel}
-                          {item.timeLabel ? ` · ${item.timeLabel}` : ''}
-                          {' · '}
-                          {item.hoursLabel}
-                        </span>
-                        <span
-                          class:list={[
-                            'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                            request.status === 'pending' && 'bg-amber-100 text-amber-900',
-                            request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
-                            request.status === 'denied' && 'bg-red-100 text-red-900',
-                          ]}
-                        >
-                          {item.statusLabel}
-                        </span>
-                      </li>
-                    );
-                  })
-                }
-              </ul>
-            </div>
-          ) : null
-        }
+        <div class="mt-6 border-t border-sage-dark/10 pt-5" data-timesheet-backlog-section>
+          <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Pending requests</h3>
+          <p
+            class="mt-3 text-sm text-sage-dark/65"
+            data-timesheet-backlog-empty
+            hidden={pendingBacklogRequests.length > 0}
+          >
+            No pending requests.
+          </p>
+          <ul class="mt-3 space-y-2" data-timesheet-backlog-list hidden={pendingBacklogRequests.length === 0}>
+            {
+              pendingBacklogRequests.map((item) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
+                  <span class="text-charcoal">
+                    {item.dateLabel}
+                    {item.timeLabel ? ` · ${item.timeLabel}` : ''}
+                    {' · '}
+                    {item.hoursLabel}
+                  </span>
+                  <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                    {item.statusLabel}
+                  </span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
       </section>
     </section>
   </div>
@@ -402,6 +399,41 @@ const activeShift = summary.activeShift;
     }
   }
 
+  function renderBacklogRequests(root: HTMLElement, requests: Array<Record<string, unknown>>): void {
+    root.dataset.backlogRequests = JSON.stringify(requests);
+    const section = root.querySelector('[data-timesheet-backlog-section]');
+    const list = root.querySelector('[data-timesheet-backlog-list]');
+    const empty = root.querySelector('[data-timesheet-backlog-empty]');
+
+    if (list instanceof HTMLElement) {
+      list.innerHTML = requests
+        .map(
+          (item) => `
+          <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
+            <span class="text-charcoal">
+              ${String(item.dateLabel)}
+              ${item.timeLabel ? ` · ${String(item.timeLabel)}` : ''}
+              · ${String(item.hoursLabel)}
+            </span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+              ${String(item.statusLabel ?? 'Pending')}
+            </span>
+          </li>
+        `,
+        )
+        .join('');
+      list.hidden = requests.length === 0;
+    }
+
+    if (empty instanceof HTMLElement) {
+      empty.hidden = requests.length > 0;
+    }
+
+    if (section instanceof HTMLElement) {
+      section.hidden = false;
+    }
+  }
+
   function showBacklogSuccess(form: HTMLFormElement): void {
     const success = form.querySelector('[data-timesheet-backlog-success]');
     if (!(success instanceof HTMLElement)) return;
@@ -432,6 +464,7 @@ const activeShift = summary.activeShift;
         ok?: boolean;
         summary?: Record<string, unknown>;
         request?: Record<string, unknown>;
+        requests?: Array<Record<string, unknown>>;
         error?: string;
       };
 
@@ -442,6 +475,9 @@ const activeShift = summary.activeShift;
       if (isBacklog) {
         form.reset();
         showBacklogSuccess(form);
+        if (Array.isArray(payload.requests)) {
+          renderBacklogRequests(root, payload.requests);
+        }
         if (submitButton) {
           submitButton.disabled = false;
           submitButton.textContent = previousLabel;
