@@ -237,7 +237,6 @@ const week = summary?.week;
       );
     } catch (error) {
       setFlash(root, 'error', error instanceof Error ? error.message : 'Unable to update your timesheet.');
-    } finally {
       if (button) button.disabled = false;
     }
   }

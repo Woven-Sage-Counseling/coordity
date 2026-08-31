@@ -387,11 +387,21 @@ const activeShift = summary.activeShift;
           'mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800';
         flash.hidden = false;
       }
-    } finally {
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = previousLabel;
       }
+      return;
+    }
+
+    if (form.matches('[data-timesheet-backlog-form]')) {
+      form.reset();
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = previousLabel;
+      }
+    } else if (submitButton) {
+      submitButton.textContent = previousLabel;
     }
   }
 
