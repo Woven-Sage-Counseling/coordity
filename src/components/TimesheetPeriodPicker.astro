@@ -1,0 +1,46 @@
+---
+import { timesheetPeriodOptions, type TimesheetResolvedPeriod } from '../lib/timesheet-periods';
+
+interface Props {
+  period: TimesheetResolvedPeriod;
+  action: string;
+}
+
+const { period, action } = Astro.props;
+const options = timesheetPeriodOptions();
+const showDates = period.id === 'custom';
+---
+
+<form method="get" action={action} class="mt-4 flex flex-wrap items-end gap-3">
+  <label class="block">
+    <span class="text-sm text-sage-dark/70">Timeframe</span>
+    <select
+      name="period"
+      class="field mt-1 max-w-xs"
+      onchange="const custom = this.value === 'custom'; const start = this.form.elements.namedItem('start'); const end = this.form.elements.namedItem('end'); if (start) start.disabled = !custom; if (end) end.disabled = !custom; if (!custom) this.form.submit();"
+    >
+      {
+        options.map((option: { id: string; label: string }) => (
+          <option value={option.id} selected={period.id === option.id}>
+            {option.label}
+          </option>
+        ))
+      }
+      <option value="custom" selected={period.id === 'custom'}>
+        Custom dates
+      </option>
+    </select>
+  </label>
+
+  <div class:list={['flex flex-wrap items-end gap-2', showDates ? '' : 'hidden']} data-custom-dates>
+    <label class="block">
+      <span class="text-sm text-sage-dark/70">From</span>
+      <input class="field mt-1" type="date" name="start" value={period.start} disabled={!showDates} />
+    </label>
+    <label class="block">
+      <span class="text-sm text-sage-dark/70">To</span>
+      <input class="field mt-1" type="date" name="end" value={period.end} disabled={!showDates} />
+    </label>
+    <button class="btn-secondary !px-4 !py-2" type="submit">Apply</button>
+  </div>
+</form>

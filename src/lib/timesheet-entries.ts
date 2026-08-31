@@ -13,6 +13,7 @@ import {
   weekEndSunday,
   weekStartMonday,
 } from './timesheet';
+import { listWorkItemsForShifts, serializeWorkItem, type TimesheetShiftWorkItem } from './timesheet-work-items';
 
 export type TimesheetShiftSource = 'clock' | 'backlog';
 
@@ -28,6 +29,7 @@ export interface TimesheetShift {
   backlogId: string | null;
   createdAt: number;
   updatedAt: number;
+  workItems: TimesheetShiftWorkItem[];
 }
 
 export interface TimesheetWeekSummary {
@@ -63,7 +65,7 @@ const SHIFT_SELECT = `
   FROM timesheet_shift
 `;
 
-function mapShift(row: ShiftRow): TimesheetShift {
+function mapShift(row: ShiftRow, workItems: TimesheetShiftWorkItem[] = []): TimesheetShift {
   return {
     id: row.id,
     userId: row.user_id,
@@ -76,11 +78,14 @@ function mapShift(row: ShiftRow): TimesheetShift {
     backlogId: row.backlog_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    workItems,
   };
 }
 
 export function serializeTimesheetShift(shift: TimesheetShift) {
   const isActive = shift.source === 'clock' && shift.endedAt == null;
+  const workItems = shift.workItems.map(serializeWorkItem);
+  const allocatedMinutes = workItems.reduce((sum, item) => sum + item.minutes, 0);
   return {
     id: shift.id,
     workDate: shift.workDate,
@@ -90,6 +95,11 @@ export function serializeTimesheetShift(shift: TimesheetShift) {
     notes: shift.notes,
     source: shift.source,
     isActive,
+    canEditWorkItems: !isActive,
+    workItems,
+    allocatedMinutes,
+    unallocatedMinutes: Math.max(0, shift.minutes - allocatedMinutes),
+    unallocatedLabel: formatHours(Math.max(0, shift.minutes - allocatedMinutes)),
     timeLabel:
       shift.source === 'backlog'
         ? 'Backlog entry'
@@ -167,7 +177,28 @@ export async function listTimesheetShiftsForUser(
     .bind(...binds)
     .all<ShiftRow>();
 
-  return (rows.results ?? []).map(mapShift);
+  return (rows.results ?? []).map((row) => mapShift(row));
+}
+
+async function attachWorkItems(shifts: TimesheetShift[]): Promise<TimesheetShift[]> {
+  if (shifts.length === 0) return shifts;
+  const workItemsByShift = await listWorkItemsForShifts(shifts.map((shift) => shift.id));
+  return shifts.map((shift) => mapShift(
+    {
+      id: shift.id,
+      user_id: shift.userId,
+      work_date: shift.workDate,
+      started_at: shift.startedAt,
+      ended_at: shift.endedAt,
+      minutes: shift.minutes,
+      notes: shift.notes,
+      source: shift.source,
+      backlog_id: shift.backlogId,
+      created_at: shift.createdAt,
+      updated_at: shift.updatedAt,
+    },
+    workItemsByShift.get(shift.id) ?? [],
+  ));
 }
 
 export async function getWeekSummary(userId: string, weekStart?: string): Promise<TimesheetWeekSummary> {
@@ -210,18 +241,37 @@ export async function getWeeklyAverageMinutes(userId: string): Promise<number> {
 }
 
 export async function getTimesheetSummary(userId: string): Promise<TimesheetSummary> {
-  const [activeShift, week, weeklyAverageMinutes, entries] = await Promise.all([
+  const [activeShiftRaw, weekRaw, weeklyAverageMinutes, entriesRaw] = await Promise.all([
     getActiveShift(userId),
     getWeekSummary(userId),
     getWeeklyAverageMinutes(userId),
     listTimesheetShiftsForUser(userId, { limit: 100 }),
   ]);
 
+  const unique = new Map<string, TimesheetShift>();
+  if (activeShiftRaw) unique.set(activeShiftRaw.id, activeShiftRaw);
+  for (const entry of entriesRaw) unique.set(entry.id, entry);
+  for (const entry of weekRaw.entries) unique.set(entry.id, entry);
+
+  const withItems = await attachWorkItems([...unique.values()]);
+  const byId = new Map(withItems.map((shift) => [shift.id, shift]));
+
+  const weekEntries = weekRaw.entries
+    .map((entry) => byId.get(entry.id) ?? entry)
+    .sort((a, b) => {
+      const aKey = a.endedAt ?? a.startedAt ?? a.createdAt;
+      const bKey = b.endedAt ?? b.startedAt ?? b.createdAt;
+      return aKey - bKey;
+    });
+
   return {
-    activeShift,
-    week,
+    activeShift: activeShiftRaw ? byId.get(activeShiftRaw.id) ?? activeShiftRaw : null,
+    week: {
+      ...weekRaw,
+      entries: weekEntries,
+    },
     weeklyAverageMinutes,
-    entries,
+    entries: entriesRaw.map((entry) => byId.get(entry.id) ?? entry),
   };
 }
 

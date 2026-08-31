@@ -1,11 +1,13 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import TimesheetShiftWorkItems from '../components/TimesheetShiftWorkItems.astro';
 import {
   getTimesheetSummary,
   serializeTimesheetShift,
   serializeTimesheetSummary,
 } from '../lib/timesheet-entries';
 import { listTimesheetBacklogForUser, serializeBacklogRequest } from '../lib/timesheet-backlog';
+import { TIMESHEET_WORK_CATEGORIES } from '../lib/timesheet-categories';
 import { formatWeekLabel } from '../lib/timesheet';
 
 export const prerender = false;
@@ -29,14 +31,21 @@ const activeShift = summary.activeShift;
     Hours worked
   </p>
 
-  <div class="mt-3">
-    <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Hours worked</h1>
-    <p class="mt-3 max-w-2xl text-sage-dark/75">
-      Start your shift when you begin working and end it when you&apos;re done. The portal tracks your hours and date automatically.
-    </p>
+  <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Hours worked</h1>
+      <p class="mt-3 max-w-2xl text-sage-dark/75">
+        Start your shift when you begin working and end it when you&apos;re done. The portal tracks your hours and date automatically.
+      </p>
+    </div>
+    <a href="/timesheet/work" class="btn-secondary !px-4 !py-2 text-sm">Work breakdown</a>
   </div>
 
-  <div data-timesheet-page data-summary={JSON.stringify(serialized)}>
+  <div
+    data-timesheet-page
+    data-summary={JSON.stringify(serialized)}
+    data-work-categories={JSON.stringify(TIMESHEET_WORK_CATEGORIES)}
+  >
     {
       error ? (
         <p class="mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" data-timesheet-flash>
@@ -159,6 +168,16 @@ const activeShift = summary.activeShift;
                         }
                       </div>
                     </div>
+                    {
+                      !serializedEntry.isActive ? (
+                        <TimesheetShiftWorkItems
+                          shiftId={entry.id}
+                          minutes={entry.minutes}
+                          workItems={entry.workItems}
+                          canEdit={serializedEntry.canEditWorkItems}
+                        />
+                      ) : null
+                    }
                   </li>
                 );
               })
@@ -247,6 +266,8 @@ const activeShift = summary.activeShift;
 </PortalLayout>
 
 <script>
+  import { initTimesheetWorkItems, renderWorkItemsSection } from '../lib/timesheet-work-items-client';
+
   function formatDuration(minutes: number): string {
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -255,7 +276,12 @@ const activeShift = summary.activeShift;
     return `${hrs}h ${mins}m`;
   }
 
-  function applySummary(root: HTMLElement, summary: Record<string, unknown>): void {
+  function applySummary(
+    root: HTMLElement,
+    summary: Record<string, unknown>,
+    options: { updateList?: boolean } = {},
+  ): void {
+    const updateList = options.updateList !== false;
     root.dataset.summary = JSON.stringify(summary);
 
     const weekTotal = root.querySelector('[data-timesheet-week-total]');
@@ -279,7 +305,13 @@ const activeShift = summary.activeShift;
     if (startBtn) startBtn.disabled = Boolean(activeShift);
     if (endBtn) endBtn.disabled = !activeShift;
 
-    if (list instanceof HTMLElement) {
+    const categories = JSON.parse(root.dataset.workCategories || '[]') as Array<{
+      key: string;
+      label: string;
+      color: string;
+    }>;
+
+    if (updateList && list instanceof HTMLElement) {
       list.innerHTML = entries
         .map((entry) => {
           const source = String(entry.source ?? 'clock');
@@ -293,6 +325,7 @@ const activeShift = summary.activeShift;
           const notes = entry.notes
             ? `<p class="mt-2 text-sm text-sage-dark/70">${String(entry.notes)}</p>`
             : '';
+          const workItems = isActive ? '' : renderWorkItemsSection(entry, categories);
           return `
             <li class="rounded-xl border border-sage-dark/10 bg-white px-4 py-3" data-timesheet-item data-entry-id="${String(entry.id)}">
               <div class="flex flex-wrap items-start justify-between gap-3">
@@ -306,10 +339,12 @@ const activeShift = summary.activeShift;
                   ${badge}
                 </div>
               </div>
+              ${workItems}
             </li>
           `;
         })
         .join('');
+      initTimesheetWorkItems(root, categories, (nextSummary) => applySummary(root, nextSummary));
     }
 
     if (empty instanceof HTMLElement) {
@@ -408,7 +443,13 @@ const activeShift = summary.activeShift;
   document.querySelectorAll('[data-timesheet-page]').forEach((node) => {
     if (!(node instanceof HTMLElement)) return;
     const summary = JSON.parse(node.dataset.summary || '{}') as Record<string, unknown>;
-    applySummary(node, summary);
+    const categories = JSON.parse(node.dataset.workCategories || '[]') as Array<{
+      key: string;
+      label: string;
+      color: string;
+    }>;
+    applySummary(node, summary, { updateList: false });
+    initTimesheetWorkItems(node, categories, (nextSummary) => applySummary(node, nextSummary));
 
     node.querySelectorAll(
       '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-backlog-form]',
