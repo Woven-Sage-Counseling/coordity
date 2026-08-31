@@ -55,7 +55,7 @@ function personCells(person: DirectoryPerson) {
                   <thead>
                     <tr class="border-b border-sage-dark/15 text-sage-dark/60">
                       <th class="py-2 pr-4 font-medium">Name</th>
-                      <th class="py-2 pr-4 font-medium">Status</th>
+                      <th class="w-16 py-2 pr-4 text-center font-medium">Status</th>
                       <th class="py-2 pr-4 font-medium">Job title</th>
                       <th class="py-2 pr-4 font-medium">Email</th>
                       <th class="py-2 font-medium">Phone</th>
@@ -85,7 +85,9 @@ function personCells(person: DirectoryPerson) {
                             </div>
                           </td>
                           <td class="py-3 pr-4">
-                            <ShiftStatusIndicator onShift={isOnShift(person)} compact />
+                            <div class="flex justify-center">
+                              <ShiftStatusIndicator onShift={isOnShift(person)} compact />
+                            </div>
                           </td>
                           <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>
                           <td class="py-3 pr-4">
@@ -128,7 +130,7 @@ function personCells(person: DirectoryPerson) {
                 <thead>
                   <tr class="border-b border-sage-dark/15 text-sage-dark/60">
                     <th class="py-2 pr-4 font-medium">Name</th>
-                    <th class="py-2 pr-4 font-medium">Status</th>
+                    <th class="w-16 py-2 pr-4 text-center font-medium">Status</th>
                     <th class="py-2 pr-4 font-medium">Job title</th>
                     <th class="py-2 pr-4 font-medium">Email</th>
                     <th class="py-2 font-medium">Phone</th>
