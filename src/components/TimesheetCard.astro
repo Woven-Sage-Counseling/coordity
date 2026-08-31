@@ -5,6 +5,7 @@ import {
   serializeTimesheetSummary,
 } from '../lib/timesheet-entries';
 import { formatWeekLabel } from '../lib/timesheet';
+import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
@@ -82,22 +83,22 @@ const week = summary?.week;
               <input type="hidden" name="returnTo" value="/" />
               <button
                 type="submit"
-                class="widget-accent-btn w-full rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] disabled:opacity-60"
+                class={shiftButtonClasses(activeShift != null, 'start', 'widget')}
                 data-timesheet-start-btn
                 disabled={activeShift != null}
               >
-                START
+                START shift
               </button>
             </form>
             <form method="post" action="/api/timesheet/end-shift" class="flex-1" data-timesheet-end-form>
               <input type="hidden" name="returnTo" value="/" />
               <button
                 type="submit"
-                class="widget-accent-btn w-full rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] disabled:opacity-60"
+                class={shiftButtonClasses(activeShift != null, 'end', 'widget')}
                 data-timesheet-end-btn
                 disabled={activeShift == null}
               >
-                END
+                END shift
               </button>
             </form>
           </div>
@@ -149,6 +150,8 @@ const week = summary?.week;
 </aside>
 
 <script>
+  import { applyShiftButtonState } from '../lib/timesheet-shift-buttons';
+
   function setFlash(root: HTMLElement, kind: 'ok' | 'error', text: string): void {
     const flash = root.querySelector('[data-timesheet-flash]');
     if (!(flash instanceof HTMLElement)) return;
@@ -177,8 +180,7 @@ const week = summary?.week;
     if (averageTotal && summary.weeklyAverageLabel) {
       averageTotal.textContent = String(summary.weeklyAverageLabel);
     }
-    if (startBtn) startBtn.disabled = Boolean(activeShift);
-    if (endBtn) endBtn.disabled = !activeShift;
+    applyShiftButtonState(startBtn, endBtn, activeShift, 'widget');
 
     const entries = week.entries ?? [];
     if (list instanceof HTMLElement) {
@@ -237,7 +239,8 @@ const week = summary?.week;
       );
     } catch (error) {
       setFlash(root, 'error', error instanceof Error ? error.message : 'Unable to update your timesheet.');
-      if (button) button.disabled = false;
+      const summary = JSON.parse(root.dataset.summary || '{}') as Record<string, unknown>;
+      applySummary(root, summary);
     }
   }
 

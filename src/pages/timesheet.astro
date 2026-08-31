@@ -9,6 +9,7 @@ import {
 import { listTimesheetBacklogForUser, serializeBacklogRequest } from '../lib/timesheet-backlog';
 import { TIMESHEET_WORK_CATEGORIES } from '../lib/timesheet-categories';
 import { formatWeekLabel } from '../lib/timesheet';
+import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 
 export const prerender = false;
 
@@ -107,23 +108,23 @@ const activeShift = summary.activeShift;
         <form method="post" action="/api/timesheet/start-shift" data-timesheet-start-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
           <button
-            class="btn-primary"
+            class={shiftButtonClasses(activeShift != null, 'start', 'page')}
             type="submit"
             data-timesheet-start-btn
             disabled={activeShift != null}
           >
-            START
+            START shift
           </button>
         </form>
         <form method="post" action="/api/timesheet/end-shift" data-timesheet-end-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
           <button
-            class="btn-primary"
+            class={shiftButtonClasses(activeShift != null, 'end', 'page')}
             type="submit"
             data-timesheet-end-btn
             disabled={activeShift == null}
           >
-            END
+            END shift
           </button>
         </form>
       </div>
@@ -277,6 +278,7 @@ const activeShift = summary.activeShift;
 
 <script>
   import { initTimesheetWorkItems, renderWorkItemsSection } from '../lib/timesheet-work-items-client';
+  import { applyShiftButtonState } from '../lib/timesheet-shift-buttons';
 
   function formatDuration(minutes: number): string {
     const hrs = Math.floor(minutes / 60);
@@ -312,8 +314,7 @@ const activeShift = summary.activeShift;
       averageTotal.textContent = String(summary.weeklyAverageLabel);
     }
 
-    if (startBtn) startBtn.disabled = Boolean(activeShift);
-    if (endBtn) endBtn.disabled = !activeShift;
+    applyShiftButtonState(startBtn, endBtn, activeShift, 'page');
 
     const categories = JSON.parse(root.dataset.workCategories || '[]') as Array<{
       key: string;
