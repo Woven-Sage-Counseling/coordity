@@ -31,7 +31,13 @@ const { requests, error = null, embedded = false } = Astro.props;
 
   {
     error ? (
-      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+      <p
+        class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        data-timesheet-backlog-error
+        role="alert"
+      >
+        {error}
+      </p>
     ) : null
   }
 
@@ -39,10 +45,14 @@ const { requests, error = null, embedded = false } = Astro.props;
     requests.length === 0 ? (
       <p class="mt-6 text-sm text-sage-dark/65">No backlog hours waiting for review.</p>
     ) : (
-      <div class="mt-6 space-y-4">
+      <div class="mt-6 space-y-4" data-timesheet-backlog-list>
         {
           requests.map((request) => (
-            <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+            <article
+              class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm"
+              data-timesheet-backlog-item
+              data-request-id={request.id}
+            >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p class="text-sm font-semibold text-charcoal">{request.userName}</p>
@@ -113,7 +123,7 @@ const { requests, error = null, embedded = false } = Astro.props;
                         <span />
                       )
                     }
-                    <form method="post" action="/api/timesheet/backlog/clear">
+                    <form method="post" action="/api/timesheet/backlog/clear" data-timesheet-backlog-clear-form>
                       <input type="hidden" name="requestId" value={request.id} />
                       <button class="btn-secondary !px-3 !py-1.5" type="submit">Clear</button>
                     </form>
@@ -132,3 +142,97 @@ const { requests, error = null, embedded = false } = Astro.props;
     )
   }
 </section>
+
+<script>
+  function stripTimesheetErrorFromUrl(): void {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('timesheetError')) return;
+    url.searchParams.delete('timesheetError');
+    history.replaceState(
+      null,
+      '',
+      `${url.pathname}${url.search}${url.hash || '#timesheet-backlog'}`,
+    );
+  }
+
+  function showBacklogError(message: string): void {
+    const root = document.getElementById('timesheet-backlog');
+    if (!root) return;
+
+    const existing = root.querySelector('[data-timesheet-backlog-error]');
+    const banner =
+      existing instanceof HTMLElement
+        ? existing
+        : (() => {
+            const next = document.createElement('p');
+            next.setAttribute('data-timesheet-backlog-error', '');
+            next.className =
+              'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800';
+            next.setAttribute('role', 'alert');
+            const heading = root.querySelector('h2');
+            if (heading?.nextElementSibling) {
+              root.insertBefore(next, heading.nextElementSibling);
+            } else if (root.firstChild) {
+              root.insertBefore(next, root.firstChild);
+            } else {
+              root.appendChild(next);
+            }
+            return next;
+          })();
+
+    banner.textContent = message;
+    banner.hidden = false;
+  }
+
+  stripTimesheetErrorFromUrl();
+
+  document.querySelectorAll('[data-timesheet-backlog-clear-form]').forEach((node) => {
+    if (!(node instanceof HTMLFormElement)) return;
+
+    node.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = node.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      const card = node.closest('[data-timesheet-backlog-item]');
+      const previousLabel = button?.textContent ?? 'Clear';
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Clearing…';
+      }
+
+      try {
+        const response = await fetch(node.action, {
+          method: 'POST',
+          body: new FormData(node),
+          headers: { accept: 'application/json' },
+        });
+        const payload = (await response.json()) as { ok?: boolean; error?: string };
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error ?? 'Could not clear that backlog request.');
+        }
+
+        const errorBanner = document.querySelector('[data-timesheet-backlog-error]');
+        if (errorBanner instanceof HTMLElement) {
+          errorBanner.hidden = true;
+        }
+
+        card?.remove();
+
+        const list = document.querySelector('[data-timesheet-backlog-list]');
+        if (list instanceof HTMLElement && !list.querySelector('[data-timesheet-backlog-item]')) {
+          list.outerHTML =
+            '<p class="mt-6 text-sm text-sage-dark/65">No backlog hours waiting for review.</p>';
+        }
+      } catch (error) {
+        showBacklogError(
+          error instanceof Error ? error.message : 'Could not clear that backlog request.',
+        );
+        if (button) {
+          button.disabled = false;
+          button.textContent = previousLabel;
+        }
+      }
+    });
+  });
+</script>
