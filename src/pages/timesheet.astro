@@ -205,14 +205,14 @@ const activeShift = summary.activeShift;
 
         <form method="post" action="/api/timesheet/backlog" class="mt-5" data-timesheet-backlog-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
-          <div class="flex flex-nowrap items-end gap-x-3 overflow-x-auto pb-1">
-            <label class="block shrink-0 text-sm">
+          <div class="flex max-w-lg flex-col gap-4">
+            <label class="block text-sm">
               <span class="font-medium text-charcoal">Date</span>
-              <input class="field mt-1.5 !w-[11rem]" name="workDate" type="date" required />
+              <input class="field mt-1.5 max-w-xs" name="workDate" type="date" required />
             </label>
             <BacklogTimePicker name="timeStarted" label="Time started" />
             <BacklogTimePicker name="timeEnded" label="Time ended" />
-            <div class="flex shrink-0 items-center gap-3 pb-0.5">
+            <div class="flex flex-wrap items-center gap-3">
               <button class="btn-primary !px-4 !py-2" type="submit">Submit</button>
               <p
                 class="hidden text-sm font-medium text-emerald-800"
