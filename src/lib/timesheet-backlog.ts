@@ -1,6 +1,6 @@
 import { randomToken, nowMs } from './crypto';
 import { getEnv } from './env';
-import { formatHours, formatWorkDate } from './timesheet';
+import { formatHours, formatShiftRange, formatWorkDate } from './timesheet';
 import { createBacklogShift } from './timesheet-entries';
 
 export type TimesheetBacklogStatus = 'pending' | 'approved' | 'denied';
@@ -12,6 +12,8 @@ export interface TimesheetBacklogRequest {
   userEmail: string;
   workDate: string;
   minutes: number;
+  startedAt: number | null;
+  endedAt: number | null;
   notes: string | null;
   status: TimesheetBacklogStatus;
   reviewedBy: string | null;
@@ -28,6 +30,8 @@ type BacklogRow = {
   user_email: string;
   work_date: string;
   minutes: number;
+  started_at: number | null;
+  ended_at: number | null;
   notes: string | null;
   status: TimesheetBacklogStatus;
   reviewed_by: string | null;
@@ -45,6 +49,8 @@ const BACKLOG_SELECT = `
     u.email AS user_email,
     b.work_date,
     b.minutes,
+    b.started_at,
+    b.ended_at,
     b.notes,
     b.status,
     b.reviewed_by,
@@ -65,6 +71,8 @@ function mapBacklog(row: BacklogRow): TimesheetBacklogRequest {
     userEmail: row.user_email,
     workDate: row.work_date,
     minutes: row.minutes,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
     notes: row.notes,
     status: row.status,
     reviewedBy: row.reviewed_by,
@@ -91,11 +99,17 @@ export function formatBacklogRequestDate(timestamp: number): string {
 }
 
 export function serializeBacklogRequest(request: TimesheetBacklogRequest) {
+  const timeLabel =
+    request.startedAt != null && request.endedAt != null
+      ? formatShiftRange(request.startedAt, request.endedAt)
+      : null;
+
   return {
     id: request.id,
     workDate: request.workDate,
     dateLabel: formatWorkDate(request.workDate),
     hoursLabel: formatHours(request.minutes),
+    timeLabel,
     minutes: request.minutes,
     notes: request.notes,
     status: request.status,
@@ -108,6 +122,8 @@ export async function createTimesheetBacklogRequest(input: {
   userId: string;
   workDate: string;
   minutes: number;
+  startedAt: number;
+  endedAt: number;
   notes: string | null;
 }): Promise<{ id: string; createdAt: number }> {
   const { DB } = getEnv();
@@ -116,10 +132,19 @@ export async function createTimesheetBacklogRequest(input: {
 
   await DB.prepare(
     `INSERT INTO timesheet_backlog
-       (id, user_id, work_date, minutes, notes, status, created_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+       (id, user_id, work_date, minutes, started_at, ended_at, notes, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
   )
-    .bind(id, input.userId, input.workDate, input.minutes, input.notes, createdAt)
+    .bind(
+      id,
+      input.userId,
+      input.workDate,
+      input.minutes,
+      input.startedAt,
+      input.endedAt,
+      input.notes,
+      createdAt,
+    )
     .run();
 
   return { id, createdAt };
@@ -184,6 +209,8 @@ export async function reviewTimesheetBacklogRequest(
       minutes: existing.minutes,
       notes: existing.notes,
       backlogId: existing.id,
+      startedAt: existing.started_at,
+      endedAt: existing.ended_at,
     });
     shiftId = shift.id;
   }
@@ -206,16 +233,23 @@ export function buildTimesheetBacklogEmail(input: {
   employeeEmail: string;
   workDate: string;
   minutes: number;
+  startedAt: number | null;
+  endedAt: number | null;
   notes: string | null;
 }): { subject: string; text: string; html: string; replyTo: string } {
   const hoursLabel = formatHours(input.minutes);
   const dateLabel = formatWorkDate(input.workDate);
+  const timeLabel =
+    input.startedAt != null && input.endedAt != null
+      ? formatShiftRange(input.startedAt, input.endedAt)
+      : null;
   const subject = `Timesheet backlog request from ${input.employeeName}`;
   const textParts = [
     `${input.employeeName} (${input.employeeEmail}) submitted backlog hours for approval:`,
     '',
     `Date: ${dateLabel}`,
-    `Hours: ${hoursLabel}`,
+    timeLabel ? `Time: ${timeLabel}` : `Hours: ${hoursLabel}`,
+    `Total: ${hoursLabel}`,
   ];
   if (input.notes) textParts.push('', `Notes: ${input.notes}`);
   textParts.push('', 'Review this request in the portal admin panel.');
@@ -223,7 +257,8 @@ export function buildTimesheetBacklogEmail(input: {
   const html = `
     <p><strong>${escapeHtml(input.employeeName)}</strong> (${escapeHtml(input.employeeEmail)}) submitted backlog hours for approval:</p>
     <p><strong>Date:</strong> ${escapeHtml(dateLabel)}<br />
-    <strong>Hours:</strong> ${escapeHtml(hoursLabel)}</p>
+    ${timeLabel ? `<strong>Time:</strong> ${escapeHtml(timeLabel)}<br />` : ''}
+    <strong>Total:</strong> ${escapeHtml(hoursLabel)}</p>
     ${input.notes ? `<p><strong>Notes:</strong> ${escapeHtml(input.notes)}</p>` : ''}
     <p style="color:#6b6c72;font-size:13px;">Review this request in the portal admin panel.</p>
   `.trim();

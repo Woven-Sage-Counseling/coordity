@@ -7,9 +7,7 @@ import {
   formatHours,
   formatShiftRange,
   formatWorkDate,
-  ISO_DATE,
   minutesBetween,
-  parseHoursInput,
   weekEndSunday,
   weekStartMonday,
 } from './timesheet';
@@ -102,7 +100,9 @@ export function serializeTimesheetShift(shift: TimesheetShift) {
     unallocatedLabel: formatHours(Math.max(0, shift.minutes - allocatedMinutes)),
     timeLabel:
       shift.source === 'backlog'
-        ? 'Backlog entry'
+        ? shift.startedAt != null && shift.endedAt != null
+          ? formatShiftRange(shift.startedAt, shift.endedAt)
+          : 'Backlog entry'
         : isActive && shift.startedAt != null
           ? `Started ${formatClockTime(shift.startedAt)}`
           : formatShiftRange(shift.startedAt, shift.endedAt),
@@ -329,17 +329,32 @@ export async function createBacklogShift(input: {
   minutes: number;
   notes: string | null;
   backlogId: string;
+  startedAt?: number | null;
+  endedAt?: number | null;
 }): Promise<TimesheetShift> {
   const { DB } = getEnv();
   const now = nowMs();
   const id = randomToken(16);
+  const startedAt = input.startedAt ?? null;
+  const endedAt = input.endedAt ?? null;
 
   await DB.prepare(
     `INSERT INTO timesheet_shift
        (id, user_id, work_date, started_at, ended_at, minutes, notes, source, backlog_id, created_at, updated_at)
-     VALUES (?, ?, ?, NULL, NULL, ?, ?, 'backlog', ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'backlog', ?, ?, ?)`,
   )
-    .bind(id, input.userId, input.workDate, input.minutes, input.notes, input.backlogId, now, now)
+    .bind(
+      id,
+      input.userId,
+      input.workDate,
+      startedAt,
+      endedAt,
+      input.minutes,
+      input.notes,
+      input.backlogId,
+      now,
+      now,
+    )
     .run();
 
   const row = await DB.prepare(`${SHIFT_SELECT} WHERE id = ?`).bind(id).first<ShiftRow>();
@@ -347,25 +362,7 @@ export async function createBacklogShift(input: {
   return mapShift(row);
 }
 
-export function parseBacklogForm(form: FormData): {
-  workDate: string;
-  minutes: number;
-  notes: string | null;
-} {
-  const workDate = String(form.get('workDate') ?? '').trim();
-  if (!ISO_DATE.test(workDate)) {
-    throw new Error('Choose a valid date.');
-  }
-
-  const minutes = parseHoursInput(String(form.get('hours') ?? ''));
-  const notes = String(form.get('notes') ?? '').trim();
-
-  return {
-    workDate,
-    minutes,
-    notes: notes || null,
-  };
-}
+export { parseBacklogTimeRange } from './timesheet';
 
 export function shiftWeek(start: string, weeks: number): string {
   return addDays(start, weeks * 7);

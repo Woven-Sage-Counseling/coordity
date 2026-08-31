@@ -82,22 +82,22 @@ const week = summary?.week;
               <input type="hidden" name="returnTo" value="/" />
               <button
                 type="submit"
-                class="widget-accent-btn w-full rounded-lg px-3 py-2 text-[11px] font-semibold disabled:opacity-60"
+                class="widget-accent-btn w-full rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] disabled:opacity-60"
                 data-timesheet-start-btn
                 disabled={activeShift != null}
               >
-                Start shift
+                START
               </button>
             </form>
             <form method="post" action="/api/timesheet/end-shift" class="flex-1" data-timesheet-end-form>
               <input type="hidden" name="returnTo" value="/" />
               <button
                 type="submit"
-                class="w-full rounded-lg border border-sage-dark/20 bg-white px-3 py-2 text-[11px] font-semibold text-charcoal transition hover:bg-[#eef4ff] disabled:opacity-60"
+                class="widget-accent-btn w-full rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] disabled:opacity-60"
                 data-timesheet-end-btn
                 disabled={activeShift == null}
               >
-                End shift
+                END
               </button>
             </form>
           </div>

@@ -6,14 +6,14 @@ import {
   createTimesheetBacklogRequest,
   formatBacklogRequestDate,
 } from '../../../lib/timesheet-backlog';
-import { parseBacklogForm } from '../../../lib/timesheet-entries';
+import { parseBacklogTimeRange } from '../../../lib/timesheet-entries';
 import {
   resolveTimesheetReturnTo,
   timesheetErrorResponse,
   timesheetJsonOk,
   wantsJson,
 } from '../../../lib/timesheet-http';
-import { formatHours, formatWorkDate } from '../../../lib/timesheet';
+import { formatHours, formatShiftRange, formatWorkDate } from '../../../lib/timesheet';
 
 export const prerender = false;
 
@@ -28,11 +28,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let parsed;
   let created: { id: string; createdAt: number };
   try {
-    parsed = parseBacklogForm(form);
+    parsed = parseBacklogTimeRange(form);
     created = await createTimesheetBacklogRequest({
       userId: employee.id,
       workDate: parsed.workDate,
       minutes: parsed.minutes,
+      startedAt: parsed.startedAt,
+      endedAt: parsed.endedAt,
       notes: parsed.notes,
     });
   } catch (error) {
@@ -42,11 +44,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const dateLabel = formatWorkDate(parsed.workDate);
   const hoursLabel = formatHours(parsed.minutes);
+  const timeLabel = formatShiftRange(parsed.startedAt, parsed.endedAt);
 
   try {
     await notifyManagementUsers({
       title: 'Timesheet backlog to review',
-      body: `${employee.name} requested ${hoursLabel} for ${dateLabel}`,
+      body: `${employee.name} requested ${hoursLabel} (${timeLabel}) for ${dateLabel}`,
       excludeUserId: employee.id,
       sourceType: TIMESHEET_BACKLOG_SOURCE,
       sourceId: created.id,
@@ -61,6 +64,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       employeeEmail: employee.email,
       workDate: parsed.workDate,
       minutes: parsed.minutes,
+      startedAt: parsed.startedAt,
+      endedAt: parsed.endedAt,
       notes: parsed.notes,
     }),
   );
@@ -72,6 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         createdAtLabel: formatBacklogRequestDate(created.createdAt),
         dateLabel,
         hoursLabel,
+        timeLabel,
       },
     });
   }

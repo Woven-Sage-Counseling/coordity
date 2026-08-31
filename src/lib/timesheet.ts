@@ -1,6 +1,7 @@
 import { todayEastern } from './financials/periods';
 
 export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const ISO_TIME = /^(\d{1,2}):(\d{2})(?::\d{2})?$/;
 export const MAX_MINUTES_PER_DAY = 24 * 60;
 
 export function weekStartMonday(date: string): string {
@@ -80,6 +81,104 @@ export function minutesBetween(startedAt: number, endedAt: number): number {
     throw new Error('A single shift cannot be longer than 24 hours.');
   }
   return minutes;
+}
+
+export function parseTimeInput(raw: string): { hours: number; minutes: number } {
+  const match = ISO_TIME.exec(raw.trim());
+  if (!match) {
+    throw new Error('Enter a valid start and end time.');
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) {
+    throw new Error('Enter a valid start and end time.');
+  }
+
+  return { hours, minutes };
+}
+
+export function easternDateTimeToMs(workDate: string, time: string): number {
+  if (!ISO_DATE.test(workDate)) {
+    throw new Error('Choose a valid date.');
+  }
+
+  const { hours, minutes } = parseTimeInput(time);
+  const [year, month, day] = workDate.split('-').map(Number);
+  let timestamp = Date.UTC(year, month - 1, day, hours + 5, minutes);
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date(timestamp));
+
+    const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value ?? 0);
+    const easternYear = part('year');
+    const easternMonth = part('month');
+    const easternDay = part('day');
+    const easternHour = part('hour') % 24;
+    const easternMinute = part('minute');
+
+    if (
+      easternYear === year &&
+      easternMonth === month &&
+      easternDay === day &&
+      easternHour === hours &&
+      easternMinute === minutes
+    ) {
+      return timestamp;
+    }
+
+    const targetDay = Date.UTC(year, month - 1, day);
+    const actualDay = Date.UTC(easternYear, easternMonth - 1, easternDay);
+    const dayDiff = Math.round((targetDay - actualDay) / 86_400_000);
+    const minuteDiff = hours * 60 + minutes - (easternHour * 60 + easternMinute) + dayDiff * 24 * 60;
+    timestamp += minuteDiff * 60_000;
+  }
+
+  throw new Error('Enter a valid start and end time.');
+}
+
+export function parseBacklogTimeRange(form: FormData): {
+  workDate: string;
+  startedAt: number;
+  endedAt: number;
+  minutes: number;
+  notes: string | null;
+} {
+  const workDate = String(form.get('workDate') ?? '').trim();
+  if (!ISO_DATE.test(workDate)) {
+    throw new Error('Choose a valid date.');
+  }
+
+  const timeStarted = String(form.get('timeStarted') ?? '').trim();
+  const timeEnded = String(form.get('timeEnded') ?? '').trim();
+  if (!timeStarted || !timeEnded) {
+    throw new Error('Enter both a start time and an end time.');
+  }
+
+  const startedAt = easternDateTimeToMs(workDate, timeStarted);
+  let endedAt = easternDateTimeToMs(workDate, timeEnded);
+  if (endedAt <= startedAt) {
+    endedAt = easternDateTimeToMs(addDays(workDate, 1), timeEnded);
+  }
+
+  const minutes = minutesBetween(startedAt, endedAt);
+  const notes = String(form.get('notes') ?? '').trim();
+
+  return {
+    workDate,
+    startedAt,
+    endedAt,
+    minutes,
+    notes: notes || null,
+  };
 }
 
 export function parseHoursInput(raw: string): number {

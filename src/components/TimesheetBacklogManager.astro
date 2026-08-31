@@ -1,5 +1,5 @@
 ---
-import { formatHours, formatWorkDate } from '../lib/timesheet';
+import { formatHours, formatShiftRange, formatWorkDate } from '../lib/timesheet';
 import {
   backlogStatusLabel,
   formatBacklogRequestDate,
@@ -66,6 +66,14 @@ const { requests, error = null, embedded = false } = Astro.props;
               <div class="mt-4 text-sm text-charcoal">
                 <p>
                   <span class="font-semibold">{formatWorkDate(request.workDate)}</span>
+                  {
+                    request.startedAt != null && request.endedAt != null ? (
+                      <>
+                        <span class="text-sage-dark/50"> · </span>
+                        <span>{formatShiftRange(request.startedAt, request.endedAt)}</span>
+                      </>
+                    ) : null
+                  }
                   <span class="text-sage-dark/50"> · </span>
                   <span>{formatHours(request.minutes)}</span>
                 </p>
