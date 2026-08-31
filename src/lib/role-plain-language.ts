@@ -107,6 +107,20 @@ export const rolePlainLanguage: Record<string, { summary: string; can: string[];
       'Manage people or announcements',
     ],
   },
+  it: {
+    summary: 'For technical staff who maintain portal integrations and support.',
+    can: [
+      'Sign in',
+      'Open business and integration tools',
+      'View the staff Directory and people list',
+      'Receive portal issue reports',
+    ],
+    cannot: [
+      'View financials',
+      'Invite people or change roles',
+      'Post announcements',
+    ],
+  },
 };
 
 export function plainPermission(key: string, fallback?: string): string {

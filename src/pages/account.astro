@@ -19,7 +19,9 @@ const roleLabel = employee.roles.includes('owner')
   ? 'Primary owner'
   : employee.roles.includes('owner_view')
     ? 'Owner'
-    : employee.roles.join(', ') || 'None';
+    : employee.roles.includes('it')
+      ? 'IT'
+      : employee.roles.join(', ') || 'None';
 ---
 
 <PortalLayout title="Account">

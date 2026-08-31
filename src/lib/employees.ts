@@ -215,10 +215,11 @@ export async function listRoles() {
        WHEN 'owner_view' THEN 1
        WHEN 'finance' THEN 2
        WHEN 'manager' THEN 3
-       WHEN 'clinician' THEN 4
-       WHEN 'employee' THEN 5
-       WHEN 'intern' THEN 6
-       ELSE 7
+       WHEN 'it' THEN 4
+       WHEN 'clinician' THEN 5
+       WHEN 'employee' THEN 6
+       WHEN 'intern' THEN 7
+       ELSE 8
      END`,
   ).all<{
     id: string;

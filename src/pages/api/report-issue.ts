@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
+import { randomToken } from '../../lib/crypto';
 import { notifyAdminEmail } from '../../lib/email';
-import { buildIssueReportEmail } from '../../lib/issue-report';
+import { buildIssueReportEmail, buildIssueReportNotification } from '../../lib/issue-report';
+import { notifyIssueReportUsers } from '../../lib/notifications';
 
 export const prerender = false;
 
@@ -29,6 +31,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
   if (page.length > 200 || !page.startsWith('/')) {
     return jsonError('Invalid page.');
+  }
+
+  const reportId = randomToken(12);
+  const notification = buildIssueReportNotification({
+    employeeName: employee.name,
+    page,
+    description,
+  });
+
+  try {
+    await notifyIssueReportUsers({
+      ...notification,
+      excludeUserId: employee.id,
+      sourceId: reportId,
+    });
+  } catch (error) {
+    console.error('issue report notification failed', error);
   }
 
   const sent = await notifyAdminEmail(

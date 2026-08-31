@@ -3,6 +3,7 @@ import { randomToken, nowMs } from './crypto';
 
 export const CALENDAR_CONFLICT_SOURCE = 'calendar_conflict';
 export const TIME_OFF_REQUEST_SOURCE = 'time_off_request';
+export const ISSUE_REPORT_SOURCE = 'issue_report';
 
 export interface PortalNotification {
   id: string;
@@ -325,19 +326,24 @@ export async function notifyActiveUsers(input: {
   );
 }
 
-/** Notify primary owner + Owner (view) accounts with admin access. */
-export async function notifyManagementUsers(input: {
+/** Notify active users who hold any of the given role keys. */
+export async function notifyUsersByRoleKeys(input: {
+  roleKeys: string[];
   title: string;
   body: string;
   excludeUserId?: string;
   sourceType?: string;
   sourceId?: string;
+  includeOwnerEmail?: boolean;
 }): Promise<void> {
+  if (input.roleKeys.length === 0) return;
+
   const { DB } = getEnv();
   const now = nowMs();
   const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim().toLowerCase();
   const excludeId = input.excludeUserId?.trim() || null;
   const recipientIds = new Set<string>();
+  const placeholders = input.roleKeys.map(() => '?').join(', ');
 
   const byRole = await DB.prepare(
     `SELECT DISTINCT u.id
@@ -346,14 +352,16 @@ export async function notifyManagementUsers(input: {
      JOIN user_role ur ON ur.user_id = u.id
      JOIN role r ON r.id = ur.role_id
      WHERE p.status = 'active'
-       AND r.key IN ('owner', 'owner_view')`,
-  ).all<{ id: string }>();
+       AND r.key IN (${placeholders})`,
+  )
+    .bind(...input.roleKeys)
+    .all<{ id: string }>();
 
   for (const row of byRole.results ?? []) {
     recipientIds.add(row.id);
   }
 
-  if (ownerEmail) {
+  if (input.includeOwnerEmail && ownerEmail) {
     const byEmail = await DB.prepare(
       `SELECT u.id
        FROM user u
@@ -368,7 +376,8 @@ export async function notifyManagementUsers(input: {
 
   const recipients = [...recipientIds].filter((id) => id !== excludeId);
   if (recipients.length === 0) {
-    console.error('notifyManagementUsers: no admin recipients found', {
+    console.error('notifyUsersByRoleKeys: no recipients found', {
+      roleKeys: input.roleKeys,
       ownerEmailSet: Boolean(ownerEmail),
       roleMatchCount: byRole.results?.length ?? 0,
       excludeId,
@@ -393,6 +402,36 @@ export async function notifyManagementUsers(input: {
       ),
     ),
   );
+}
+
+/** Notify primary owner + Owner (view) accounts with admin access. */
+export async function notifyManagementUsers(input: {
+  title: string;
+  body: string;
+  excludeUserId?: string;
+  sourceType?: string;
+  sourceId?: string;
+}): Promise<void> {
+  await notifyUsersByRoleKeys({
+    ...input,
+    roleKeys: ['owner', 'owner_view'],
+    includeOwnerEmail: true,
+  });
+}
+
+/** Notify owner roles and IT when someone reports a portal issue. */
+export async function notifyIssueReportUsers(input: {
+  title: string;
+  body: string;
+  excludeUserId?: string;
+  sourceId: string;
+}): Promise<void> {
+  await notifyUsersByRoleKeys({
+    ...input,
+    roleKeys: ['owner', 'owner_view', 'it'],
+    sourceType: ISSUE_REPORT_SOURCE,
+    includeOwnerEmail: true,
+  });
 }
 
 export async function deleteNotificationsBySource(

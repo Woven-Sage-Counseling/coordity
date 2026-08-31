@@ -31,6 +31,24 @@ export function buildIssueReportEmail(input: {
   };
 }
 
+export function summarizeIssueReport(description: string, maxLength = 240): string {
+  const oneLine = description.replace(/\s+/g, ' ').trim();
+  if (oneLine.length <= maxLength) return oneLine;
+  return `${oneLine.slice(0, maxLength - 1)}…`;
+}
+
+export function buildIssueReportNotification(input: {
+  employeeName: string;
+  page: string;
+  description: string;
+}): { title: string; body: string } {
+  const summary = summarizeIssueReport(input.description);
+  return {
+    title: 'Portal issue reported',
+    body: `${input.employeeName} on ${input.page}: ${summary}`,
+  };
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
