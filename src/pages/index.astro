@@ -4,6 +4,7 @@ import AppCard from '../components/AppCard.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
 import HomeShortcuts from '../components/HomeShortcuts.astro';
 import HomeWidgetCarousel from '../components/HomeWidgetCarousel.astro';
+import ReportIssueDialog from '../components/ReportIssueDialog.astro';
 import { appCategories, portalApps } from '../lib/apps';
 import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
 import { getEnv } from '../lib/env';
@@ -21,19 +22,12 @@ const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeCredentialingWidget = canSeeCredentialing(employee);
 const canSeeCaseloadWidget = canSeeCaseload(employee);
 const canSeeAdmin = canAccessManagement(employee);
-const ownerEmail = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim();
 const announcements = await listAnnouncementsForUser(employee.id);
 const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
 const notifications = await listNotificationsForUser(employee.id);
 const notificationUnreadCount = await countUnreadNotifications(employee.id);
 
-const reportSubject = encodeURIComponent('Portal issue');
-const reportBody = encodeURIComponent(
-  `Hi,\n\nI'd like to report an issue with the employee portal.\n\nName: ${employee.name}\nPage: /\nWhat happened: \n\nThank you.`,
-);
-const reportHref = ownerEmail
-  ? `mailto:${ownerEmail}?subject=${reportSubject}&body=${reportBody}`
-  : null;
+const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
 ---
 
 <PortalLayout title="Home" wide>
@@ -81,15 +75,7 @@ const reportHref = ownerEmail
       }
 
       <div class="mt-14 border-t border-sage-dark/10 pt-6">
-        {
-          reportHref ? (
-            <a href={reportHref} class="text-sm text-sage-dark/65 underline-offset-2 hover:text-sage-dark hover:underline">
-              Report an issue
-            </a>
-          ) : (
-            <p class="text-sm text-sage-dark/50">Report an issue is unavailable right now.</p>
-          )
-        }
+        <ReportIssueDialog employeeName={employee.name} enabled={reportIssueEnabled} />
       </div>
     </div>
   </div>

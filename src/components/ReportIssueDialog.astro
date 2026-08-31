@@ -1,0 +1,190 @@
+---
+interface Props {
+  employeeName: string;
+  enabled: boolean;
+}
+
+const { employeeName, enabled } = Astro.props;
+---
+
+{
+  enabled ? (
+    <>
+      <button
+        type="button"
+        class="text-sm text-sage-dark/65 underline-offset-2 hover:text-sage-dark hover:underline"
+        data-report-issue-open
+      >
+        Report an issue
+      </button>
+
+      <dialog
+        class="report-issue-dialog m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-charcoal/50"
+        data-report-issue-dialog
+        aria-labelledby="report-issue-title"
+      >
+        <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
+          <form
+            method="post"
+            action="/api/report-issue"
+            class="w-full max-w-lg rounded-2xl border border-sage-dark/10 bg-surface p-5 shadow-2xl ring-1 ring-black/10 sm:p-6"
+            data-report-issue-form
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="report-issue-title" class="font-display text-2xl text-charcoal">
+                  Report an issue
+                </h2>
+                <p class="mt-1 text-sm text-sage-dark/70">
+                  We'll email the portal admin with your report.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sage-dark/70 transition hover:bg-sage/20 hover:text-charcoal"
+                data-report-issue-close
+                aria-label="Close"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            <p class="mt-4 text-sm text-sage-dark/70">
+              Reporting as <span class="font-medium text-charcoal">{employeeName}</span>
+            </p>
+
+            <input type="hidden" name="page" value="/" data-report-issue-page />
+
+            <label class="mt-4 block text-sm font-medium text-charcoal">
+              What happened?
+              <textarea
+                class="field mt-1 min-h-[8rem] resize-y"
+                name="description"
+                required
+                minlength="10"
+                maxlength="5000"
+                placeholder="Describe what you were trying to do and what went wrong."
+                data-report-issue-description
+              ></textarea>
+            </label>
+
+            <p class="mt-3 hidden text-sm" data-report-issue-status role="status"></p>
+
+            <div class="mt-5 flex justify-end gap-2">
+              <button type="button" class="btn-secondary" data-report-issue-cancel>
+                Cancel
+              </button>
+              <button type="submit" class="btn-primary" data-report-issue-submit>
+                Send report
+              </button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+    </>
+  ) : (
+    <p class="text-sm text-sage-dark/50">Report an issue is unavailable right now.</p>
+  )
+}
+
+<script>
+  function initReportIssueDialog(root: Document | Element = document): void {
+    const dialog = root.querySelector('[data-report-issue-dialog]') as HTMLDialogElement | null;
+    const openButton = root.querySelector('[data-report-issue-open]') as HTMLButtonElement | null;
+    const form = root.querySelector('[data-report-issue-form]') as HTMLFormElement | null;
+    if (!dialog || !openButton || !form) return;
+
+    const pageInput = form.querySelector('[data-report-issue-page]') as HTMLInputElement | null;
+    const descriptionInput = form.querySelector('[data-report-issue-description]') as HTMLTextAreaElement | null;
+    const statusEl = form.querySelector('[data-report-issue-status]') as HTMLElement | null;
+    const submitButton = form.querySelector('[data-report-issue-submit]') as HTMLButtonElement | null;
+    const closeButtons = form.querySelectorAll('[data-report-issue-close], [data-report-issue-cancel]');
+    const dialogEl = dialog;
+    const formEl = form;
+
+    function setStatus(message: string, kind: 'error' | 'success'): void {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+      statusEl.hidden = false;
+      statusEl.classList.remove('hidden', 'text-red-700', 'text-sage-dark/80');
+      statusEl.classList.add(kind === 'error' ? 'text-red-700' : 'text-sage-dark/80');
+    }
+
+    function clearStatus(): void {
+      if (!statusEl) return;
+      statusEl.textContent = '';
+      statusEl.hidden = true;
+      statusEl.classList.add('hidden');
+    }
+
+    function resetForm(): void {
+      formEl.reset();
+      clearStatus();
+      if (pageInput) pageInput.value = window.location.pathname || '/';
+    }
+
+    function openDialog(): void {
+      resetForm();
+      dialogEl.showModal();
+      descriptionInput?.focus();
+    }
+
+    function closeDialog(): void {
+      dialogEl.close();
+      resetForm();
+    }
+
+    openButton.addEventListener('click', openDialog);
+    closeButtons.forEach((button) => button.addEventListener('click', closeDialog));
+    dialogEl.addEventListener('click', (event) => {
+      if (event.target === dialogEl) closeDialog();
+    });
+    dialogEl.addEventListener('close', resetForm);
+
+    formEl.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearStatus();
+      if (pageInput) pageInput.value = window.location.pathname || '/';
+
+      const previousLabel = submitButton?.textContent ?? 'Send report';
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending…';
+      }
+
+      try {
+        const response = await fetch(formEl.action, {
+          method: 'POST',
+          body: new FormData(formEl),
+          headers: { accept: 'application/json' },
+        });
+        const payload = (await response.json()) as { ok?: boolean; error?: string };
+
+        if (!response.ok) {
+          setStatus(payload.error ?? 'Unable to send your report.', 'error');
+          return;
+        }
+
+        setStatus('Thanks — your report was sent to the admin.', 'success');
+        window.setTimeout(() => closeDialog(), 1400);
+      } catch {
+        setStatus('Unable to send your report. Please try again.', 'error');
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = previousLabel;
+        }
+      }
+    });
+  }
+
+  initReportIssueDialog();
+</script>
+
+<style>
+  .report-issue-dialog::backdrop {
+    background: rgb(26 28 30 / 50%);
+  }
+</style>
