@@ -654,6 +654,28 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       }
     };
 
+    const createInfoTooltip = (description: string, widgetLabel: string): HTMLElement => {
+      const wrap = document.createElement('span');
+      wrap.className = 'group/info relative inline-flex shrink-0';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className =
+        'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-sage-dark/30 text-[11px] font-semibold leading-none text-sage-dark/50 transition hover:border-sage-dark/45 hover:text-sage-dark/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
+      button.setAttribute('aria-label', `About ${widgetLabel}`);
+      button.textContent = 'i';
+
+      const tooltip = document.createElement('span');
+      tooltip.setAttribute('role', 'tooltip');
+      tooltip.className =
+        'pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-20 w-72 max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-sage-dark/10 bg-white px-3.5 py-2.5 text-left text-sm font-normal leading-snug text-sage-dark/75 opacity-0 shadow-lg transition-opacity duration-150 group-hover/info:opacity-100 group-focus-within/info:opacity-100';
+      tooltip.textContent = description;
+
+      wrap.appendChild(button);
+      wrap.appendChild(tooltip);
+      return wrap;
+    };
+
     const syncSelect = () => {
       const enabled = rows.filter((r) => r.enabled).map((r) => r.id);
       select.innerHTML = '';
@@ -714,12 +736,17 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           render();
         });
 
+        const titleWrap = document.createElement('div');
+        titleWrap.className = 'flex min-w-0 flex-1 items-center gap-2';
+
         const label = document.createElement('label');
         label.htmlFor = check.id;
-        label.className = 'min-w-0 flex-1 cursor-pointer';
-        label.innerHTML = `<span class="block text-[15px] font-medium text-charcoal"></span><span class="mt-0.5 block text-sm text-sage-dark/65"></span>`;
-        (label.children[0] as HTMLElement).textContent = widget.label;
-        (label.children[1] as HTMLElement).textContent = widget.description;
+        label.className = 'cursor-pointer text-[15px] font-medium text-charcoal';
+        label.textContent = widget.label;
+        titleWrap.appendChild(label);
+        if (widget.description) {
+          titleWrap.appendChild(createInfoTooltip(widget.description, widget.label));
+        }
 
         const colorWrap = document.createElement('div');
         colorWrap.className = 'flex shrink-0 items-center gap-2';
@@ -827,7 +854,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         controls.appendChild(up);
         controls.appendChild(down);
         li.appendChild(check);
-        li.appendChild(label);
+        li.appendChild(titleWrap);
         li.appendChild(colorWrap);
         if (iconWrap) li.appendChild(iconWrap);
         li.appendChild(controls);
