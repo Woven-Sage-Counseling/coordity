@@ -701,7 +701,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         const li = document.createElement('li');
         li.className =
-          'relative grid items-center gap-x-3 gap-y-2 overflow-visible rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3 shadow-sm [grid-template-columns:auto_minmax(0,10rem)_auto_auto_auto]';
+          'relative grid grid-cols-[auto_1fr_auto] grid-rows-[auto_auto] items-start gap-x-3 gap-y-2 overflow-visible rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3 shadow-sm';
         li.dataset.widgetId = row.id;
 
         const check = document.createElement('input');
@@ -710,7 +710,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         check.value = row.id;
         check.checked = row.enabled;
         check.className =
-          'h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30';
+          'col-start-1 row-start-1 h-4 w-4 self-center rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30';
         check.addEventListener('change', () => {
           const enabledCount = rows.filter((r) => r.enabled).length;
           if (check.checked && enabledCount >= max) {
@@ -737,12 +737,12 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         });
 
         const titleWrap = document.createElement('div');
-        titleWrap.className = 'flex min-w-0 items-center gap-1.5 overflow-visible';
+        titleWrap.className =
+          'col-start-2 row-start-1 flex items-center gap-1.5 overflow-visible';
 
         const label = document.createElement('label');
         label.htmlFor = check.id;
-        label.className =
-          'min-w-0 flex-1 cursor-pointer truncate text-[15px] font-medium text-charcoal';
+        label.className = 'cursor-pointer text-[15px] font-medium text-charcoal';
         label.textContent = widget.label;
         titleWrap.appendChild(label);
         if (widget.description) {
@@ -816,7 +816,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         }
 
         const controls = document.createElement('div');
-        controls.className = 'flex items-center gap-1';
+        controls.className =
+          'col-start-3 row-span-2 row-start-1 flex items-center gap-1 self-center';
 
         const up = document.createElement('button');
         up.type = 'button';
@@ -854,11 +855,17 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         controls.appendChild(up);
         controls.appendChild(down);
+
+        const optionsRow = document.createElement('div');
+        optionsRow.className =
+          'col-start-2 row-start-2 flex flex-wrap items-center gap-3';
+        optionsRow.appendChild(colorWrap);
+        if (iconWrap) optionsRow.appendChild(iconWrap);
+
         li.appendChild(check);
         li.appendChild(titleWrap);
-        li.appendChild(colorWrap);
-        if (iconWrap) li.appendChild(iconWrap);
         li.appendChild(controls);
+        li.appendChild(optionsRow);
         list.appendChild(li);
       });
       syncSelect();
