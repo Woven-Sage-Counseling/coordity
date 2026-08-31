@@ -8,6 +8,8 @@ interface Props {
 }
 
 const { onShift, showLabel = false, compact = false, self = false } = Astro.props;
+const iconSize = compact ? 'size-3.5' : 'size-4';
+const dotSize = compact ? 'size-2.5' : 'size-3';
 ---
 
 <div
@@ -16,23 +18,33 @@ const { onShift, showLabel = false, compact = false, self = false } = Astro.prop
   {...self ? { 'data-shift-status-self': '' } : {}}
   data-on-shift={onShift ? '1' : '0'}
 >
-  <span
-    class:list={[
-      'shrink-0 rounded-full',
-      compact ? 'size-2.5' : 'size-3',
-      onShift
-        ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]'
-        : 'bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
-    ]}
-    data-shift-status-dot
-    aria-hidden="true"
-  />
+  <span class="inline-flex shrink-0 items-center justify-center" data-shift-status-icon>
+    <span
+      class:list={[
+        'rounded-full',
+        dotSize,
+        'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]',
+        !onShift && 'hidden',
+      ]}
+      data-shift-status-available
+      aria-hidden="true"
+    />
+    <svg
+      class:list={[iconSize, 'text-sage-dark/45', onShift && 'hidden']}
+      data-shift-status-unavailable
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  </span>
   {
     showLabel ? (
       <span class="text-sm font-medium text-sage-dark/80" data-shift-status-label>
-        {onShift ? 'Working' : 'Not working'}
+        {onShift ? 'Available' : 'Unavailable'}
       </span>
     ) : null
   }
-  <span class="sr-only">{onShift ? 'Currently working' : 'Not currently working'}</span>
+  <span class="sr-only">{onShift ? 'Currently available' : 'Currently unavailable'}</span>
 </div>
