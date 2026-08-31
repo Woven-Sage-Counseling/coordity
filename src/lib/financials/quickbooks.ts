@@ -508,13 +508,14 @@ export class QuickBooksProvider implements FinancialDataProvider {
   }
 
   async getCachedSnapshot(periodStart: string, periodEnd: string): Promise<FinancialSnapshot | null> {
-    return this.readSnapshot(periodStart, periodEnd);
+    return (await this.readSnapshot(periodStart, periodEnd)) ?? (await this.readNearestSnapshot(periodStart, periodEnd));
   }
 
   async getOrFetchSnapshot(periodStart: string, periodEnd: string): Promise<FinancialSnapshot | null> {
     const cached = await this.readSnapshot(periodStart, periodEnd);
+    const fallback = cached ?? (await this.readNearestSnapshot(periodStart, periodEnd));
     const today = todayEastern();
-    const createdAt = await this.snapshotCreatedAt(periodStart, periodEnd);
+    const createdAt = cached ? await this.snapshotCreatedAt(periodStart, periodEnd) : null;
     const fresh =
       cached != null &&
       createdAt != null &&
@@ -524,14 +525,13 @@ export class QuickBooksProvider implements FinancialDataProvider {
     try {
       const accessToken = await this.validAccessToken();
       const connection = await this.connection();
-      if (!connection?.realm_id) return cached;
+      if (!connection?.realm_id) return fallback;
 
       return await this.fetchAndStorePnl(accessToken, connection.realm_id, periodStart, periodEnd, {
         includeBanks: false,
       });
-    } catch (error) {
-      if (cached) return cached;
-      throw error;
+    } catch {
+      return fallback;
     }
   }
 
@@ -559,6 +559,23 @@ export class QuickBooksProvider implements FinancialDataProvider {
              ORDER BY period_end DESC, created_at DESC
              LIMIT 1`,
           ).first<Record<string, unknown>>();
+
+    return row ? snapshotFromRow(row) : null;
+  }
+
+  private async readNearestSnapshot(periodStart: string, periodEnd: string): Promise<FinancialSnapshot | null> {
+    const { DB } = getEnv();
+    const row = await DB.prepare(
+      `SELECT source, accounting_method, period_start, period_end,
+              revenue_cents, therapist_compensation_cents, management_compensation_cents,
+              software_and_technology_cents, total_expenses_cents, net_income_cents, notes
+       FROM financial_snapshot
+       WHERE source = 'quickbooks' AND period_start = ? AND period_end <= ?
+       ORDER BY period_end DESC, created_at DESC
+       LIMIT 1`,
+    )
+      .bind(periodStart, periodEnd)
+      .first<Record<string, unknown>>();
 
     return row ? snapshotFromRow(row) : null;
   }
