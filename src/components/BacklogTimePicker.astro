@@ -1,0 +1,96 @@
+---
+interface Props {
+  name: string;
+  label: string;
+}
+
+const { name, label } = Astro.props;
+const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const minutes = Array.from({ length: 60 }, (_, index) => index);
+const fieldClass =
+  'w-full rounded-xl border border-sage-dark/15 bg-white px-2 py-2 text-sm text-charcoal';
+---
+
+<label class="block text-sm">
+  <span class="font-medium text-charcoal">{label}</span>
+  <div class="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4.5rem] gap-1.5" data-backlog-time-picker>
+    <input type="hidden" name={name} required />
+    <select data-time-hour class={fieldClass} aria-label={`${label} hour`}>
+      {
+        hours.map((hour) => (
+          <option value={String(hour)}>{String(hour).padStart(2, '0')}</option>
+        ))
+      }
+    </select>
+    <select data-time-minute class={fieldClass} aria-label={`${label} minute`}>
+      {
+        minutes.map((minute) => (
+          <option value={String(minute)}>{String(minute).padStart(2, '0')}</option>
+        ))
+      }
+    </select>
+    <select data-time-period class={fieldClass} aria-label={`${label} AM or PM`}>
+      <option value="AM">AM</option>
+      <option value="PM">PM</option>
+    </select>
+  </div>
+</label>
+
+<script>
+  function to24HourTime(hour12: number, minute: number, period: string): string {
+    let hours = hour12;
+    if (period === 'AM') {
+      hours = hour12 === 12 ? 0 : hour12;
+    } else {
+      hours = hour12 === 12 ? 12 : hour12 + 12;
+    }
+    return `${String(hours).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  function syncTimePicker(container: HTMLElement): void {
+    const hidden = container.querySelector('input[type="hidden"]') as HTMLInputElement | null;
+    const hourSelect = container.querySelector('[data-time-hour]') as HTMLSelectElement | null;
+    const minuteSelect = container.querySelector('[data-time-minute]') as HTMLSelectElement | null;
+    const periodSelect = container.querySelector('[data-time-period]') as HTMLSelectElement | null;
+    if (!hidden || !hourSelect || !minuteSelect || !periodSelect) return;
+
+    hidden.value = to24HourTime(
+      Number(hourSelect.value),
+      Number(minuteSelect.value),
+      periodSelect.value,
+    );
+  }
+
+  function resetTimePicker(container: HTMLElement): void {
+    const hourSelect = container.querySelector('[data-time-hour]') as HTMLSelectElement | null;
+    const minuteSelect = container.querySelector('[data-time-minute]') as HTMLSelectElement | null;
+    const periodSelect = container.querySelector('[data-time-period]') as HTMLSelectElement | null;
+    if (hourSelect) hourSelect.value = '12';
+    if (minuteSelect) minuteSelect.value = '0';
+    if (periodSelect) periodSelect.value = 'AM';
+    syncTimePicker(container);
+  }
+
+  function initTimePicker(container: HTMLElement): void {
+    syncTimePicker(container);
+    container.querySelectorAll('select').forEach((select) => {
+      select.addEventListener('change', () => syncTimePicker(container));
+    });
+  }
+
+  document.querySelectorAll('[data-backlog-time-picker]').forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    initTimePicker(node);
+  });
+
+  document.querySelectorAll('[data-timesheet-backlog-form]').forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) return;
+    form.addEventListener('reset', () => {
+      window.setTimeout(() => {
+        form.querySelectorAll('[data-backlog-time-picker]').forEach((node) => {
+          if (node instanceof HTMLElement) resetTimePicker(node);
+        });
+      }, 0);
+    });
+  });
+</script>

@@ -1,5 +1,6 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import BacklogTimePicker from '../components/BacklogTimePicker.astro';
 import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
 import TimesheetShiftWorkItems from '../components/TimesheetShiftWorkItems.astro';
 import {
@@ -203,7 +204,7 @@ const activeShift = summary.activeShift;
 
         <form method="post" action="/api/timesheet/backlog" class="mt-5" data-timesheet-backlog-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
-          <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_minmax(0,1.2fr)_auto] sm:items-end">
+          <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,11rem)_minmax(0,11rem)_minmax(0,1.2fr)_auto] sm:items-end">
             <label class="block text-sm">
               <span class="font-medium text-charcoal">Date</span>
               <input
@@ -213,24 +214,8 @@ const activeShift = summary.activeShift;
                 class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal"
               />
             </label>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Time started</span>
-              <input
-                name="timeStarted"
-                type="time"
-                required
-                class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal"
-              />
-            </label>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Time ended</span>
-              <input
-                name="timeEnded"
-                type="time"
-                required
-                class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal"
-              />
-            </label>
+            <BacklogTimePicker name="timeStarted" label="Time started" />
+            <BacklogTimePicker name="timeEnded" label="Time ended" />
             <label class="block text-sm">
               <span class="font-medium text-charcoal">Notes</span>
               <input
