@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import PreviewBanner from '../components/PreviewBanner.astro';
+import PortalFooter from '../components/PortalFooter.astro';
+import { getEnv } from '../lib/env';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
 
 interface Props {
@@ -12,6 +14,8 @@ const { title, wide = false } = Astro.props;
 const employee = Astro.locals.employee;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
+const showFooter = employee?.status === 'active';
+const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
 ---
 
 <!doctype html>
@@ -110,6 +114,11 @@ const canSeeManagement = canAccessManagement(employee);
         <slot />
       </div>
     </main>
+    {
+      showFooter && (
+        <PortalFooter employeeName={employee!.name} reportIssueEnabled={reportIssueEnabled} />
+      )
+    }
     <script is:inline>
       (function () {
         function showSaveFlash(el) {

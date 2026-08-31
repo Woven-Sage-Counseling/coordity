@@ -1,0 +1,23 @@
+---
+import ReportIssueDialog from './ReportIssueDialog.astro';
+
+interface Props {
+  employeeName: string;
+  reportIssueEnabled: boolean;
+}
+
+const { employeeName, reportIssueEnabled } = Astro.props;
+---
+
+<footer class="border-t border-sage-dark/10 bg-cream/90">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 text-sm sm:px-8">
+    <a
+      href="/help"
+      class="text-sage-dark/65 underline-offset-2 hover:text-sage-dark hover:underline"
+    >
+      Help
+    </a>
+    <span class="text-sage-dark/25" aria-hidden="true">·</span>
+    <ReportIssueDialog employeeName={employeeName} enabled={reportIssueEnabled} />
+  </div>
+</footer>

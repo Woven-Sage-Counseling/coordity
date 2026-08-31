@@ -4,11 +4,9 @@ import AppCard from '../components/AppCard.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
 import HomeShortcuts from '../components/HomeShortcuts.astro';
 import HomeWidgetCarousel from '../components/HomeWidgetCarousel.astro';
-import ReportIssueDialog from '../components/ReportIssueDialog.astro';
 import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
 import { appCategories, portalApps } from '../lib/apps';
 import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
-import { getEnv } from '../lib/env';
 import { listNotificationsForUser, countUnreadNotifications } from '../lib/notifications';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
 import { canSeeCredentialing } from '../lib/credentialing';
@@ -29,7 +27,6 @@ const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
 const notifications = await listNotificationsForUser(employee.id);
 const notificationUnreadCount = await countUnreadNotifications(employee.id);
 
-const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
 const activeShift = await getActiveShift(employee.id);
 const onShift = activeShift != null;
 ---
@@ -80,10 +77,6 @@ const onShift = activeShift != null;
           );
         })
       }
-
-      <div class="mt-14 border-t border-sage-dark/10 pt-6">
-        <ReportIssueDialog employeeName={employee.name} enabled={reportIssueEnabled} />
-      </div>
     </div>
   </div>
 </PortalLayout>
