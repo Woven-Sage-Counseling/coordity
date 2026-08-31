@@ -21,7 +21,7 @@ const { requests, error = null, embedded = false } = Astro.props;
       <div>
         <h2 id="timesheet-backlog" class="font-display text-3xl text-charcoal">Timesheet backlog</h2>
         <p class="mt-2 text-sm text-sage-dark/65">
-          Review backlog hours submitted when someone forgot to clock in.
+          Review backlog hours submitted when someone forgot to clock in. Clear approved requests once handled.
         </p>
       </div>
     ) : (
@@ -99,6 +99,23 @@ const { requests, error = null, embedded = false } = Astro.props;
                       <input type="hidden" name="requestId" value={request.id} />
                       <input type="hidden" name="action" value="deny" />
                       <button class="btn-secondary !px-3 !py-1.5" type="submit">Deny</button>
+                    </form>
+                  </div>
+                ) : request.status === 'approved' ? (
+                  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    {
+                      request.reviewerName ? (
+                        <p class="text-xs text-sage-dark/55">
+                          Reviewed by {request.reviewerName}
+                          {request.reviewedAt ? ` on ${formatBacklogRequestDate(request.reviewedAt)}` : ''}
+                        </p>
+                      ) : (
+                        <span />
+                      )
+                    }
+                    <form method="post" action="/api/timesheet/backlog/clear">
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <button class="btn-secondary !px-3 !py-1.5" type="submit">Clear</button>
                     </form>
                   </div>
                 ) : request.reviewerName ? (

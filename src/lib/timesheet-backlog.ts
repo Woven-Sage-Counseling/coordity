@@ -21,6 +21,7 @@ export interface TimesheetBacklogRequest {
   reviewedAt: number | null;
   shiftId: string | null;
   createdAt: number;
+  clearedAt: number | null;
 }
 
 type BacklogRow = {
@@ -39,6 +40,7 @@ type BacklogRow = {
   reviewed_at: number | null;
   shift_id: string | null;
   created_at: number;
+  cleared_at: number | null;
 };
 
 const BACKLOG_SELECT = `
@@ -57,7 +59,8 @@ const BACKLOG_SELECT = `
     reviewer.name AS reviewer_name,
     b.reviewed_at,
     b.shift_id,
-    b.created_at
+    b.created_at,
+    b.cleared_at
   FROM timesheet_backlog b
   JOIN user u ON u.id = b.user_id
   LEFT JOIN user reviewer ON reviewer.id = b.reviewed_by
@@ -80,6 +83,7 @@ function mapBacklog(row: BacklogRow): TimesheetBacklogRequest {
     reviewedAt: row.reviewed_at,
     shiftId: row.shift_id,
     createdAt: row.created_at,
+    clearedAt: row.cleared_at,
   };
 }
 
@@ -172,7 +176,11 @@ export async function listTimesheetBacklogForAdmin(limit = 100): Promise<Timeshe
   const rows = await DB.prepare(
     `${BACKLOG_SELECT}
      WHERE b.status = 'pending'
-        OR (b.status = 'approved' AND b.work_date >= date('now', '-30 day'))
+        OR (
+          b.status = 'approved'
+          AND b.cleared_at IS NULL
+          AND b.work_date >= date('now', '-30 day')
+        )
      ORDER BY
        CASE b.status WHEN 'pending' THEN 0 ELSE 1 END,
        b.created_at DESC
@@ -226,6 +234,31 @@ export async function reviewTimesheetBacklogRequest(
   const row = await DB.prepare(`${BACKLOG_SELECT} WHERE b.id = ?`).bind(requestId).first<BacklogRow>();
   if (!row) throw new Error('Unable to load reviewed backlog request.');
   return mapBacklog(row);
+}
+
+export async function clearTimesheetBacklogRequest(requestId: string): Promise<void> {
+  const { DB } = getEnv();
+  const existing = await DB.prepare(
+    `${BACKLOG_SELECT} WHERE b.id = ?`,
+  )
+    .bind(requestId)
+    .first<BacklogRow>();
+
+  if (!existing) throw new Error('Backlog request not found.');
+  if (existing.status !== 'approved') {
+    throw new Error('Only approved backlog requests can be cleared.');
+  }
+  if (existing.cleared_at != null) {
+    throw new Error('That backlog request was already cleared.');
+  }
+
+  await DB.prepare(
+    `UPDATE timesheet_backlog
+     SET cleared_at = ?
+     WHERE id = ?`,
+  )
+    .bind(nowMs(), requestId)
+    .run();
 }
 
 export function buildTimesheetBacklogEmail(input: {
