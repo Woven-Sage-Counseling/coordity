@@ -145,6 +145,17 @@ export async function getActiveShift(userId: string): Promise<TimesheetShift | n
   return row ? mapShift(row) : null;
 }
 
+export async function listActiveShiftUserIds(): Promise<Set<string>> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT DISTINCT user_id
+     FROM timesheet_shift
+     WHERE source = 'clock' AND ended_at IS NULL`,
+  ).all<{ user_id: string }>();
+
+  return new Set((rows.results ?? []).map((row) => row.user_id));
+}
+
 export async function listTimesheetShiftsForUser(
   userId: string,
   options: { start?: string; end?: string; limit?: number; completedOnly?: boolean } = {},

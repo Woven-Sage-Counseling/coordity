@@ -1,11 +1,18 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
 import { groupDirectoryByTeam, listDirectory, type DirectoryPerson } from '../lib/employees';
+import { listActiveShiftUserIds } from '../lib/timesheet-entries';
 
 export const prerender = false;
 
 const people = await listDirectory();
+const activeShiftUserIds = await listActiveShiftUserIds();
 const { groups, unassigned } = groupDirectoryByTeam(people);
+
+function isOnShift(person: DirectoryPerson): boolean {
+  return activeShiftUserIds.has(person.id);
+}
 
 function initials(name: string): string {
   return name
@@ -48,6 +55,7 @@ function personCells(person: DirectoryPerson) {
                   <thead>
                     <tr class="border-b border-sage-dark/15 text-sage-dark/60">
                       <th class="py-2 pr-4 font-medium">Name</th>
+                      <th class="py-2 pr-4 font-medium">Status</th>
                       <th class="py-2 pr-4 font-medium">Job title</th>
                       <th class="py-2 pr-4 font-medium">Email</th>
                       <th class="py-2 font-medium">Phone</th>
@@ -75,6 +83,9 @@ function personCells(person: DirectoryPerson) {
                               )}
                               <span class="font-medium text-charcoal">{person.name}</span>
                             </div>
+                          </td>
+                          <td class="py-3 pr-4">
+                            <ShiftStatusIndicator onShift={isOnShift(person)} compact />
                           </td>
                           <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>
                           <td class="py-3 pr-4">
@@ -117,6 +128,7 @@ function personCells(person: DirectoryPerson) {
                 <thead>
                   <tr class="border-b border-sage-dark/15 text-sage-dark/60">
                     <th class="py-2 pr-4 font-medium">Name</th>
+                    <th class="py-2 pr-4 font-medium">Status</th>
                     <th class="py-2 pr-4 font-medium">Job title</th>
                     <th class="py-2 pr-4 font-medium">Email</th>
                     <th class="py-2 font-medium">Phone</th>
@@ -144,6 +156,9 @@ function personCells(person: DirectoryPerson) {
                             )}
                             <span class="font-medium text-charcoal">{person.name}</span>
                           </div>
+                        </td>
+                        <td class="py-3 pr-4">
+                          <ShiftStatusIndicator onShift={isOnShift(person)} compact />
                         </td>
                         <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>
                         <td class="py-3 pr-4">

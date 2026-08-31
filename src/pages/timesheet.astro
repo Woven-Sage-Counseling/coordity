@@ -1,5 +1,6 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
 import TimesheetShiftWorkItems from '../components/TimesheetShiftWorkItems.astro';
 import {
   getTimesheetSummary,
@@ -104,8 +105,10 @@ const activeShift = summary.activeShift;
         </div>
       </div>
 
-      <div class="mt-6 flex flex-wrap gap-3">
-        <form method="post" action="/api/timesheet/start-shift" data-timesheet-start-form>
+      <div class="mt-6 flex flex-wrap items-center gap-4">
+        <ShiftStatusIndicator onShift={activeShift != null} showLabel self />
+        <div class="flex flex-wrap gap-3">
+          <form method="post" action="/api/timesheet/start-shift" data-timesheet-start-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
           <button
             class={shiftButtonClasses(activeShift != null, 'start', 'page')}
@@ -127,6 +130,7 @@ const activeShift = summary.activeShift;
             END shift
           </button>
         </form>
+        </div>
       </div>
 
       <div class="mt-8">

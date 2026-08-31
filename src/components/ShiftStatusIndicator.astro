@@ -1,0 +1,38 @@
+---
+interface Props {
+  onShift: boolean;
+  showLabel?: boolean;
+  compact?: boolean;
+  /** Update live when the signed-in user starts or ends a shift. */
+  self?: boolean;
+}
+
+const { onShift, showLabel = false, compact = false, self = false } = Astro.props;
+---
+
+<div
+  class="inline-flex items-center gap-2"
+  data-shift-status
+  {...self ? { 'data-shift-status-self': '' } : {}}
+  data-on-shift={onShift ? '1' : '0'}
+>
+  <span
+    class:list={[
+      'shrink-0 rounded-full',
+      compact ? 'size-2.5' : 'size-3',
+      onShift
+        ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]'
+        : 'bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
+    ]}
+    data-shift-status-dot
+    aria-hidden="true"
+  />
+  {
+    showLabel ? (
+      <span class="text-sm font-medium text-sage-dark/80" data-shift-status-label>
+        {onShift ? 'Working' : 'Not working'}
+      </span>
+    ) : null
+  }
+  <span class="sr-only">{onShift ? 'Currently working' : 'Not currently working'}</span>
+</div>

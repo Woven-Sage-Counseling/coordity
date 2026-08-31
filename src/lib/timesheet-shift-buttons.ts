@@ -28,4 +28,26 @@ export function applyShiftButtonState(
     endBtn.disabled = !onShift;
     endBtn.className = shiftButtonClasses(onShift, 'end', variant);
   }
+
+  applyShiftStatus(activeShift);
+}
+
+export function applyShiftStatus(activeShift: unknown): void {
+  const onShift = Boolean(activeShift);
+
+  document.querySelectorAll('[data-shift-status-self]').forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    node.dataset.onShift = onShift ? '1' : '0';
+
+    const dot = node.querySelector('[data-shift-status-dot]');
+    if (dot instanceof HTMLElement) {
+      dot.classList.toggle('bg-emerald-500', onShift);
+      dot.classList.toggle('shadow-[0_0_0_3px_rgba(16,185,129,0.25)]', onShift);
+      dot.classList.toggle('bg-red-500', !onShift);
+      dot.classList.toggle('shadow-[0_0_0_3px_rgba(239,68,68,0.2)]', !onShift);
+    }
+
+    const label = node.querySelector('[data-shift-status-label]');
+    if (label) label.textContent = onShift ? 'Working' : 'Not working';
+  });
 }
