@@ -4,6 +4,7 @@ import { randomToken, nowMs } from './crypto';
 export const CALENDAR_CONFLICT_SOURCE = 'calendar_conflict';
 export const TIME_OFF_REQUEST_SOURCE = 'time_off_request';
 export const ISSUE_REPORT_SOURCE = 'issue_report';
+export const TIMESHEET_BACKLOG_SOURCE = 'timesheet_backlog';
 
 export interface PortalNotification {
   id: string;

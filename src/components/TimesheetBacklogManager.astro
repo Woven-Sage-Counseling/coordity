@@ -1,0 +1,109 @@
+---
+import { formatHours, formatWorkDate } from '../lib/timesheet';
+import {
+  backlogStatusLabel,
+  formatBacklogRequestDate,
+  type TimesheetBacklogRequest,
+} from '../lib/timesheet-backlog';
+
+interface Props {
+  requests: TimesheetBacklogRequest[];
+  error?: string | null;
+  embedded?: boolean;
+}
+
+const { requests, error = null, embedded = false } = Astro.props;
+---
+
+<section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} aria-labelledby="timesheet-backlog" id="timesheet-backlog">
+  {
+    !embedded ? (
+      <div>
+        <h2 id="timesheet-backlog" class="font-display text-3xl text-charcoal">Timesheet backlog</h2>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          Review backlog hours submitted when someone forgot to clock in.
+        </p>
+      </div>
+    ) : (
+      <h2 id="timesheet-backlog" class="sr-only">Timesheet backlog</h2>
+    )
+  }
+
+  {
+    error ? (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    ) : null
+  }
+
+  {
+    requests.length === 0 ? (
+      <p class="mt-6 text-sm text-sage-dark/65">No backlog hours waiting for review.</p>
+    ) : (
+      <div class="mt-6 space-y-4">
+        {
+          requests.map((request) => (
+            <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-charcoal">{request.userName}</p>
+                  <p class="text-sm text-sage-dark/65">{request.userEmail}</p>
+                  <p class="mt-1 text-xs text-sage-dark/55">
+                    Submitted {formatBacklogRequestDate(request.createdAt)}
+                  </p>
+                </div>
+                <span
+                  class:list={[
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                    request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                    request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                    request.status === 'denied' && 'bg-red-100 text-red-900',
+                  ]}
+                >
+                  {backlogStatusLabel(request.status)}
+                </span>
+              </div>
+
+              <div class="mt-4 text-sm text-charcoal">
+                <p>
+                  <span class="font-semibold">{formatWorkDate(request.workDate)}</span>
+                  <span class="text-sage-dark/50"> · </span>
+                  <span>{formatHours(request.minutes)}</span>
+                </p>
+              </div>
+
+              {
+                request.notes ? (
+                  <p class="mt-4 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm text-sage-dark/80">
+                    <span class="font-semibold text-charcoal">Notes:</span> {request.notes}
+                  </p>
+                ) : null
+              }
+
+              {
+                request.status === 'pending' ? (
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <form method="post" action="/api/timesheet/backlog/review" class="contents">
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <input type="hidden" name="action" value="approve" />
+                      <button class="btn-primary !px-3 !py-1.5" type="submit">Approve</button>
+                    </form>
+                    <form method="post" action="/api/timesheet/backlog/review" class="contents">
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <input type="hidden" name="action" value="deny" />
+                      <button class="btn-secondary !px-3 !py-1.5" type="submit">Deny</button>
+                    </form>
+                  </div>
+                ) : request.reviewerName ? (
+                  <p class="mt-4 text-xs text-sage-dark/55">
+                    Reviewed by {request.reviewerName}
+                    {request.reviewedAt ? ` on ${formatBacklogRequestDate(request.reviewedAt)}` : ''}
+                  </p>
+                ) : null
+              }
+            </article>
+          ))
+        }
+      </div>
+    )
+  }
+</section>

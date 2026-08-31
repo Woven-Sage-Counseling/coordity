@@ -54,6 +54,34 @@ export function formatHours(minutes: number): string {
   return `${hours.toFixed(1)} hrs`;
 }
 
+export function formatClockTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function easternDateFromMs(ms: number): string {
+  return new Date(ms).toLocaleDateString('en-CA', {
+    timeZone: 'America/New_York',
+  });
+}
+
+export function formatShiftRange(startedAt: number | null, endedAt: number | null): string {
+  if (startedAt == null || endedAt == null) return 'Manual entry';
+  return `${formatClockTime(startedAt)} – ${formatClockTime(endedAt)}`;
+}
+
+export function minutesBetween(startedAt: number, endedAt: number): number {
+  const minutes = Math.round((endedAt - startedAt) / 60_000);
+  if (minutes < 1) return 1;
+  if (minutes > MAX_MINUTES_PER_DAY) {
+    throw new Error('A single shift cannot be longer than 24 hours.');
+  }
+  return minutes;
+}
+
 export function parseHoursInput(raw: string): number {
   const value = raw.trim().replace(',', '.');
   if (!value) {

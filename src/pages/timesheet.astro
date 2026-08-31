@@ -1,37 +1,25 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import {
-  getWeekSummary,
-  serializeTimesheetEntry,
-  shiftWeek,
-  weekStartMonday,
+  getTimesheetSummary,
+  serializeTimesheetShift,
+  serializeTimesheetSummary,
 } from '../lib/timesheet-entries';
-import {
-  currentWeekRange,
-  formatHours,
-  formatWeekLabel,
-} from '../lib/timesheet';
-import { todayEastern } from '../lib/financials/periods';
+import { listTimesheetBacklogForUser, serializeBacklogRequest } from '../lib/timesheet-backlog';
+import { formatWeekLabel } from '../lib/timesheet';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const error = Astro.url.searchParams.get('error');
-const saved = Astro.url.searchParams.get('saved') === '1';
-const deleted = Astro.url.searchParams.get('deleted') === '1';
+const started = Astro.url.searchParams.get('started') === '1';
+const ended = Astro.url.searchParams.get('ended') === '1';
+const backlogSent = Astro.url.searchParams.get('backlog') === '1';
 
-const weekParam = Astro.url.searchParams.get('week');
-const current = currentWeekRange();
-const weekStart =
-  weekParam && /^\d{4}-\d{2}-\d{2}$/.test(weekParam)
-    ? weekStartMonday(weekParam)
-    : current.start;
-
-let week = await getWeekSummary(employee.id, weekStart);
-const today = todayEastern();
-const prevWeek = shiftWeek(week.start, -1);
-const nextWeek = shiftWeek(week.start, 1);
-const canGoNext = nextWeek <= current.start;
+const summary = await getTimesheetSummary(employee.id);
+const backlogRequests = await listTimesheetBacklogForUser(employee.id, 10);
+const serialized = serializeTimesheetSummary(summary);
+const activeShift = summary.activeShift;
 ---
 
 <PortalLayout title="Hours worked" wide>
@@ -44,155 +32,382 @@ const canGoNext = nextWeek <= current.start;
   <div class="mt-3">
     <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Hours worked</h1>
     <p class="mt-3 max-w-2xl text-sage-dark/75">
-      Log the hours you worked each day. Saving the same date again updates that day&apos;s entry.
+      Start your shift when you begin working and end it when you&apos;re done. The portal tracks your hours and date automatically.
     </p>
   </div>
 
-  {
-    error ? (
-      <p class="mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-        {error}
-      </p>
-    ) : null
-  }
-  {
-    saved ? (
-      <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
-        Hours saved.
-      </p>
-    ) : null
-  }
-  {
-    deleted ? (
-      <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80">
-        Entry removed.
-      </p>
-    ) : null
-  }
+  <div data-timesheet-page data-summary={JSON.stringify(serialized)}>
+    {
+      error ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" data-timesheet-flash>
+          {error}
+        </p>
+      ) : started ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
+          Shift started.
+        </p>
+      ) : ended ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
+          Shift ended and saved.
+        </p>
+      ) : backlogSent ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
+          Backlog hours submitted for admin approval.
+        </p>
+      ) : null
+    }
 
-  <section class="mt-8 max-w-3xl">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="text-sm font-semibold text-charcoal">{formatWeekLabel(week.start, week.end)}</p>
-        <p class="mt-1 text-3xl font-semibold text-charcoal">{formatHours(week.totalMinutes)}</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <a
-          href={`/timesheet?week=${prevWeek}`}
-          class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:bg-sage/10"
-        >
-          Previous
-        </a>
-        {
-          canGoNext ? (
-            <a
-              href={`/timesheet?week=${nextWeek}`}
-              class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:bg-sage/10"
-            >
-              Next
-            </a>
-          ) : (
-            <span class="rounded-full border border-sage-dark/10 px-3 py-1.5 text-sm font-semibold text-sage-dark/35">
-              Next
-            </span>
-          )
-        }
-      </div>
-    </div>
-
-    <form method="post" action="/api/timesheet/upsert" class="mt-6 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
-      <input type="hidden" name="returnTo" value={`/timesheet?week=${week.start}`} />
-      <h2 class="text-sm font-semibold text-charcoal">Log hours</h2>
-      <div class="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1.2fr)_auto] sm:items-end">
-        <label class="block text-sm">
-          <span class="font-medium text-charcoal">Date</span>
-          <input
-            name="workDate"
-            type="date"
-            required
-            value={today}
-            class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal"
-          />
-        </label>
-        <label class="block text-sm">
-          <span class="font-medium text-charcoal">Hours</span>
-          <input
-            name="hours"
-            type="text"
-            inputmode="decimal"
-            required
-            placeholder="7.5"
-            class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-sage-dark/45"
-          />
-        </label>
-        <label class="block text-sm">
-          <span class="font-medium text-charcoal">Notes</span>
-          <input
-            name="notes"
-            type="text"
-            maxlength="500"
-            placeholder="Optional"
-            class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-sage-dark/45"
-          />
-        </label>
-        <button class="btn-primary !px-4 !py-2" type="submit">Save</button>
-      </div>
-      <p class="mt-3 text-xs text-sage-dark/55">Use decimals like 7.5 or times like 7:30.</p>
-    </form>
-
-    <div class="mt-8">
-      <h2 class="text-sm font-semibold text-charcoal">Entries</h2>
-      {
-        week.entries.length === 0 ? (
-          <p class="mt-4 text-sm text-sage-dark/65">No hours logged for this week.</p>
-        ) : (
-          <div class="mt-4 space-y-3">
+    <section class="mt-8 max-w-3xl">
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">This week</p>
+          <p class="mt-2 text-3xl font-semibold text-charcoal" data-timesheet-week-total>
+            {serialized.week.totalLabel}
+          </p>
+          <p class="mt-1 text-xs text-sage-dark/60" data-timesheet-week-label>
+            {formatWeekLabel(summary.week.start, summary.week.end)}
+          </p>
+        </div>
+        <div class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Weekly average</p>
+          <p class="mt-2 text-3xl font-semibold text-charcoal" data-timesheet-average-total>
+            {serialized.weeklyAverageLabel}
+          </p>
+          <p class="mt-1 text-xs text-sage-dark/60">Across weeks with logged hours</p>
+        </div>
+        <div class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Current shift</p>
+          <p class="mt-2 text-3xl font-semibold text-charcoal" data-timesheet-active-duration>
+            {activeShift?.startedAt ? 'In progress' : '—'}
+          </p>
+          <p class="mt-1 text-xs text-sage-dark/60" data-timesheet-active-since>
             {
-              week.entries.map((entry) => {
-                const serialized = serializeTimesheetEntry(entry);
+              activeShift?.startedAt
+                ? `Started ${new Date(activeShift.startedAt).toLocaleTimeString('en-US', {
+                    timeZone: 'America/New_York',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}`
+                : 'Not clocked in'
+            }
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <form method="post" action="/api/timesheet/start-shift" data-timesheet-start-form>
+          <input type="hidden" name="returnTo" value="/timesheet" />
+          <button
+            class="btn-primary"
+            type="submit"
+            data-timesheet-start-btn
+            disabled={activeShift != null}
+          >
+            Start shift
+          </button>
+        </form>
+        <form method="post" action="/api/timesheet/end-shift" data-timesheet-end-form>
+          <input type="hidden" name="returnTo" value="/timesheet" />
+          <button
+            class="btn-secondary"
+            type="submit"
+            data-timesheet-end-btn
+            disabled={activeShift == null}
+          >
+            End shift
+          </button>
+        </form>
+      </div>
+
+      <div class="mt-8">
+        <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
+        <p class="mt-1 text-sm text-sage-dark/65">Scroll through your recent shifts and approved backlog entries.</p>
+        <div class="mt-4 max-h-[28rem] overflow-y-auto overscroll-contain rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
+          <p class="hidden px-2 py-6 text-center text-sm text-sage-dark/65" data-timesheet-empty>
+            No shifts logged yet.
+          </p>
+          <ul class="space-y-3" data-timesheet-list>
+            {
+              summary.entries.map((entry) => {
+                const serializedEntry = serializeTimesheetShift(entry);
                 return (
-                  <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+                  <li
+                    class="rounded-xl border border-sage-dark/10 bg-white px-4 py-3"
+                    data-timesheet-item
+                    data-entry-id={entry.id}
+                  >
                     <div class="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p class="text-sm font-semibold text-charcoal">{serialized.dateLabel}</p>
-                        <p class="mt-1 text-sm text-sage-dark/80">{serialized.hoursLabel}</p>
+                        <p class="text-sm font-semibold text-charcoal">{serializedEntry.dateLabel}</p>
+                        <p class="mt-1 text-sm text-sage-dark/75">{serializedEntry.timeLabel}</p>
                         {entry.notes ? (
                           <p class="mt-2 text-sm text-sage-dark/70">{entry.notes}</p>
                         ) : null}
                       </div>
-                      <form method="post" action="/api/timesheet/delete" class="contents">
-                        <input type="hidden" name="entryId" value={entry.id} />
-                        <input type="hidden" name="returnTo" value={`/timesheet?week=${week.start}`} />
-                        <button
-                          class="rounded-md bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-800 ring-1 ring-red-200 transition hover:bg-red-100"
-                          type="submit"
-                          data-confirm="Remove this entry?"
-                        >
-                          Remove
-                        </button>
-                      </form>
+                      <div class="text-right">
+                        <p class="text-sm font-semibold text-charcoal">{serializedEntry.hoursLabel}</p>
+                        {
+                          serializedEntry.source === 'backlog' ? (
+                            <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-sage-dark/50">
+                              Backlog
+                            </p>
+                          ) : serializedEntry.isActive ? (
+                            <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#1a73e8]">
+                              Active
+                            </p>
+                          ) : null
+                        }
+                      </div>
                     </div>
-                  </article>
+                  </li>
                 );
               })
             }
+          </ul>
+        </div>
+      </div>
+
+      <section class="mt-10 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+        <h2 class="text-sm font-semibold text-charcoal">Request backlog hours</h2>
+        <p class="mt-2 text-sm text-sage-dark/70">
+          Forgot to clock in? Submit the date and hours for admin approval. Approved backlog hours appear in your shift log.
+        </p>
+
+        <form method="post" action="/api/timesheet/backlog" class="mt-5" data-timesheet-backlog-form>
+          <input type="hidden" name="returnTo" value="/timesheet" />
+          <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1.2fr)_auto] sm:items-end">
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Date</span>
+              <input
+                name="workDate"
+                type="date"
+                required
+                class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Hours</span>
+              <input
+                name="hours"
+                type="text"
+                inputmode="decimal"
+                required
+                placeholder="7.5"
+                class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-sage-dark/45"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Notes</span>
+              <input
+                name="notes"
+                type="text"
+                maxlength="500"
+                placeholder="Why these hours are needed"
+                class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-sage-dark/45"
+              />
+            </label>
+            <button class="btn-primary !px-4 !py-2" type="submit">Submit</button>
           </div>
-        )
-      }
-    </div>
-  </section>
+        </form>
+
+        {
+          backlogRequests.length > 0 ? (
+            <div class="mt-6 border-t border-sage-dark/10 pt-5">
+              <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Your backlog requests</h3>
+              <ul class="mt-3 space-y-2">
+                {
+                  backlogRequests.map((request) => {
+                    const item = serializeBacklogRequest(request);
+                    return (
+                      <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
+                        <span class="text-charcoal">
+                          {item.dateLabel} · {item.hoursLabel}
+                        </span>
+                        <span
+                          class:list={[
+                            'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                            request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                            request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                            request.status === 'denied' && 'bg-red-100 text-red-900',
+                          ]}
+                        >
+                          {item.statusLabel}
+                        </span>
+                      </li>
+                    );
+                  })
+                }
+              </ul>
+            </div>
+          ) : null
+        }
+      </section>
+    </section>
+  </div>
 </PortalLayout>
 
 <script>
-  document.querySelectorAll('[data-confirm]').forEach((button) => {
-    if (!(button instanceof HTMLButtonElement)) return;
-    const form = button.form;
-    if (!(form instanceof HTMLFormElement)) return;
-    form.addEventListener('submit', (event) => {
-      const message = button.getAttribute('data-confirm');
-      if (message && !window.confirm(message)) {
-        event.preventDefault();
+  function formatDuration(minutes: number): string {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs <= 0) return `${mins}m`;
+    if (mins === 0) return `${hrs}h`;
+    return `${hrs}h ${mins}m`;
+  }
+
+  function applySummary(root: HTMLElement, summary: Record<string, unknown>): void {
+    root.dataset.summary = JSON.stringify(summary);
+
+    const weekTotal = root.querySelector('[data-timesheet-week-total]');
+    const averageTotal = root.querySelector('[data-timesheet-average-total]');
+    const activeDuration = root.querySelector('[data-timesheet-active-duration]');
+    const activeSince = root.querySelector('[data-timesheet-active-since]');
+    const startBtn = root.querySelector('[data-timesheet-start-btn]') as HTMLButtonElement | null;
+    const endBtn = root.querySelector('[data-timesheet-end-btn]') as HTMLButtonElement | null;
+    const list = root.querySelector('[data-timesheet-list]');
+    const empty = root.querySelector('[data-timesheet-empty]');
+
+    const week = summary.week as { totalLabel?: string };
+    const activeShift = summary.activeShift as { startedAt?: number | null; timeLabel?: string } | null;
+    const entries = (summary.entries as Array<Record<string, unknown>>) ?? [];
+
+    if (weekTotal && week.totalLabel) weekTotal.textContent = week.totalLabel;
+    if (averageTotal && summary.weeklyAverageLabel) {
+      averageTotal.textContent = String(summary.weeklyAverageLabel);
+    }
+
+    if (startBtn) startBtn.disabled = Boolean(activeShift);
+    if (endBtn) endBtn.disabled = !activeShift;
+
+    if (list instanceof HTMLElement) {
+      list.innerHTML = entries
+        .map((entry) => {
+          const source = String(entry.source ?? 'clock');
+          const isActive = Boolean(entry.isActive);
+          const badge =
+            source === 'backlog'
+              ? '<p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-sage-dark/50">Backlog</p>'
+              : isActive
+                ? '<p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#1a73e8]">Active</p>'
+                : '';
+          const notes = entry.notes
+            ? `<p class="mt-2 text-sm text-sage-dark/70">${String(entry.notes)}</p>`
+            : '';
+          return `
+            <li class="rounded-xl border border-sage-dark/10 bg-white px-4 py-3" data-timesheet-item data-entry-id="${String(entry.id)}">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-charcoal">${String(entry.dateLabel)}</p>
+                  <p class="mt-1 text-sm text-sage-dark/75">${String(entry.timeLabel)}</p>
+                  ${notes}
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-semibold text-charcoal">${String(entry.hoursLabel)}</p>
+                  ${badge}
+                </div>
+              </div>
+            </li>
+          `;
+        })
+        .join('');
+    }
+
+    if (empty instanceof HTMLElement) {
+      const showEmpty = entries.length === 0;
+      empty.classList.toggle('hidden', !showEmpty);
+      empty.classList.toggle('block', showEmpty);
+    }
+
+    if (activeShift?.startedAt) {
+      const startedAt = Number(activeShift.startedAt);
+      const updateActive = () => {
+        const minutes = Math.max(1, Math.round((Date.now() - startedAt) / 60_000));
+        if (activeDuration) activeDuration.textContent = formatDuration(minutes);
+        if (activeSince) {
+          activeSince.textContent = `Started ${new Date(startedAt).toLocaleTimeString('en-US', {
+            timeZone: 'America/New_York',
+            hour: 'numeric',
+            minute: '2-digit',
+          })}`;
+        }
+      };
+      updateActive();
+      window.clearInterval(Number(root.dataset.activeTimer || 0));
+      const timer = window.setInterval(updateActive, 30_000);
+      root.dataset.activeTimer = String(timer);
+    } else {
+      window.clearInterval(Number(root.dataset.activeTimer || 0));
+      if (activeDuration) activeDuration.textContent = '—';
+      if (activeSince) activeSince.textContent = 'Not clocked in';
+    }
+  }
+
+  async function submitTimesheetForm(form: HTMLFormElement, root: HTMLElement): Promise<void> {
+    const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    const previousLabel = submitButton?.textContent ?? '';
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Saving…';
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { accept: 'application/json' },
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        summary?: Record<string, unknown>;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.summary) {
+        throw new Error(payload.error ?? 'Unable to update your timesheet.');
       }
+
+      applySummary(root, payload.summary);
+      const flash = root.querySelector('[data-timesheet-flash]') as HTMLElement | null;
+      if (flash) {
+        flash.textContent =
+          form.matches('[data-timesheet-start-form]')
+            ? 'Shift started.'
+            : form.matches('[data-timesheet-end-form]')
+              ? 'Shift ended and saved.'
+              : 'Backlog hours submitted for admin approval.';
+        flash.className =
+          'mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80';
+        flash.hidden = false;
+      }
+    } catch (error) {
+      const flash = root.querySelector('[data-timesheet-flash]') as HTMLElement | null;
+      if (flash) {
+        flash.textContent = error instanceof Error ? error.message : 'Unable to update your timesheet.';
+        flash.className =
+          'mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800';
+        flash.hidden = false;
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = previousLabel;
+      }
+    }
+  }
+
+  document.querySelectorAll('[data-timesheet-page]').forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    const summary = JSON.parse(node.dataset.summary || '{}') as Record<string, unknown>;
+    applySummary(node, summary);
+
+    node.querySelectorAll(
+      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-backlog-form]',
+    ).forEach((formNode) => {
+      if (!(formNode instanceof HTMLFormElement)) return;
+      formNode.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void submitTimesheetForm(formNode, node);
+      });
     });
   });
 </script>
