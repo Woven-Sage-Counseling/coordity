@@ -195,8 +195,9 @@ const activeShift = summary.activeShift;
           </ul>
         </div>
       </div>
+    </section>
 
-      <section class="mt-10 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+    <section class="mt-10 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
         <h2 class="text-sm font-semibold text-charcoal">Request backlog hours</h2>
         <p class="mt-2 text-sm text-sage-dark/70">
           Forgot to clock in? Submit the date, start time, and end time for admin approval. Approved backlog hours appear in your shift log.
@@ -204,7 +205,7 @@ const activeShift = summary.activeShift;
 
         <form method="post" action="/api/timesheet/backlog" class="mt-5" data-timesheet-backlog-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
-          <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
+          <div class="flex flex-nowrap items-end gap-x-3 overflow-x-auto pb-1">
             <label class="block shrink-0 text-sm">
               <span class="font-medium text-charcoal">Date</span>
               <input class="field mt-1.5 !w-[11rem]" name="workDate" type="date" required />
@@ -253,7 +254,6 @@ const activeShift = summary.activeShift;
           </ul>
         </div>
       </section>
-    </section>
   </div>
 </PortalLayout>
 

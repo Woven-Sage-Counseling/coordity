@@ -13,7 +13,7 @@ const periodClass = 'field !mt-0 !w-[7rem] shrink-0';
 
 <label class="block shrink-0 text-sm">
   <span class="font-medium text-charcoal">{label}</span>
-  <div class="mt-1.5 flex flex-wrap items-center gap-2" data-backlog-time-picker>
+  <div class="mt-1.5 flex flex-nowrap items-center gap-2" data-backlog-time-picker>
     <input type="hidden" name={name} required />
     <select data-time-hour class={selectClass} aria-label={`${label} hour`}>
       {
