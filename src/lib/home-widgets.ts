@@ -53,8 +53,8 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
   },
   {
     id: 'timesheet',
-    label: 'Hours worked',
-    description: 'Log daily hours and track your weekly total.',
+    label: 'Timesheet',
+    description: 'Clock in and out, log hours, and track your weekly total.',
   },
   {
     id: 'my_progress',

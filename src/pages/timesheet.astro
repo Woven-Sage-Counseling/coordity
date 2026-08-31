@@ -237,7 +237,17 @@ const activeShift = summary.activeShift;
                 class="mt-1.5 w-full rounded-xl border border-sage-dark/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-sage-dark/45"
               />
             </label>
-            <button class="btn-primary !px-4 !py-2" type="submit">Submit</button>
+            <div class="flex items-center gap-3 sm:items-end">
+              <button class="btn-primary !px-4 !py-2" type="submit">Submit</button>
+              <p
+                class="hidden text-sm font-medium text-emerald-800"
+                data-timesheet-backlog-success
+                role="status"
+                aria-live="polite"
+              >
+                Successfully submitted.
+              </p>
+            </div>
           </div>
         </form>
 
@@ -392,7 +402,19 @@ const activeShift = summary.activeShift;
     }
   }
 
+  function showBacklogSuccess(form: HTMLFormElement): void {
+    const success = form.querySelector('[data-timesheet-backlog-success]');
+    if (!(success instanceof HTMLElement)) return;
+    success.hidden = false;
+    window.clearTimeout(Number(success.dataset.timer || 0));
+    const timer = window.setTimeout(() => {
+      success.hidden = true;
+    }, 4000);
+    success.dataset.timer = String(timer);
+  }
+
   async function submitTimesheetForm(form: HTMLFormElement, root: HTMLElement): Promise<void> {
+    const isBacklog = form.matches('[data-timesheet-backlog-form]');
     const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     const previousLabel = submitButton?.textContent ?? '';
     if (submitButton) {
@@ -409,11 +431,26 @@ const activeShift = summary.activeShift;
       const payload = (await response.json()) as {
         ok?: boolean;
         summary?: Record<string, unknown>;
+        request?: Record<string, unknown>;
         error?: string;
       };
 
-      if (!response.ok || !payload.ok || !payload.summary) {
+      if (!response.ok || !payload.ok) {
         throw new Error(payload.error ?? 'Unable to update your timesheet.');
+      }
+
+      if (isBacklog) {
+        form.reset();
+        showBacklogSuccess(form);
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = previousLabel;
+        }
+        return;
+      }
+
+      if (!payload.summary) {
+        throw new Error('Unable to update your timesheet.');
       }
 
       applySummary(root, payload.summary);
@@ -422,9 +459,7 @@ const activeShift = summary.activeShift;
         flash.textContent =
           form.matches('[data-timesheet-start-form]')
             ? 'Shift started.'
-            : form.matches('[data-timesheet-end-form]')
-              ? 'Shift ended and saved.'
-              : 'Backlog hours submitted for admin approval.';
+            : 'Shift ended and saved.';
         flash.className =
           'mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80';
         flash.hidden = false;
@@ -444,13 +479,7 @@ const activeShift = summary.activeShift;
       return;
     }
 
-    if (form.matches('[data-timesheet-backlog-form]')) {
-      form.reset();
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = previousLabel;
-      }
-    } else if (submitButton) {
+    if (submitButton) {
       submitButton.textContent = previousLabel;
     }
   }
