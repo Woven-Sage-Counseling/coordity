@@ -419,7 +419,7 @@ export async function notifyManagementUsers(input: {
   });
 }
 
-/** Notify owner roles and IT when someone reports a portal issue. */
+/** Notify primary owner and IT when someone reports a portal issue. */
 export async function notifyIssueReportUsers(input: {
   title: string;
   body: string;
@@ -428,7 +428,7 @@ export async function notifyIssueReportUsers(input: {
 }): Promise<void> {
   await notifyUsersByRoleKeys({
     ...input,
-    roleKeys: ['owner', 'owner_view', 'it'],
+    roleKeys: ['owner', 'it'],
     sourceType: ISSUE_REPORT_SOURCE,
     includeOwnerEmail: true,
   });
