@@ -22,7 +22,7 @@ const ended = Astro.url.searchParams.get('ended') === '1';
 const backlogSent = Astro.url.searchParams.get('backlog') === '1';
 
 const summary = await getTimesheetSummary(employee.id);
-const backlogRequests = await listTimesheetBacklogForUser(employee.id, 10);
+const backlogRequests = await listTimesheetBacklogForUser(employee.id, 50);
 const pendingBacklogRequests = backlogRequests
   .filter((request) => request.status === 'pending')
   .map(serializeBacklogRequest);
@@ -141,7 +141,7 @@ const activeShift = summary.activeShift;
       <div class="mt-8">
         <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
         <p class="mt-1 text-sm text-sage-dark/65">Scroll through your recent shifts and approved backlog entries.</p>
-        <div class="mt-4 max-h-[28rem] overflow-y-auto overscroll-contain rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
+        <div class="mt-4 max-h-[28rem] overflow-y-auto overscroll-auto rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
           <p class="hidden px-2 py-6 text-center text-sm text-sage-dark/65" data-timesheet-empty>
             No shifts logged yet.
           </p>
@@ -235,7 +235,12 @@ const activeShift = summary.activeShift;
           >
             No pending requests.
           </p>
-          <ul class="mt-3 space-y-2" data-timesheet-backlog-list hidden={pendingBacklogRequests.length === 0}>
+          <div
+            class="mt-3 max-h-64 overflow-y-auto overscroll-auto rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-2"
+            data-timesheet-backlog-scroll
+            hidden={pendingBacklogRequests.length === 0}
+          >
+            <ul class="space-y-2" data-timesheet-backlog-list>
             {
               pendingBacklogRequests.map((item) => (
                 <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
@@ -252,6 +257,7 @@ const activeShift = summary.activeShift;
               ))
             }
           </ul>
+          </div>
         </div>
       </section>
   </div>
@@ -372,13 +378,17 @@ const activeShift = summary.activeShift;
   function renderBacklogRequests(root: HTMLElement, requests: Array<Record<string, unknown>>): void {
     root.dataset.backlogRequests = JSON.stringify(requests);
     const section = root.querySelector('[data-timesheet-backlog-section]');
+    const scroll = root.querySelector('[data-timesheet-backlog-scroll]');
     const list = root.querySelector('[data-timesheet-backlog-list]');
     const empty = root.querySelector('[data-timesheet-backlog-empty]');
 
     if (list instanceof HTMLElement) {
-      list.innerHTML = requests
-        .map(
-          (item) => `
+      list.innerHTML =
+        requests.length === 0
+          ? ''
+          : requests
+              .map(
+                (item) => `
           <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
             <span class="text-charcoal">
               ${String(item.dateLabel)}
@@ -390,9 +400,12 @@ const activeShift = summary.activeShift;
             </span>
           </li>
         `,
-        )
-        .join('');
-      list.hidden = requests.length === 0;
+              )
+              .join('');
+    }
+
+    if (scroll instanceof HTMLElement) {
+      scroll.hidden = requests.length === 0;
     }
 
     if (empty instanceof HTMLElement) {

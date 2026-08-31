@@ -73,7 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
 
   if (wantsJson(request)) {
-    const pendingRequests = (await listTimesheetBacklogForUser(employee.id, 10))
+    const pendingRequests = (await listTimesheetBacklogForUser(employee.id, 50))
       .filter((request) => request.status === 'pending')
       .map(serializeBacklogRequest);
 
