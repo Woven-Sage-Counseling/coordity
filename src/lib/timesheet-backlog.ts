@@ -40,10 +40,23 @@ type BacklogRow = {
   reviewed_at: number | null;
   shift_id: string | null;
   created_at: number;
-  cleared_at: number | null;
+  cleared_at?: number | null;
 };
 
-const BACKLOG_SELECT = `
+let backlogClearSupported: boolean | null = null;
+
+async function backlogClearColumnExists(): Promise<boolean> {
+  if (backlogClearSupported !== null) return backlogClearSupported;
+
+  const { DB } = getEnv();
+  const columns = await DB.prepare(`PRAGMA table_info(timesheet_backlog)`).all<{ name: string }>();
+  backlogClearSupported = (columns.results ?? []).some((column) => column.name === 'cleared_at');
+  return backlogClearSupported;
+}
+
+async function backlogSelect(): Promise<string> {
+  const includeClearedAt = await backlogClearColumnExists();
+  return `
   SELECT
     b.id,
     b.user_id,
@@ -59,12 +72,26 @@ const BACKLOG_SELECT = `
     reviewer.name AS reviewer_name,
     b.reviewed_at,
     b.shift_id,
-    b.created_at,
-    b.cleared_at
+    b.created_at${includeClearedAt ? ',\n    b.cleared_at' : ''}
   FROM timesheet_backlog b
   JOIN user u ON u.id = b.user_id
   LEFT JOIN user reviewer ON reviewer.id = b.reviewed_by
 `;
+}
+
+function adminBacklogWhereClause(includeClearedAt: boolean): string {
+  if (includeClearedAt) {
+    return `b.status = 'pending'
+        OR (
+          b.status = 'approved'
+          AND b.cleared_at IS NULL
+          AND b.work_date >= date('now', '-30 day')
+        )`;
+  }
+
+  return `b.status = 'pending'
+        OR (b.status = 'approved' AND b.work_date >= date('now', '-30 day'))`;
+}
 
 function mapBacklog(row: BacklogRow): TimesheetBacklogRequest {
   return {
@@ -83,7 +110,7 @@ function mapBacklog(row: BacklogRow): TimesheetBacklogRequest {
     reviewedAt: row.reviewed_at,
     shiftId: row.shift_id,
     createdAt: row.created_at,
-    clearedAt: row.cleared_at,
+    clearedAt: row.cleared_at ?? null,
   };
 }
 
@@ -159,8 +186,9 @@ export async function listTimesheetBacklogForUser(
   limit = 20,
 ): Promise<TimesheetBacklogRequest[]> {
   const { DB } = getEnv();
+  const select = await backlogSelect();
   const rows = await DB.prepare(
-    `${BACKLOG_SELECT}
+    `${select}
      WHERE b.user_id = ?
      ORDER BY b.created_at DESC
      LIMIT ?`,
@@ -173,14 +201,11 @@ export async function listTimesheetBacklogForUser(
 
 export async function listTimesheetBacklogForAdmin(limit = 100): Promise<TimesheetBacklogRequest[]> {
   const { DB } = getEnv();
+  const includeClearedAt = await backlogClearColumnExists();
+  const select = await backlogSelect();
   const rows = await DB.prepare(
-    `${BACKLOG_SELECT}
-     WHERE b.status = 'pending'
-        OR (
-          b.status = 'approved'
-          AND b.cleared_at IS NULL
-          AND b.work_date >= date('now', '-30 day')
-        )
+    `${select}
+     WHERE ${adminBacklogWhereClause(includeClearedAt)}
      ORDER BY
        CASE b.status WHEN 'pending' THEN 0 ELSE 1 END,
        b.created_at DESC
@@ -198,8 +223,9 @@ export async function reviewTimesheetBacklogRequest(
   status: Exclude<TimesheetBacklogStatus, 'pending'>,
 ): Promise<TimesheetBacklogRequest> {
   const { DB } = getEnv();
+  const select = await backlogSelect();
   const existing = await DB.prepare(
-    `${BACKLOG_SELECT} WHERE b.id = ?`,
+    `${select} WHERE b.id = ?`,
   )
     .bind(requestId)
     .first<BacklogRow>();
@@ -231,15 +257,20 @@ export async function reviewTimesheetBacklogRequest(
     .bind(status, reviewerId, reviewedAt, shiftId, requestId)
     .run();
 
-  const row = await DB.prepare(`${BACKLOG_SELECT} WHERE b.id = ?`).bind(requestId).first<BacklogRow>();
+  const row = await DB.prepare(`${select} WHERE b.id = ?`).bind(requestId).first<BacklogRow>();
   if (!row) throw new Error('Unable to load reviewed backlog request.');
   return mapBacklog(row);
 }
 
 export async function clearTimesheetBacklogRequest(requestId: string): Promise<void> {
+  if (!(await backlogClearColumnExists())) {
+    throw new Error('Backlog clear is not available yet. Try again after the database migration finishes.');
+  }
+
   const { DB } = getEnv();
+  const select = await backlogSelect();
   const existing = await DB.prepare(
-    `${BACKLOG_SELECT} WHERE b.id = ?`,
+    `${select} WHERE b.id = ?`,
   )
     .bind(requestId)
     .first<BacklogRow>();
