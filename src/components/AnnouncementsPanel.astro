@@ -295,8 +295,8 @@ const hasNotificationUnread = notificationUnreadCount > 0;
     const syncViewAll = (key: 'announcements' | 'notifications') => {
       if (!(viewAll instanceof HTMLAnchorElement)) return;
       if (key === 'notifications') {
-        viewAll.href = '/notifications?history=1';
-        viewAll.textContent = 'Open history';
+        viewAll.href = '/notifications';
+        viewAll.textContent = 'View all';
       } else {
         viewAll.href = '/announcements';
         viewAll.textContent = 'Open history';

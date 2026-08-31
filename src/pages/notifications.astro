@@ -2,17 +2,21 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import { formatAnnouncementDate } from '../lib/announcements';
 import {
+  ACTIVE_NOTIFICATIONS_LIMIT,
   CALENDAR_CONFLICT_SOURCE,
+  countActiveNotifications,
   listNotificationsForUser,
 } from '../lib/notifications';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
-const activeNotifications = await listNotificationsForUser(employee.id, 100);
-const historyNotifications = await listNotificationsForUser(employee.id, 100, {
+const activeTotal = await countActiveNotifications(employee.id);
+const activeNotifications = await listNotificationsForUser(employee.id, ACTIVE_NOTIFICATIONS_LIMIT);
+const historyNotifications = await listNotificationsForUser(employee.id, ACTIVE_NOTIFICATIONS_LIMIT, {
   clearedOnly: true,
 });
+const hasMoreActive = activeTotal > activeNotifications.length;
 const showHistory = Astro.url.searchParams.get('history') === '1';
 ---
 
@@ -31,7 +35,7 @@ const showHistory = Astro.url.searchParams.get('history') === '1';
         {
           showHistory
             ? 'Cleared alerts stay here until you delete them. Schedule conflicts are not cleared — use Hide/Unhide on those.'
-            : 'Active alerts. Schedule conflicts use Hide/Unhide; other alerts can be cleared into history.'
+            : 'Active alerts. Schedule conflicts use Hide/Unhide; other alerts can be cleared into history. Cleared alerts move to history — reload will not bring them back unless a new alert is created.'
         }
       </p>
     </div>
@@ -92,7 +96,30 @@ const showHistory = Astro.url.searchParams.get('history') === '1';
         </a>
       </p>
     ) : (
-      <ul class="mt-10 space-y-4" data-notifications-page>
+      <>
+        {
+          hasMoreActive ? (
+            <p class="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Showing {activeNotifications.length} of {activeTotal} active notifications. Clear more or use Clear all below.
+            </p>
+          ) : null
+        }
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-sage-dark/65">
+            {activeTotal} active notification{activeTotal === 1 ? '' : 's'}
+            {activeNotifications.some((item) => item.sourceType === CALENDAR_CONFLICT_SOURCE)
+              ? ' · schedule conflicts stay until hidden'
+              : ''}
+          </p>
+          <button
+            type="button"
+            class="btn-secondary !px-3 !py-1.5 text-sm"
+            data-notifications-clear-all
+          >
+            Clear all
+          </button>
+        </div>
+        <ul class="mt-4 space-y-4" data-notifications-page>
         {activeNotifications.map((item) => {
           const isConflict = item.sourceType === CALENDAR_CONFLICT_SOURCE;
           return (
@@ -145,12 +172,35 @@ const showHistory = Astro.url.searchParams.get('history') === '1';
             </li>
           );
         })}
-      </ul>
+        </ul>
+      </>
     )
   }
 </PortalLayout>
 
 <script>
+  document.querySelector('[data-notifications-clear-all]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    if (!(button instanceof HTMLButtonElement)) return;
+    if (!window.confirm('Clear all notifications except schedule conflicts? They will move to history.')) return;
+
+    button.disabled = true;
+    const previousLabel = button.textContent ?? 'Clear all';
+    button.textContent = 'Clearing…';
+
+    try {
+      await fetch('/api/notifications/clear', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      });
+      window.location.href = '/notifications';
+    } catch {
+      button.disabled = false;
+      button.textContent = previousLabel;
+    }
+  });
+
   document.querySelectorAll('[data-notifications-page] [data-notification-toggle]').forEach((button) => {
     button.addEventListener('click', async () => {
       const item = button.closest('[data-notification-item]');

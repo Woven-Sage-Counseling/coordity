@@ -6,6 +6,8 @@ export const TIME_OFF_REQUEST_SOURCE = 'time_off_request';
 export const ISSUE_REPORT_SOURCE = 'issue_report';
 export const TIMESHEET_BACKLOG_SOURCE = 'timesheet_backlog';
 
+export const ACTIVE_NOTIFICATIONS_LIMIT = 500;
+
 export interface PortalNotification {
   id: string;
   title: string;
@@ -41,7 +43,7 @@ function mapNotification(row: {
 
 export async function listNotificationsForUser(
   userId: string,
-  limit = 20,
+  limit = ACTIVE_NOTIFICATIONS_LIMIT,
   options: { includeCleared?: boolean; clearedOnly?: boolean } = {},
 ): Promise<PortalNotification[]> {
   const { DB } = getEnv();
@@ -114,6 +116,29 @@ export async function countUnreadNotifications(userId: string): Promise<number> 
       `SELECT COUNT(*) AS count
        FROM notification
        WHERE user_id = ? AND read_at IS NULL`,
+    )
+      .bind(userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  }
+}
+
+export async function countActiveNotifications(userId: string): Promise<number> {
+  const { DB } = getEnv();
+  try {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM notification
+       WHERE user_id = ? AND cleared_at IS NULL`,
+    )
+      .bind(userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  } catch {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM notification
+       WHERE user_id = ?`,
     )
       .bind(userId)
       .first<{ count: number }>();
@@ -196,6 +221,31 @@ export async function clearNotifications(input: {
         ).bind(id, input.userId, CALENDAR_CONFLICT_SOURCE),
       ),
     );
+  }
+}
+
+export async function clearAllActiveNotifications(userId: string): Promise<number> {
+  const { DB } = getEnv();
+  const now = nowMs();
+  try {
+    const result = await DB.prepare(
+      `UPDATE notification
+       SET cleared_at = ?, read_at = COALESCE(read_at, ?)
+       WHERE user_id = ? AND cleared_at IS NULL
+         AND (source_type IS NULL OR source_type != ?)`,
+    )
+      .bind(now, now, userId, CALENDAR_CONFLICT_SOURCE)
+      .run();
+    return Number(result.meta.changes ?? 0);
+  } catch {
+    const result = await DB.prepare(
+      `DELETE FROM notification
+       WHERE user_id = ?
+         AND (source_type IS NULL OR source_type != ?)`,
+    )
+      .bind(userId, CALENDAR_CONFLICT_SOURCE)
+      .run();
+    return Number(result.meta.changes ?? 0);
   }
 }
 
