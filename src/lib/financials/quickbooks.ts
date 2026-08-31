@@ -8,6 +8,17 @@ const INTUIT_AUTH = 'https://appcenter.intuit.com/connect/oauth2';
 const INTUIT_TOKEN = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const OAUTH_STATE_PREFIX = 'qb-oauth:';
 const CONNECTION_ID = 'default';
+const RECONNECT_MESSAGE = 'QuickBooks authorization expired. Click Reconnect QuickBooks to sign in again.';
+
+function reconnectRequiredError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('refresh token') ||
+    normalized.includes('invalid_grant') ||
+    normalized.includes('authorization expired') ||
+    normalized.includes('could not be decrypted')
+  );
+}
 
 type QbEnvironment = 'sandbox' | 'production';
 
@@ -787,6 +798,51 @@ export class QuickBooksProvider implements FinancialDataProvider {
       .run();
   }
 
+  private async invalidateConnection(lastError: string): Promise<void> {
+    await getEnv()
+      .DB.prepare(
+        `UPDATE quickbooks_connection
+         SET access_token_encrypted = NULL,
+             refresh_token_encrypted = NULL,
+             access_token_expires_at = NULL,
+             refresh_token_expires_at = NULL,
+             status = 'disconnected',
+             last_error = ?
+         WHERE id = ?`,
+      )
+      .bind(lastError.slice(0, 500), CONNECTION_ID)
+      .run();
+  }
+
+  private async decryptStoredSecret(payload: string): Promise<string> {
+    try {
+      return await decryptSecret(payload);
+    } catch {
+      await this.invalidateConnection('Stored QuickBooks credentials could not be decrypted.');
+      throw new Error(RECONNECT_MESSAGE);
+    }
+  }
+
+  private async refreshAccessToken(row: ConnectionRow): Promise<string> {
+    try {
+      const refreshed = await this.requestTokens(
+        new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: await this.decryptStoredSecret(row.refresh_token_encrypted!),
+        }),
+      );
+      await this.storeTokens(refreshed, row.realm_id ?? '', row.connected_by ?? '');
+      return refreshed.access_token;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'QuickBooks token request failed.';
+      if (reconnectRequiredError(message)) {
+        await this.invalidateConnection(message);
+        throw new Error(RECONNECT_MESSAGE);
+      }
+      throw error;
+    }
+  }
+
   private async connection(): Promise<ConnectionRow | null> {
     const { DB } = getEnv();
     return DB.prepare(
@@ -806,17 +862,10 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
     const stillValid = (row.access_token_expires_at ?? 0) - nowMs() > 5 * 60 * 1000;
     if (stillValid) {
-      return decryptSecret(row.access_token_encrypted);
+      return this.decryptStoredSecret(row.access_token_encrypted);
     }
 
-    const refreshed = await this.requestTokens(
-      new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: await decryptSecret(row.refresh_token_encrypted),
-      }),
-    );
-    await this.storeTokens(refreshed, row.realm_id ?? '', row.connected_by ?? '');
-    return refreshed.access_token;
+    return this.refreshAccessToken(row);
   }
 
   private async qbGet(accessToken: string, realmId: string, path: string): Promise<unknown> {
