@@ -1,0 +1,59 @@
+export function buildFeatureSuggestionEmail(input: {
+  employeeName: string;
+  employeeEmail: string;
+  page: string;
+  description: string;
+}): { subject: string; text: string; html: string; replyTo: string } {
+  const subject = `Portal feature suggestion from ${input.employeeName}`;
+  const text = [
+    `${input.employeeName} (${input.employeeEmail}) suggested a feature:`,
+    '',
+    `Page: ${input.page}`,
+    '',
+    input.description,
+    '',
+    'Submitted via the Woven Sage employee portal.',
+  ].join('\n');
+
+  const html = `
+    <p><strong>${escapeHtml(input.employeeName)}</strong> (${escapeHtml(input.employeeEmail)}) suggested a feature:</p>
+    <p><strong>Page:</strong> ${escapeHtml(input.page)}</p>
+    <p><strong>Suggestion:</strong></p>
+    <p style="white-space:pre-wrap;">${escapeHtml(input.description)}</p>
+    <p style="color:#6b6c72;font-size:13px;">Submitted via the Woven Sage employee portal.</p>
+  `.trim();
+
+  return {
+    subject,
+    text,
+    html,
+    replyTo: input.employeeEmail,
+  };
+}
+
+export function summarizeFeatureSuggestion(description: string, maxLength = 240): string {
+  const oneLine = description.replace(/\s+/g, ' ').trim();
+  if (oneLine.length <= maxLength) return oneLine;
+  return `${oneLine.slice(0, maxLength - 1)}…`;
+}
+
+export function buildFeatureSuggestionNotification(input: {
+  employeeName: string;
+  page: string;
+  description: string;
+}): { title: string; body: string } {
+  const summary = summarizeFeatureSuggestion(input.description);
+  return {
+    title: 'Portal feature suggested',
+    body: `${input.employeeName} on ${input.page}: ${summary}`,
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}

@@ -4,6 +4,7 @@ import { randomToken, nowMs } from './crypto';
 export const CALENDAR_CONFLICT_SOURCE = 'calendar_conflict';
 export const TIME_OFF_REQUEST_SOURCE = 'time_off_request';
 export const ISSUE_REPORT_SOURCE = 'issue_report';
+export const FEATURE_SUGGESTION_SOURCE = 'feature_suggestion';
 export const TIMESHEET_BACKLOG_SOURCE = 'timesheet_backlog';
 
 export const ACTIVE_NOTIFICATIONS_LIMIT = 500;
@@ -481,6 +482,21 @@ export async function notifyIssueReportUsers(input: {
     ...input,
     roleKeys: ['owner', 'it'],
     sourceType: ISSUE_REPORT_SOURCE,
+    includeOwnerEmail: true,
+  });
+}
+
+/** Notify primary owner and IT when someone suggests a portal feature. */
+export async function notifyFeatureSuggestionUsers(input: {
+  title: string;
+  body: string;
+  excludeUserId?: string;
+  sourceId: string;
+}): Promise<void> {
+  await notifyUsersByRoleKeys({
+    ...input,
+    roleKeys: ['owner', 'it'],
+    sourceType: FEATURE_SUGGESTION_SOURCE,
     includeOwnerEmail: true,
   });
 }

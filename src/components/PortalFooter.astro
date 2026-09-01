@@ -1,5 +1,6 @@
 ---
 import ReportIssueDialog from './ReportIssueDialog.astro';
+import SuggestFeatureDialog from './SuggestFeatureDialog.astro';
 
 interface Props {
   employeeName: string;
@@ -19,5 +20,7 @@ const { employeeName, reportIssueEnabled } = Astro.props;
     </a>
     <span class="text-sage-dark/25" aria-hidden="true">·</span>
     <ReportIssueDialog employeeName={employeeName} enabled={reportIssueEnabled} />
+    <span class="text-sage-dark/25" aria-hidden="true">·</span>
+    <SuggestFeatureDialog employeeName={employeeName} enabled={reportIssueEnabled} />
   </div>
 </footer>
