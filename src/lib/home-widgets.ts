@@ -83,10 +83,8 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
 ];
 
 export interface HomeWidgetPrefs {
-  /** Ordered list of enabled widget ids (max 10). */
+  /** Ordered list of enabled widget ids (max 10). Home opens to the first item. */
   enabled: HomeWidgetId[];
-  /** Widget shown when opening Home. */
-  defaultId: HomeWidgetId;
   /** Per-widget header bar overrides (hex colors). */
   headerColors?: Partial<Record<HomeWidgetId, string>>;
   /** Per-widget icon overrides (preset ids). */
@@ -123,10 +121,7 @@ export function defaultPrefs(access: HomeWidgetAccess): HomeWidgetPrefs {
     'quickbooks',
   ];
   const enabled = preferredOrder.filter((id) => available.includes(id)).slice(0, HOME_WIDGET_MAX);
-  return {
-    enabled,
-    defaultId: enabled.includes('schedule') ? 'schedule' : (enabled[0] ?? 'schedule'),
-  };
+  return { enabled };
 }
 
 export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidgetPrefs {
@@ -136,7 +131,6 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
   if (!raw || typeof raw !== 'object') return fallback;
   const data = raw as {
     enabled?: unknown;
-    defaultId?: unknown;
     headerColors?: unknown;
     headerIcons?: unknown;
   };
@@ -182,12 +176,6 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
   }
 
   const finalEnabled = enabled.length > 0 ? enabled : fallback.enabled;
-  const defaultRaw =
-    typeof data.defaultId === 'string' ? migrateWidgetId(data.defaultId) : data.defaultId;
-  const defaultId =
-    typeof defaultRaw === 'string' && finalEnabled.includes(defaultRaw as HomeWidgetId)
-      ? (defaultRaw as HomeWidgetId)
-      : finalEnabled[0]!;
 
   const headerColors = sanitizeHeaderColors(data.headerColors, allowed);
   const headerIcons = sanitizeHeaderIcons(data.headerIcons, allowed);
@@ -196,7 +184,6 @@ export function normalizePrefs(raw: unknown, access: HomeWidgetAccess): HomeWidg
 
   return {
     enabled: finalEnabled,
-    defaultId,
     ...(hasHeaderColors ? { headerColors } : {}),
     ...(hasHeaderIcons ? { headerIcons } : {}),
   };

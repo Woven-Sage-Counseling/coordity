@@ -187,17 +187,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
       <ul class="mt-6 space-y-2 overflow-visible" data-widget-list></ul>
 
-      <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
-        <label for="default-widget" class="block px-4 pt-3.5 text-[13px] font-medium text-sage-dark/65">
-          Open home to
-        </label>
-        <select
-          id="default-widget"
-          class="w-full border-0 bg-transparent px-4 pb-3.5 pt-1 text-[15px] font-medium text-charcoal outline-none"
-          data-widget-default
-        ></select>
-      </div>
-
       <div class="mt-6 flex flex-wrap items-center gap-3">
         <button type="button" class="btn-primary" data-settings-save>Save preferences</button>
         <span
@@ -377,7 +366,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
   type Prefs = {
     enabled: string[];
-    defaultId: string;
     headerColors?: Record<string, string>;
     headerIcons?: Record<string, WidgetIconId>;
   };
@@ -423,7 +411,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     if (canClinical) enabled.splice(1, 0, 'caseload');
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
-    return { enabled, defaultId: 'schedule' };
+    return { enabled };
   }
 
   function migrateWidgetId(id: string): string {
@@ -518,11 +506,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const canClinical = root.dataset.canClinical === '1';
     const max = Number(root.dataset.max || 10);
     const list = root.querySelector('[data-widget-list]');
-    const select = root.querySelector('[data-widget-default]');
     const errorEl = root.querySelector('[data-settings-error]');
     const savedEl = root.querySelector('[data-settings-saved]');
     const saveBtn = root.querySelector('[data-settings-save]');
-    if (!(list instanceof HTMLElement) || !(select instanceof HTMLSelectElement)) return;
+    if (!(list instanceof HTMLElement)) return;
 
     let catalog: CatalogItem[] = [];
     try {
@@ -547,7 +534,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               .map(migrateWidgetId)
               .filter((id) => catalog.some((w) => w.id === id))
               .slice(0, max),
-            defaultId: migrateWidgetId(parsed.defaultId || parsed.enabled[0]!),
             ...(Object.keys(headerColors).length ? { headerColors } : {}),
             ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
           };
@@ -598,9 +584,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               0,
               'credentialing',
             );
-          }
-          if (!prefs.enabled.includes(prefs.defaultId)) {
-            prefs.defaultId = prefs.enabled[0] || 'schedule';
           }
           if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials, canCredentialing, canClinical);
         }
@@ -820,23 +803,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const widgetColorColClass = 'flex w-[7.25rem] shrink-0 flex-col gap-1';
     const widgetIconColClass = 'flex w-[9.75rem] shrink-0 flex-col gap-1';
 
-    const syncSelect = () => {
-      const enabled = rows.filter((r) => r.enabled).map((r) => r.id);
-      select.innerHTML = '';
-      catalog.forEach((widget) => {
-        if (!enabled.includes(widget.id)) return;
-        const opt = document.createElement('option');
-        opt.value = widget.id;
-        opt.textContent = widget.label;
-        select.appendChild(opt);
-      });
-      if (enabled.includes(select.value) === false && enabled[0]) {
-        select.value = enabled[0];
-      } else if (enabled.includes(prefs.defaultId)) {
-        select.value = prefs.defaultId;
-      }
-    };
-
     const render = () => {
       list.innerHTML = '';
       rows.forEach((row, index) => {
@@ -876,7 +842,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           row.enabled = check.checked;
           if (errorEl instanceof HTMLElement) errorEl.classList.add('hidden');
           if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
-          syncSelect();
           render();
         });
 
@@ -1029,7 +994,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           rows[index] = tmp;
           if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
           render();
-          syncSelect();
         });
 
         const down = document.createElement('button');
@@ -1046,7 +1010,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           rows[index] = tmp;
           if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
           render();
-          syncSelect();
         });
 
         controls.appendChild(up);
@@ -1061,13 +1024,9 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         li.appendChild(controls);
         list.appendChild(li);
       });
-      syncSelect();
     };
 
     render();
-    if (prefs.enabled.includes(prefs.defaultId)) {
-      select.value = prefs.defaultId;
-    }
 
     saveBtn?.addEventListener('click', () => {
       const enabled = rows.filter((r) => r.enabled).map((r) => r.id).slice(0, max);
@@ -1078,10 +1037,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         }
         return;
       }
-      const defaultId = enabled.includes(select.value) ? select.value : enabled[0]!;
       const next: Prefs = {
         enabled,
-        defaultId,
         ...(Object.keys(headerColors).length ? { headerColors: { ...headerColors } } : {}),
         ...(Object.keys(headerIcons).length ? { headerIcons: { ...headerIcons } } : {}),
       };

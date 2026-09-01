@@ -229,7 +229,6 @@ const arrowClass =
 
   type Prefs = {
     enabled: string[];
-    defaultId: string;
     headerColors?: Record<string, string>;
     headerIcons?: Record<string, WidgetIconId>;
   };
@@ -239,7 +238,7 @@ const arrowClass =
     if (canClinical) enabled.splice(1, 0, 'caseload');
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
-    return { enabled, defaultId: 'schedule' };
+    return { enabled };
   }
 
   function migrateWidgetId(id: string): string {
@@ -334,14 +333,10 @@ const arrowClass =
         mutated = true;
       }
       const finalEnabled = enabled.length ? enabled : fallback.enabled.filter((id) => allowed.has(id));
-      const defaultId = finalEnabled.includes(migrateWidgetId(parsed.defaultId || ''))
-        ? migrateWidgetId(parsed.defaultId)
-        : finalEnabled[0]!;
       const headerColors = sanitizeHeaderColors(parsed.headerColors);
       const headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
       const next: Prefs = {
         enabled: finalEnabled,
-        defaultId,
         ...(Object.keys(headerColors).length ? { headerColors } : {}),
         ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
       };
@@ -405,10 +400,7 @@ const arrowClass =
     const dots = root.querySelector('[data-carousel-dots]');
     const solo = enabledSlides.length === 1;
     root.dataset.solo = solo ? 'true' : 'false';
-    let index = Math.max(
-      0,
-      enabledSlides.findIndex((el) => el.dataset.widgetId === prefs.defaultId),
-    );
+    let index = 0;
 
     enabledSlides.forEach((slide) => {
       slide.dataset.solo = solo ? 'true' : 'false';
