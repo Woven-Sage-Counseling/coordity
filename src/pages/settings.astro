@@ -371,6 +371,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   import {
     DEFAULT_WIDGET_ICONS,
     WIDGET_ICON_OPTIONS,
+    widgetIconMarkup,
     type WidgetIconId,
   } from '../lib/home-widget-icons';
 
@@ -654,6 +655,108 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       }
     };
 
+    let openIconPickerMenu: HTMLElement | null = null;
+
+    const closeOpenIconPicker = () => {
+      if (!openIconPickerMenu) return;
+      openIconPickerMenu.classList.add('hidden');
+      const picker = openIconPickerMenu.closest('[data-icon-picker]');
+      const trigger = picker?.querySelector('[data-icon-picker-trigger]');
+      if (trigger instanceof HTMLButtonElement) {
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+      openIconPickerMenu = null;
+    };
+
+    const createIconPicker = (
+      widgetLabel: string,
+      getSelected: () => WidgetIconId,
+      onSelect: (iconId: WidgetIconId) => void,
+    ): { element: HTMLElement; sync: () => void } => {
+      const root = document.createElement('div');
+      root.className = 'relative';
+      root.dataset.iconPicker = 'true';
+
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.dataset.iconPickerTrigger = 'true';
+      trigger.className =
+        'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sage-dark/15 bg-white text-charcoal shadow-sm transition hover:bg-sage/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
+      trigger.setAttribute('aria-label', `${widgetLabel} header icon`);
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+
+      const syncTrigger = () => {
+        trigger.innerHTML = widgetIconMarkup(getSelected()).replace(
+          'width="16" height="16"',
+          'width="18" height="18"',
+        );
+      };
+      syncTrigger();
+
+      const menu = document.createElement('div');
+      menu.dataset.iconPickerMenu = 'true';
+      menu.className =
+        'absolute left-0 top-[calc(100%+0.35rem)] z-50 hidden w-[10.75rem] rounded-xl border border-sage-dark/10 bg-white p-2 shadow-lg';
+      menu.setAttribute('role', 'listbox');
+      menu.setAttribute('aria-label', `${widgetLabel} icon options`);
+
+      const syncMenuSelection = () => {
+        const selected = getSelected();
+        menu.querySelectorAll('[data-icon-option]').forEach((node) => {
+          if (!(node instanceof HTMLButtonElement)) return;
+          const active = node.dataset.iconId === selected;
+          node.setAttribute('aria-selected', active ? 'true' : 'false');
+          node.classList.toggle('bg-sage/25', active);
+          node.classList.toggle('ring-1', active);
+          node.classList.toggle('ring-sage-dark/20', active);
+        });
+      };
+
+      WIDGET_ICON_OPTIONS.forEach((option) => {
+        const optionBtn = document.createElement('button');
+        optionBtn.type = 'button';
+        optionBtn.dataset.iconOption = 'true';
+        optionBtn.dataset.iconId = option.id;
+        optionBtn.className =
+          'inline-flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-sage/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
+        optionBtn.setAttribute('role', 'option');
+        optionBtn.setAttribute('aria-label', option.label);
+        optionBtn.title = option.label;
+        optionBtn.innerHTML = widgetIconMarkup(option.id);
+        optionBtn.addEventListener('click', () => {
+          onSelect(option.id);
+          syncTrigger();
+          syncMenuSelection();
+          closeOpenIconPicker();
+        });
+        menu.appendChild(optionBtn);
+      });
+
+      menu.classList.add('grid', 'grid-cols-4', 'gap-1');
+
+      trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (openIconPickerMenu === menu) {
+          closeOpenIconPicker();
+          return;
+        }
+        closeOpenIconPicker();
+        menu.classList.remove('hidden');
+        trigger.setAttribute('aria-expanded', 'true');
+        openIconPickerMenu = menu;
+        syncMenuSelection();
+      });
+
+      root.appendChild(trigger);
+      root.appendChild(menu);
+      return { element: root, sync: syncTrigger };
+    };
+
+    document.addEventListener('click', () => {
+      closeOpenIconPicker();
+    });
+
     const createInfoTooltip = (description: string, widgetLabel: string): HTMLElement => {
       const wrap = document.createElement('span');
       wrap.className = 'group/info relative inline-flex shrink-0';
@@ -785,21 +888,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           const iconLabel = document.createElement('span');
           iconLabel.className = 'text-[11px] font-medium text-sage-dark/55';
           iconLabel.textContent = 'Icon';
-          const iconSelect = document.createElement('select');
-          iconSelect.className =
-            'h-8 max-w-[8.5rem] rounded-lg border border-sage-dark/15 bg-white px-2 text-[12px] text-charcoal';
-          iconSelect.setAttribute('aria-label', `${widget.label} header icon`);
-          WIDGET_ICON_OPTIONS.forEach((option) => {
-            const opt = document.createElement('option');
-            opt.value = option.id;
-            opt.textContent = option.label;
-            iconSelect.appendChild(opt);
-          });
-          iconSelect.value = resolveHeaderIcon(row.id);
-          iconSelect.addEventListener('change', () => {
-            setHeaderIcon(row.id, iconSelect.value as WidgetIconId);
-            if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
-          });
+          const { element: iconPicker, sync: syncIconPicker } = createIconPicker(
+            widget.label,
+            () => resolveHeaderIcon(row.id),
+            (iconId) => {
+              setHeaderIcon(row.id, iconId);
+              if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+            },
+          );
           const resetIcon = document.createElement('button');
           resetIcon.type = 'button';
           resetIcon.className =
@@ -807,11 +903,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           resetIcon.textContent = 'Reset';
           resetIcon.addEventListener('click', () => {
             setHeaderIcon(row.id, defaultHeaderIcon(row.id));
-            iconSelect.value = resolveHeaderIcon(row.id);
+            syncIconPicker();
             if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
           });
           iconWrap.appendChild(iconLabel);
-          iconWrap.appendChild(iconSelect);
+          iconWrap.appendChild(iconPicker);
           iconWrap.appendChild(resetIcon);
         }
 
