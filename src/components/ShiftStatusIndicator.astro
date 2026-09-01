@@ -15,9 +15,9 @@ const dotSize = compact ? 'size-2.5' : 'size-3';
 const traveling = onTimeOff;
 const available = !traveling && onShift;
 const unavailable = !traveling && !onShift;
-const statusLabel = traveling ? 'Traveling' : onShift ? 'Available' : 'Unavailable';
+const statusLabel = traveling ? 'On vacation' : onShift ? 'Available' : 'Unavailable';
 const srLabel = traveling
-  ? 'Currently traveling on approved time off'
+  ? 'Currently on vacation'
   : onShift
     ? 'Currently available'
     : 'Currently unavailable';
