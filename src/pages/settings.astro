@@ -64,7 +64,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 ---
 
 <PortalLayout title="Settings">
-  <div class="mx-auto max-w-lg" data-settings-shell>
+  <div class="mx-auto max-w-xl" data-settings-shell>
     <div data-settings-header>
       <p class="text-sm text-sage-dark/65">
         <a href="/" class="hover:text-sage-dark">Home</a>
@@ -817,6 +817,9 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       return wrap;
     };
 
+    const widgetColorColClass = 'flex w-[7.25rem] shrink-0 flex-col gap-1';
+    const widgetIconColClass = 'flex w-[9.75rem] shrink-0 flex-col gap-1';
+
     const syncSelect = () => {
       const enabled = rows.filter((r) => r.enabled).map((r) => r.id);
       select.innerHTML = '';
@@ -878,27 +881,26 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         });
 
         const main = document.createElement('div');
-        main.className =
-          'grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_9rem_11rem] items-end gap-x-3';
+        main.className = 'flex min-w-0 flex-1 flex-nowrap items-end gap-x-3';
 
         const titleWrap = document.createElement('div');
-        titleWrap.className = 'flex min-w-0 items-center gap-1.5 overflow-hidden pb-0.5';
+        titleWrap.className = 'flex min-w-[5.5rem] flex-1 items-center gap-1.5 pb-0.5';
+
+        const labelWrap = document.createElement('div');
+        labelWrap.className = 'min-w-0 flex-1 overflow-hidden';
 
         const label = document.createElement('label');
         label.htmlFor = check.id;
-        label.className =
-          'min-w-0 flex-1 truncate cursor-pointer text-[15px] font-medium text-charcoal';
+        label.className = 'block truncate cursor-pointer text-[15px] font-medium text-charcoal';
         label.textContent = widget.label;
-        titleWrap.appendChild(label);
+        labelWrap.appendChild(label);
+        titleWrap.appendChild(labelWrap);
         if (widget.description) {
           titleWrap.appendChild(createInfoTooltip(widget.description, widget.label));
         }
 
-        const colorColumnClass = 'flex min-w-0 flex-col gap-1 overflow-hidden';
-        const iconColumnClass = 'flex min-w-0 flex-col gap-1 overflow-hidden';
-
         const colorWrap = document.createElement('div');
-        colorWrap.className = colorColumnClass;
+        colorWrap.className = widgetColorColClass;
         const colorLabel = document.createElement('span');
         colorLabel.className = fieldLabelClass;
         colorLabel.textContent = 'Color';
@@ -966,21 +968,21 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         let iconWrap: HTMLElement;
         if (widget.brandIconSrc) {
           iconWrap = document.createElement('div');
-          iconWrap.className = iconColumnClass;
+          iconWrap.className = widgetIconColClass;
           const iconLabel = document.createElement('span');
           iconLabel.className = fieldLabelClass;
           iconLabel.textContent = 'Icon';
           const iconRow = document.createElement('div');
           iconRow.className = 'flex h-9 min-w-0 items-center';
           const iconMemo = document.createElement('p');
-          iconMemo.className = 'whitespace-nowrap text-[11px] leading-snug text-sage-dark/55';
+          iconMemo.className = 'text-[10px] leading-snug text-sage-dark/55';
           iconMemo.textContent = 'Icon is not changeable.';
           iconRow.appendChild(iconMemo);
           iconWrap.appendChild(iconLabel);
           iconWrap.appendChild(iconRow);
         } else {
           iconWrap = document.createElement('div');
-          iconWrap.className = iconColumnClass;
+          iconWrap.className = widgetIconColClass;
           const iconLabel = document.createElement('span');
           iconLabel.className = fieldLabelClass;
           iconLabel.textContent = 'Icon';
