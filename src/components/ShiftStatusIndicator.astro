@@ -10,7 +10,7 @@ interface Props {
 
 const { onShift, onTimeOff = false, showLabel = false, compact = false, self = false } = Astro.props;
 const iconSize = compact ? 'size-3.5' : 'size-4';
-const travelIconSize = compact ? 'size-4' : 'size-[1.125rem]';
+const travelIconSize = compact ? 'size-5' : 'size-6';
 const dotSize = compact ? 'size-2.5' : 'size-3';
 const traveling = onTimeOff;
 const available = !traveling && onShift;
@@ -53,9 +53,9 @@ const srLabel = traveling
     <img
       src="/icons/traveling-palm.png"
       alt=""
-      width="18"
-      height="18"
-      class:list={[travelIconSize, 'object-contain opacity-70', !traveling && 'hidden']}
+      width="24"
+      height="24"
+      class:list={[travelIconSize, 'object-contain', !traveling && 'hidden']}
       data-shift-status-traveling
       aria-hidden="true"
       loading="lazy"
