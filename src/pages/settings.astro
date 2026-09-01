@@ -655,6 +655,27 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       }
     };
 
+    const fieldLabelClass = 'text-[11px] font-medium text-sage-dark/55';
+    const controlTriggerClass =
+      'inline-flex h-9 items-center gap-1.5 rounded-lg border border-sage-dark/20 bg-white px-2 text-charcoal shadow-sm transition hover:border-sage-dark/35 hover:bg-sage/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
+
+    const createChevron = (): HTMLSpanElement => {
+      const chevron = document.createElement('span');
+      chevron.className = 'inline-flex text-sage-dark/45 transition-transform duration-150';
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      return chevron;
+    };
+
+    const setControlOpen = (trigger: HTMLButtonElement, chevron: HTMLElement, open: boolean) => {
+      trigger.classList.toggle('border-sage-dark/40', open);
+      trigger.classList.toggle('bg-sage/10', open);
+      trigger.classList.toggle('ring-2', open);
+      trigger.classList.toggle('ring-sage-dark/15', open);
+      chevron.classList.toggle('rotate-180', open);
+    };
+
     let openIconPickerMenu: HTMLElement | null = null;
 
     const closeOpenIconPicker = () => {
@@ -664,9 +685,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       const trigger = picker?.querySelector('[data-icon-picker-trigger]');
       if (trigger instanceof HTMLButtonElement) {
         trigger.setAttribute('aria-expanded', 'false');
-        trigger.classList.remove('border-sage-dark/40', 'bg-sage/10', 'ring-2', 'ring-sage-dark/15');
-        const chevron = trigger.querySelector('span:last-child');
-        chevron?.classList.remove('rotate-180');
+        const chevron = trigger.querySelector('[data-control-chevron]');
+        setControlOpen(trigger, chevron instanceof HTMLElement ? chevron : trigger, false);
       }
       openIconPickerMenu = null;
     };
@@ -683,8 +703,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       const trigger = document.createElement('button');
       trigger.type = 'button';
       trigger.dataset.iconPickerTrigger = 'true';
-      trigger.className =
-        'inline-flex h-9 items-center gap-1.5 rounded-lg border border-sage-dark/20 bg-white px-2 text-charcoal shadow-sm transition hover:border-sage-dark/35 hover:bg-sage/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
+      trigger.className = controlTriggerClass;
       trigger.setAttribute('aria-label', `Change ${widgetLabel} header icon`);
       trigger.setAttribute('aria-haspopup', 'listbox');
       trigger.setAttribute('aria-expanded', 'false');
@@ -694,11 +713,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       preview.className =
         'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sage/15 text-charcoal';
 
-      const chevron = document.createElement('span');
-      chevron.className = 'inline-flex text-sage-dark/45 transition-transform duration-150';
-      chevron.setAttribute('aria-hidden', 'true');
-      chevron.innerHTML =
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const chevron = createChevron();
+      chevron.dataset.controlChevron = 'true';
 
       trigger.appendChild(preview);
       trigger.appendChild(chevron);
@@ -713,11 +729,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
       const setTriggerOpen = (open: boolean) => {
         trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-        trigger.classList.toggle('border-sage-dark/40', open);
-        trigger.classList.toggle('bg-sage/10', open);
-        trigger.classList.toggle('ring-2', open);
-        trigger.classList.toggle('ring-sage-dark/15', open);
-        chevron.classList.toggle('rotate-180', open);
+        setControlOpen(trigger, chevron, open);
       };
 
       const menu = document.createElement('div');
@@ -879,20 +891,53 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         }
 
         const colorWrap = document.createElement('div');
-        colorWrap.className = 'flex shrink-0 items-center gap-2';
+        colorWrap.className = 'flex shrink-0 flex-col gap-1';
         const colorLabel = document.createElement('span');
-        colorLabel.className = 'text-[11px] font-medium text-sage-dark/55';
-        colorLabel.textContent = 'Header';
+        colorLabel.className = fieldLabelClass;
+        colorLabel.textContent = 'Color';
+        const colorRow = document.createElement('div');
+        colorRow.className = 'flex items-center gap-2';
+
+        const colorTrigger = document.createElement('button');
+        colorTrigger.type = 'button';
+        colorTrigger.className = controlTriggerClass;
+        colorTrigger.setAttribute('aria-label', `${widget.label} color`);
+
+        const colorSwatch = document.createElement('span');
+        colorSwatch.className =
+          'inline-flex h-7 w-7 shrink-0 rounded-md border border-black/10 ring-1 ring-black/5';
+        const colorChevron = createChevron();
+        colorChevron.dataset.controlChevron = 'true';
+
+        const syncColorSwatch = () => {
+          colorSwatch.style.backgroundColor = resolveHeaderColor(row.id);
+        };
+        syncColorSwatch();
+
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = resolveHeaderColor(row.id);
-        colorInput.setAttribute('aria-label', `${widget.label} header color`);
-        colorInput.className =
-          'h-8 w-10 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-0.5';
+        colorInput.className = 'sr-only';
+        colorInput.tabIndex = -1;
+        colorInput.setAttribute('aria-hidden', 'true');
         colorInput.addEventListener('input', () => {
           setHeaderColor(row.id, colorInput.value);
+          syncColorSwatch();
           if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
         });
+        colorInput.addEventListener('focus', () => {
+          setControlOpen(colorTrigger, colorChevron, true);
+        });
+        colorInput.addEventListener('blur', () => {
+          setControlOpen(colorTrigger, colorChevron, false);
+        });
+
+        colorTrigger.addEventListener('click', () => {
+          colorInput.click();
+        });
+        colorTrigger.appendChild(colorSwatch);
+        colorTrigger.appendChild(colorChevron);
+
         const resetColor = document.createElement('button');
         resetColor.type = 'button';
         resetColor.className =
@@ -901,19 +946,25 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         resetColor.addEventListener('click', () => {
           setHeaderColor(row.id, defaultHeaderColor(widget));
           colorInput.value = resolveHeaderColor(row.id);
+          syncColorSwatch();
           if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
         });
+
+        colorRow.appendChild(colorTrigger);
+        colorRow.appendChild(colorInput);
+        colorRow.appendChild(resetColor);
         colorWrap.appendChild(colorLabel);
-        colorWrap.appendChild(colorInput);
-        colorWrap.appendChild(resetColor);
+        colorWrap.appendChild(colorRow);
 
         let iconWrap: HTMLElement | null = null;
         if (!widget.brandIconSrc) {
           iconWrap = document.createElement('div');
-          iconWrap.className = 'flex shrink-0 items-center gap-2';
+          iconWrap.className = 'flex shrink-0 flex-col gap-1';
           const iconLabel = document.createElement('span');
-          iconLabel.className = 'text-[11px] font-medium text-sage-dark/55';
+          iconLabel.className = fieldLabelClass;
           iconLabel.textContent = 'Icon';
+          const iconRow = document.createElement('div');
+          iconRow.className = 'flex items-center gap-2';
           const { element: iconPicker, sync: syncIconPicker } = createIconPicker(
             widget.label,
             () => resolveHeaderIcon(row.id),
@@ -932,9 +983,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             syncIconPicker();
             if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
           });
+          iconRow.appendChild(iconPicker);
+          iconRow.appendChild(resetIcon);
           iconWrap.appendChild(iconLabel);
-          iconWrap.appendChild(iconPicker);
-          iconWrap.appendChild(resetIcon);
+          iconWrap.appendChild(iconRow);
         }
 
         const controls = document.createElement('div');
@@ -980,7 +1032,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         const optionsRow = document.createElement('div');
         optionsRow.className =
-          'col-start-2 row-start-2 flex flex-wrap items-center gap-3';
+          'col-start-2 row-start-2 flex flex-wrap items-end gap-4';
         optionsRow.appendChild(colorWrap);
         if (iconWrap) optionsRow.appendChild(iconWrap);
 
