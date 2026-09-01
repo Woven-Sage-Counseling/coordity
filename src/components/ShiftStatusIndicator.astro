@@ -1,15 +1,25 @@
 ---
 interface Props {
   onShift: boolean;
+  onTimeOff?: boolean;
   showLabel?: boolean;
   compact?: boolean;
   /** Update live when the signed-in user starts or ends a shift. */
   self?: boolean;
 }
 
-const { onShift, showLabel = false, compact = false, self = false } = Astro.props;
+const { onShift, onTimeOff = false, showLabel = false, compact = false, self = false } = Astro.props;
 const iconSize = compact ? 'size-3.5' : 'size-4';
 const dotSize = compact ? 'size-2.5' : 'size-3';
+const traveling = onTimeOff;
+const available = !traveling && onShift;
+const unavailable = !traveling && !onShift;
+const statusLabel = traveling ? 'Traveling' : onShift ? 'Available' : 'Unavailable';
+const srLabel = traveling
+  ? 'Currently traveling on approved time off'
+  : onShift
+    ? 'Currently available'
+    : 'Currently unavailable';
 ---
 
 <div
@@ -17,6 +27,7 @@ const dotSize = compact ? 'size-2.5' : 'size-3';
   data-shift-status
   {...self ? { 'data-shift-status-self': '' } : {}}
   data-on-shift={onShift ? '1' : '0'}
+  data-on-time-off={onTimeOff ? '1' : '0'}
 >
   <span class="inline-flex shrink-0 items-center justify-center" data-shift-status-icon>
     <span
@@ -24,13 +35,13 @@ const dotSize = compact ? 'size-2.5' : 'size-3';
         'rounded-full',
         dotSize,
         'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]',
-        !onShift && 'hidden',
+        !available && 'hidden',
       ]}
       data-shift-status-available
       aria-hidden="true"
     />
     <svg
-      class:list={[iconSize, 'text-sage-dark/45', onShift && 'hidden']}
+      class:list={[iconSize, 'text-sage-dark/45', !unavailable && 'hidden']}
       data-shift-status-unavailable
       viewBox="0 0 24 24"
       fill="currentColor"
@@ -38,13 +49,30 @@ const dotSize = compact ? 'size-2.5' : 'size-3';
     >
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
+    <svg
+      class:list={[iconSize, 'text-teal-600', !traveling && 'hidden']}
+      data-shift-status-traveling
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 20V11" />
+      <path d="M12 11C9.5 8 6 8 6 4.5A6 6 0 0 1 18 4.5c0 3.5-3.5 3.5-6 6.5Z" />
+      <path d="M7.5 12.5C5.8 12.5 4.5 13.3 4 15" />
+      <path d="M16.5 12.5c1.7 0 3 .8 3.5 2.5" />
+      <path d="M6.5 19c1.4-1.6 3.4-2.3 5.5-2.3s4.1.7 5.5 2.3" />
+    </svg>
   </span>
   {
     showLabel ? (
       <span class="text-sm font-medium text-sage-dark/80" data-shift-status-label>
-        {onShift ? 'Available' : 'Unavailable'}
+        {statusLabel}
       </span>
     ) : null
   }
-  <span class="sr-only">{onShift ? 'Currently available' : 'Currently unavailable'}</span>
+  <span class="sr-only">{srLabel}</span>
 </div>

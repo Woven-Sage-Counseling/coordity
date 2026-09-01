@@ -336,3 +336,99 @@ export function formatTimeOffRequestDate(ms: number): string {
     minute: '2-digit',
   });
 }
+
+const EASTERN_TZ = 'America/New_York';
+
+export function easternClockTime(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: EASTERN_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+}
+
+export function isTimeOffEntryActiveNow(
+  entry: Pick<StoredTimeOffEntry, 'date' | 'fullDay' | 'startTime' | 'endTime'>,
+  today: string,
+  clockTime: string,
+): boolean {
+  if (entry.date !== today) return false;
+  if (entry.fullDay) return true;
+  if (!entry.startTime || !entry.endTime) return false;
+  return clockTime >= entry.startTime && clockTime < entry.endTime;
+}
+
+export async function listUsersOnApprovedTimeOffNow(now = new Date()): Promise<Set<string>> {
+  const { DB } = getEnv();
+  const today = todayEastern(now);
+  const clockTime = easternClockTime(now);
+  const rows = await DB.prepare(
+    `SELECT r.user_id, e.entry_date, e.full_day, e.start_time, e.end_time
+     FROM time_off_request r
+     JOIN time_off_entry e ON e.request_id = r.id
+     WHERE r.status = 'approved' AND e.entry_date = ?`,
+  )
+    .bind(today)
+    .all<{
+      user_id: string;
+      entry_date: string;
+      full_day: number;
+      start_time: string | null;
+      end_time: string | null;
+    }>();
+
+  const userIds = new Set<string>();
+  for (const row of rows.results ?? []) {
+    if (
+      isTimeOffEntryActiveNow(
+        {
+          date: row.entry_date,
+          fullDay: row.full_day === 1,
+          startTime: row.start_time,
+          endTime: row.end_time,
+        },
+        today,
+        clockTime,
+      )
+    ) {
+      userIds.add(row.user_id);
+    }
+  }
+  return userIds;
+}
+
+export async function isUserOnApprovedTimeOffNow(userId: string, now = new Date()): Promise<boolean> {
+  const { DB } = getEnv();
+  const today = todayEastern(now);
+  const clockTime = easternClockTime(now);
+  const rows = await DB.prepare(
+    `SELECT e.entry_date, e.full_day, e.start_time, e.end_time
+     FROM time_off_request r
+     JOIN time_off_entry e ON e.request_id = r.id
+     WHERE r.status = 'approved' AND r.user_id = ? AND e.entry_date = ?`,
+  )
+    .bind(userId, today)
+    .all<{
+      entry_date: string;
+      full_day: number;
+      start_time: string | null;
+      end_time: string | null;
+    }>();
+
+  return (rows.results ?? []).some((row) =>
+    isTimeOffEntryActiveNow(
+      {
+        date: row.entry_date,
+        fullDay: row.full_day === 1,
+        startTime: row.start_time,
+        endTime: row.end_time,
+      },
+      today,
+      clockTime,
+    ),
+  );
+}

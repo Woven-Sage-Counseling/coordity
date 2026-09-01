@@ -2,13 +2,18 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import DirectoryPeopleTable from '../components/DirectoryPeopleTable.astro';
 import { groupDirectoryByTeam, listDirectory } from '../lib/employees';
+import { listUsersOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import { listActiveShiftUserIds } from '../lib/timesheet-entries';
 
 export const prerender = false;
 
 const people = await listDirectory();
-const activeShiftUserIds = await listActiveShiftUserIds();
+const [activeShiftUserIds, timeOffUserIds] = await Promise.all([
+  listActiveShiftUserIds(),
+  listUsersOnApprovedTimeOffNow(),
+]);
 const onShiftUserIds = [...activeShiftUserIds];
+const travelingUserIds = [...timeOffUserIds];
 const { groups, unassigned } = groupDirectoryByTeam(people);
 ---
 
@@ -32,7 +37,11 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
               group.people.length === 0 ? (
                 <p class="mt-3 text-sm text-sage-dark/55">No one assigned yet.</p>
               ) : (
-                <DirectoryPeopleTable people={group.people} onShiftUserIds={onShiftUserIds} />
+                <DirectoryPeopleTable
+                  people={group.people}
+                  onShiftUserIds={onShiftUserIds}
+                  travelingUserIds={travelingUserIds}
+                />
               )
             }
           </section>
@@ -44,7 +53,11 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
               <h2 id="team-unassigned" class="font-display text-3xl text-charcoal">
                 Unassigned
               </h2>
-              <DirectoryPeopleTable people={unassigned} onShiftUserIds={onShiftUserIds} />
+              <DirectoryPeopleTable
+                people={unassigned}
+                onShiftUserIds={onShiftUserIds}
+                travelingUserIds={travelingUserIds}
+              />
             </section>
           ) : null
         }

@@ -7,6 +7,7 @@ import {
 import { formatWeekLabel } from '../lib/timesheet';
 import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
+import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import ShiftStatusIndicator from './ShiftStatusIndicator.astro';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
@@ -28,6 +29,7 @@ try {
 
 const serialized = summary ? serializeTimesheetSummary(summary) : null;
 const activeShift = summary?.activeShift ?? null;
+const onTimeOff = summary ? await isUserOnApprovedTimeOffNow(userId) : false;
 const week = summary?.week;
 ---
 
@@ -80,7 +82,7 @@ const week = summary?.week;
           </div>
 
           <div class="mt-3 flex items-center gap-2">
-            <ShiftStatusIndicator onShift={activeShift != null} compact self />
+            <ShiftStatusIndicator onShift={activeShift != null} onTimeOff={onTimeOff} compact self />
             <form method="post" action="/api/timesheet/start-shift" class="flex-1" data-timesheet-start-form>
               <input type="hidden" name="returnTo" value="/" />
               <button

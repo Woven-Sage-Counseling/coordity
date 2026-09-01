@@ -2,6 +2,7 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import BacklogTimePicker from '../components/BacklogTimePicker.astro';
 import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
+import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import TimesheetShiftWorkItems from '../components/TimesheetShiftWorkItems.astro';
 import {
   getTimesheetSummary,
@@ -28,6 +29,7 @@ const pendingBacklogRequests = backlogRequests
   .map(serializeBacklogRequest);
 const serialized = serializeTimesheetSummary(summary);
 const activeShift = summary.activeShift;
+const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
 
 <PortalLayout title="Timesheet" wide>
@@ -111,7 +113,7 @@ const activeShift = summary.activeShift;
       </div>
 
       <div class="mt-6 flex flex-wrap items-center gap-4">
-        <ShiftStatusIndicator onShift={activeShift != null} showLabel self />
+        <ShiftStatusIndicator onShift={activeShift != null} onTimeOff={onTimeOff} showLabel self />
         <div class="flex flex-wrap gap-3">
           <form method="post" action="/api/timesheet/start-shift" data-timesheet-start-form>
           <input type="hidden" name="returnTo" value="/timesheet" />

@@ -5,10 +5,12 @@ import type { DirectoryPerson } from '../lib/employees';
 interface Props {
   people: DirectoryPerson[];
   onShiftUserIds: string[];
+  travelingUserIds: string[];
 }
 
-const { people, onShiftUserIds } = Astro.props;
+const { people, onShiftUserIds, travelingUserIds } = Astro.props;
 const onShiftIds = new Set(onShiftUserIds);
+const travelingIds = new Set(travelingUserIds);
 
 function initials(name: string): string {
   return name
@@ -67,7 +69,11 @@ function initials(name: string): string {
               </td>
               <td class="py-3 pr-4">
                 <div class="flex justify-center">
-                  <ShiftStatusIndicator onShift={onShiftIds.has(person.id)} compact />
+                  <ShiftStatusIndicator
+                    onShift={onShiftIds.has(person.id)}
+                    onTimeOff={travelingIds.has(person.id)}
+                    compact
+                  />
                 </div>
               </td>
               <td class="py-3 pr-4 text-sage-dark/80">{person.jobTitle || '—'}</td>

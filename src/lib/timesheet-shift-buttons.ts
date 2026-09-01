@@ -33,16 +33,19 @@ export function applyShiftButtonState(
 }
 
 export function applyShiftStatus(activeShift: unknown): void {
-  const onShift = Boolean(activeShift);
-
   document.querySelectorAll('[data-shift-status-self]').forEach((node) => {
     if (!(node instanceof HTMLElement)) return;
+    if (node.dataset.onTimeOff === '1') return;
+
+    const onShift = Boolean(activeShift);
     node.dataset.onShift = onShift ? '1' : '0';
 
     const available = node.querySelector('[data-shift-status-available]');
     const unavailable = node.querySelector('[data-shift-status-unavailable]');
+    const traveling = node.querySelector('[data-shift-status-traveling]');
     if (available instanceof HTMLElement) available.classList.toggle('hidden', !onShift);
     if (unavailable instanceof HTMLElement) unavailable.classList.toggle('hidden', onShift);
+    if (traveling instanceof HTMLElement) traveling.classList.add('hidden');
 
     const label = node.querySelector('[data-shift-status-label]');
     if (label) label.textContent = onShift ? 'Available' : 'Unavailable';
