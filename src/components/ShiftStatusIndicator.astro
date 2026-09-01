@@ -50,26 +50,17 @@ const srLabel = traveling
     >
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
-    <svg
-      class:list={[travelIconSize, 'text-emerald-600', !traveling && 'hidden']}
+    <img
+      src="/icons/traveling-palm.png"
+      alt=""
+      width="18"
+      height="18"
+      class:list={[travelIconSize, 'object-contain opacity-70', !traveling && 'hidden']}
       data-shift-status-traveling
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
       aria-hidden="true"
-    >
-      <path d="M13 8h.01" />
-      <path d="M12 20v-8" />
-      <path
-        d="M12 12C9.515 8.94 6.42 8.536 5.432 5.877a3.934 3.934 0 0 1 1.656-4.672 3.85 3.85 0 0 1 3.42-.424c.955.455 1.722 1.2 2.07 2.087a4 4 0 0 1 2.422-.424 3.85 3.85 0 0 1 3.42.424 3.93 3.93 0 0 1 1.656 4.672C17.58 8.536 14.485 8.94 12 12Z"
-      />
-      <path d="M8 12c-1.866 0-3.5 1-4 3" />
-      <path d="M16 12c1.866 0 3.5 1 4 3" />
-      <path d="M7 19c1.138-1.477 2.73-2.18 5-2.18s3.862.703 5 2.18" />
-    </svg>
+      loading="lazy"
+      decoding="async"
+    />
   </span>
   {
     showLabel ? (
