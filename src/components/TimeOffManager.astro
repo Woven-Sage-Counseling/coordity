@@ -1,5 +1,5 @@
 ---
-import { formatTimeOffEntry } from '../lib/time-off';
+import { formatTimeOffRequestEntries } from '../lib/time-off';
 import {
   formatTimeOffRequestDate,
   timeOffStatusLabel,
@@ -14,13 +14,15 @@ interface Props {
 
 const { requests, error = null, embedded = false } = Astro.props;
 
-function entryLabel(entry: TimeOffRequest['entries'][number]): string {
-  return formatTimeOffEntry({
-    date: entry.date,
-    fullDay: entry.fullDay,
-    startTime: entry.startTime,
-    endTime: entry.endTime,
-  });
+function entryLabels(request: TimeOffRequest): string[] {
+  return formatTimeOffRequestEntries(
+    request.entries.map((entry) => ({
+      date: entry.date,
+      fullDay: entry.fullDay,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+    })),
+  );
 }
 ---
 
@@ -73,8 +75,8 @@ function entryLabel(entry: TimeOffRequest['entries'][number]): string {
               </div>
 
               <ul class="mt-4 space-y-1.5 text-sm text-charcoal">
-                {request.entries.map((entry) => (
-                  <li>{entryLabel(entry)}</li>
+                {entryLabels(request).map((label) => (
+                  <li>{label}</li>
                 ))}
               </ul>
 

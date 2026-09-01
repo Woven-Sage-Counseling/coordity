@@ -5,7 +5,7 @@ import {
   notifyManagementUsers,
 } from '../../../lib/notifications';
 import { createTimeOffRequest, formatTimeOffRequestDate } from '../../../lib/time-off-requests';
-import { buildTimeOffEmail, formatTimeOffEntry, parseTimeOffEntries } from '../../../lib/time-off';
+import { buildTimeOffEmail, formatTimeOffRequestEntries, parseTimeOffEntries } from '../../../lib/time-off';
 import {
   resolveTimeOffReturnTo,
   timeOffErrorResponse,
@@ -35,7 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return timeOffErrorResponse(request, form, message);
   }
 
-  const dateSummary = entries.map((entry) => formatTimeOffEntry(entry)).join('; ');
+  const dateSummary = formatTimeOffRequestEntries(entries).join('; ');
   try {
     await notifyManagementUsers({
       title: 'New time off request',
@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         id: created.id,
         status: 'pending',
         createdAtLabel: formatTimeOffRequestDate(created.createdAt),
-        entryLabels: entries.map((entry) => formatTimeOffEntry(entry)),
+        entryLabels: formatTimeOffRequestEntries(entries),
       },
     });
   }

@@ -7,7 +7,7 @@ import {
   notifyUser,
 } from '../../../lib/notifications';
 import { reviewTimeOffRequest } from '../../../lib/time-off-requests';
-import { formatTimeOffEntry } from '../../../lib/time-off';
+import { formatTimeOffRequestEntries } from '../../../lib/time-off';
 
 export const prerender = false;
 
@@ -34,7 +34,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const reviewed = await reviewTimeOffRequest(requestId, actor.id, status);
     await deleteNotificationsBySource(TIME_OFF_REQUEST_SOURCE, requestId);
 
-    const dateSummary = reviewed.entries.map((entry) => formatTimeOffEntry(entry)).join('; ');
+    const dateSummary = formatTimeOffRequestEntries(
+      reviewed.entries.map((entry) => ({
+        date: entry.date,
+        fullDay: entry.fullDay,
+        startTime: entry.startTime,
+        endTime: entry.endTime,
+      })),
+    ).join('; ');
     const approved = status === 'approved';
     await notifyUser({
       userId: reviewed.userId,

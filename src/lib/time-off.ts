@@ -1,5 +1,8 @@
+import { addDays } from './timesheet';
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const MAX_TIME_OFF_RANGE_DAYS = 120;
 
 export type TimeOffEntry = {
   date: string;
@@ -8,60 +11,186 @@ export type TimeOffEntry = {
   endTime: string | null;
 };
 
-export function parseTimeOffEntries(form: FormData): TimeOffEntry[] {
+function parseRowIndices(form: FormData): number[] {
   const indices = new Set<number>();
   for (const key of form.keys()) {
-    const match = key.match(/^entry_date_(\d+)$/);
-    if (match) indices.add(Number(match[1]));
+    const startMatch = key.match(/^entry_start_date_(\d+)$/);
+    const legacyMatch = key.match(/^entry_date_(\d+)$/);
+    if (startMatch) indices.add(Number(startMatch[1]));
+    else if (legacyMatch) indices.add(Number(legacyMatch[1]));
   }
+  return [...indices].sort((a, b) => a - b);
+}
 
-  if (indices.size === 0) {
+function expandDateRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  let cursor = startDate;
+  while (cursor <= endDate) {
+    dates.push(cursor);
+    if (dates.length > MAX_TIME_OFF_RANGE_DAYS) {
+      throw new Error(`Each period can cover at most ${MAX_TIME_OFF_RANGE_DAYS} days.`);
+    }
+    cursor = addDays(cursor, 1);
+  }
+  return dates;
+}
+
+export function parseTimeOffEntries(form: FormData): TimeOffEntry[] {
+  const indices = parseRowIndices(form);
+  if (indices.length === 0) {
     throw new Error('Add at least one date.');
   }
 
   const entries: TimeOffEntry[] = [];
-  for (const index of [...indices].sort((a, b) => a - b)) {
-    const date = String(form.get(`entry_date_${index}`) ?? '').trim();
-    if (!ISO_DATE.test(date)) {
-      throw new Error('Each request needs a valid date.');
+  const seenDates = new Set<string>();
+
+  for (const index of indices) {
+    const startDate = String(
+      form.get(`entry_start_date_${index}`) ?? form.get(`entry_date_${index}`) ?? '',
+    ).trim();
+    const endDate = String(form.get(`entry_end_date_${index}`) ?? startDate).trim();
+
+    if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate)) {
+      throw new Error('Each request needs valid start and end dates.');
+    }
+    if (endDate < startDate) {
+      throw new Error('End date must be on or after the start date.');
     }
 
+    const dates = expandDateRange(startDate, endDate);
     const fullDay = form.get(`entry_full_day_${index}`) === 'on';
     const startTime = String(form.get(`entry_start_${index}`) ?? '').trim();
     const endTime = String(form.get(`entry_end_${index}`) ?? '').trim();
 
-    if (fullDay) {
-      entries.push({ date, fullDay: true, startTime: null, endTime: null });
+    if (dates.length === 1) {
+      if (fullDay) {
+        addUniqueEntry(entries, seenDates, {
+          date: dates[0]!,
+          fullDay: true,
+          startTime: null,
+          endTime: null,
+        });
+        continue;
+      }
+
+      if (!TIME.test(startTime) || !TIME.test(endTime)) {
+        throw new Error('Partial-day requests need a start and end time, or mark the day as full day.');
+      }
+      if (startTime >= endTime) {
+        throw new Error('End time must be after start time for partial-day requests.');
+      }
+
+      addUniqueEntry(entries, seenDates, {
+        date: dates[0]!,
+        fullDay: false,
+        startTime,
+        endTime,
+      });
       continue;
     }
 
-    if (!TIME.test(startTime) || !TIME.test(endTime)) {
-      throw new Error('Partial-day requests need a start and end time, or mark the day as full day.');
+    if (!fullDay) {
+      throw new Error('Multi-day requests must be full days.');
     }
-    if (startTime >= endTime) {
-      throw new Error('End time must be after start time for partial-day requests.');
+    if (startTime || endTime) {
+      throw new Error('Partial-day hours only apply when the start and end date are the same.');
     }
 
-    entries.push({ date, fullDay: false, startTime, endTime });
+    for (const date of dates) {
+      addUniqueEntry(entries, seenDates, {
+        date,
+        fullDay: true,
+        startTime: null,
+        endTime: null,
+      });
+    }
   }
 
-  return entries;
+  if (entries.length === 0) {
+    throw new Error('Add at least one date.');
+  }
+
+  return entries.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function formatTimeOffEntry(entry: TimeOffEntry): string {
-  const dateLabel = new Date(`${entry.date}T12:00:00`).toLocaleDateString('en-US', {
+function addUniqueEntry(
+  entries: TimeOffEntry[],
+  seenDates: Set<string>,
+  entry: TimeOffEntry,
+): void {
+  if (seenDates.has(entry.date)) {
+    throw new Error('Each date can only appear once in a request.');
+  }
+  seenDates.add(entry.date);
+  entries.push(entry);
+}
+
+function formatTimeOffDate(
+  date: string,
+  options: { weekday?: boolean } = {},
+): string {
+  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
     timeZone: 'America/New_York',
-    weekday: 'long',
+    weekday: options.weekday ? 'long' : undefined,
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+export function formatTimeOffEntry(entry: TimeOffEntry): string {
+  const dateLabel = formatTimeOffDate(entry.date, { weekday: true });
 
   if (entry.fullDay) {
     return `${dateLabel} (full day)`;
   }
 
   return `${dateLabel} (${formatTime12(entry.startTime!)} – ${formatTime12(entry.endTime!)})`;
+}
+
+function formatTimeOffDateRange(startDate: string, endDate: string): string {
+  const startLabel = formatTimeOffDate(startDate, { weekday: true });
+  const endLabel = formatTimeOffDate(endDate, { weekday: true });
+  return `${startLabel} – ${endLabel} (full days)`;
+}
+
+function isNextCalendarDay(left: string, right: string): boolean {
+  return addDays(left, 1) === right;
+}
+
+export function formatTimeOffRequestEntries(entries: TimeOffEntry[]): string[] {
+  if (entries.length === 0) return [];
+
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const labels: string[] = [];
+  let index = 0;
+
+  while (index < sorted.length) {
+    const entry = sorted[index]!;
+    if (!entry.fullDay) {
+      labels.push(formatTimeOffEntry(entry));
+      index += 1;
+      continue;
+    }
+
+    let endIndex = index;
+    while (
+      endIndex + 1 < sorted.length &&
+      sorted[endIndex + 1]!.fullDay &&
+      isNextCalendarDay(sorted[endIndex]!.date, sorted[endIndex + 1]!.date)
+    ) {
+      endIndex += 1;
+    }
+
+    if (endIndex === index) {
+      labels.push(formatTimeOffEntry(entry));
+    } else {
+      labels.push(formatTimeOffDateRange(entry.date, sorted[endIndex]!.date));
+    }
+    index = endIndex + 1;
+  }
+
+  return labels;
 }
 
 function formatTime12(value: string): string {
@@ -79,7 +208,7 @@ export function buildTimeOffEmail(input: {
   entries: TimeOffEntry[];
   notes: string;
 }): { subject: string; text: string; html: string; replyTo: string } {
-  const lines = input.entries.map((entry) => `- ${formatTimeOffEntry(entry)}`);
+  const lines = formatTimeOffRequestEntries(input.entries).map((entry) => `- ${entry}`);
   const notes = input.notes.trim();
   const subject = `Time off request from ${input.employeeName}`;
 
@@ -93,8 +222,8 @@ export function buildTimeOffEmail(input: {
   }
   textParts.push('', 'Submitted via the Woven Sage employee portal.');
 
-  const htmlLines = input.entries
-    .map((entry) => `<li>${escapeHtml(formatTimeOffEntry(entry))}</li>`)
+  const htmlLines = formatTimeOffRequestEntries(input.entries)
+    .map((entry) => `<li>${escapeHtml(entry)}</li>`)
     .join('');
 
   const html = `
@@ -118,7 +247,7 @@ export function buildTimeOffRetractionEmail(input: {
   entries: TimeOffEntry[];
   notes: string;
 }): { subject: string; text: string; html: string; replyTo: string } {
-  const lines = input.entries.map((entry) => `- ${formatTimeOffEntry(entry)}`);
+  const lines = formatTimeOffRequestEntries(input.entries).map((entry) => `- ${entry}`);
   const notes = input.notes.trim();
   const subject = `Time off request retracted by ${input.employeeName}`;
 
@@ -132,8 +261,8 @@ export function buildTimeOffRetractionEmail(input: {
   }
   textParts.push('', 'The request was removed from the employee portal.');
 
-  const htmlLines = input.entries
-    .map((entry) => `<li>${escapeHtml(formatTimeOffEntry(entry))}</li>`)
+  const htmlLines = formatTimeOffRequestEntries(input.entries)
+    .map((entry) => `<li>${escapeHtml(entry)}</li>`)
     .join('');
 
   const html = `

@@ -1,6 +1,6 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import { formatTimeOffEntry } from '../lib/time-off';
+import { formatTimeOffRequestEntries } from '../lib/time-off';
 import {
   formatTimeOffRequestDate,
   listTimeOffRequestsForUser,
@@ -27,7 +27,7 @@ const requests = await listTimeOffRequestsForUser(employee.id);
   <div class="mt-3">
     <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Request time off</h1>
     <p class="mt-3 max-w-2xl text-sage-dark/75">
-      Add the dates you need off. Mark a day as full day unless you are requesting a partial day, such as a half day.
+      Add the dates you need off. Pick a start and end date for a multi-day period, or use the same date for a single day or partial day.
     </p>
   </div>
 
@@ -67,29 +67,46 @@ const requests = await listTimeOffRequestsForUser(employee.id);
     <fieldset class="space-y-4" data-time-off-entries>
       <legend class="text-sm font-semibold text-charcoal">Dates requested</legend>
       <div class="rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4" data-time-off-row>
-        <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div class="grid gap-4 sm:grid-cols-2">
           <label class="block text-sm font-medium text-charcoal">
-            Date
-            <input class="field" type="date" name="entry_date_0" required />
-          </label>
-          <label class="inline-flex items-center gap-2 pb-2.5 text-sm text-charcoal">
+            Start date
             <input
-              type="checkbox"
-              name="entry_full_day_0"
-              checked
-              data-time-off-full-day
+              class="field"
+              type="date"
+              name="entry_start_date_0"
+              data-time-off-start-date
+              required
             />
-            Full day
+          </label>
+          <label class="block text-sm font-medium text-charcoal">
+            End date
+            <input
+              class="field"
+              type="date"
+              name="entry_end_date_0"
+              data-time-off-end-date
+              required
+            />
           </label>
         </div>
+        <p class="mt-2 text-xs text-sage-dark/60" data-time-off-range-note hidden>
+          Multi-day periods are submitted as full days.
+        </p>
+        <label
+          class="mt-4 inline-flex items-center gap-2 text-sm text-charcoal"
+          data-time-off-full-day-wrap
+        >
+          <input type="checkbox" name="entry_full_day_0" checked data-time-off-full-day />
+          Full day
+        </label>
         <div class="mt-4 grid gap-4 sm:grid-cols-2" data-time-off-times hidden>
           <label class="block text-sm font-medium text-charcoal">
             Start time
-            <input class="field" type="time" name="entry_start_0" />
+            <input class="field" type="time" name="entry_start_0" data-time-off-start-time />
           </label>
           <label class="block text-sm font-medium text-charcoal">
             End time
-            <input class="field" type="time" name="entry_end_0" />
+            <input class="field" type="time" name="entry_end_0" data-time-off-end-time />
           </label>
         </div>
       </div>
@@ -97,7 +114,7 @@ const requests = await listTimeOffRequestsForUser(employee.id);
 
     <div class="mt-4 flex flex-wrap gap-2">
       <button class="btn-secondary !px-3 !py-1.5" type="button" data-time-off-add>
-        Add another date
+        Add another period
       </button>
     </div>
 
@@ -143,16 +160,14 @@ const requests = await listTimeOffRequestsForUser(employee.id);
 
                 <ul class="mt-3 space-y-1.5 text-sm text-charcoal">
                   {
-                    request.entries.map((entry) => (
-                      <li>
-                        {formatTimeOffEntry({
-                          date: entry.date,
-                          fullDay: entry.fullDay,
-                          startTime: entry.startTime,
-                          endTime: entry.endTime,
-                        })}
-                      </li>
-                    ))
+                    formatTimeOffRequestEntries(
+                      request.entries.map((entry) => ({
+                        date: entry.date,
+                        fullDay: entry.fullDay,
+                        startTime: entry.startTime,
+                        endTime: entry.endTime,
+                      })),
+                    ).map((label) => <li>{label}</li>)
                   }
                 </ul>
 
@@ -211,29 +226,78 @@ const requests = await listTimeOffRequestsForUser(employee.id);
 </PortalLayout>
 
 <script>
+  function rowDates(row: HTMLElement): { start: HTMLInputElement | null; end: HTMLInputElement | null } {
+    return {
+      start: row.querySelector('[data-time-off-start-date]'),
+      end: row.querySelector('[data-time-off-end-date]'),
+    };
+  }
+
+  function isMultiDayRow(row: HTMLElement): boolean {
+    const { start, end } = rowDates(row);
+    return Boolean(
+      start?.value && end?.value && end.value > start.value,
+    );
+  }
+
   function syncRow(row: HTMLElement): void {
     const fullDay = row.querySelector('[data-time-off-full-day]');
+    const fullDayWrap = row.querySelector('[data-time-off-full-day-wrap]');
+    const rangeNote = row.querySelector('[data-time-off-range-note]');
     const times = row.querySelector('[data-time-off-times]');
-    const start = row.querySelector('input[name^="entry_start_"]');
-    const end = row.querySelector('input[name^="entry_end_"]');
+    const startTime = row.querySelector('[data-time-off-start-time]');
+    const endTime = row.querySelector('[data-time-off-end-time]');
+    const { start: startDate, end: endDate } = rowDates(row);
+
+    if (startDate instanceof HTMLInputElement && endDate instanceof HTMLInputElement) {
+      if (startDate.value && (!endDate.value || endDate.value < startDate.value)) {
+        endDate.value = startDate.value;
+      }
+    }
+
+    const multiDay = isMultiDayRow(row);
+    if (rangeNote instanceof HTMLElement) rangeNote.hidden = !multiDay;
+    if (fullDayWrap instanceof HTMLElement) fullDayWrap.hidden = multiDay;
+
     if (!(fullDay instanceof HTMLInputElement) || !(times instanceof HTMLElement)) return;
+
+    if (multiDay) {
+      fullDay.checked = true;
+      times.hidden = true;
+      if (startTime instanceof HTMLInputElement) {
+        startTime.required = false;
+        startTime.value = '';
+      }
+      if (endTime instanceof HTMLInputElement) {
+        endTime.required = false;
+        endTime.value = '';
+      }
+      return;
+    }
 
     const isFullDay = fullDay.checked;
     times.hidden = isFullDay;
-    if (start instanceof HTMLInputElement) {
-      start.required = !isFullDay;
-      if (isFullDay) start.value = '';
+    if (startTime instanceof HTMLInputElement) {
+      startTime.required = !isFullDay;
+      if (isFullDay) startTime.value = '';
     }
-    if (end instanceof HTMLInputElement) {
-      end.required = !isFullDay;
-      if (isFullDay) end.value = '';
+    if (endTime instanceof HTMLInputElement) {
+      endTime.required = !isFullDay;
+      if (isFullDay) endTime.value = '';
     }
   }
 
   function bindRow(row: HTMLElement): void {
     const fullDay = row.querySelector('[data-time-off-full-day]');
+    const { start, end } = rowDates(row);
     if (fullDay instanceof HTMLInputElement) {
       fullDay.addEventListener('change', () => syncRow(row));
+    }
+    if (start instanceof HTMLInputElement) {
+      start.addEventListener('change', () => syncRow(row));
+    }
+    if (end instanceof HTMLInputElement) {
+      end.addEventListener('change', () => syncRow(row));
     }
     syncRow(row);
   }
@@ -242,14 +306,16 @@ const requests = await listTimeOffRequestsForUser(employee.id);
     const rows = container.querySelectorAll('[data-time-off-row]');
     rows.forEach((row, index) => {
       if (!(row instanceof HTMLElement)) return;
-      const date = row.querySelector('input[name^="entry_date_"]');
+      const startDate = row.querySelector('[data-time-off-start-date]');
+      const endDate = row.querySelector('[data-time-off-end-date]');
       const fullDay = row.querySelector('[data-time-off-full-day]');
-      const start = row.querySelector('input[name^="entry_start_"]');
-      const end = row.querySelector('input[name^="entry_end_"]');
-      if (date instanceof HTMLInputElement) date.name = `entry_date_${index}`;
+      const startTime = row.querySelector('[data-time-off-start-time]');
+      const endTime = row.querySelector('[data-time-off-end-time]');
+      if (startDate instanceof HTMLInputElement) startDate.name = `entry_start_date_${index}`;
+      if (endDate instanceof HTMLInputElement) endDate.name = `entry_end_date_${index}`;
       if (fullDay instanceof HTMLInputElement) fullDay.name = `entry_full_day_${index}`;
-      if (start instanceof HTMLInputElement) start.name = `entry_start_${index}`;
-      if (end instanceof HTMLInputElement) end.name = `entry_end_${index}`;
+      if (startTime instanceof HTMLInputElement) startTime.name = `entry_start_${index}`;
+      if (endTime instanceof HTMLInputElement) endTime.name = `entry_end_${index}`;
 
       let removeButton = row.querySelector('[data-time-off-remove]') as HTMLButtonElement | null;
       if (index === 0) {
@@ -284,19 +350,20 @@ const requests = await listTimeOffRequestsForUser(employee.id);
       const template = container.querySelector('[data-time-off-row]');
       if (!(template instanceof HTMLElement)) return;
       const row = template.cloneNode(true) as HTMLElement;
-      const date = row.querySelector('input[type="date"]');
+      const { start, end } = rowDates(row);
       const fullDay = row.querySelector('[data-time-off-full-day]');
-      const start = row.querySelector('input[type="time"]');
-      const end = row.querySelectorAll('input[type="time"]')[1];
-      if (date instanceof HTMLInputElement) date.value = '';
-      if (fullDay instanceof HTMLInputElement) fullDay.checked = true;
+      const startTime = row.querySelector('[data-time-off-start-time]');
+      const endTime = row.querySelector('[data-time-off-end-time]');
       if (start instanceof HTMLInputElement) start.value = '';
       if (end instanceof HTMLInputElement) end.value = '';
+      if (fullDay instanceof HTMLInputElement) fullDay.checked = true;
+      if (startTime instanceof HTMLInputElement) startTime.value = '';
+      if (endTime instanceof HTMLInputElement) endTime.value = '';
       row.querySelector('[data-time-off-remove]')?.remove();
       container.appendChild(row);
       bindRow(row);
       reindexRows(container);
-      if (date instanceof HTMLInputElement) date.focus();
+      if (start instanceof HTMLInputElement) start.focus();
     });
 
     reindexRows(container);

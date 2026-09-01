@@ -1,5 +1,5 @@
 ---
-import { formatTimeOffEntry } from '../lib/time-off';
+import { formatTimeOffRequestEntries } from '../lib/time-off';
 import {
   formatTimeOffRequestDate,
   listTimeOffRequestsForUser,
@@ -65,22 +65,56 @@ const initialFlash =
 
     <form method="post" action="/api/time-off/request" class="shrink-0" data-time-off-widget-form>
       <div class="rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]" data-time-off-row>
-        <label class="block text-[11px] font-semibold text-[#393a3d]">
-          Date
-          <input class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px] text-[#393a3d]" type="date" name="entry_date_0" required />
-        </label>
-        <label class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[#393a3d]">
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block text-[11px] font-semibold text-[#393a3d]">
+            Start
+            <input
+              class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px] text-[#393a3d]"
+              type="date"
+              name="entry_start_date_0"
+              data-time-off-start-date
+              required
+            />
+          </label>
+          <label class="block text-[11px] font-semibold text-[#393a3d]">
+            End
+            <input
+              class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px] text-[#393a3d]"
+              type="date"
+              name="entry_end_date_0"
+              data-time-off-end-date
+              required
+            />
+          </label>
+        </div>
+        <p class="mt-1.5 text-[10px] text-[#6b6c72]" data-time-off-range-note hidden>
+          Multi-day periods are full days.
+        </p>
+        <label
+          class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[#393a3d]"
+          data-time-off-full-day-wrap
+        >
           <input type="checkbox" name="entry_full_day_0" checked data-time-off-full-day />
           Full day
         </label>
         <div class="mt-2 grid grid-cols-2 gap-2" data-time-off-times hidden>
           <label class="block text-[11px] font-semibold text-[#393a3d]">
             Start
-            <input class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]" type="time" name="entry_start_0" />
+            <input
+              class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]"
+              type="time"
+              name="entry_start_0"
+              data-time-off-start-time
+            />
           </label>
           <label class="block text-[11px] font-semibold text-[#393a3d]">
             End
-            <input class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]" type="time" name="entry_end_0" />
+            <input
+              class="mt-1 w-full rounded-md border border-[#d5d8de] bg-white px-2 py-1.5 text-[12px]"
+              type="time"
+              name="entry_end_0"
+              data-time-off-end-time
+            />
           </label>
         </div>
         <label class="mt-2 block text-[11px] font-semibold text-[#393a3d]">
@@ -133,16 +167,14 @@ const initialFlash =
               </div>
               <ul class="mt-1.5 space-y-0.5 text-[11px] leading-snug text-[#393a3d]">
                 {
-                  request.entries.map((entry) => (
-                    <li>
-                      {formatTimeOffEntry({
-                        date: entry.date,
-                        fullDay: entry.fullDay,
-                        startTime: entry.startTime,
-                        endTime: entry.endTime,
-                      })}
-                    </li>
-                  ))
+                  formatTimeOffRequestEntries(
+                    request.entries.map((entry) => ({
+                      date: entry.date,
+                      fullDay: entry.fullDay,
+                      startTime: entry.startTime,
+                      endTime: entry.endTime,
+                    })),
+                  ).map((label) => <li>{label}</li>)
                 }
               </ul>
               {
@@ -202,22 +234,62 @@ const initialFlash =
       .replaceAll("'", '&#39;');
   }
 
+  function rowDates(row: HTMLElement): { start: HTMLInputElement | null; end: HTMLInputElement | null } {
+    return {
+      start: row.querySelector('[data-time-off-start-date]'),
+      end: row.querySelector('[data-time-off-end-date]'),
+    };
+  }
+
+  function isMultiDayRow(row: HTMLElement): boolean {
+    const { start, end } = rowDates(row);
+    return Boolean(start?.value && end?.value && end.value > start.value);
+  }
+
   function syncRow(row: HTMLElement): void {
     const fullDay = row.querySelector('[data-time-off-full-day]');
+    const fullDayWrap = row.querySelector('[data-time-off-full-day-wrap]');
+    const rangeNote = row.querySelector('[data-time-off-range-note]');
     const times = row.querySelector('[data-time-off-times]');
-    const start = row.querySelector('input[name^="entry_start_"]');
-    const end = row.querySelector('input[name^="entry_end_"]');
+    const startTime = row.querySelector('[data-time-off-start-time]');
+    const endTime = row.querySelector('[data-time-off-end-time]');
+    const { start: startDate, end: endDate } = rowDates(row);
+
+    if (startDate instanceof HTMLInputElement && endDate instanceof HTMLInputElement) {
+      if (startDate.value && (!endDate.value || endDate.value < startDate.value)) {
+        endDate.value = startDate.value;
+      }
+    }
+
+    const multiDay = isMultiDayRow(row);
+    if (rangeNote instanceof HTMLElement) rangeNote.hidden = !multiDay;
+    if (fullDayWrap instanceof HTMLElement) fullDayWrap.hidden = multiDay;
+
     if (!(fullDay instanceof HTMLInputElement) || !(times instanceof HTMLElement)) return;
+
+    if (multiDay) {
+      fullDay.checked = true;
+      times.hidden = true;
+      if (startTime instanceof HTMLInputElement) {
+        startTime.required = false;
+        startTime.value = '';
+      }
+      if (endTime instanceof HTMLInputElement) {
+        endTime.required = false;
+        endTime.value = '';
+      }
+      return;
+    }
 
     const isFullDay = fullDay.checked;
     times.hidden = isFullDay;
-    if (start instanceof HTMLInputElement) {
-      start.required = !isFullDay;
-      if (isFullDay) start.value = '';
+    if (startTime instanceof HTMLInputElement) {
+      startTime.required = !isFullDay;
+      if (isFullDay) startTime.value = '';
     }
-    if (end instanceof HTMLInputElement) {
-      end.required = !isFullDay;
-      if (isFullDay) end.value = '';
+    if (endTime instanceof HTMLInputElement) {
+      endTime.required = !isFullDay;
+      if (isFullDay) endTime.value = '';
     }
   }
 
@@ -359,8 +431,15 @@ const initialFlash =
     root.querySelectorAll('[data-time-off-row]').forEach((row) => {
       if (!(row instanceof HTMLElement)) return;
       const fullDay = row.querySelector('[data-time-off-full-day]');
+      const { start, end } = rowDates(row);
       if (fullDay instanceof HTMLInputElement) {
         fullDay.addEventListener('change', () => syncRow(row));
+      }
+      if (start instanceof HTMLInputElement) {
+        start.addEventListener('change', () => syncRow(row));
+      }
+      if (end instanceof HTMLInputElement) {
+        end.addEventListener('change', () => syncRow(row));
       }
       syncRow(row);
     });
