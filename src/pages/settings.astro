@@ -664,6 +664,9 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       const trigger = picker?.querySelector('[data-icon-picker-trigger]');
       if (trigger instanceof HTMLButtonElement) {
         trigger.setAttribute('aria-expanded', 'false');
+        trigger.classList.remove('border-sage-dark/40', 'bg-sage/10', 'ring-2', 'ring-sage-dark/15');
+        const chevron = trigger.querySelector('span:last-child');
+        chevron?.classList.remove('rotate-180');
       }
       openIconPickerMenu = null;
     };
@@ -681,18 +684,46 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       trigger.type = 'button';
       trigger.dataset.iconPickerTrigger = 'true';
       trigger.className =
-        'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sage-dark/15 bg-white text-charcoal shadow-sm transition hover:bg-sage/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
-      trigger.setAttribute('aria-label', `${widgetLabel} header icon`);
+        'inline-flex h-9 items-center gap-1.5 rounded-lg border border-sage-dark/20 bg-white px-2 text-charcoal shadow-sm transition hover:border-sage-dark/35 hover:bg-sage/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-dark/25';
+      trigger.setAttribute('aria-label', `Change ${widgetLabel} header icon`);
       trigger.setAttribute('aria-haspopup', 'listbox');
       trigger.setAttribute('aria-expanded', 'false');
 
+      const preview = document.createElement('span');
+      preview.dataset.iconPickerPreview = 'true';
+      preview.className =
+        'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sage/15 text-charcoal';
+
+      const changeLabel = document.createElement('span');
+      changeLabel.className = 'text-[12px] font-medium text-sage-dark/75';
+      changeLabel.textContent = 'Change';
+
+      const chevron = document.createElement('span');
+      chevron.className = 'inline-flex text-sage-dark/45 transition-transform duration-150';
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      trigger.appendChild(preview);
+      trigger.appendChild(changeLabel);
+      trigger.appendChild(chevron);
+
       const syncTrigger = () => {
-        trigger.innerHTML = widgetIconMarkup(getSelected()).replace(
+        preview.innerHTML = widgetIconMarkup(getSelected()).replace(
           'width="16" height="16"',
           'width="18" height="18"',
         );
       };
       syncTrigger();
+
+      const setTriggerOpen = (open: boolean) => {
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        trigger.classList.toggle('border-sage-dark/40', open);
+        trigger.classList.toggle('bg-sage/10', open);
+        trigger.classList.toggle('ring-2', open);
+        trigger.classList.toggle('ring-sage-dark/15', open);
+        chevron.classList.toggle('rotate-180', open);
+      };
 
       const menu = document.createElement('div');
       menu.dataset.iconPickerMenu = 'true';
@@ -743,7 +774,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         }
         closeOpenIconPicker();
         menu.classList.remove('hidden');
-        trigger.setAttribute('aria-expanded', 'true');
+        setTriggerOpen(true);
         openIconPickerMenu = menu;
         syncMenuSelection();
       });
