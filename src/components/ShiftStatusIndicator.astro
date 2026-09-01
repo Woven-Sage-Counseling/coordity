@@ -10,7 +10,7 @@ interface Props {
 
 const { onShift, onTimeOff = false, showLabel = false, compact = false, self = false } = Astro.props;
 const iconSize = compact ? 'size-3.5' : 'size-4';
-const travelIconSize = compact ? 'size-5' : 'size-6';
+const travelIconSize = compact ? 'size-7' : 'size-8';
 const dotSize = compact ? 'size-2.5' : 'size-3';
 const traveling = onTimeOff;
 const available = !traveling && onShift;
@@ -50,17 +50,17 @@ const srLabel = traveling
     >
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
-    <img
-      src="/icons/traveling-palm.png"
-      alt=""
-      width="24"
-      height="24"
-      class:list={[travelIconSize, 'object-contain', !traveling && 'hidden']}
+    <svg
+      class:list={[travelIconSize, 'shrink-0 text-sage-dark/70', !traveling && 'hidden']}
       data-shift-status-traveling
+      viewBox="0 0 396 403"
+      fill="currentColor"
       aria-hidden="true"
-      loading="lazy"
-      decoding="async"
-    />
+    >
+      <path
+        d="M 47.0,180.0 L 54.0,169.0 L 59.0,158.0 L 65.0,148.0 L 121.0,155.0 L 53.0,125.0 L 57.0,120.0 L 31.0,101.0 L 64.0,110.0 L 153.0,154.0 L 72.0,101.0 L 104.0,116.0 L 77.0,90.0 L 91.0,92.0 L 167.0,150.0 L 87.0,59.0 L 160.0,131.0 L 151.0,112.0 L 129.0,55.0 L 149.0,65.0 L 164.0,87.0 L 171.0,92.0 L 167.0,57.0 L 173.0,54.0 L 178.0,37.0 L 190.0,82.0 L 196.0,81.0 L 202.0,81.0 L 211.0,51.0 L 208.0,122.0 L 226.0,55.0 L 238.0,61.0 L 248.0,67.0 L 238.0,112.0 L 259.0,91.0 L 248.0,118.0 L 214.0,165.0 L 265.0,128.0 L 261.0,142.0 L 299.0,133.0 L 281.0,151.0 L 259.0,165.0 L 321.0,162.0 L 356.0,165.0 L 371.0,175.0 L 350.0,185.0 L 365.0,191.0 L 288.0,189.0 L 320.0,196.0 L 326.0,201.0 L 355.0,212.0 L 290.0,203.0 L 345.0,224.0 L 286.0,211.0 L 304.0,223.0 L 304.0,229.0 L 279.0,225.0 L 250.0,214.0 L 241.0,214.0 L 267.0,253.0 L 259.0,275.0 L 248.0,266.0 L 256.0,287.0 L 299.0,386.0 L 252.0,303.0 L 250.0,315.0 L 247.0,328.0 L 232.0,310.0 L 231.0,373.0 L 208.0,321.0 L 202.0,274.0 L 196.0,243.0 L 179.0,323.0 L 170.0,344.0 L 177.0,275.0 L 148.0,355.0 L 175.0,248.0 L 119.0,377.0 L 171.0,225.0 L 181.0,188.0 L 112.0,187.0 L 47.0,180.0 Z"
+      />
+    </svg>
   </span>
   {
     showLabel ? (
