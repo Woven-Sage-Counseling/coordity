@@ -1,0 +1,28 @@
+---
+import { getWidgetDefaultHeaderColor, widgetHeaderForeground } from '../lib/home-widget-header';
+import { getWidgetDefaultIcon, widgetIconMarkup } from '../lib/home-widget-icons';
+import type { PortalTool } from '../lib/portal-tools';
+
+interface Props {
+  tool: PortalTool;
+}
+
+const { tool } = Astro.props;
+const background = getWidgetDefaultHeaderColor(tool.widgetId);
+const foreground = widgetHeaderForeground(background);
+const iconMarkup = widgetIconMarkup(getWidgetDefaultIcon(tool.widgetId));
+---
+
+<a
+  href={tool.href}
+  class="group inline-flex w-[7.5rem] flex-col items-center text-center outline-none"
+  title={tool.description}
+>
+  <div
+    class="flex h-[6.4rem] w-[6.4rem] items-center justify-center rounded-[1.48rem] shadow-[0_10px_24px_rgba(26,28,30,0.18)] ring-1 ring-black/10 transition group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_28px_rgba(26,28,30,0.22)] group-focus-visible:ring-2 group-focus-visible:ring-sage-dark"
+    style={`background: ${background}; color: ${foreground}`}
+  >
+    <span class="inline-flex scale-[2]" set:html={iconMarkup} />
+  </div>
+  <span class="mt-2.5 text-sm font-medium leading-tight text-charcoal">{tool.label}</span>
+</a>

@@ -58,6 +58,7 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
             </a>
             <nav class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-sm">
               <a href="/" class="text-sage-dark/80 hover:text-sage-dark">Home</a>
+              <a href="/tools" class="text-sage-dark/80 hover:text-sage-dark">Tools</a>
               <a href="/apps" class="text-sage-dark/80 hover:text-sage-dark">Applications</a>
               <a href="/directory" class="text-sage-dark/80 hover:text-sage-dark">Directory</a>
               <div
@@ -188,7 +189,7 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
         >
           (function () {
             var path = window.location.pathname.replace(/\/$/, '') || '/';
-            var allowed = ['/apps', '/directory', '/account', '/announcements', '/notifications'];
+            var allowed = ['/apps', '/directory', '/account', '/announcements', '/notifications', '/tools'];
             if (canSeeFinancials) allowed.push('/financials');
             if (canSeeManagement) allowed.push('/admin');
             if (allowed.indexOf(path) === -1) return;
