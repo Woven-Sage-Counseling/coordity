@@ -842,7 +842,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         const li = document.createElement('li');
         li.className =
-          'relative grid grid-cols-[auto_1fr_auto] grid-rows-[auto_auto] items-start gap-x-3 gap-y-2 overflow-visible rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3 shadow-sm';
+          'relative flex items-stretch gap-3 overflow-visible rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3 shadow-sm';
         li.dataset.widgetId = row.id;
 
         const check = document.createElement('input');
@@ -851,7 +851,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         check.value = row.id;
         check.checked = row.enabled;
         check.className =
-          'col-start-1 row-start-1 h-4 w-4 self-center rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30';
+          'mb-2.5 h-4 w-4 shrink-0 self-end rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30';
         check.addEventListener('change', () => {
           const enabledCount = rows.filter((r) => r.enabled).length;
           if (check.checked && enabledCount >= max) {
@@ -877,9 +877,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           render();
         });
 
+        const main = document.createElement('div');
+        main.className = 'flex min-w-0 flex-1 flex-wrap items-end gap-x-4 gap-y-2';
+
         const titleWrap = document.createElement('div');
-        titleWrap.className =
-          'col-start-2 row-start-1 flex items-center gap-1.5 overflow-visible';
+        titleWrap.className = 'flex min-w-[6rem] flex-1 items-center gap-1.5 overflow-visible pb-0.5';
 
         const label = document.createElement('label');
         label.htmlFor = check.id;
@@ -990,8 +992,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         }
 
         const controls = document.createElement('div');
-        controls.className =
-          'col-start-3 row-span-2 row-start-1 flex items-center gap-1 self-center';
+        controls.className = 'mb-0.5 flex shrink-0 items-center gap-1 self-end';
 
         const up = document.createElement('button');
         up.type = 'button';
@@ -1030,16 +1031,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         controls.appendChild(up);
         controls.appendChild(down);
 
-        const optionsRow = document.createElement('div');
-        optionsRow.className =
-          'col-start-2 row-start-2 flex flex-wrap items-end gap-4';
-        optionsRow.appendChild(colorWrap);
-        if (iconWrap) optionsRow.appendChild(iconWrap);
+        main.appendChild(titleWrap);
+        main.appendChild(colorWrap);
+        if (iconWrap) main.appendChild(iconWrap);
 
         li.appendChild(check);
-        li.appendChild(titleWrap);
+        li.appendChild(main);
         li.appendChild(controls);
-        li.appendChild(optionsRow);
         list.appendChild(li);
       });
       syncSelect();
