@@ -10,9 +10,9 @@ const employee = Astro.locals.employee!;
 const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permission));
 ---
 
-<PortalLayout title="Applications" wide>
-  <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Applications</p>
-  <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Open the tool you need.</h1>
+<PortalLayout title="App links" wide>
+  <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">App links</p>
+  <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Open an external app.</h1>
   <p class="mt-4 max-w-2xl text-sage-dark/75">
     Each tile opens the respective website. Woven Sage does not copy clinical data into this portal.
   </p>

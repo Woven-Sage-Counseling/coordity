@@ -1,7 +1,7 @@
 import { formErrorRedirect } from './http';
 
 function isAllowedReturnPath(path: string): boolean {
-  return path === '/' || path === '/admin';
+  return path === '/' || path === '/admin' || path === '/tasks' || path === '/workspace';
 }
 
 export function wantsJson(request: Request): boolean {
@@ -42,6 +42,9 @@ export function tasksErrorRedirect(form: FormData, message: string): Response {
     const url = new URL(target, 'https://portal.local');
     if (url.pathname === '/admin') {
       return formErrorRedirect('/admin', message, 'tasksError');
+    }
+    if (url.pathname === '/tasks') {
+      return formErrorRedirect('/tasks', message, 'tasksError');
     }
   } catch {
     /* fall through */

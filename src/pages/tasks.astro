@@ -1,15 +1,17 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import TasksCard from '../components/TasksCard.astro';
+import TasksPanel from '../components/TasksPanel.astro';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+const error = Astro.url.searchParams.get('tasksError');
+const initialError = error != null && error !== '' ? error : null;
 ---
 
 <PortalLayout title="Tasks" wide>
   <p class="text-sm text-sage-dark/65">
-    <a href="/tools" class="hover:text-sage-dark">Tools</a>
+    <a href="/workspace" class="hover:text-sage-dark">Workspace</a>
     <span class="mx-1.5 text-sage-dark/35">/</span>
     Tasks
   </p>
@@ -17,14 +19,10 @@ const employee = Astro.locals.employee!;
   <div class="mt-3">
     <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Tasks</h1>
     <p class="mt-3 max-w-2xl text-sage-dark/75">
-      Personal to-dos and tasks assigned by admins. Completed items stay in your list until you
-      remove them.
+      Keep track of personal to-dos and tasks assigned by admins. Check items off when you are done,
+      or delete them to clear your list.
     </p>
   </div>
 
-  <div class="mt-8 max-w-xl">
-    <div class="h-[min(42rem,70vh)] min-h-[28rem]">
-      <TasksCard userId={employee.id} />
-    </div>
-  </div>
+  <TasksPanel userId={employee.id} mode="page" returnTo="/tasks" initialError={initialError} />
 </PortalLayout>

@@ -4,8 +4,8 @@ export interface ShortcutTarget {
 }
 
 export const SHORTCUT_CATALOG: ShortcutTarget[] = [
-  { path: '/tools', label: 'Tools' },
-  { path: '/apps', label: 'Applications' },
+  { path: '/workspace', label: 'Workspace' },
+  { path: '/apps', label: 'App links' },
   { path: '/directory', label: 'Directory' },
   { path: '/account', label: 'Account' },
   { path: '/financials', label: 'Financials' },

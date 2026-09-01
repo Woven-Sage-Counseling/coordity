@@ -1,0 +1,130 @@
+---
+import { serializeTask } from '../lib/tasks';
+
+type SerializedTask = ReturnType<typeof serializeTask>;
+
+interface Props {
+  task: SerializedTask;
+  mode: 'widget' | 'page';
+  returnTo: string;
+}
+
+const { task, mode, returnTo } = Astro.props;
+const isPage = mode === 'page';
+const completed = task.completed;
+
+const itemClass = isPage
+  ? 'rounded-xl border border-sage-dark/10 bg-white px-4 py-3 shadow-sm'
+  : 'rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]';
+const titleClass = completed
+  ? isPage
+    ? 'text-sm leading-snug text-sage-dark/65 line-through'
+    : 'text-[12px] leading-snug text-[#6b6c72] line-through'
+  : isPage
+    ? 'text-sm leading-snug text-charcoal'
+    : 'text-[12px] leading-snug text-charcoal';
+const metaClass = isPage ? 'mt-1 text-xs text-sage-dark/65' : 'mt-0.5 text-[10px] text-sage-dark/70';
+const taskActionPillBase = isPage
+  ? 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-none ring-1 transition disabled:opacity-60'
+  : 'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold leading-none ring-1 transition disabled:opacity-60';
+const taskEditPillClass = `${taskActionPillBase} bg-stone-100 text-stone-700 ring-stone-200 hover:bg-stone-200`;
+const taskDeletePillClass = `${taskActionPillBase} bg-red-50 text-red-800 ring-red-200 hover:bg-red-100`;
+---
+
+<li
+  class={itemClass}
+  data-tasks-item
+  data-task-id={task.id}
+  data-completed={completed ? '1' : '0'}
+>
+  <div class="flex items-start gap-3">
+    <form method="post" action="/api/tasks/toggle" class="mt-0.5 shrink-0" data-tasks-action="toggle">
+      <input type="hidden" name="taskId" value={task.id} />
+      <input type="hidden" name="completed" value={completed ? '0' : '1'} />
+      <input
+        type="checkbox"
+        class="h-4 w-4 rounded border-sage-dark/30 text-sage-dark focus:ring-sage-dark/30"
+        checked={completed}
+        aria-label={completed ? `Mark "${task.title}" incomplete` : `Mark "${task.title}" complete`}
+      />
+    </form>
+    <div class="min-w-0 flex-1" data-task-body>
+      <div data-task-display>
+        <p class={titleClass} data-task-title>
+          {task.title}
+        </p>
+        {
+          task.assigned ? (
+            <p class={metaClass} data-task-assigned>
+              Assigned by {task.createdByName}
+              {isPage ? ` · ${task.createdAtLabel}` : ''}
+            </p>
+          ) : isPage ? (
+            <p class={metaClass} data-task-meta>
+              Added {task.createdAtLabel}
+            </p>
+          ) : null
+        }
+        <div class:list={['flex justify-end gap-1.5', isPage ? 'mt-2' : 'mt-1']} data-task-actions>
+          <button
+            type="button"
+            class={taskEditPillClass}
+            data-task-edit-open
+            aria-label={`Edit "${task.title}"`}
+          >
+            Edit
+          </button>
+          <form method="post" action="/api/tasks/delete" class="inline-flex" data-tasks-action="delete">
+            <input type="hidden" name="taskId" value={task.id} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <button type="submit" class={taskDeletePillClass} aria-label={`Delete "${task.title}"`}>
+              Delete
+            </button>
+          </form>
+        </div>
+      </div>
+      <form
+        method="post"
+        action="/api/tasks/update"
+        class="mt-2 hidden flex-col gap-2"
+        data-tasks-action="edit"
+      >
+        <input type="hidden" name="taskId" value={task.id} />
+        <input type="hidden" name="returnTo" value={returnTo} />
+        <input
+          name="title"
+          type="text"
+          maxlength="500"
+          required
+          value={task.title}
+          class:list={[
+            'w-full rounded-lg border border-sage-dark/15 bg-white px-3 py-2 text-charcoal outline-none focus:border-sage-dark/30',
+            isPage ? 'text-sm' : 'text-[12px]',
+          ]}
+          data-task-edit-input
+        />
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            class:list={[
+              'rounded-full bg-sage-dark/10 font-semibold text-charcoal transition hover:bg-sage-dark/15',
+              isPage ? 'px-3 py-1.5 text-xs' : 'px-2.5 py-1 text-[10px]',
+            ]}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            class:list={[
+              'rounded-full bg-[#f4f5f8] font-semibold text-[#6b6c72] ring-1 ring-black/[0.06] transition hover:bg-sage-dark/10',
+              isPage ? 'px-3 py-1.5 text-xs' : 'px-2.5 py-1 text-[10px]',
+            ]}
+            data-task-edit-cancel
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</li>
