@@ -694,10 +694,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       preview.className =
         'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sage/15 text-charcoal';
 
-      const changeLabel = document.createElement('span');
-      changeLabel.className = 'text-[12px] font-medium text-sage-dark/75';
-      changeLabel.textContent = 'Change';
-
       const chevron = document.createElement('span');
       chevron.className = 'inline-flex text-sage-dark/45 transition-transform duration-150';
       chevron.setAttribute('aria-hidden', 'true');
@@ -705,7 +701,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
       trigger.appendChild(preview);
-      trigger.appendChild(changeLabel);
       trigger.appendChild(chevron);
 
       const syncTrigger = () => {
