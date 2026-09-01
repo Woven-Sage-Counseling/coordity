@@ -1,19 +1,21 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import DirectoryPeopleTable from '../components/DirectoryPeopleTable.astro';
-import { groupDirectoryByTeam, listDirectory } from '../lib/employees';
+import { groupDirectoryByTeam, listDirectory, listDirectoryClinicians } from '../lib/employees';
 import { listUsersOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import { listActiveShiftUserIds } from '../lib/timesheet-entries';
 
 export const prerender = false;
 
 const people = await listDirectory();
-const [activeShiftUserIds, timeOffUserIds] = await Promise.all([
+const [activeShiftUserIds, timeOffUserIds, clinicians] = await Promise.all([
   listActiveShiftUserIds(),
   listUsersOnApprovedTimeOffNow(),
+  listDirectoryClinicians(),
 ]);
 const onShiftUserIds = [...activeShiftUserIds];
 const travelingUserIds = [...timeOffUserIds];
+const clinicianUserIds = clinicians.map((person) => person.id);
 const { groups, unassigned } = groupDirectoryByTeam(people);
 ---
 
@@ -41,6 +43,7 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
                   people={group.people}
                   onShiftUserIds={onShiftUserIds}
                   travelingUserIds={travelingUserIds}
+                  clinicianUserIds={clinicianUserIds}
                 />
               )
             }
@@ -57,6 +60,7 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
                 people={unassigned}
                 onShiftUserIds={onShiftUserIds}
                 travelingUserIds={travelingUserIds}
+                clinicianUserIds={clinicianUserIds}
               />
             </section>
           ) : null

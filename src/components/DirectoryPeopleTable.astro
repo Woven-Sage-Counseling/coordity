@@ -6,11 +6,13 @@ interface Props {
   people: DirectoryPerson[];
   onShiftUserIds: string[];
   travelingUserIds: string[];
+  clinicianUserIds: string[];
 }
 
-const { people, onShiftUserIds, travelingUserIds } = Astro.props;
+const { people, onShiftUserIds, travelingUserIds, clinicianUserIds } = Astro.props;
 const onShiftIds = new Set(onShiftUserIds);
 const travelingIds = new Set(travelingUserIds);
+const clinicianIds = new Set(clinicianUserIds);
 
 function initials(name: string): string {
   return name
@@ -72,6 +74,7 @@ function initials(name: string): string {
                   <ShiftStatusIndicator
                     onShift={onShiftIds.has(person.id)}
                     onTimeOff={travelingIds.has(person.id)}
+                    showShiftStatus={!clinicianIds.has(person.id)}
                     compact
                   />
                 </div>

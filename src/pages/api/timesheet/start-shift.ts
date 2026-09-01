@@ -6,14 +6,14 @@ import {
   timesheetJsonOk,
   wantsJson,
 } from '../../../lib/timesheet-http';
+import { requireTimesheetAccess } from '../../../lib/timesheet-access';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const employee = locals.employee;
-  if (!employee || employee.status !== 'active') {
-    return new Response('Forbidden', { status: 403 });
-  }
+  const denied = requireTimesheetAccess(locals.employee);
+  if (denied) return denied;
+  const employee = locals.employee!;
 
   const form = await request.formData();
 

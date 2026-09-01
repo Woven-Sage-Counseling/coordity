@@ -11,6 +11,7 @@ import { listNotificationsForUser, countUnreadNotifications } from '../lib/notif
 import { canAccessManagement, hasPermission } from '../lib/permissions';
 import { canSeeCredentialing } from '../lib/credentialing';
 import { canSeeCaseload } from '../lib/caseload';
+import { canUseTimesheet } from '../lib/timesheet-access';
 import { getActiveShift } from '../lib/timesheet-entries';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 
@@ -22,13 +23,14 @@ const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeCredentialingWidget = canSeeCredentialing(employee);
 const canSeeCaseloadWidget = canSeeCaseload(employee);
+const canSeeTimesheet = canUseTimesheet(employee);
 const canSeeAdmin = canAccessManagement(employee);
 const announcements = await listAnnouncementsForUser(employee.id);
 const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
 const notifications = await listNotificationsForUser(employee.id);
 const notificationUnreadCount = await countUnreadNotifications(employee.id);
 
-const activeShift = await getActiveShift(employee.id);
+const activeShift = canSeeTimesheet ? await getActiveShift(employee.id) : null;
 const onShift = activeShift != null;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
@@ -42,13 +44,20 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
         canSeeFinancials={canSeeFinancials}
         canSeeCredentialing={canSeeCredentialingWidget}
         canSeeClinical={canSeeCaseloadWidget}
+        canSeeTimesheet={canSeeTimesheet}
       />
     </div>
 
     <div class="order-2 lg:order-1">
       <div class="flex flex-wrap items-center gap-3">
         <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
-        <ShiftStatusIndicator onShift={onShift} onTimeOff={onTimeOff} showLabel self />
+        <ShiftStatusIndicator
+          onShift={onShift}
+          onTimeOff={onTimeOff}
+          showLabel
+          self
+          showShiftStatus={canSeeTimesheet}
+        />
       </div>
 
       <AnnouncementsPanel

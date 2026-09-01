@@ -25,12 +25,14 @@ export interface HomeWidgetDef {
   requiresFinancials?: boolean;
   requiresCredentialing?: boolean;
   requiresClinical?: boolean;
+  requiresTimesheet?: boolean;
 }
 
 export interface HomeWidgetAccess {
   canSeeFinancials: boolean;
   canSeeCredentialing: boolean;
   canSeeClinical: boolean;
+  canSeeTimesheet: boolean;
 }
 
 /** Registry of home widgets. Add new widgets here as they are built. */
@@ -55,6 +57,7 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
     id: 'timesheet',
     label: 'Timesheet',
     description: 'Clock in and out, log hours, and track your weekly total.',
+    requiresTimesheet: true,
   },
   {
     id: 'my_progress',
@@ -100,6 +103,7 @@ export function availableWidgets(access: HomeWidgetAccess): HomeWidgetDef[] {
     if (widget.requiresFinancials && !access.canSeeFinancials) return false;
     if (widget.requiresCredentialing && !access.canSeeCredentialing) return false;
     if (widget.requiresClinical && !access.canSeeClinical) return false;
+    if (widget.requiresTimesheet && !access.canSeeTimesheet) return false;
     return true;
   });
 }

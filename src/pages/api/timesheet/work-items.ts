@@ -2,14 +2,14 @@ import type { APIRoute } from 'astro';
 import { getTimesheetSummary, serializeTimesheetSummary } from '../../../lib/timesheet-entries';
 import { parseWorkItemsForm, serializeWorkItem, setShiftWorkItems } from '../../../lib/timesheet-work-items';
 import { timesheetJsonError, timesheetJsonOk, wantsJson } from '../../../lib/timesheet-http';
+import { requireTimesheetAccess } from '../../../lib/timesheet-access';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const employee = locals.employee;
-  if (!employee || employee.status !== 'active') {
-    return new Response('Forbidden', { status: 403 });
-  }
+  const denied = requireTimesheetAccess(locals.employee);
+  if (denied) return denied;
+  const employee = locals.employee!;
 
   if (!wantsJson(request)) {
     return timesheetJsonError('JSON request required.', 406);

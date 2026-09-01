@@ -5,10 +5,14 @@ import { buildPieSlices, type PieSlicePath } from '../../lib/timesheet-charts';
 import { formatWorkDate } from '../../lib/timesheet';
 import { getWorkBreakdownByCategory, serializeWorkBreakdown } from '../../lib/timesheet-work-items';
 import { resolveTimesheetPeriod } from '../../lib/timesheet-periods';
+import { canUseTimesheet } from '../../lib/timesheet-access';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+if (!canUseTimesheet(employee)) {
+  return Astro.redirect('/');
+}
 const period = resolveTimesheetPeriod(Astro.url.searchParams);
 const breakdown = await getWorkBreakdownByCategory(employee.id, {
   start: period.start,

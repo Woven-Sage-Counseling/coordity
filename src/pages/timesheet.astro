@@ -13,10 +13,14 @@ import { listTimesheetBacklogForUser, serializeBacklogRequest } from '../lib/tim
 import { TIMESHEET_WORK_CATEGORIES } from '../lib/timesheet-categories';
 import { formatWeekLabel } from '../lib/timesheet';
 import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
+import { canUseTimesheet } from '../lib/timesheet-access';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+if (!canUseTimesheet(employee)) {
+  return Astro.redirect('/');
+}
 const error = Astro.url.searchParams.get('error');
 const started = Astro.url.searchParams.get('started') === '1';
 const ended = Astro.url.searchParams.get('ended') === '1';

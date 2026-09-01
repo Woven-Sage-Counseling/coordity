@@ -11,6 +11,15 @@ export const DIRECTORY_TEAMS = [
   { id: 'team_clinical', key: 'clinical', name: 'Clinical' },
 ] as const;
 
+export const CLINICAL_TEAM_NAME =
+  DIRECTORY_TEAMS.find((team) => team.id === 'team_clinical')?.name ?? 'Clinical';
+
+/** Active clinicians by role or Clinical team membership (matches directory credentialing). */
+export function isClinicianEmployee(employee: PortalEmployee | null): boolean {
+  if (!employee || employee.status !== 'active') return false;
+  return employee.roles.includes('clinician') || employee.teams.includes(CLINICAL_TEAM_NAME);
+}
+
 export type DirectoryTeamId = (typeof DIRECTORY_TEAMS)[number]['id'];
 
 export interface DirectoryPerson {

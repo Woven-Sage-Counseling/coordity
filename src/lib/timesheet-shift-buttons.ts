@@ -36,6 +36,7 @@ export function applyShiftStatus(activeShift: unknown): void {
   document.querySelectorAll('[data-shift-status-self]').forEach((node) => {
     if (!(node instanceof HTMLElement)) return;
     if (node.dataset.onTimeOff === '1') return;
+    if (node.dataset.showShiftStatus === '0') return;
 
     const onShift = Boolean(activeShift);
     node.dataset.onShift = onShift ? '1' : '0';

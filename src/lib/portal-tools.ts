@@ -1,5 +1,6 @@
 import { canSeeCaseload } from './caseload';
 import { canSeeCredentialing } from './credentialing';
+import { canUseTimesheet } from './timesheet-access';
 import type { HomeWidgetId } from './home-widgets';
 
 export interface PortalTool {
@@ -9,6 +10,7 @@ export interface PortalTool {
   href: string;
   requiresCredentialing?: boolean;
   requiresClinical?: boolean;
+  requiresTimesheet?: boolean;
 }
 
 export const PORTAL_TOOLS: PortalTool[] = [
@@ -43,6 +45,7 @@ export const PORTAL_TOOLS: PortalTool[] = [
     label: 'Timesheet',
     description: 'Clock in and out, log hours, and review your shift log.',
     href: '/timesheet',
+    requiresTimesheet: true,
   },
   {
     widgetId: 'my_progress',
@@ -55,10 +58,12 @@ export const PORTAL_TOOLS: PortalTool[] = [
 export function availablePortalTools(employee: PortalEmployee): PortalTool[] {
   const canCredentialing = canSeeCredentialing(employee);
   const canClinical = canSeeCaseload(employee);
+  const canTimesheet = canUseTimesheet(employee);
 
   return PORTAL_TOOLS.filter((tool) => {
     if (tool.requiresCredentialing && !canCredentialing) return false;
     if (tool.requiresClinical && !canClinical) return false;
+    if (tool.requiresTimesheet && !canTimesheet) return false;
     return true;
   });
 }

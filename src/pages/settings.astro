@@ -3,6 +3,7 @@ import PanelHeading from '../components/PanelHeading.astro';
 import PortalLayout from '../layouts/PortalLayout.astro';
 import { canSeeCredentialing } from '../lib/credentialing';
 import { canSeeCaseload } from '../lib/caseload';
+import { canUseTimesheet } from '../lib/timesheet-access';
 import { availableWidgets, HOME_WIDGET_MAX } from '../lib/home-widgets';
 import { hasPermission } from '../lib/permissions';
 import { GoogleCalendarProvider } from '../lib/schedule/google-calendar';
@@ -13,10 +14,12 @@ const employee = Astro.locals.employee!;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeCredentialingWidget = canSeeCredentialing(employee);
 const canSeeClinicalWidget = canSeeCaseload(employee);
+const canSeeTimesheet = canUseTimesheet(employee);
 const widgets = availableWidgets({
   canSeeFinancials,
   canSeeCredentialing: canSeeCredentialingWidget,
   canSeeClinical: canSeeClinicalWidget,
+  canSeeTimesheet,
 });
 
 const calendarProvider = new GoogleCalendarProvider();
@@ -162,6 +165,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       data-can-financials={canSeeFinancials ? '1' : '0'}
       data-can-credentialing={canSeeCredentialingWidget ? '1' : '0'}
       data-can-clinical={canSeeClinicalWidget ? '1' : '0'}
+      data-can-timesheet={canSeeTimesheet ? '1' : '0'}
       data-max={HOME_WIDGET_MAX}
       data-catalog={JSON.stringify(widgets)}
     >
@@ -406,9 +410,18 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     return icons;
   }
 
-  function defaultPrefs(canFinancials: boolean, canCredentialing: boolean, canClinical: boolean): Prefs {
-    const enabled = ['schedule', 'time_off', 'timesheet', 'my_progress', 'tasks'];
+  function defaultPrefs(
+    canFinancials: boolean,
+    canCredentialing: boolean,
+    canClinical: boolean,
+    canTimesheet: boolean,
+  ): Prefs {
+    const enabled = ['schedule', 'time_off', 'my_progress', 'tasks'];
     if (canClinical) enabled.splice(1, 0, 'caseload');
+    if (canTimesheet) {
+      const timeOffIdx = enabled.indexOf('time_off');
+      enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'timesheet');
+    }
     if (canCredentialing) enabled.push('credentialing');
     if (canFinancials) enabled.push('quickbooks');
     return { enabled };
@@ -504,6 +517,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const canFinancials = root.dataset.canFinancials === '1';
     const canCredentialing = root.dataset.canCredentialing === '1';
     const canClinical = root.dataset.canClinical === '1';
+    const canTimesheet = root.dataset.canTimesheet === '1';
     const max = Number(root.dataset.max || 10);
     const list = root.querySelector('[data-widget-list]');
     const errorEl = root.querySelector('[data-settings-error]');
@@ -519,7 +533,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     }
 
     const key = 'portal:home-widgets:' + userId;
-    let prefs = defaultPrefs(canFinancials, canCredentialing, canClinical);
+    let prefs = defaultPrefs(canFinancials, canCredentialing, canClinical, canTimesheet);
     let headerColors: Record<string, string> = {};
     let headerIcons: Record<string, WidgetIconId> = {};
     try {
@@ -585,7 +599,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               'credentialing',
             );
           }
-          if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials, canCredentialing, canClinical);
+          if (!prefs.enabled.length) prefs = defaultPrefs(canFinancials, canCredentialing, canClinical, canTimesheet);
         }
       }
     } catch {
