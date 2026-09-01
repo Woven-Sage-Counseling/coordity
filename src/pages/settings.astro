@@ -878,10 +878,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         });
 
         const main = document.createElement('div');
-        main.className = 'flex min-w-0 flex-1 flex-wrap items-end gap-x-4 gap-y-2';
+        main.className =
+          'grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_8.5rem_11rem] items-end gap-x-4';
 
         const titleWrap = document.createElement('div');
-        titleWrap.className = 'flex min-w-[6rem] flex-1 items-center gap-1.5 overflow-visible pb-0.5';
+        titleWrap.className = 'flex min-w-0 items-center gap-1.5 overflow-visible pb-0.5';
 
         const label = document.createElement('label');
         label.htmlFor = check.id;
@@ -892,8 +893,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           titleWrap.appendChild(createInfoTooltip(widget.description, widget.label));
         }
 
-        const colorColumnClass = 'flex w-[8.5rem] shrink-0 flex-col gap-1';
-        const iconColumnClass = 'flex w-[11rem] shrink-0 flex-col gap-1';
+        const colorColumnClass = 'flex min-w-0 flex-col gap-1';
+        const iconColumnClass = 'flex min-w-0 flex-col gap-1';
 
         const colorWrap = document.createElement('div');
         colorWrap.className = colorColumnClass;
@@ -971,7 +972,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           const iconRow = document.createElement('div');
           iconRow.className = 'flex h-9 items-center';
           const iconMemo = document.createElement('p');
-          iconMemo.className = 'text-[11px] leading-snug text-sage-dark/55';
+          iconMemo.className = 'whitespace-nowrap text-[11px] leading-snug text-sage-dark/55';
           iconMemo.textContent = 'Icon is not changeable.';
           iconRow.appendChild(iconMemo);
           iconWrap.appendChild(iconLabel);
