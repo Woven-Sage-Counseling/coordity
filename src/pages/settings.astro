@@ -809,7 +809,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       const tooltip = document.createElement('span');
       tooltip.setAttribute('role', 'tooltip');
       tooltip.className =
-        'pointer-events-none absolute left-[calc(100%+0.45rem)] top-1/2 z-50 w-64 -translate-y-1/2 rounded-xl border border-sage-dark/10 bg-white px-3.5 py-2.5 text-left text-sm font-normal leading-snug text-sage-dark/75 opacity-0 shadow-lg transition-opacity duration-150 group-hover/info:opacity-100 group-focus-within/info:opacity-100';
+        'pointer-events-none absolute bottom-[calc(100%+0.45rem)] left-1/2 z-50 w-64 -translate-x-1/2 rounded-xl border border-sage-dark/10 bg-white px-3.5 py-2.5 text-left text-sm font-normal leading-snug text-sage-dark/75 opacity-0 shadow-lg transition-opacity duration-150 group-hover/info:opacity-100 group-focus-within/info:opacity-100';
       tooltip.textContent = description;
 
       wrap.appendChild(button);
@@ -879,22 +879,23 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         const main = document.createElement('div');
         main.className =
-          'grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_8.5rem_11rem] items-end gap-x-4';
+          'grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_9rem_11rem] items-end gap-x-3';
 
         const titleWrap = document.createElement('div');
-        titleWrap.className = 'flex min-w-0 items-center gap-1.5 overflow-visible pb-0.5';
+        titleWrap.className = 'flex min-w-0 items-center gap-1.5 overflow-hidden pb-0.5';
 
         const label = document.createElement('label');
         label.htmlFor = check.id;
-        label.className = 'cursor-pointer text-[15px] font-medium text-charcoal';
+        label.className =
+          'min-w-0 flex-1 truncate cursor-pointer text-[15px] font-medium text-charcoal';
         label.textContent = widget.label;
         titleWrap.appendChild(label);
         if (widget.description) {
           titleWrap.appendChild(createInfoTooltip(widget.description, widget.label));
         }
 
-        const colorColumnClass = 'flex min-w-0 flex-col gap-1';
-        const iconColumnClass = 'flex min-w-0 flex-col gap-1';
+        const colorColumnClass = 'flex min-w-0 flex-col gap-1 overflow-hidden';
+        const iconColumnClass = 'flex min-w-0 flex-col gap-1 overflow-hidden';
 
         const colorWrap = document.createElement('div');
         colorWrap.className = colorColumnClass;
@@ -902,7 +903,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         colorLabel.className = fieldLabelClass;
         colorLabel.textContent = 'Color';
         const colorRow = document.createElement('div');
-        colorRow.className = 'flex items-center gap-2';
+        colorRow.className = 'flex min-w-0 items-center gap-1.5';
 
         const colorTrigger = document.createElement('button');
         colorTrigger.type = 'button';
@@ -947,7 +948,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         const resetColor = document.createElement('button');
         resetColor.type = 'button';
         resetColor.className =
-          'text-[11px] font-medium text-sage-dark/55 underline decoration-sage-dark/25 underline-offset-2 hover:text-charcoal';
+          'shrink-0 text-[11px] font-medium text-sage-dark/55 underline decoration-sage-dark/25 underline-offset-2 hover:text-charcoal';
         resetColor.textContent = 'Reset';
         resetColor.addEventListener('click', () => {
           setHeaderColor(row.id, defaultHeaderColor(widget));
@@ -970,7 +971,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           iconLabel.className = fieldLabelClass;
           iconLabel.textContent = 'Icon';
           const iconRow = document.createElement('div');
-          iconRow.className = 'flex h-9 items-center';
+          iconRow.className = 'flex h-9 min-w-0 items-center';
           const iconMemo = document.createElement('p');
           iconMemo.className = 'whitespace-nowrap text-[11px] leading-snug text-sage-dark/55';
           iconMemo.textContent = 'Icon is not changeable.';
@@ -984,7 +985,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           iconLabel.className = fieldLabelClass;
           iconLabel.textContent = 'Icon';
           const iconRow = document.createElement('div');
-          iconRow.className = 'flex items-center gap-2';
+          iconRow.className = 'flex min-w-0 items-center gap-1.5';
           const { element: iconPicker, sync: syncIconPicker } = createIconPicker(
             widget.label,
             () => resolveHeaderIcon(row.id),
@@ -996,7 +997,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           const resetIcon = document.createElement('button');
           resetIcon.type = 'button';
           resetIcon.className =
-            'text-[11px] font-medium text-sage-dark/55 underline decoration-sage-dark/25 underline-offset-2 hover:text-charcoal';
+            'shrink-0 text-[11px] font-medium text-sage-dark/55 underline decoration-sage-dark/25 underline-offset-2 hover:text-charcoal';
           resetIcon.textContent = 'Reset';
           resetIcon.addEventListener('click', () => {
             setHeaderIcon(row.id, defaultHeaderIcon(row.id));
