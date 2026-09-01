@@ -849,17 +849,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         main.className = 'flex min-w-0 flex-1 flex-nowrap items-end gap-x-3';
 
         const titleWrap = document.createElement('div');
-        titleWrap.className = 'flex min-w-[5.5rem] flex-1 items-center gap-1.5 pb-0.5';
-
-        const labelWrap = document.createElement('div');
-        labelWrap.className = 'min-w-0 flex-1 overflow-hidden';
+        titleWrap.className = 'flex min-w-0 flex-1 items-center gap-1.5 pb-0.5';
 
         const label = document.createElement('label');
         label.htmlFor = check.id;
-        label.className = 'block truncate cursor-pointer text-[15px] font-medium text-charcoal';
+        label.className = 'min-w-0 shrink truncate cursor-pointer text-[15px] font-medium text-charcoal';
         label.textContent = widget.label;
-        labelWrap.appendChild(label);
-        titleWrap.appendChild(labelWrap);
+        titleWrap.appendChild(label);
         if (widget.description) {
           titleWrap.appendChild(createInfoTooltip(widget.description, widget.label));
         }
