@@ -59,8 +59,14 @@ export function parseTimeOffEntries(form: FormData): TimeOffEntry[] {
 
     const dates = expandDateRange(startDate, endDate);
     const fullDay = form.get(`entry_full_day_${index}`) === 'on';
-    const startTime = String(form.get(`entry_start_${index}`) ?? '').trim();
-    const endTime = String(form.get(`entry_end_${index}`) ?? '').trim();
+    const startTime =
+      fullDay || dates.length > 1
+        ? ''
+        : String(form.get(`entry_start_${index}`) ?? '').trim();
+    const endTime =
+      fullDay || dates.length > 1
+        ? ''
+        : String(form.get(`entry_end_${index}`) ?? '').trim();
 
     if (dates.length === 1) {
       if (fullDay) {
@@ -91,9 +97,6 @@ export function parseTimeOffEntries(form: FormData): TimeOffEntry[] {
 
     if (!fullDay) {
       throw new Error('Multi-day requests must be full days.');
-    }
-    if (startTime || endTime) {
-      throw new Error('Partial-day hours only apply when the start and end date are the same.');
     }
 
     for (const date of dates) {
