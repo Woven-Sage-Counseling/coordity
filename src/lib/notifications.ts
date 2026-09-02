@@ -6,6 +6,7 @@ export const TIME_OFF_REQUEST_SOURCE = 'time_off_request';
 export const ISSUE_REPORT_SOURCE = 'issue_report';
 export const FEATURE_SUGGESTION_SOURCE = 'feature_suggestion';
 export const TIMESHEET_BACKLOG_SOURCE = 'timesheet_backlog';
+export const TIMESHEET_SHIFT_EDIT_SOURCE = 'timesheet_shift_edit';
 
 export const ACTIVE_NOTIFICATIONS_LIMIT = 500;
 

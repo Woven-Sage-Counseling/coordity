@@ -63,6 +63,31 @@ export function formatClockTime(ms: number): string {
   });
 }
 
+const CLOCK_MINUTE_OPTIONS = [0, 15, 30, 45] as const;
+
+export function easternClockParts(ms: number): {
+  hour: number;
+  minute: number;
+  period: 'AM' | 'PM';
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(new Date(ms));
+
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 12);
+  const rawMinute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+  const dayPeriod = parts.find((part) => part.type === 'dayPeriod')?.value ?? 'AM';
+  const minute = CLOCK_MINUTE_OPTIONS.reduce((closest, candidate) =>
+    Math.abs(candidate - rawMinute) < Math.abs(closest - rawMinute) ? candidate : closest,
+  );
+  const period = dayPeriod.toUpperCase() === 'PM' ? 'PM' : 'AM';
+
+  return { hour, minute, period };
+}
+
 export function easternDateFromMs(ms: number): string {
   return new Date(ms).toLocaleDateString('en-CA', {
     timeZone: 'America/New_York',

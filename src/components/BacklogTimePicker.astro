@@ -2,9 +2,18 @@
 interface Props {
   name: string;
   label: string;
+  initialHour?: number;
+  initialMinute?: number;
+  initialPeriod?: 'AM' | 'PM';
 }
 
-const { name, label } = Astro.props;
+const {
+  name,
+  label,
+  initialHour = 12,
+  initialMinute = 0,
+  initialPeriod = 'AM',
+} = Astro.props;
 const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const minutes = [0, 15, 30, 45];
 const selectClass = 'field !mt-0 !w-[6.5rem] shrink-0';
@@ -18,20 +27,24 @@ const periodClass = 'field !mt-0 !w-[7rem] shrink-0';
     <select data-time-hour class={selectClass} aria-label={`${label} hour`}>
       {
         hours.map((hour) => (
-          <option value={String(hour)}>{String(hour).padStart(2, '0')}</option>
+          <option value={String(hour)} selected={hour === initialHour}>
+            {String(hour).padStart(2, '0')}
+          </option>
         ))
       }
     </select>
     <select data-time-minute class={selectClass} aria-label={`${label} minute`}>
       {
         minutes.map((minute) => (
-          <option value={String(minute)}>{String(minute).padStart(2, '0')}</option>
+          <option value={String(minute)} selected={minute === initialMinute}>
+            {String(minute).padStart(2, '0')}
+          </option>
         ))
       }
     </select>
     <select data-time-period class={periodClass} aria-label={`${label} AM or PM`}>
-      <option value="AM">AM</option>
-      <option value="PM">PM</option>
+      <option value="AM" selected={initialPeriod === 'AM'}>AM</option>
+      <option value="PM" selected={initialPeriod === 'PM'}>PM</option>
     </select>
   </div>
 </label>
@@ -83,7 +96,7 @@ const periodClass = 'field !mt-0 !w-[7rem] shrink-0';
     initTimePicker(node);
   });
 
-  document.querySelectorAll('[data-timesheet-backlog-form]').forEach((form) => {
+  document.querySelectorAll('[data-timesheet-backlog-form], [data-timesheet-shift-edit-form]').forEach((form) => {
     if (!(form instanceof HTMLFormElement)) return;
     form.addEventListener('reset', () => {
       window.setTimeout(() => {

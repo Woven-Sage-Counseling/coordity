@@ -2,6 +2,7 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import BacklogTimePicker from '../components/BacklogTimePicker.astro';
 import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
+import TimesheetShiftEditForm from '../components/TimesheetShiftEditForm.astro';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import TimesheetShiftWorkItems from '../components/TimesheetShiftWorkItems.astro';
 import {
@@ -10,6 +11,11 @@ import {
   serializeTimesheetSummary,
 } from '../lib/timesheet-entries';
 import { listTimesheetBacklogForUser, serializeBacklogRequest } from '../lib/timesheet-backlog';
+import {
+  listPendingShiftEditShiftIds,
+  listTimesheetShiftEditsForUser,
+  serializeShiftEditRequest,
+} from '../lib/timesheet-shift-edits';
 import { TIMESHEET_WORK_CATEGORIES } from '../lib/timesheet-categories';
 import { formatWeekLabel } from '../lib/timesheet';
 import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
@@ -25,13 +31,19 @@ const error = Astro.url.searchParams.get('error');
 const started = Astro.url.searchParams.get('started') === '1';
 const ended = Astro.url.searchParams.get('ended') === '1';
 const backlogSent = Astro.url.searchParams.get('backlog') === '1';
+const shiftEditSent = Astro.url.searchParams.get('shiftEdit') === '1';
 
 const summary = await getTimesheetSummary(employee.id);
+const pendingEditShiftIds = await listPendingShiftEditShiftIds(employee.id);
 const backlogRequests = await listTimesheetBacklogForUser(employee.id, 50);
+const shiftEditRequests = await listTimesheetShiftEditsForUser(employee.id, 50);
 const pendingBacklogRequests = backlogRequests
   .filter((request) => request.status === 'pending')
   .map(serializeBacklogRequest);
-const serialized = serializeTimesheetSummary(summary);
+const pendingShiftEditRequests = shiftEditRequests
+  .filter((request) => request.status === 'pending')
+  .map(serializeShiftEditRequest);
+const serialized = serializeTimesheetSummary(summary, { pendingEditShiftIds });
 const activeShift = summary.activeShift;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
@@ -58,6 +70,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
     data-summary={JSON.stringify(serialized)}
     data-work-categories={JSON.stringify(TIMESHEET_WORK_CATEGORIES)}
     data-backlog-requests={JSON.stringify(pendingBacklogRequests)}
+    data-shift-edit-requests={JSON.stringify(pendingShiftEditRequests)}
   >
     {
       error ? (
@@ -75,6 +88,10 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       ) : backlogSent ? (
         <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
           Backlog hours submitted for admin approval.
+        </p>
+      ) : shiftEditSent ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
+          Time change submitted for admin approval.
         </p>
       ) : null
     }
@@ -154,7 +171,9 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
           <ul class="space-y-3" data-timesheet-list>
             {
               summary.entries.map((entry) => {
-                const serializedEntry = serializeTimesheetShift(entry);
+                const serializedEntry = serializeTimesheetShift(entry, {
+                  pendingEdit: pendingEditShiftIds.has(entry.id),
+                });
                 return (
                   <li
                     class="rounded-xl border border-sage-dark/10 bg-white px-4 py-3"
@@ -172,7 +191,11 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                       <div class="text-right">
                         <p class="text-sm font-semibold text-charcoal">{serializedEntry.hoursLabel}</p>
                         {
-                          serializedEntry.source === 'backlog' ? (
+                          serializedEntry.hasPendingEdit ? (
+                            <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                              Edit pending
+                            </p>
+                          ) : serializedEntry.source === 'backlog' ? (
                             <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-sage-dark/50">
                               Backlog
                             </p>
@@ -184,6 +207,17 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                         }
                       </div>
                     </div>
+                    {
+                      serializedEntry.canRequestEdit && entry.startedAt != null && entry.endedAt != null ? (
+                        <TimesheetShiftEditForm
+                          shiftId={entry.id}
+                          workDate={entry.workDate}
+                          startedAt={entry.startedAt}
+                          endedAt={entry.endedAt}
+                          hasPendingEdit={serializedEntry.hasPendingEdit}
+                        />
+                      ) : null
+                    }
                     {
                       !serializedEntry.isActive ? (
                         <TimesheetShiftWorkItems
@@ -263,6 +297,40 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
               ))
             }
           </ul>
+          </div>
+        </div>
+
+        <div class="mt-6 border-t border-sage-dark/10 pt-5" data-timesheet-shift-edit-section>
+          <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Pending time changes</h3>
+          <p
+            class="mt-3 text-sm text-sage-dark/65"
+            data-timesheet-shift-edit-empty
+            hidden={pendingShiftEditRequests.length > 0}
+          >
+            No pending time change requests.
+          </p>
+          <div
+            class="mt-3 max-h-64 overflow-y-auto overscroll-auto rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-2"
+            data-timesheet-shift-edit-scroll
+            hidden={pendingShiftEditRequests.length === 0}
+          >
+            <ul class="space-y-2" data-timesheet-shift-edit-list>
+              {
+                pendingShiftEditRequests.map((item) => (
+                  <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
+                    <span class="text-charcoal">
+                      {item.dateLabel}
+                      {item.timeLabel ? ` · ${item.timeLabel}` : ''}
+                      {' · '}
+                      {item.hoursLabel}
+                    </span>
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                      {item.statusLabel}
+                    </span>
+                  </li>
+                ))
+              }
+            </ul>
           </div>
         </div>
       </section>
@@ -423,6 +491,75 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
     }
   }
 
+  function renderShiftEditRequests(root: HTMLElement, requests: Array<Record<string, unknown>>): void {
+    root.dataset.shiftEditRequests = JSON.stringify(requests);
+    const section = root.querySelector('[data-timesheet-shift-edit-section]');
+    const scroll = root.querySelector('[data-timesheet-shift-edit-scroll]');
+    const list = root.querySelector('[data-timesheet-shift-edit-list]');
+    const empty = root.querySelector('[data-timesheet-shift-edit-empty]');
+
+    if (list instanceof HTMLElement) {
+      list.innerHTML =
+        requests.length === 0
+          ? ''
+          : requests
+              .map(
+                (item) => `
+          <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm">
+            <span class="text-charcoal">
+              ${String(item.dateLabel)}
+              ${item.timeLabel ? ` · ${String(item.timeLabel)}` : ''}
+              · ${String(item.hoursLabel)}
+            </span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+              ${String(item.statusLabel ?? 'Pending')}
+            </span>
+          </li>
+        `,
+              )
+              .join('');
+    }
+
+    if (scroll instanceof HTMLElement) {
+      scroll.hidden = requests.length === 0;
+    }
+
+    if (empty instanceof HTMLElement) {
+      empty.hidden = requests.length > 0;
+    }
+
+    if (section instanceof HTMLElement) {
+      section.hidden = false;
+    }
+  }
+
+  function markShiftEditPending(root: HTMLElement, shiftId: string): void {
+    const item = root.querySelector(`[data-timesheet-item][data-entry-id="${shiftId}"]`);
+    if (!(item instanceof HTMLElement)) return;
+
+    const badgeHost = item.querySelector('.text-right');
+    if (badgeHost instanceof HTMLElement && !badgeHost.querySelector('.text-amber-800')) {
+      const badge = document.createElement('p');
+      badge.className =
+        'mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800';
+      badge.textContent = 'Edit pending';
+      badgeHost.appendChild(badge);
+    }
+
+    item.querySelector('[data-timesheet-shift-edit-form]')?.closest('details')?.remove();
+  }
+
+  function showShiftEditSuccess(form: HTMLFormElement): void {
+    const success = form.querySelector('[data-timesheet-shift-edit-success]');
+    if (!(success instanceof HTMLElement)) return;
+    success.hidden = false;
+    window.clearTimeout(Number(success.dataset.timer || 0));
+    const timer = window.setTimeout(() => {
+      success.hidden = true;
+    }, 4000);
+    success.dataset.timer = String(timer);
+  }
+
   function showBacklogSuccess(form: HTMLFormElement): void {
     const success = form.querySelector('[data-timesheet-backlog-success]');
     if (!(success instanceof HTMLElement)) return;
@@ -436,6 +573,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 
   async function submitTimesheetForm(form: HTMLFormElement, root: HTMLElement): Promise<void> {
     const isBacklog = form.matches('[data-timesheet-backlog-form]');
+    const isShiftEdit = form.matches('[data-timesheet-shift-edit-form]');
     const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     const previousLabel = submitButton?.textContent ?? '';
     if (submitButton) {
@@ -466,6 +604,20 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
         showBacklogSuccess(form);
         if (Array.isArray(payload.requests)) {
           renderBacklogRequests(root, payload.requests);
+        }
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = previousLabel;
+        }
+        return;
+      }
+
+      if (isShiftEdit) {
+        showShiftEditSuccess(form);
+        const shiftId = String(new FormData(form).get('shiftId') ?? '');
+        if (shiftId) markShiftEditPending(root, shiftId);
+        if (Array.isArray(payload.requests)) {
+          renderShiftEditRequests(root, payload.requests);
         }
         if (submitButton) {
           submitButton.disabled = false;
@@ -521,7 +673,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
     initTimesheetWorkItems(node, categories, (nextSummary) => applySummary(node, nextSummary));
 
     node.querySelectorAll(
-      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-backlog-form]',
+      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-backlog-form], [data-timesheet-shift-edit-form]',
     ).forEach((formNode) => {
       if (!(formNode instanceof HTMLFormElement)) return;
       formNode.addEventListener('submit', (event) => {

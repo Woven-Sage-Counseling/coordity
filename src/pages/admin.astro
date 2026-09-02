@@ -7,6 +7,7 @@ import PeopleManager from '../components/PeopleManager.astro';
 import TasksManager from '../components/TasksManager.astro';
 import TimeOffManager from '../components/TimeOffManager.astro';
 import TimesheetBacklogManager from '../components/TimesheetBacklogManager.astro';
+import TimesheetShiftEditManager from '../components/TimesheetShiftEditManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import {
   listProvidersForLookup,
@@ -19,6 +20,7 @@ import { canAccessManagement } from '../lib/permissions';
 import { plainPermission, plainRole } from '../lib/role-plain-language';
 import { listTimeOffRequestsForAdmin } from '../lib/time-off-requests';
 import { listTimesheetBacklogForAdmin } from '../lib/timesheet-backlog';
+import { listTimesheetShiftEditsForAdmin } from '../lib/timesheet-shift-edits';
 import { listAssignedTasksForAdmin } from '../lib/tasks';
 
 export const prerender = false;
@@ -31,6 +33,7 @@ if (!canAccessManagement(employee)) {
 const announcements = await listActiveAnnouncements(50);
 const timeOffRequests = await listTimeOffRequestsForAdmin();
 const timesheetBacklogRequests = await listTimesheetBacklogForAdmin();
+const timesheetShiftEditRequests = await listTimesheetShiftEditsForAdmin();
 const roles = await listRolesWithPermissions();
 const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
@@ -61,6 +64,8 @@ const tasksError = tasksLoadError;
 const tasksSaved = Astro.url.searchParams.get('tasksSaved');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetBacklog = timesheetBacklogRequests.filter((request) => request.status === 'pending').length;
+const pendingTimesheetShiftEdits = timesheetShiftEditRequests.filter((request) => request.status === 'pending').length;
+const pendingTimesheetRequests = pendingTimesheetBacklog + pendingTimesheetShiftEdits;
 const openAssignedTasks = assignedTasks.filter((task) => task.completedAt == null).length;
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -107,15 +112,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
           data-admin-open="timesheet"
         >
-          <span class="text-[15px] font-medium text-charcoal">Timesheet backlog</span>
+          <span class="text-[15px] font-medium text-charcoal">Timesheet requests</span>
           <span class="inline-flex shrink-0 items-center gap-2">
             {
-              pendingTimesheetBacklog > 0 ? (
+              pendingTimesheetRequests > 0 ? (
                 <span
                   class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold leading-none text-white"
-                  aria-label={`${pendingTimesheetBacklog} pending timesheet backlog ${pendingTimesheetBacklog === 1 ? 'request' : 'requests'}`}
+                  aria-label={`${pendingTimesheetRequests} pending timesheet ${pendingTimesheetRequests === 1 ? 'request' : 'requests'}`}
                 >
-                  {pendingTimesheetBacklog > 9 ? '9+' : pendingTimesheetBacklog}
+                  {pendingTimesheetRequests > 9 ? '9+' : pendingTimesheetRequests}
                 </span>
               ) : null
             }
@@ -212,10 +217,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         Back
       </button>
       <PanelHeading
-        title="Timesheet backlog"
-        description="Review backlog hours submitted when someone forgot to clock in. Clear approved requests once handled — hours stay on the employee timesheet."
+        title="Timesheet requests"
+        description="Review backlog hours and requested shift time changes. Clear approved requests once handled — hours stay on the employee timesheet."
       />
       <TimesheetBacklogManager requests={timesheetBacklogRequests} error={timesheetError} embedded />
+      <TimesheetShiftEditManager requests={timesheetShiftEditRequests} embedded />
     </section>
 
     <section class="hidden" data-admin-panel="announcements">

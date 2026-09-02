@@ -80,10 +80,11 @@ function mapShift(row: ShiftRow, workItems: TimesheetShiftWorkItem[] = []): Time
   };
 }
 
-export function serializeTimesheetShift(shift: TimesheetShift) {
+export function serializeTimesheetShift(shift: TimesheetShift, options: { pendingEdit?: boolean } = {}) {
   const isActive = shift.source === 'clock' && shift.endedAt == null;
   const workItems = shift.workItems.map(serializeWorkItem);
   const allocatedMinutes = workItems.reduce((sum, item) => sum + item.minutes, 0);
+  const canRequestEdit = !isActive && shift.startedAt != null && shift.endedAt != null;
   return {
     id: shift.id,
     workDate: shift.workDate,
@@ -94,6 +95,8 @@ export function serializeTimesheetShift(shift: TimesheetShift) {
     source: shift.source,
     isActive,
     canEditWorkItems: !isActive,
+    canRequestEdit,
+    hasPendingEdit: options.pendingEdit ?? false,
     workItems,
     allocatedMinutes,
     unallocatedMinutes: Math.max(0, shift.minutes - allocatedMinutes),
@@ -111,23 +114,36 @@ export function serializeTimesheetShift(shift: TimesheetShift) {
   };
 }
 
-export function serializeWeekSummary(summary: TimesheetWeekSummary) {
+export function serializeWeekSummary(
+  summary: TimesheetWeekSummary,
+  options: { pendingEditShiftIds?: Set<string> } = {},
+) {
+  const pending = options.pendingEditShiftIds;
   return {
     start: summary.start,
     end: summary.end,
     totalMinutes: summary.totalMinutes,
     totalLabel: formatHours(summary.totalMinutes),
-    entries: summary.entries.map(serializeTimesheetShift),
+    entries: summary.entries.map((entry) =>
+      serializeTimesheetShift(entry, { pendingEdit: pending?.has(entry.id) ?? false }),
+    ),
   };
 }
 
-export function serializeTimesheetSummary(summary: TimesheetSummary) {
+export function serializeTimesheetSummary(
+  summary: TimesheetSummary,
+  options: { pendingEditShiftIds?: Set<string> } = {},
+) {
+  const pending = options.pendingEditShiftIds;
+  const mapShift = (shift: TimesheetShift) =>
+    serializeTimesheetShift(shift, { pendingEdit: pending?.has(shift.id) ?? false });
+
   return {
-    activeShift: summary.activeShift ? serializeTimesheetShift(summary.activeShift) : null,
-    week: serializeWeekSummary(summary.week),
+    activeShift: summary.activeShift ? mapShift(summary.activeShift) : null,
+    week: serializeWeekSummary(summary.week, options),
     weeklyAverageMinutes: summary.weeklyAverageMinutes,
     weeklyAverageLabel: formatHours(summary.weeklyAverageMinutes),
-    entries: summary.entries.map(serializeTimesheetShift),
+    entries: summary.entries.map(mapShift),
   };
 }
 
@@ -331,6 +347,51 @@ export async function endShift(userId: string): Promise<TimesheetShift> {
 
   const row = await DB.prepare(`${SHIFT_SELECT} WHERE id = ?`).bind(active.id).first<ShiftRow>();
   if (!row) throw new Error('Unable to end your shift.');
+  return mapShift(row);
+}
+
+export async function getShiftForUser(shiftId: string, userId: string): Promise<TimesheetShift | null> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(`${SHIFT_SELECT} WHERE id = ? AND user_id = ?`)
+    .bind(shiftId, userId)
+    .first<ShiftRow>();
+
+  return row ? mapShift(row) : null;
+}
+
+export async function applyApprovedShiftEdit(input: {
+  shiftId: string;
+  userId: string;
+  startedAt: number;
+  endedAt: number;
+  minutes: number;
+  workDate: string;
+}): Promise<TimesheetShift> {
+  const { DB } = getEnv();
+  const updatedAt = nowMs();
+
+  const result = await DB.prepare(
+    `UPDATE timesheet_shift
+     SET work_date = ?, started_at = ?, ended_at = ?, minutes = ?, updated_at = ?
+     WHERE id = ? AND user_id = ? AND ended_at IS NOT NULL`,
+  )
+    .bind(
+      input.workDate,
+      input.startedAt,
+      input.endedAt,
+      input.minutes,
+      updatedAt,
+      input.shiftId,
+      input.userId,
+    )
+    .run();
+
+  if ((result.meta.changes ?? 0) < 1) {
+    throw new Error('Unable to apply the approved time change.');
+  }
+
+  const row = await DB.prepare(`${SHIFT_SELECT} WHERE id = ?`).bind(input.shiftId).first<ShiftRow>();
+  if (!row) throw new Error('Unable to load updated shift.');
   return mapShift(row);
 }
 

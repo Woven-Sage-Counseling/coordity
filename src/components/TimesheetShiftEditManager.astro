@@ -1,0 +1,193 @@
+---
+import { formatHours, formatShiftRange, formatWorkDate } from '../lib/timesheet';
+import {
+  formatShiftEditRequestDate,
+  shiftEditStatusLabel,
+  type TimesheetShiftEditRequest,
+} from '../lib/timesheet-shift-edits';
+
+interface Props {
+  requests: TimesheetShiftEditRequest[];
+  embedded?: boolean;
+}
+
+const { requests, embedded = false } = Astro.props;
+---
+
+<section
+  class:list={[embedded ? 'mt-10' : 'mt-10', 'scroll-mt-24']}
+  aria-labelledby="timesheet-shift-edits"
+  id="timesheet-shift-edits"
+>
+  {
+    !embedded ? (
+      <div>
+        <h2 id="timesheet-shift-edits" class="font-display text-3xl text-charcoal">Time change requests</h2>
+        <p class="mt-2 text-sm text-sage-dark/65">
+          Review requested corrections to logged shift times. Clear approved requests once handled.
+        </p>
+      </div>
+    ) : (
+      <h2 id="timesheet-shift-edits" class="text-sm font-semibold text-charcoal">Time change requests</h2>
+    )
+  }
+
+  {
+    requests.length === 0 ? (
+      <p class="mt-4 text-sm text-sage-dark/65">No time change requests waiting for review.</p>
+    ) : (
+      <div class="mt-4 space-y-4" data-timesheet-shift-edit-list>
+        {
+          requests.map((request) => {
+            const previousTimeLabel =
+              request.previousStartedAt != null && request.previousEndedAt != null
+                ? formatShiftRange(request.previousStartedAt, request.previousEndedAt)
+                : null;
+            const requestedTimeLabel = formatShiftRange(request.startedAt, request.endedAt);
+
+            return (
+              <article
+                class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm"
+                data-timesheet-shift-edit-item
+                data-request-id={request.id}
+              >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold text-charcoal">{request.userName}</p>
+                    <p class="text-sm text-sage-dark/65">{request.userEmail}</p>
+                    <p class="mt-1 text-xs text-sage-dark/55">
+                      Submitted {formatShiftEditRequestDate(request.createdAt)}
+                    </p>
+                  </div>
+                  <span
+                    class:list={[
+                      'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                      request.status === 'pending' && 'bg-amber-100 text-amber-900',
+                      request.status === 'approved' && 'bg-emerald-100 text-emerald-900',
+                      request.status === 'denied' && 'bg-red-100 text-red-900',
+                    ]}
+                  >
+                    {shiftEditStatusLabel(request.status)}
+                  </span>
+                </div>
+
+                <div class="mt-4 space-y-2 text-sm text-charcoal">
+                  <p>
+                    <span class="font-semibold">{formatWorkDate(request.workDate)}</span>
+                  </p>
+                  <p>
+                    <span class="text-sage-dark/60">Current:</span>{' '}
+                    {previousTimeLabel ? `${previousTimeLabel} · ` : ''}
+                    {formatHours(request.previousMinutes)}
+                  </p>
+                  <p>
+                    <span class="text-sage-dark/60">Requested:</span>{' '}
+                    {requestedTimeLabel} · {formatHours(request.minutes)}
+                  </p>
+                </div>
+
+                {
+                  request.notes ? (
+                    <p class="mt-4 rounded-xl bg-[#f4f5f8] px-3 py-2 text-sm text-sage-dark/80">
+                      <span class="font-semibold text-charcoal">Notes:</span> {request.notes}
+                    </p>
+                  ) : null
+                }
+
+                {
+                  request.status === 'pending' ? (
+                    <div class="mt-4 flex flex-wrap gap-2">
+                      <form method="post" action="/api/timesheet/shift-edit/review" class="contents">
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <input type="hidden" name="action" value="approve" />
+                        <button class="btn-primary !px-3 !py-1.5" type="submit">Approve</button>
+                      </form>
+                      <form method="post" action="/api/timesheet/shift-edit/review" class="contents">
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <input type="hidden" name="action" value="deny" />
+                        <button class="btn-secondary !px-3 !py-1.5" type="submit">Deny</button>
+                      </form>
+                    </div>
+                  ) : request.status === 'approved' ? (
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      {
+                        request.reviewerName ? (
+                          <p class="text-xs text-sage-dark/55">
+                            Reviewed by {request.reviewerName}
+                            {request.reviewedAt ? ` on ${formatShiftEditRequestDate(request.reviewedAt)}` : ''}
+                          </p>
+                        ) : (
+                          <span />
+                        )
+                      }
+                      <form method="post" action="/api/timesheet/shift-edit/clear" data-timesheet-shift-edit-clear-form>
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <button class="btn-secondary !px-3 !py-1.5" type="submit">Clear</button>
+                      </form>
+                    </div>
+                  ) : request.reviewerName ? (
+                    <p class="mt-4 text-xs text-sage-dark/55">
+                      Reviewed by {request.reviewerName}
+                      {request.reviewedAt ? ` on ${formatShiftEditRequestDate(request.reviewedAt)}` : ''}
+                    </p>
+                  ) : null
+                }
+              </article>
+            );
+          })
+        }
+      </div>
+    )
+  }
+</section>
+
+<script>
+  document.querySelectorAll('[data-timesheet-shift-edit-clear-form]').forEach((node) => {
+    if (!(node instanceof HTMLFormElement)) return;
+
+    node.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = node.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      const card = node.closest('[data-timesheet-shift-edit-item]');
+      const previousLabel = button?.textContent ?? 'Clear';
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Clearing…';
+      }
+
+      try {
+        const response = await fetch(node.action, {
+          method: 'POST',
+          body: new FormData(node),
+          headers: { accept: 'application/json' },
+        });
+        const payload = (await response.json()) as { ok?: boolean; error?: string };
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error ?? 'Could not clear that time change request.');
+        }
+
+        card?.remove();
+
+        const list = document.querySelector('[data-timesheet-shift-edit-list]');
+        if (list instanceof HTMLElement && !list.querySelector('[data-timesheet-shift-edit-item]')) {
+          list.outerHTML =
+            '<p class="mt-4 text-sm text-sage-dark/65">No time change requests waiting for review.</p>';
+        }
+      } catch (error) {
+        const root = document.getElementById('timesheet-backlog');
+        const banner = root?.querySelector('[data-timesheet-backlog-error]');
+        if (banner instanceof HTMLElement) {
+          banner.textContent =
+            error instanceof Error ? error.message : 'Could not clear that time change request.';
+          banner.hidden = false;
+        }
+        if (button) {
+          button.disabled = false;
+          button.textContent = previousLabel;
+        }
+      }
+    });
+  });
+</script>
