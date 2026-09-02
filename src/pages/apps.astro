@@ -11,11 +11,7 @@ const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permi
 ---
 
 <PortalLayout title="Quick links" wide>
-  <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Quick links</p>
-  <h1 class="mt-3 font-display text-4xl text-charcoal sm:text-5xl">Open an external app.</h1>
-  <p class="mt-4 max-w-2xl text-sage-dark/75">
-    Each tile opens the respective website. Woven Sage does not copy clinical data into this portal.
-  </p>
+  <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Quick links</h1>
 
   {
     appCategories.map((category) => {
