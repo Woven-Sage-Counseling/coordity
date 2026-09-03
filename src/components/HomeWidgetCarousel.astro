@@ -36,7 +36,7 @@ const arrowClass =
 {
   available.length === 0 ? null : (
     <section
-      class="lg:sticky lg:top-6"
+      class="min-w-0"
       aria-roledescription="carousel"
       aria-label="Home widgets"
       data-widget-carousel
@@ -51,7 +51,7 @@ const arrowClass =
         <button
           type="button"
           class:list={[arrowClass, 'left-0 -translate-x-1/3']}
-          aria-label="Previous widget"
+          aria-label="Previous widgets"
           data-carousel-prev
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -116,7 +116,7 @@ const arrowClass =
         <button
           type="button"
           class:list={[arrowClass, 'right-0 translate-x-1/3']}
-          aria-label="Next widget"
+          aria-label="Next widgets"
           data-carousel-next
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -172,7 +172,8 @@ const arrowClass =
     );
   }
 
-  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport {
+  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport,
+  [data-widget-carousel][data-scrollable='false'] .widget-carousel-viewport {
     -webkit-mask-image: none;
     mask-image: none;
   }
@@ -200,6 +201,17 @@ const arrowClass =
       opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
     /* Grow/shrink from the top so the active card does not paint past the clip edge */
     transform-origin: top center;
+  }
+
+  [data-widget-carousel][data-per-page]:not([data-per-page='1']) .widget-carousel-slide {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  [data-widget-carousel][data-per-page]:not([data-per-page='1'])
+    .widget-carousel-slide:not([data-active='true']) {
+    transform: scale(0.96);
+    opacity: 0.7;
   }
 
   .widget-carousel-slide[data-active='true'] {
@@ -421,14 +433,30 @@ const arrowClass =
     root.dataset.solo = solo ? 'true' : 'false';
     let index = 0;
 
+    const gapSize = () => {
+      const styles = getComputedStyle(track);
+      return Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+    };
+
+    const perPage = () => {
+      const width = viewport.clientWidth;
+      if (width < 640) return 1;
+      if (width < 1024) return 2;
+      return 4;
+    };
+
+    const pageCount = () => Math.min(perPage(), enabledSlides.length);
+    const maxIndex = () => Math.max(0, enabledSlides.length - pageCount());
+
     enabledSlides.forEach((slide) => {
       slide.dataset.solo = solo ? 'true' : 'false';
       slide.addEventListener(
         'click',
         (event) => {
-          if (solo) return;
+          if (enabledSlides.length <= pageCount()) return;
           const slideIndex = enabledSlides.indexOf(slide);
-          if (slideIndex === index) return;
+          const count = pageCount();
+          if (slideIndex >= index && slideIndex < index + count) return;
           event.preventDefault();
           event.stopPropagation();
           show(slideIndex);
@@ -440,53 +468,79 @@ const arrowClass =
     const renderDots = () => {
       if (!(dots instanceof HTMLElement)) return;
       dots.innerHTML = '';
+      const count = pageCount();
       enabledSlides.forEach((slide, i) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.setAttribute('role', 'tab');
         btn.setAttribute('aria-label', `Show ${slide.dataset.widgetId} widget`);
-        btn.setAttribute('aria-selected', i === index ? 'true' : 'false');
-        btn.className =
-          i === index
-            ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
-            : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
+        const selected = i >= index && i < index + count;
+        btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+        btn.className = selected
+          ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
+          : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
         btn.addEventListener('click', () => show(i));
         dots.appendChild(btn);
       });
     };
 
     const layout = () => {
-      if (solo) {
-        track.style.transform = 'translate3d(0,0,0)';
-        enabledSlides[0]!.dataset.active = 'true';
+      const n = enabledSlides.length;
+      const count = pageCount();
+      const canScroll = n > count;
+      root.dataset.perPage = String(count);
+      root.dataset.scrollable = canScroll ? 'true' : 'false';
+      const viewportWidth = viewport.clientWidth;
+      const gap = gapSize();
+
+      if (count === 1) {
+        enabledSlides.forEach((el) => {
+          el.style.width = '';
+        });
+        if (!canScroll) {
+          track.style.transform = 'translate3d(0,0,0)';
+          enabledSlides[0]!.dataset.active = 'true';
+          return;
+        }
+
+        const slideWidth = enabledSlides[index]?.offsetWidth || viewportWidth * 0.7;
+        const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
+        const offset = peek - index * (slideWidth + gap);
+        track.style.transform = `translate3d(${offset}px, 0, 0)`;
+
+        enabledSlides.forEach((el, i) => {
+          el.dataset.active = i === index ? 'true' : 'false';
+          el.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+        });
         return;
       }
 
-      const viewportWidth = viewport.clientWidth;
-      const slideWidth = enabledSlides[index]?.offsetWidth || viewportWidth * 0.7;
-      const styles = getComputedStyle(track);
-      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
-      const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
-      const offset = peek - index * (slideWidth + gap);
-      track.style.transform = `translate3d(${offset}px, 0, 0)`;
+      const peek = canScroll ? 48 : 0;
+      const slideWidth = (viewportWidth - 2 * peek - Math.max(0, count - 1) * gap) / count;
+      enabledSlides.forEach((el) => {
+        el.style.width = `${Math.max(0, slideWidth)}px`;
+      });
+      const stride = slideWidth + gap;
+      track.style.transform = `translate3d(${peek - index * stride}px, 0, 0)`;
 
       enabledSlides.forEach((el, i) => {
-        el.dataset.active = i === index ? 'true' : 'false';
-        el.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+        const onScreen = i >= index && i < index + count;
+        el.dataset.active = onScreen ? 'true' : 'false';
+        el.setAttribute('aria-hidden', onScreen ? 'false' : 'true');
       });
     };
 
     const show = (next: number) => {
-      index = Math.min(enabledSlides.length - 1, Math.max(0, next));
+      index = Math.min(maxIndex(), Math.max(0, next));
       layout();
       renderDots();
-      const multi = !solo;
+      const multi = enabledSlides.length > pageCount();
       if (prevBtn instanceof HTMLButtonElement) {
         prevBtn.disabled = !multi || index === 0;
         prevBtn.classList.toggle('invisible', !multi);
       }
       if (nextBtn instanceof HTMLButtonElement) {
-        nextBtn.disabled = !multi || index === enabledSlides.length - 1;
+        nextBtn.disabled = !multi || index === maxIndex();
         nextBtn.classList.toggle('invisible', !multi);
       }
       if (dots instanceof HTMLElement) {
@@ -505,7 +559,7 @@ const arrowClass =
       });
     });
 
-    window.addEventListener('resize', () => layout());
+    window.addEventListener('resize', () => show(index));
   }
 
   document.querySelectorAll('[data-widget-carousel]').forEach((root) => setupCarousel(root));

@@ -36,8 +36,29 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
 
 <PortalLayout title="Home" wide>
-  <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-8">
-    <div class="order-1 mb-10 lg:order-2 lg:mb-0">
+  <div>
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
+      <ShiftStatusIndicator
+        onShift={onShift}
+        onTimeOff={onTimeOff}
+        showLabel
+        self
+        showShiftStatus={canSeeTimesheet}
+      />
+    </div>
+
+    <AnnouncementsPanel
+      announcements={announcements}
+      announcementUnreadCount={announcementUnreadCount}
+      notifications={notifications}
+      notificationUnreadCount={notificationUnreadCount}
+      canSeeAdmin={canSeeAdmin}
+    />
+
+    <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
+
+    <div class="mt-8">
       <HomeWidgetCarousel
         userId={employee.id}
         employee={employee}
@@ -48,46 +69,23 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       />
     </div>
 
-    <div class="order-2 lg:order-1">
-      <div class="flex flex-wrap items-center gap-3">
-        <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
-        <ShiftStatusIndicator
-          onShift={onShift}
-          onTimeOff={onTimeOff}
-          showLabel
-          self
-          showShiftStatus={canSeeTimesheet}
-        />
-      </div>
-
-      <AnnouncementsPanel
-        announcements={announcements}
-        announcementUnreadCount={announcementUnreadCount}
-        notifications={notifications}
-        notificationUnreadCount={notificationUnreadCount}
-        canSeeAdmin={canSeeAdmin}
-      />
-
-      <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
-
-      {
-        appCategories.map((category) => {
-          const apps = visibleApps.filter((app) => app.category === category.id);
-          if (apps.length === 0) return null;
-          return (
-            <section class="mt-12" aria-labelledby={`${category.id}-heading`}>
-              <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
-                {category.title}
-              </h2>
-              <div class="mt-5 flex flex-wrap gap-x-4 gap-y-6">
-                {apps.map((app) => (
-                  <AppCard app={app} />
-                ))}
-              </div>
-            </section>
-          );
-        })
-      }
-    </div>
+    {
+      appCategories.map((category) => {
+        const apps = visibleApps.filter((app) => app.category === category.id);
+        if (apps.length === 0) return null;
+        return (
+          <section class="mt-12" aria-labelledby={`${category.id}-heading`}>
+            <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
+              {category.title}
+            </h2>
+            <div class="mt-5 flex flex-wrap gap-x-4 gap-y-6">
+              {apps.map((app) => (
+                <AppCard app={app} />
+              ))}
+            </div>
+          </section>
+        );
+      })
+    }
   </div>
 </PortalLayout>
