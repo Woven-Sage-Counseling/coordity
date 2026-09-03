@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
-import { serializePin, updateBulletinBoardPin } from '../../../../lib/bulletin-board';
+import {
+  getBulletinBoardSettings,
+  serializePin,
+  updateBulletinBoardPin,
+} from '../../../../lib/bulletin-board';
 import { requirePortalOwner } from '../../../../lib/owner-access';
 
 export const prerender = false;
@@ -24,7 +28,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       clearExpires,
       expiresAt: !clearExpires && expiresRaw ? Number(expiresRaw) : undefined,
     });
-    return new Response(JSON.stringify({ ok: true, pin: serializePin(pin) }), {
+    const settings = await getBulletinBoardSettings();
+    return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.surface) }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });

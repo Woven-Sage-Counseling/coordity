@@ -1,5 +1,12 @@
 import type { APIRoute } from 'astro';
-import { isBulletinSurface, setBulletinBoardSurface } from '../../../lib/bulletin-board';
+import {
+  BULLETIN_COLORS,
+  isBulletinSurface,
+  listBulletinBoardPins,
+  serializePin,
+  setBulletinBoardSurface,
+  writingModeForSurface,
+} from '../../../lib/bulletin-board';
 import { requirePortalOwner } from '../../../lib/owner-access';
 
 export const prerender = false;
@@ -18,8 +25,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const settings = await setBulletinBoardSurface(surface);
-  return new Response(JSON.stringify({ ok: true, surface: settings.surface }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  });
+  const pins = (await listBulletinBoardPins()).map((pin) => serializePin(pin, settings.surface));
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      surface: settings.surface,
+      writingMode: writingModeForSurface(settings.surface),
+      colors: BULLETIN_COLORS[settings.surface],
+      pins,
+    }),
+    {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    },
+  );
 };

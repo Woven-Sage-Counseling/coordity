@@ -29,7 +29,7 @@ const payload = {
   surface: settings.surface,
   writingMode,
   colors,
-  pins: pins.map(serializePin),
+  pins: pins.map((pin) => serializePin(pin, settings.surface)),
   requests: pending.map(serializeRequest),
 };
 ---
@@ -640,14 +640,9 @@ const payload = {
         if (!surface) return;
         const json = await postForm('/api/bulletin-board/surface', { surface });
         state.surface = json.surface;
-        state.writingMode =
-          surface === 'blackboard' ? 'chalk' : surface === 'whiteboard' ? 'marker' : 'sticky';
-        state.colors =
-          surface === 'blackboard'
-            ? ['#f8fafc', '#fde68a', '#a5f3fc', '#f9a8d4', '#d9f99d']
-            : surface === 'whiteboard'
-              ? ['#111827', '#1d4ed8', '#dc2626', '#15803d', '#7c3aed']
-              : ['#fef3c7', '#fecdd3', '#bfdbfe', '#bbf7d0', '#f5f5f4'];
+        state.writingMode = json.writingMode;
+        state.colors = json.colors;
+        state.pins = json.pins;
         if (writingModeEl) writingModeEl.textContent = state.writingMode;
         root.querySelectorAll('[data-surface-option]').forEach((node) => {
           if (!(node instanceof HTMLButtonElement)) return;

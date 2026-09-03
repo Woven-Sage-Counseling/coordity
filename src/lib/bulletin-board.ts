@@ -21,6 +21,20 @@ export function defaultColorForSurface(surface: BulletinSurface): string {
   return BULLETIN_COLORS[surface][0]!;
 }
 
+/** Map a pin color onto the active surface palette (by palette index). */
+export function mapColorToSurface(color: string, surface: BulletinSurface): string {
+  const normalized = color.trim().toLowerCase();
+  const palette = BULLETIN_COLORS[surface];
+  const direct = palette.find((entry) => entry.toLowerCase() === normalized);
+  if (direct) return direct;
+
+  for (const other of BULLETIN_SURFACES) {
+    const idx = BULLETIN_COLORS[other].findIndex((entry) => entry.toLowerCase() === normalized);
+    if (idx >= 0) return palette[idx] ?? defaultColorForSurface(surface);
+  }
+  return defaultColorForSurface(surface);
+}
+
 export function isBulletinSurface(value: string): value is BulletinSurface {
   return (BULLETIN_SURFACES as readonly string[]).includes(value);
 }
@@ -191,6 +205,23 @@ export async function setBulletinBoardSurface(
   )
     .bind(orgId, surface, now)
     .run();
+
+  // Remap stored pin colors onto the new surface palette so sticky yellow
+  // does not become yellow chalk/marker after a surface change.
+  const pins = await DB.prepare(
+    `SELECT id, color FROM bulletin_board_pin WHERE org_id = ? AND active = 1`,
+  )
+    .bind(orgId)
+    .all<{ id: string; color: string }>();
+
+  for (const pin of pins.results ?? []) {
+    const nextColor = mapColorToSurface(pin.color, surface);
+    if (nextColor.toLowerCase() === pin.color.trim().toLowerCase()) continue;
+    await DB.prepare(`UPDATE bulletin_board_pin SET color = ?, updated_at = ? WHERE id = ?`)
+      .bind(nextColor, now, pin.id)
+      .run();
+  }
+
   return { orgId, surface, updatedAt: now };
 }
 
@@ -369,7 +400,10 @@ export async function placePinFromRequest(input: {
 
   const id = randomToken(16);
   const now = nowMs();
-  const color = input.color ?? defaultColorForSurface(settings.surface);
+  const color = mapColorToSurface(
+    input.color ?? defaultColorForSurface(settings.surface),
+    settings.surface,
+  );
   const zIndex = await nextZIndex(orgId);
 
   await DB.prepare(
@@ -459,7 +493,10 @@ export async function createDirectPin(input: {
       input.yPct ?? 40,
       input.widthPct ?? 22,
       input.rotationDeg ?? 0,
-      input.color ?? defaultColorForSurface(settings.surface),
+      mapColorToSurface(
+        input.color ?? defaultColorForSurface(settings.surface),
+        settings.surface,
+      ),
       zIndex,
       input.expiresAt ?? null,
       input.createdBy,
@@ -498,12 +535,13 @@ export async function updateBulletinBoardPin(input: {
 
   if (!existing) throw new Error('Pin not found.');
 
+  const settings = await getBulletinBoardSettings(existing.org_id);
   const next = {
     xPct: input.xPct ?? existing.x_pct,
     yPct: input.yPct ?? existing.y_pct,
     widthPct: input.widthPct ?? existing.width_pct,
     rotationDeg: input.rotationDeg ?? existing.rotation_deg,
-    color: input.color ?? existing.color,
+    color: mapColorToSurface(input.color ?? existing.color, settings.surface),
     body: input.body !== undefined ? input.body : existing.body,
     expiresAt: input.clearExpires
       ? null
@@ -569,7 +607,8 @@ export async function getBulletinRequestFile(
   return { mime: row.file_mime, dataBase64: row.file_data, fileName: row.file_name };
 }
 
-export function serializePin(pin: BulletinBoardPin) {
+export function serializePin(pin: BulletinBoardPin, surface?: BulletinSurface) {
+  const color = surface ? mapColorToSurface(pin.color, surface) : pin.color;
   return {
     id: pin.id,
     requestId: pin.requestId,
@@ -582,7 +621,7 @@ export function serializePin(pin: BulletinBoardPin) {
     yPct: pin.yPct,
     widthPct: pin.widthPct,
     rotationDeg: pin.rotationDeg,
-    color: pin.color,
+    color,
     zIndex: pin.zIndex,
     expiresAt: pin.expiresAt,
     fileUrl: pin.hasFile ? `/api/bulletin-board/file/pin/${pin.id}` : null,
