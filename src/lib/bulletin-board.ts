@@ -490,6 +490,9 @@ export async function createDirectPin(input: {
   const settings = await getBulletinBoardSettings(orgId);
   const body = input.body?.trim() || null;
   if (input.kind === 'text' && !body) throw new Error('Write something for the note.');
+  if ((input.kind === 'image' || input.kind === 'pdf') && !input.fileData) {
+    throw new Error('Upload a file for this post.');
+  }
 
   const id = randomToken(16);
   const now = nowMs();
@@ -681,5 +684,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export const BULLETIN_MAX_IMAGE_BYTES = 400_000;
-export const BULLETIN_MAX_PDF_BYTES = 700_000;
+export const BULLETIN_MAX_IMAGE_BYTES = 1_000_000;
+export const BULLETIN_MAX_PDF_BYTES = 1_200_000;
+export const BULLETIN_IMAGE_MAX_EDGE = 1600;

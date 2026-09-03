@@ -3,6 +3,9 @@ import '../styles/bulletin-board.css';
 import PortalLayout from '../layouts/PortalLayout.astro';
 import {
   BULLETIN_COLORS,
+  BULLETIN_IMAGE_MAX_EDGE,
+  BULLETIN_MAX_IMAGE_BYTES,
+  BULLETIN_MAX_PDF_BYTES,
   getBulletinBoardSettings,
   listBulletinBoardPins,
   listBulletinBoardRequests,
@@ -31,6 +34,9 @@ const payload = {
   colors,
   pins: pins.map((pin) => serializePin(pin, settings.surface)),
   requests: pending.map(serializeRequest),
+  maxImageBytes: BULLETIN_MAX_IMAGE_BYTES,
+  maxPdfBytes: BULLETIN_MAX_PDF_BYTES,
+  imageMaxEdge: BULLETIN_IMAGE_MAX_EDGE,
 };
 ---
 
@@ -77,14 +83,9 @@ const payload = {
     <section class="mt-6" data-lab-panel="board">
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div class="shrink-0">
-          <div class="mb-3 flex max-w-[24rem] flex-wrap items-center justify-between gap-2">
-            <p class="text-sm text-sage-dark/70">
-              Same size as Home. Drag to place; hover media for expand.
-            </p>
-            <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-add-direct-note>
-              Add note
-            </button>
-          </div>
+          <p class="mb-3 max-w-[24rem] text-sm text-sage-dark/70">
+            Same size as Home. Drag to place; hover media for expand.
+          </p>
           <div
             class="board-surface board-frame relative"
             data-board-canvas
@@ -94,49 +95,80 @@ const payload = {
           </div>
         </div>
 
-        <aside class="w-full max-w-sm rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm lg:sticky lg:top-6" data-pin-inspector>
-          <h2 class="text-sm font-semibold text-charcoal">Pin controls</h2>
-          <p class="mt-2 text-sm text-sage-dark/60" data-inspector-empty>Select a pin on the board.</p>
-          <div class="mt-3 hidden space-y-3" data-inspector-form>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Text</span>
-              <textarea class="field mt-1 min-h-[5rem] resize-y text-sm" data-insp-body></textarea>
-            </label>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Color</span>
-              <div class="mt-2 flex flex-wrap gap-2" data-insp-colors></div>
-            </label>
-            <label class="block text-sm" data-insp-font-wrap>
-              <span class="font-medium text-charcoal">Font size (<span data-insp-font-label>1.05</span>rem)</span>
-              <input class="mt-2 w-full" type="range" min="0.7" max="2.5" step="0.05" data-insp-font />
-            </label>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Width (<span data-insp-width-label>22</span>%)</span>
-              <input class="mt-2 w-full" type="range" min="10" max="55" step="1" data-insp-width />
-            </label>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Rotation (<span data-insp-rotation-label>0</span>°)</span>
-              <input class="mt-2 w-full" type="range" min="-35" max="35" step="1" data-insp-rotation />
-            </label>
-            <label class="block text-sm">
-              <span class="font-medium text-charcoal">Expires</span>
-              <select class="field mt-1" data-insp-expires>
-                <option value="">Permanent until removed</option>
-                <option value="1d">In 1 day</option>
-                <option value="3d">In 3 days</option>
-                <option value="7d">In 7 days</option>
-                <option value="30d">In 30 days</option>
+        <div class="flex w-full max-w-sm flex-col gap-4 lg:sticky lg:top-6">
+          <form class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm" data-admin-post-form>
+            <h2 class="text-sm font-semibold text-charcoal">Post to board</h2>
+            <p class="mt-1 text-xs text-sage-dark/60">
+              Place your own note, photo, or PDF. Large images are compressed automatically.
+            </p>
+            <label class="mt-3 block text-sm">
+              <span class="font-medium text-charcoal">Type</span>
+              <select name="kind" class="field mt-1" data-admin-kind>
+                <option value="text">Text / sticky note</option>
+                <option value="image">Photo / poster</option>
+                <option value="pdf">PDF flyer</option>
               </select>
             </label>
-            <div class="flex flex-wrap gap-2 pt-1">
-              <button type="button" class="btn-primary !px-3 !py-1.5 text-xs" data-insp-save>Save placement</button>
-              <button type="button" class="text-xs font-medium text-red-700 hover:text-red-900" data-insp-remove>
-                Take off board
-              </button>
+            <label class="mt-3 block text-sm" data-admin-body-wrap>
+              <span class="font-medium text-charcoal">Text</span>
+              <textarea name="body" class="field mt-1 min-h-[4.5rem] resize-y text-sm" placeholder="Write something…" data-admin-body></textarea>
+            </label>
+            <label class="mt-3 block text-sm hidden" data-admin-file-wrap>
+              <span class="font-medium text-charcoal">File</span>
+              <input name="file" type="file" class="mt-1 block w-full text-sm" accept="image/*,application/pdf" data-admin-file />
+              <span class="mt-1 block text-[11px] text-sage-dark/55" data-admin-file-hint>
+                Photos compress to about 1MB. PDFs must be under 1.2MB.
+              </span>
+            </label>
+            <button type="submit" class="btn-primary mt-4 !px-4 !py-2 text-sm" data-admin-submit>Place on board</button>
+            <p class="mt-2 hidden text-xs text-sage-dark/60" data-admin-status></p>
+            <p class="mt-2 hidden text-xs text-red-700" data-admin-error></p>
+          </form>
+
+          <aside class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm" data-pin-inspector>
+            <h2 class="text-sm font-semibold text-charcoal">Pin controls</h2>
+            <p class="mt-2 text-sm text-sage-dark/60" data-inspector-empty>Select a pin on the board.</p>
+            <div class="mt-3 hidden space-y-3" data-inspector-form>
+              <label class="block text-sm">
+                <span class="font-medium text-charcoal">Text</span>
+                <textarea class="field mt-1 min-h-[5rem] resize-y text-sm" data-insp-body></textarea>
+              </label>
+              <label class="block text-sm">
+                <span class="font-medium text-charcoal">Color</span>
+                <div class="mt-2 flex flex-wrap gap-2" data-insp-colors></div>
+              </label>
+              <label class="block text-sm" data-insp-font-wrap>
+                <span class="font-medium text-charcoal">Font size (<span data-insp-font-label>1.05</span>rem)</span>
+                <input class="mt-2 w-full" type="range" min="0.7" max="2.5" step="0.05" data-insp-font />
+              </label>
+              <label class="block text-sm">
+                <span class="font-medium text-charcoal">Width (<span data-insp-width-label>22</span>%)</span>
+                <input class="mt-2 w-full" type="range" min="10" max="55" step="1" data-insp-width />
+              </label>
+              <label class="block text-sm">
+                <span class="font-medium text-charcoal">Rotation (<span data-insp-rotation-label>0</span>°)</span>
+                <input class="mt-2 w-full" type="range" min="-35" max="35" step="1" data-insp-rotation />
+              </label>
+              <label class="block text-sm">
+                <span class="font-medium text-charcoal">Expires</span>
+                <select class="field mt-1" data-insp-expires>
+                  <option value="">Permanent until removed</option>
+                  <option value="1d">In 1 day</option>
+                  <option value="3d">In 3 days</option>
+                  <option value="7d">In 7 days</option>
+                  <option value="30d">In 30 days</option>
+                </select>
+              </label>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button type="button" class="btn-primary !px-3 !py-1.5 text-xs" data-insp-save>Save placement</button>
+                <button type="button" class="text-xs font-medium text-red-700 hover:text-red-900" data-insp-remove>
+                  Take off board
+                </button>
+              </div>
+              <p class="hidden text-xs text-red-700" data-insp-error></p>
             </div>
-            <p class="hidden text-xs text-red-700" data-insp-error></p>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
 
       <dialog class="board-expand-dialog" data-board-expand>
@@ -179,6 +211,9 @@ const payload = {
           <label class="mt-3 block text-sm" data-request-file-wrap>
             <span class="font-medium text-charcoal">File</span>
             <input name="file" type="file" class="mt-1 block w-full text-sm" accept="image/*,application/pdf" data-request-file />
+            <span class="mt-1 block text-[11px] text-sage-dark/55">
+              Photos compress to about 1MB. PDFs must be under 1.2MB.
+            </span>
           </label>
           <button type="submit" class="btn-primary mt-4 !px-4 !py-2 text-sm">Submit request</button>
           <p class="mt-2 hidden text-xs text-red-700" data-request-error></p>
@@ -231,6 +266,83 @@ const payload = {
     let state = JSON.parse(root.dataset.payload || '{}');
     let selectedId = null;
     let drag = null;
+    const maxImageBytes = Number(state.maxImageBytes) || 1000000;
+    const maxPdfBytes = Number(state.maxPdfBytes) || 1200000;
+    const imageMaxEdge = Number(state.imageMaxEdge) || 1600;
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Could not read that image.'));
+        };
+        image.src = url;
+      });
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), type, quality));
+    }
+
+    async function compressBoardImage(file) {
+      if (!(file instanceof File) || !file.type.startsWith('image/')) return file;
+
+      const image = await loadImage(file);
+      const needsResize = Math.max(image.width, image.height) > imageMaxEdge;
+      if (!needsResize && file.size <= maxImageBytes) return file;
+
+      const scale = Math.min(1, imageMaxEdge / Math.max(image.width, image.height));
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      const scratch = document.createElement('canvas');
+      scratch.width = width;
+      scratch.height = height;
+      const ctx = scratch.getContext('2d');
+      if (!ctx) throw new Error('Could not compress that image.');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(image, 0, 0, width, height);
+
+      const qualities = [0.88, 0.8, 0.72, 0.64];
+      let best = null;
+      for (const quality of qualities) {
+        const blob = await canvasToBlob(scratch, 'image/jpeg', quality);
+        if (!blob) continue;
+        best = blob;
+        if (blob.size <= maxImageBytes) break;
+      }
+      if (!best) throw new Error('Could not compress that image.');
+      if (best.size > maxImageBytes) {
+        throw new Error('Image is still too large after compression. Try a smaller photo.');
+      }
+      const baseName = (file.name || 'photo').replace(/\.[^.]+$/, '') || 'photo';
+      return new File([best], baseName + '.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+    }
+
+    async function prepareUploadFile(kind, file) {
+      if (!(file instanceof File) || file.size <= 0) {
+        if (kind === 'image' || kind === 'pdf') throw new Error('Choose a file to upload.');
+        return null;
+      }
+      if (kind === 'image') {
+        if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+          throw new Error('Use a JPEG, PNG, WebP, or GIF image.');
+        }
+        return compressBoardImage(file);
+      }
+      if (kind === 'pdf') {
+        if (file.type !== 'application/pdf') throw new Error('Upload a PDF file.');
+        if (file.size > maxPdfBytes) throw new Error('PDF is too large (max about 1.2MB).');
+        return file;
+      }
+      return null;
+    }
 
     const canvas = root.querySelector('[data-board-canvas]');
     const requestList = root.querySelector('[data-request-list]');
@@ -250,6 +362,13 @@ const payload = {
     const inspExpires = root.querySelector('[data-insp-expires]');
     const inspError = root.querySelector('[data-insp-error]');
     const writingModeEl = root.querySelector('[data-writing-mode]');
+    const adminPostForm = root.querySelector('[data-admin-post-form]');
+    const adminKind = root.querySelector('[data-admin-kind]');
+    const adminBodyWrap = root.querySelector('[data-admin-body-wrap]');
+    const adminFileWrap = root.querySelector('[data-admin-file-wrap]');
+    const adminStatus = root.querySelector('[data-admin-status]');
+    const adminError = root.querySelector('[data-admin-error]');
+    const adminSubmit = root.querySelector('[data-admin-submit]');
 
     if (!(canvas instanceof HTMLElement)) return;
 
@@ -638,8 +757,16 @@ const payload = {
       event.preventDefault();
       if (!(requestForm instanceof HTMLFormElement)) return;
       if (requestError instanceof HTMLElement) requestError.classList.add('hidden');
-      const form = new FormData(requestForm);
+      const kind = requestKind instanceof HTMLSelectElement ? requestKind.value : 'text';
+      const fileInput = requestForm.querySelector('[data-request-file]');
       try {
+        const prepared = await prepareUploadFile(
+          kind,
+          fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null,
+        );
+        const form = new FormData(requestForm);
+        if (prepared) form.set('file', prepared);
+        else form.delete('file');
         const res = await fetch('/api/bulletin-board/requests/create', {
           method: 'POST',
           body: form,
@@ -682,31 +809,86 @@ const payload = {
       });
     });
 
-    root.querySelector('[data-add-direct-note]')?.addEventListener('click', async () => {
-      const body = prompt('Write a note to place on the board');
-      if (!body) return;
-      const form = new FormData();
-      form.append('kind', 'text');
-      form.append('body', body);
-      const createRes = await fetch('/api/bulletin-board/requests/create', {
-        method: 'POST',
-        body: form,
-        headers: { Accept: 'application/json' },
-      });
-      const created = await createRes.json();
-      if (!createRes.ok) {
-        alert(created.error || 'Could not create note.');
-        return;
+    const syncAdminKind = () => {
+      const kind = adminKind instanceof HTMLSelectElement ? adminKind.value : 'text';
+      if (adminBodyWrap instanceof HTMLElement) {
+        adminBodyWrap.classList.toggle('hidden', kind !== 'text');
       }
-      const place = await postForm('/api/bulletin-board/pins/place', {
-        requestId: created.request.id,
-        color: state.colors[0],
-        rotationDeg: Math.round(Math.random() * 8 - 4),
-      });
-      state.pins.push(place.pin);
-      selectedId = place.pin.id;
-      renderBoard();
-      renderInspector();
+      if (adminFileWrap instanceof HTMLElement) {
+        adminFileWrap.classList.toggle('hidden', kind === 'text');
+      }
+    };
+    adminKind?.addEventListener('change', syncAdminKind);
+    syncAdminKind();
+
+    adminPostForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(adminPostForm instanceof HTMLFormElement)) return;
+      if (adminError instanceof HTMLElement) {
+        adminError.classList.add('hidden');
+        adminError.textContent = '';
+      }
+      if (adminStatus instanceof HTMLElement) {
+        adminStatus.classList.add('hidden');
+        adminStatus.textContent = '';
+      }
+
+      const kind = adminKind instanceof HTMLSelectElement ? adminKind.value : 'text';
+      const bodyInput = adminPostForm.querySelector('[data-admin-body]');
+      const fileInput = adminPostForm.querySelector('[data-admin-file]');
+      const body = bodyInput instanceof HTMLTextAreaElement ? bodyInput.value.trim() : '';
+
+      try {
+        if (kind === 'text' && !body) throw new Error('Write something for the note.');
+        if (adminSubmit instanceof HTMLButtonElement) adminSubmit.disabled = true;
+        if (adminStatus instanceof HTMLElement) {
+          adminStatus.textContent = kind === 'image' ? 'Compressing image…' : 'Uploading…';
+          adminStatus.classList.remove('hidden');
+        }
+
+        const prepared = await prepareUploadFile(
+          kind,
+          fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null,
+        );
+        if (adminStatus instanceof HTMLElement && kind === 'image') {
+          adminStatus.textContent = 'Placing on board…';
+        }
+
+        const form = new FormData();
+        form.append('kind', kind);
+        if (kind === 'text') form.append('body', body);
+        if (prepared) form.append('file', prepared);
+        form.append('color', state.colors[0] || '');
+        form.append('rotationDeg', String(Math.round(Math.random() * 8 - 4)));
+        if (kind === 'image' || kind === 'pdf') form.append('widthPct', '28');
+
+        const res = await fetch('/api/bulletin-board/pins/create', {
+          method: 'POST',
+          body: form,
+          headers: { Accept: 'application/json' },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Could not create post.');
+
+        state.pins.push(json.pin);
+        selectedId = json.pin.id;
+        adminPostForm.reset();
+        syncAdminKind();
+        if (adminStatus instanceof HTMLElement) {
+          adminStatus.textContent = 'Posted.';
+          adminStatus.classList.remove('hidden');
+        }
+        renderBoard();
+        renderInspector();
+      } catch (error) {
+        if (adminStatus instanceof HTMLElement) adminStatus.classList.add('hidden');
+        if (adminError instanceof HTMLElement) {
+          adminError.textContent = error instanceof Error ? error.message : 'Could not create post.';
+          adminError.classList.remove('hidden');
+        }
+      } finally {
+        if (adminSubmit instanceof HTMLButtonElement) adminSubmit.disabled = false;
+      }
     });
 
     renderBoard();

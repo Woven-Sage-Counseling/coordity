@@ -2,8 +2,9 @@ import type { APIRoute } from 'astro';
 import {
   BULLETIN_MAX_IMAGE_BYTES,
   BULLETIN_MAX_PDF_BYTES,
-  createBulletinBoardRequest,
-  serializeRequest,
+  createDirectPin,
+  getBulletinBoardSettings,
+  serializePin,
   type BulletinKind,
 } from '../../../../lib/bulletin-board';
 import { requirePortalOwner } from '../../../../lib/owner-access';
@@ -29,8 +30,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const kind = String(form.get('kind') ?? '').trim() as BulletinKind;
   const body = String(form.get('body') ?? '');
   const file = form.get('file');
+  const expiresRaw = String(form.get('expiresAt') ?? '').trim();
+  const expiresAt = expiresRaw ? Number(expiresRaw) : null;
 
   try {
+    if (kind !== 'text' && kind !== 'image' && kind !== 'pdf') {
+      throw new Error('Choose text, image, or PDF.');
+    }
+
     let fileName: string | null = null;
     let fileMime: string | null = null;
     let fileData: string | null = null;
@@ -51,28 +58,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
           throw new Error('PDF is too large (max about 1.2MB).');
         }
       } else {
-        throw new Error('Text requests do not take a file.');
+        throw new Error('Text posts do not take a file.');
       }
       fileName = file.name;
       fileMime = file.type;
       fileData = await fileToBase64(file);
     }
 
-    const created = await createBulletinBoardRequest({
-      submittedBy: employee.id,
+    const pin = await createDirectPin({
+      createdBy: employee.id,
       kind,
       body,
       fileName,
       fileMime,
       fileData,
+      color: String(form.get('color') ?? '') || undefined,
+      rotationDeg: form.has('rotationDeg') ? Number(form.get('rotationDeg')) : undefined,
+      widthPct: form.has('widthPct') ? Number(form.get('widthPct')) : undefined,
+      expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
     });
-
-    return new Response(JSON.stringify({ ok: true, request: serializeRequest(created) }), {
+    const settings = await getBulletinBoardSettings();
+    return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.surface) }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not create request.';
+    const message = error instanceof Error ? error.message : 'Could not create post.';
     return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { 'content-type': 'application/json' },
