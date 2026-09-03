@@ -1,4 +1,5 @@
 ---
+import '../styles/bulletin-board.css';
 import PortalLayout from '../layouts/PortalLayout.astro';
 import {
   BULLETIN_COLORS,
@@ -44,8 +45,8 @@ const payload = {
     <div>
       <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Board lab</h1>
       <p class="mt-3 max-w-2xl text-sage-dark/75">
-        Owner-only test bench for the digital bulletin board. Choose a surface, review mock employee
-        requests, then place and arrange pins freely.
+        Owner-only lab. The board matches the Home rail size — no full-board expand. Hover pins for a
+        magnifier to open images, PDFs, or longer notes. URLs in text become links.
       </p>
     </div>
     <p class="rounded-full border border-amber-300/70 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
@@ -74,18 +75,18 @@ const payload = {
     </div>
 
     <section class="mt-6" data-lab-panel="board">
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <div>
-          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div class="shrink-0">
+          <div class="mb-3 flex max-w-[24rem] flex-wrap items-center justify-between gap-2">
             <p class="text-sm text-sage-dark/70">
-              Drag pins to move. Select one to edit size, rotation, color, and expiry.
+              Same size as Home. Drag to place; hover media for expand.
             </p>
             <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-add-direct-note>
-              Add note directly
+              Add note
             </button>
           </div>
           <div
-            class="board-surface relative aspect-[4/5] w-full overflow-hidden rounded-2xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] sm:aspect-[5/4]"
+            class="board-surface board-frame relative"
             data-board-canvas
             data-surface={settings.surface}
           >
@@ -93,7 +94,7 @@ const payload = {
           </div>
         </div>
 
-        <aside class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm" data-pin-inspector>
+        <aside class="w-full max-w-sm rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm lg:sticky lg:top-6" data-pin-inspector>
           <h2 class="text-sm font-semibold text-charcoal">Pin controls</h2>
           <p class="mt-2 text-sm text-sage-dark/60" data-inspector-empty>Select a pin on the board.</p>
           <div class="mt-3 hidden space-y-3" data-inspector-form>
@@ -133,6 +134,18 @@ const payload = {
           </div>
         </aside>
       </div>
+
+      <dialog class="board-expand-dialog" data-board-expand>
+        <div class="board-expand-panel">
+          <div class="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3">
+            <p class="text-sm font-semibold text-charcoal" data-expand-title>Item</p>
+            <button type="button" class="text-sm font-medium text-sage-dark/70 hover:text-charcoal" data-expand-close>
+              Close
+            </button>
+          </div>
+          <div class="p-0" data-expand-body></div>
+        </div>
+      </dialog>
     </section>
 
     <section class="mt-6 hidden" data-lab-panel="requests">
@@ -207,120 +220,6 @@ const payload = {
 
 <style is:global>
   @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap');
-
-  .board-surface[data-surface='cork'] {
-    background:
-      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.12), transparent 35%),
-      radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.08), transparent 40%),
-      linear-gradient(135deg, #c4a574 0%, #b08958 45%, #a67c52 100%);
-  }
-
-  .board-surface[data-surface='blackboard'] {
-    background:
-      radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.05), transparent 40%),
-      linear-gradient(160deg, #1f2933 0%, #111827 55%, #0b1220 100%);
-  }
-
-  .board-surface[data-surface='whiteboard'] {
-    background:
-      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
-    box-shadow: inset 0 0 0 10px #d1d5db;
-  }
-
-  .board-pin {
-    position: absolute;
-    transform-origin: center center;
-    cursor: grab;
-    user-select: none;
-    touch-action: none;
-  }
-
-  .board-pin[data-selected='true'] {
-    z-index: 50 !important;
-    outline: 2px solid rgba(58, 58, 56, 0.45);
-    outline-offset: 3px;
-  }
-
-  .board-pin[data-dragging='true'] {
-    cursor: grabbing;
-    z-index: 60 !important;
-  }
-
-  .board-pin-tack {
-    position: absolute;
-    left: 50%;
-    top: -0.35rem;
-    z-index: 2;
-    width: 0.7rem;
-    height: 0.7rem;
-    border-radius: 999px;
-    transform: translateX(-50%);
-    background: radial-gradient(circle at 35% 30%, #fff 0 18%, #b91c1c 19% 100%);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  }
-
-  .board-pin-body {
-    width: 100%;
-    min-height: 4.5rem;
-    padding: 0.85rem 0.75rem 0.7rem;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-  }
-
-  .board-surface[data-surface='cork'] .board-pin-body {
-    font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
-    font-size: 1.05rem;
-    line-height: 1.25;
-    color: #1f2937;
-    border-radius: 0.15rem;
-  }
-
-  .board-surface[data-surface='blackboard'] .board-pin-body {
-    font-family: 'Caveat', cursive;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    background: transparent !important;
-    box-shadow: none;
-    text-shadow: 0 0 1px rgba(255, 255, 255, 0.25);
-  }
-
-  .board-surface[data-surface='blackboard'] .board-pin-tack {
-    display: none;
-  }
-
-  .board-surface[data-surface='whiteboard'] .board-pin-body {
-    font-family: 'Permanent Marker', cursive;
-    font-size: 1.05rem;
-    line-height: 1.2;
-    background: transparent !important;
-    box-shadow: none;
-  }
-
-  .board-surface[data-surface='whiteboard'] .board-pin-tack {
-    display: none;
-  }
-
-  .board-pin-media {
-    display: block;
-    width: 100%;
-    border-radius: 0.25rem;
-    background: #fff;
-  }
-
-  .board-pin-pdf {
-    display: flex;
-    min-height: 5rem;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    border-radius: 0.25rem;
-    background: #fff;
-    padding: 0.75rem;
-    text-align: center;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.75rem;
-    color: #374151;
-  }
 </style>
 
 <script is:inline>
@@ -394,11 +293,55 @@ const payload = {
         .replaceAll('"', '&quot;');
     }
 
+    function linkifyHtml(value) {
+      return escapeHtml(value).replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi, (raw) => {
+        let url = raw;
+        let trailing = '';
+        while (/[.,!?);:\]]$/.test(url)) {
+          trailing = url.slice(-1) + trailing;
+          url = url.slice(0, -1);
+        }
+        if (!url) return raw;
+        const href = url.startsWith('http') ? url : 'https://' + url;
+        return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + url + '</a>' + trailing;
+      });
+    }
+
+    const zoomIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.25" stroke="currentColor" stroke-width="1.75"/><path d="M15.5 15.5L20 20" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>';
+
+    const expandDialog = root.querySelector('[data-board-expand]');
+    const expandTitle = root.querySelector('[data-expand-title]');
+    const expandBody = root.querySelector('[data-expand-body]');
+    root.querySelector('[data-expand-close]')?.addEventListener('click', () => {
+      if (expandDialog instanceof HTMLDialogElement) expandDialog.close();
+    });
+    expandDialog?.addEventListener('click', (event) => {
+      if (event.target === expandDialog) expandDialog.close();
+    });
+
+    function openExpand(pin) {
+      if (!(expandDialog instanceof HTMLDialogElement) || !(expandBody instanceof HTMLElement)) return;
+      if (expandTitle instanceof HTMLElement) {
+        expandTitle.textContent = pin.kind === 'pdf' ? (pin.fileName || 'PDF') : pin.kind === 'image' ? 'Photo' : 'Note';
+      }
+      if (pin.kind === 'image' && pin.fileUrl) {
+        expandBody.innerHTML = '<img src="' + pin.fileUrl + '" alt="" />';
+      } else if (pin.kind === 'pdf' && pin.fileUrl) {
+        expandBody.innerHTML = '<iframe src="' + pin.fileUrl + '" title="' + escapeHtml(pin.fileName || 'PDF') + '"></iframe>';
+      } else {
+        expandBody.innerHTML = '<div class="whitespace-pre-wrap px-5 py-4 text-sm text-charcoal">' + linkifyHtml(pin.body || '') + '</div>';
+      }
+      expandDialog.showModal();
+    }
+
     function renderPin(pin) {
       const el = document.createElement('div');
       el.className = 'board-pin';
       el.dataset.pinId = pin.id;
+      el.dataset.editable = 'true';
       el.dataset.selected = pin.id === selectedId ? 'true' : 'false';
+      const expandable = pin.kind === 'image' || pin.kind === 'pdf' || Boolean(pin.body && pin.body.length > 80);
+      el.dataset.expandable = expandable ? 'true' : 'false';
       el.style.left = `${pin.xPct}%`;
       el.style.top = `${pin.yPct}%`;
       el.style.width = `${pin.widthPct}%`;
@@ -408,17 +351,30 @@ const payload = {
       const tack = `<span class="board-pin-tack" aria-hidden="true"></span>`;
       let inner = '';
       if (pin.kind === 'text') {
-        inner = `<div class="board-pin-body" style="background:${pin.color};color:${state.surface === 'cork' ? '#1f2937' : pin.color}">${escapeHtml(pin.body || '')}</div>`;
+        inner = `<div class="board-pin-body whitespace-pre-wrap" style="background:${pin.color};color:${state.surface === 'cork' ? '#1f2937' : pin.color}">${linkifyHtml(pin.body || '')}</div>`;
       } else if (pin.kind === 'image' && pin.fileUrl) {
         inner = `<div class="board-pin-body" style="background:${state.surface === 'cork' ? '#fff7ed' : 'transparent'}"><img class="board-pin-media" src="${pin.fileUrl}" alt="" draggable="false" /></div>`;
       } else {
-        inner = `<div class="board-pin-body" style="background:${state.surface === 'cork' ? '#fff7ed' : 'transparent'}"><a class="board-pin-pdf" href="${pin.fileUrl || '#'}" target="_blank" rel="noreferrer"><span>PDF</span><span>${escapeHtml(pin.fileName || 'Flyer')}</span></a></div>`;
+        inner = `<div class="board-pin-body" style="background:${state.surface === 'cork' ? '#fff7ed' : 'transparent'}"><div class="board-pin-pdf"><span>PDF</span><span>${escapeHtml(pin.fileName || 'Flyer')}</span></div></div>`;
       }
-      el.innerHTML = tack + inner;
+      const zoom = expandable
+        ? `<button type="button" class="board-pin-zoom" aria-label="Expand item" data-board-zoom>${zoomIcon}</button>`
+        : '';
+      el.innerHTML = tack + inner + zoom;
+
+      el.querySelector('[data-board-zoom]')?.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      el.querySelector('[data-board-zoom]')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openExpand(pin);
+      });
 
       el.addEventListener('pointerdown', (event) => {
         if (event.button !== 0) return;
-        if (event.target && event.target.closest && event.target.closest('a')) return;
+        if (event.target && event.target.closest && (event.target.closest('a') || event.target.closest('[data-board-zoom]'))) return;
         event.preventDefault();
         selectedId = pin.id;
         drag = {

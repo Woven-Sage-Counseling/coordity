@@ -78,8 +78,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect('/');
   }
 
-  if (pathname.startsWith('/bulletin-board') || pathname.startsWith('/api/bulletin-board')) {
+  if (pathname.startsWith('/bulletin-board')) {
     if (!isPortalOwner(employee)) {
+      return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
+    }
+  }
+
+  if (pathname.startsWith('/api/bulletin-board')) {
+    const pinFileRead = /^\/api\/bulletin-board\/file\/pin\//.test(pathname);
+    if (!pinFileRead && !isPortalOwner(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }
   }

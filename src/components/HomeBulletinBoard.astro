@@ -1,0 +1,145 @@
+---
+import '../styles/bulletin-board.css';
+import {
+  getBulletinBoardSettings,
+  listBulletinBoardPins,
+  serializePin,
+  writingModeForSurface,
+} from '../lib/bulletin-board';
+import { BOARD_ZOOM_ICON, linkifyHtml } from '../lib/bulletin-board-format';
+
+const settings = await getBulletinBoardSettings();
+const pins = (await listBulletinBoardPins()).map(serializePin);
+const writingMode = writingModeForSurface(settings.surface);
+---
+
+<aside
+  class="lg:sticky lg:top-6"
+  aria-label="Bulletin board"
+  data-home-board
+  data-surface={settings.surface}
+  data-writing-mode={writingMode}
+>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap"
+  />
+  <div
+    class="board-surface board-frame relative"
+    data-board-canvas
+    data-surface={settings.surface}
+  >
+    {
+      pins.map((pin) => {
+        const expandable = pin.kind === 'image' || pin.kind === 'pdf' || Boolean(pin.body && pin.body.length > 80);
+        const bodyStyle =
+          settings.surface === 'cork'
+            ? `background:${pin.color};color:#1f2937`
+            : `background:transparent;color:${pin.color}`;
+        return (
+          <div
+            class="board-pin"
+            style={`left:${pin.xPct}%;top:${pin.yPct}%;width:${pin.widthPct}%;z-index:${pin.zIndex};transform:rotate(${pin.rotationDeg}deg)`}
+            data-pin-id={pin.id}
+            data-expandable={expandable ? 'true' : 'false'}
+            data-kind={pin.kind}
+            data-file-url={pin.fileUrl ?? ''}
+            data-file-name={pin.fileName ?? ''}
+            data-body={pin.body ?? ''}
+          >
+            <span class="board-pin-tack" aria-hidden="true" />
+            {
+              pin.kind === 'text' ? (
+                <div class="board-pin-body whitespace-pre-wrap" style={bodyStyle} set:html={linkifyHtml(pin.body || '')} />
+              ) : pin.kind === 'image' && pin.fileUrl ? (
+                <div class="board-pin-body" style={settings.surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
+                  <img class="board-pin-media" src={pin.fileUrl} alt="" draggable="false" />
+                </div>
+              ) : (
+                <div class="board-pin-body" style={settings.surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
+                  <div class="board-pin-pdf">
+                    <span>PDF</span>
+                    <span>{pin.fileName || 'Flyer'}</span>
+                  </div>
+                </div>
+              )
+            }
+            {
+              expandable ? (
+                <button type="button" class="board-pin-zoom" aria-label="Expand item" data-board-zoom set:html={BOARD_ZOOM_ICON} />
+              ) : null
+            }
+          </div>
+        );
+      })
+    }
+    {
+      pins.length === 0 ? (
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-black/25">Bulletin board</p>
+        </div>
+      ) : null
+    }
+  </div>
+
+  <dialog class="board-expand-dialog" data-board-expand>
+    <div class="board-expand-panel">
+      <div class="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3">
+        <p class="text-sm font-semibold text-charcoal" data-expand-title>Item</p>
+        <button type="button" class="text-sm font-medium text-sage-dark/70 hover:text-charcoal" data-expand-close>
+          Close
+        </button>
+      </div>
+      <div class="p-0" data-expand-body></div>
+    </div>
+  </dialog>
+</aside>
+
+<script>
+  function setupHomeBoard(root: Element) {
+    if (!(root instanceof HTMLElement)) return;
+    const dialog = root.querySelector('[data-board-expand]');
+    const title = root.querySelector('[data-expand-title]');
+    const body = root.querySelector('[data-expand-body]');
+    const closeBtn = root.querySelector('[data-expand-close]');
+    if (!(dialog instanceof HTMLDialogElement) || !(body instanceof HTMLElement)) return;
+
+    const openPin = (pin: HTMLElement) => {
+      const kind = pin.dataset.kind || 'text';
+      const fileUrl = pin.dataset.fileUrl || '';
+      const fileName = pin.dataset.fileName || 'Attachment';
+      const text = pin.dataset.body || '';
+      if (title instanceof HTMLElement) {
+        title.textContent = kind === 'pdf' ? fileName : kind === 'image' ? 'Photo' : 'Note';
+      }
+      if (kind === 'image' && fileUrl) {
+        body.innerHTML = `<img src="${fileUrl}" alt="" />`;
+      } else if (kind === 'pdf' && fileUrl) {
+        body.innerHTML = `<iframe src="${fileUrl}" title="${fileName.replaceAll('"', '')}"></iframe>`;
+      } else {
+        body.innerHTML = `<div class="whitespace-pre-wrap px-5 py-4 text-sm text-charcoal"></div>`;
+        const box = body.firstElementChild;
+        if (box) box.textContent = text;
+      }
+      dialog.showModal();
+    };
+
+    root.querySelectorAll('[data-board-zoom]').forEach((btn) => {
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const current = event.currentTarget;
+        if (!(current instanceof HTMLElement)) return;
+        const pin = current.closest('[data-pin-id]');
+        if (pin instanceof HTMLElement) openPin(pin);
+      });
+    });
+
+    closeBtn?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+
+  document.querySelectorAll('[data-home-board]').forEach((root) => setupHomeBoard(root));
+</script>
