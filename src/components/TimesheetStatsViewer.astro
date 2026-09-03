@@ -1,0 +1,166 @@
+---
+import TimesheetPeriodPicker from './TimesheetPeriodPicker.astro';
+import WorkBreakdownChart from './WorkBreakdownChart.astro';
+import { formatHours, formatWorkDate } from '../lib/timesheet';
+import { resolveTimesheetPeriod } from '../lib/timesheet-periods';
+import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
+import { getWorkBreakdownByCategory, serializeWorkBreakdown } from '../lib/timesheet-work-items';
+import {
+  getTimesheetPeriodStats,
+  serializeTimesheetShift,
+} from '../lib/timesheet-entries';
+
+interface EmployeeOption {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+}
+
+interface Props {
+  employees: EmployeeOption[];
+}
+
+const { employees } = Astro.props;
+const people = employees
+  .filter((person) => person.status === 'active')
+  .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+
+const selectedId = String(Astro.url.searchParams.get('hoursUser') ?? '').trim();
+const selected = people.find((person) => person.id === selectedId) ?? null;
+const period = resolveTimesheetPeriod(Astro.url.searchParams);
+
+const categoryLookup = selected ? await getWorkCategoryLookup() : null;
+const [breakdown, stats] = selected
+  ? await Promise.all([
+      getWorkBreakdownByCategory(selected.id, { start: period.start, end: period.end }),
+      getTimesheetPeriodStats(selected.id, { start: period.start, end: period.end }),
+    ])
+  : [null, null];
+
+const serialized = breakdown ? serializeWorkBreakdown(breakdown) : null;
+const shiftRows =
+  stats && categoryLookup
+    ? stats.shifts.map((shift) => serializeTimesheetShift(shift, { categoryLookup }))
+    : [];
+const weeklyAverageLabel = stats ? formatHours(stats.weeklyAverageMinutes) : '0 hrs';
+const activeShift = stats?.activeShift ?? null;
+---
+
+<section class="scroll-mt-24" aria-labelledby="hours-admin" id="hours">
+  <h2 id="hours-admin" class="sr-only">Employee hours</h2>
+
+  <TimesheetPeriodPicker period={period} action="/admin">
+    <input type="hidden" name="adminPanel" value="hours" />
+    <label class="block min-w-[12rem] flex-1">
+      <span class="text-sm text-sage-dark/70">Employee</span>
+      <select
+        name="hoursUser"
+        class="field mt-1 w-full"
+        onchange="this.form.submit()"
+      >
+        <option value="">Choose an employee</option>
+        {
+          people.map((person) => (
+            <option value={person.id} selected={person.id === selectedId}>
+              {person.name}
+            </option>
+          ))
+        }
+      </select>
+    </label>
+  </TimesheetPeriodPicker>
+
+  {
+    !selected ? (
+      <p class="mt-6 text-sm text-sage-dark/65">
+        Select an employee to see their hours and work item breakdown.
+      </p>
+    ) : (
+      <div class="mt-6 space-y-6">
+        <p class="text-sm text-sage-dark/70">
+          {selected.name}
+          <span class="text-sage-dark/45"> · </span>
+          {formatWorkDate(period.start, { weekday: false })} – {formatWorkDate(period.end, { weekday: false })}
+        </p>
+
+        <div class="grid gap-3 sm:grid-cols-3">
+          <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Period hours</p>
+            <p class="mt-2 text-3xl font-semibold text-charcoal">{serialized?.totalHoursLabel ?? '0 hrs'}</p>
+            <p class="mt-1 text-xs text-sage-dark/60">
+              {serialized
+                ? `${serialized.taggedShiftCount + serialized.untaggedShiftCount} completed shift${serialized.taggedShiftCount + serialized.untaggedShiftCount === 1 ? '' : 's'}`
+                : 'No shifts'}
+            </p>
+          </article>
+          <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Weekly average</p>
+            <p class="mt-2 text-3xl font-semibold text-charcoal">{weeklyAverageLabel}</p>
+            <p class="mt-1 text-xs text-sage-dark/60">Across weeks with logged hours</p>
+          </article>
+          <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Current shift</p>
+            <p class="mt-2 text-3xl font-semibold text-charcoal">{activeShift ? 'In progress' : '—'}</p>
+            <p class="mt-1 text-xs text-sage-dark/60">{activeShift ? 'Clocked in now' : 'Not clocked in'}</p>
+          </article>
+        </div>
+
+        <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+          <h3 class="text-sm font-semibold text-charcoal">Work items</h3>
+          <p class="mt-1 text-xs text-sage-dark/60">
+            {serialized
+              ? `${serialized.taggedShiftCount} shift${serialized.taggedShiftCount === 1 ? '' : 's'} with items${serialized.untaggedShiftCount > 0 ? ` · ${serialized.untaggedShiftCount} without` : ''}`
+              : ''}
+          </p>
+          <WorkBreakdownChart
+            slices={serialized?.slices ?? []}
+            emptyMessage="No work items logged in this period."
+          />
+        </article>
+
+        <div>
+          <h3 class="text-sm font-semibold text-charcoal">Shifts in this period</h3>
+          {
+            shiftRows.length === 0 ? (
+              <p class="mt-3 text-sm text-sage-dark/65">No completed shifts in this timeframe.</p>
+            ) : (
+              <ul class="mt-3 max-h-[24rem] space-y-2 overflow-y-auto">
+                {
+                  shiftRows.map((shift) => (
+                    <li class="rounded-xl border border-sage-dark/10 bg-white/80 px-3 py-3 shadow-sm">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="text-sm font-semibold text-charcoal">{shift.dateLabel}</p>
+                          <p class="mt-0.5 text-xs text-sage-dark/60">{shift.timeLabel}</p>
+                        </div>
+                        <p class="shrink-0 text-sm font-semibold tabular-nums text-charcoal">{shift.hoursLabel}</p>
+                      </div>
+                      {
+                        shift.workItems.length > 0 ? (
+                          <div class="mt-2 flex flex-wrap gap-1.5">
+                            {shift.workItems.map((item) => (
+                              <span
+                                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-charcoal ring-1 ring-black/[0.08]"
+                                style={`background-color: ${item.color}18`}
+                              >
+                                <span class="size-1.5 rounded-full" style={`background-color: ${item.color}`} />
+                                {item.label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p class="mt-2 text-xs text-sage-dark/50">No work items</p>
+                        )
+                      }
+                    </li>
+                  ))
+                }
+              </ul>
+            )
+          }
+        </div>
+      </div>
+    )
+  }
+</section>

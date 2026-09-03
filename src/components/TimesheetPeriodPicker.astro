@@ -12,6 +12,7 @@ const showDates = period.id === 'custom';
 ---
 
 <form method="get" action={action} class="mt-4 flex flex-wrap items-end gap-3">
+  <slot />
   <label class="block">
     <span class="text-sm text-sage-dark/70">Timeframe</span>
     <select

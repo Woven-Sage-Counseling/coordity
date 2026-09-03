@@ -273,6 +273,29 @@ export async function getWeeklyAverageMinutes(userId: string): Promise<number> {
   return Math.round(total / byWeek.size);
 }
 
+export async function getTimesheetPeriodStats(
+  userId: string,
+  range: { start: string; end: string },
+) {
+  const [entries, activeShift, weeklyAverageMinutes] = await Promise.all([
+    listTimesheetShiftsForUser(userId, {
+      start: range.start,
+      end: range.end,
+      completedOnly: true,
+      limit: 200,
+    }),
+    getActiveShift(userId),
+    getWeeklyAverageMinutes(userId),
+  ]);
+  const shifts = await attachWorkItems(entries);
+  return {
+    shifts,
+    totalMinutes: shifts.reduce((sum, shift) => sum + shift.minutes, 0),
+    activeShift,
+    weeklyAverageMinutes,
+  };
+}
+
 export async function getTimesheetSummary(userId: string): Promise<TimesheetSummary> {
   const [activeShiftRaw, weekRaw, weeklyAverageMinutes, entriesRaw] = await Promise.all([
     getActiveShift(userId),

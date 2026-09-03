@@ -8,6 +8,7 @@ import TasksManager from '../components/TasksManager.astro';
 import TimeOffManager from '../components/TimeOffManager.astro';
 import TimesheetBacklogManager from '../components/TimesheetBacklogManager.astro';
 import TimesheetShiftEditManager from '../components/TimesheetShiftEditManager.astro';
+import TimesheetStatsViewer from '../components/TimesheetStatsViewer.astro';
 import WorkItemsManager from '../components/WorkItemsManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import {
@@ -144,6 +145,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="hours"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Employee hours</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
           data-admin-open="announcements"
         >
           <span class="text-[15px] font-medium text-charcoal">Announcements</span>
@@ -244,6 +254,24 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
       <TimesheetBacklogManager requests={timesheetBacklogRequests} error={timesheetError} embedded />
       <TimesheetShiftEditManager requests={timesheetShiftEditRequests} embedded />
+    </section>
+
+    <section class="hidden" data-admin-panel="hours">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Back
+      </button>
+      <PanelHeading
+        title="Employee hours"
+        description="Pick a teammate to review their logged hours, work item chart, and completed shifts for a timeframe."
+      />
+      <TimesheetStatsViewer employees={employees} />
     </section>
 
     <section class="hidden" data-admin-panel="announcements">
@@ -465,6 +493,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const hashForPanel: Record<string, string> = {
       'time-off': '#time-off-requests',
       timesheet: '#timesheet-backlog',
+      hours: '#hours',
       announcements: '#announcement-history',
       people: '#people',
       tasks: '#tasks',
@@ -476,6 +505,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const panelFromHash = (hash: string): string | null => {
       if (hash === 'time-off-requests' || hash === 'time-off') return 'time-off';
       if (hash === 'timesheet-backlog' || hash === 'timesheet') return 'timesheet';
+      if (hash === 'hours' || hash === 'hours-admin' || hash === 'employee-hours') return 'hours';
       if (hash === 'announcement-history' || hash === 'post-announcement' || hash === 'announcements') {
         return 'announcements';
       }
@@ -527,6 +557,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     }
     if (params.has('timesheetError')) {
       showPanel('timesheet', false);
+      return;
+    }
+    if (params.get('adminPanel') === 'hours' || params.has('hoursUser')) {
+      showPanel('hours', false);
       return;
     }
     if (params.has('peopleError') || params.has('inviteUrl') || params.has('peopleSaved')) {

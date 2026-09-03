@@ -1,0 +1,56 @@
+---
+import { buildPieSlices } from '../lib/timesheet-charts';
+
+interface Slice {
+  label: string;
+  minutes: number;
+  percent: number;
+  color: string;
+  hoursLabel: string;
+}
+
+interface Props {
+  slices: Slice[];
+  emptyMessage?: string;
+}
+
+const { slices, emptyMessage = 'No work items in this period.' } = Astro.props;
+const pieSlices = buildPieSlices(slices);
+const hasData = pieSlices.length > 0;
+---
+
+{
+  hasData ? (
+    <div class="mt-4 flex flex-col items-center gap-6 md:flex-row md:items-start">
+      <svg viewBox="0 0 220 220" class="h-52 w-52 shrink-0" role="img" aria-label="Work category breakdown chart">
+        {
+          pieSlices.map((slice) => (
+            <path d={slice.path} fill={slice.color} stroke="#ffffff" stroke-width="1.5">
+              <title>
+                {slice.label}: {slice.hoursLabel} ({slice.percent}%)
+              </title>
+            </path>
+          ))
+        }
+      </svg>
+      <ul class="w-full space-y-2">
+        {
+          pieSlices.map((slice) => (
+            <li class="flex items-center justify-between gap-3 rounded-xl bg-[#f8f9fb] px-3 py-2 text-sm">
+              <span class="flex min-w-0 items-center gap-2 text-charcoal">
+                <span class="size-2.5 shrink-0 rounded-full" style={`background-color: ${slice.color}`} />
+                <span class="truncate">{slice.label}</span>
+              </span>
+              <span class="shrink-0 tabular-nums text-sage-dark/75">
+                {slice.hoursLabel}
+                <span class="ml-2 text-xs text-sage-dark/55">{slice.percent}%</span>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  ) : (
+    <p class="mt-4 text-sm text-sage-dark/70">{emptyMessage}</p>
+  )
+}
