@@ -12,6 +12,7 @@ import {
   weekStartMonday,
 } from './timesheet';
 import { listWorkItemsForShifts, serializeWorkItem, type TimesheetShiftWorkItem } from './timesheet-work-items';
+import { type WorkCategoryLookup } from './timesheet-work-categories';
 
 export type TimesheetShiftSource = 'clock' | 'backlog';
 
@@ -80,10 +81,13 @@ function mapShift(row: ShiftRow, workItems: TimesheetShiftWorkItem[] = []): Time
   };
 }
 
-export function serializeTimesheetShift(shift: TimesheetShift, options: { pendingEdit?: boolean } = {}) {
+export function serializeTimesheetShift(
+  shift: TimesheetShift,
+  options: { pendingEdit?: boolean; categoryLookup: WorkCategoryLookup },
+) {
   const isActive = shift.source === 'clock' && shift.endedAt == null;
   const canRequestEdit = !isActive && shift.startedAt != null && shift.endedAt != null;
-  const workItems = shift.workItems.map(serializeWorkItem);
+  const workItems = shift.workItems.map((item) => serializeWorkItem(item, options.categoryLookup));
   return {
     id: shift.id,
     workDate: shift.workDate,
@@ -112,7 +116,7 @@ export function serializeTimesheetShift(shift: TimesheetShift, options: { pendin
 
 export function serializeWeekSummary(
   summary: TimesheetWeekSummary,
-  options: { pendingEditShiftIds?: Set<string> } = {},
+  options: { pendingEditShiftIds?: Set<string>; categoryLookup: WorkCategoryLookup },
 ) {
   const pending = options.pendingEditShiftIds;
   return {
@@ -121,18 +125,24 @@ export function serializeWeekSummary(
     totalMinutes: summary.totalMinutes,
     totalLabel: formatHours(summary.totalMinutes),
     entries: summary.entries.map((entry) =>
-      serializeTimesheetShift(entry, { pendingEdit: pending?.has(entry.id) ?? false }),
+      serializeTimesheetShift(entry, {
+        pendingEdit: pending?.has(entry.id) ?? false,
+        categoryLookup: options.categoryLookup,
+      }),
     ),
   };
 }
 
 export function serializeTimesheetSummary(
   summary: TimesheetSummary,
-  options: { pendingEditShiftIds?: Set<string> } = {},
+  options: { pendingEditShiftIds?: Set<string>; categoryLookup: WorkCategoryLookup },
 ) {
   const pending = options.pendingEditShiftIds;
   const mapShift = (shift: TimesheetShift) =>
-    serializeTimesheetShift(shift, { pendingEdit: pending?.has(shift.id) ?? false });
+    serializeTimesheetShift(shift, {
+      pendingEdit: pending?.has(shift.id) ?? false,
+      categoryLookup: options.categoryLookup,
+    });
 
   return {
     activeShift: summary.activeShift ? mapShift(summary.activeShift) : null,

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getTimesheetSummary, serializeTimesheetSummary } from '../../../lib/timesheet-entries';
+import { getWorkCategoryLookup } from '../../../lib/timesheet-work-categories';
 import { parseWorkItemsForm, serializeWorkItem, setShiftWorkItems } from '../../../lib/timesheet-work-items';
 import { timesheetJsonError, timesheetJsonOk, wantsJson } from '../../../lib/timesheet-http';
 import { requireTimesheetAccess } from '../../../lib/timesheet-access';
@@ -22,7 +23,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const items = parseWorkItemsForm(form);
+    const categoryLookup = await getWorkCategoryLookup();
+    const items = parseWorkItemsForm(form, categoryLookup);
     const workItems = await setShiftWorkItems({
       userId: employee.id,
       shiftId,
@@ -32,8 +34,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return timesheetJsonOk({
       shiftId,
-      workItems: workItems.map(serializeWorkItem),
-      summary: serializeTimesheetSummary(summary),
+      workItems: workItems.map((item) => serializeWorkItem(item, categoryLookup)),
+      summary: serializeTimesheetSummary(summary, { categoryLookup }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to save work items.';

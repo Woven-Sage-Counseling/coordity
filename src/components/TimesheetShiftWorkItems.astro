@@ -1,15 +1,20 @@
 ---
-import { TIMESHEET_WORK_CATEGORIES } from '../lib/timesheet-categories';
+import {
+  buildWorkCategoryLookup,
+  type WorkCategoryMeta,
+} from '../lib/timesheet-work-categories';
 import { serializeWorkItem, type TimesheetShiftWorkItem } from '../lib/timesheet-work-items';
 
 interface Props {
   shiftId: string;
   workItems: TimesheetShiftWorkItem[];
   canEdit: boolean;
+  categories: WorkCategoryMeta[];
 }
 
-const { shiftId, workItems, canEdit } = Astro.props;
-const serialized = workItems.map(serializeWorkItem);
+const { shiftId, workItems, canEdit, categories } = Astro.props;
+const categoryLookup = buildWorkCategoryLookup(categories);
+const serialized = workItems.map((item) => serializeWorkItem(item, categoryLookup));
 const selectedCategories = new Set(serialized.map((item) => item.category));
 ---
 
@@ -68,7 +73,7 @@ const selectedCategories = new Set(serialized.map((item) => item.category));
         </p>
         <div class="mt-3 grid gap-2 sm:grid-cols-2">
           {
-            TIMESHEET_WORK_CATEGORIES.map((option) => (
+            categories.map((option) => (
               <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-sage-dark/10 bg-white px-3 py-2 text-sm text-charcoal">
                 <input
                   type="checkbox"

@@ -4,6 +4,7 @@ import {
   serializeTimesheetShift,
   serializeTimesheetSummary,
 } from '../lib/timesheet-entries';
+import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
 import { formatWeekLabel } from '../lib/timesheet';
 import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
@@ -27,7 +28,8 @@ try {
   timesheetLoadError = 'Timesheet is temporarily unavailable.';
 }
 
-const serialized = summary ? serializeTimesheetSummary(summary) : null;
+const categoryLookup = await getWorkCategoryLookup();
+const serialized = summary ? serializeTimesheetSummary(summary, { categoryLookup }) : null;
 const activeShift = summary?.activeShift ?? null;
 const onTimeOff = summary ? await isUserOnApprovedTimeOffNow(userId) : false;
 const week = summary?.week;
@@ -131,7 +133,7 @@ const week = summary?.week;
             <ul class="mt-2 space-y-2" data-timesheet-list hidden={(week?.entries.length ?? 0) === 0}>
               {
                 week?.entries.map((entry) => {
-                  const item = serializeTimesheetShift(entry);
+                  const item = serializeTimesheetShift(entry, { categoryLookup });
                   return (
                     <li class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]" data-timesheet-item>
                       <div class="flex items-start justify-between gap-2">

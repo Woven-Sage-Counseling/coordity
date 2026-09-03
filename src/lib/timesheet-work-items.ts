@@ -2,12 +2,10 @@ import { randomToken, nowMs } from './crypto';
 import { getEnv } from './env';
 import { formatHours } from './timesheet';
 import {
-  getTimesheetWorkCategory,
-  getTimesheetWorkCategoryLabel,
-  isTimesheetWorkCategory,
-  TIMESHEET_WORK_CATEGORIES,
-  type TimesheetWorkCategoryKey,
-} from './timesheet-categories';
+  getWorkCategoryLookup,
+  type WorkCategoryLookup,
+  type WorkCategoryMeta,
+} from './timesheet-work-categories';
 
 /** Each row marks that a category was worked during that shift (not hour allocation). */
 export const WORK_ITEM_OCCURRENCE = 1;
@@ -15,13 +13,13 @@ export const WORK_ITEM_OCCURRENCE = 1;
 export interface TimesheetShiftWorkItem {
   id: string;
   shiftId: string;
-  category: TimesheetWorkCategoryKey;
+  category: string;
   minutes: number;
   createdAt: number;
 }
 
 export interface TimesheetWorkBreakdownSlice {
-  category: TimesheetWorkCategoryKey | 'uncategorized';
+  category: string;
   label: string;
   count: number;
   frequencyLabel: string;
@@ -53,7 +51,7 @@ function mapWorkItem(row: WorkItemRow): TimesheetShiftWorkItem {
   return {
     id: row.id,
     shiftId: row.shift_id,
-    category: row.category as TimesheetWorkCategoryKey,
+    category: row.category,
     minutes: row.minutes,
     createdAt: row.created_at,
   };
@@ -63,8 +61,11 @@ function formatFrequencyLabel(count: number): string {
   return count === 1 ? '1 day' : `${count} days`;
 }
 
-export function serializeWorkItem(item: TimesheetShiftWorkItem) {
-  const category = getTimesheetWorkCategory(item.category);
+export function serializeWorkItem(
+  item: TimesheetShiftWorkItem,
+  lookup: WorkCategoryLookup,
+) {
+  const category = lookup.get(item.category);
   return {
     id: item.id,
     shiftId: item.shiftId,
@@ -116,16 +117,19 @@ export async function listWorkItemsForShifts(
   return map;
 }
 
-export function parseWorkItemsForm(form: FormData): Array<{ category: TimesheetWorkCategoryKey }> {
+export function parseWorkItemsForm(
+  form: FormData,
+  lookup: WorkCategoryLookup,
+): Array<{ category: string }> {
   const categories = form
     .getAll('category')
     .map((value) => String(value).trim())
     .filter(Boolean);
-  const items: Array<{ category: TimesheetWorkCategoryKey }> = [];
+  const items: Array<{ category: string }> = [];
   const seen = new Set<string>();
 
   for (const category of categories) {
-    if (!isTimesheetWorkCategory(category)) {
+    if (!lookup.has(category)) {
       throw new Error('Choose valid work categories.');
     }
     if (seen.has(category)) continue;
@@ -139,7 +143,7 @@ export function parseWorkItemsForm(form: FormData): Array<{ category: TimesheetW
 export async function setShiftWorkItems(input: {
   userId: string;
   shiftId: string;
-  items: Array<{ category: TimesheetWorkCategoryKey }>;
+  items: Array<{ category: string }>;
 }): Promise<TimesheetShiftWorkItem[]> {
   const { DB } = getEnv();
   const shift = await DB.prepare(
@@ -177,6 +181,7 @@ export async function getWorkBreakdownByCategory(
   range: { start: string; end: string },
 ): Promise<TimesheetWorkBreakdown> {
   const { DB } = getEnv();
+  const lookup = await getWorkCategoryLookup();
 
   const [itemRows, shiftRows] = await Promise.all([
     DB.prepare(
@@ -212,18 +217,17 @@ export async function getWorkBreakdownByCategory(
   const untaggedShiftCount = shifts.length - taggedShiftCount;
 
   const slices: TimesheetWorkBreakdownSlice[] = (itemRows.results ?? [])
-    .filter((row) => row.occurrence_count > 0 && isTimesheetWorkCategory(row.category))
+    .filter((row) => row.occurrence_count > 0)
     .map((row) => {
-      const category = row.category as TimesheetWorkCategoryKey;
-      const meta = getTimesheetWorkCategory(category)!;
+      const meta = lookup.get(row.category);
       const count = row.occurrence_count;
       return {
-        category,
-        label: meta.label,
+        category: row.category,
+        label: meta?.label ?? row.category,
         count,
         frequencyLabel: formatFrequencyLabel(count),
         percent: 0,
-        color: meta.color,
+        color: meta?.color ?? UNCATEGORIZED_COLOR,
       };
     })
     .sort((a, b) => b.count - a.count);
@@ -245,12 +249,9 @@ export async function getWorkBreakdownByCategory(
   };
 }
 
-export function workCategoryOptions() {
-  return TIMESHEET_WORK_CATEGORIES.map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.color,
-  }));
+export async function workCategoryOptions(): Promise<WorkCategoryMeta[]> {
+  const lookup = await getWorkCategoryLookup();
+  return lookup.list();
 }
 
 export function serializeWorkBreakdown(breakdown: TimesheetWorkBreakdown) {
@@ -265,4 +266,6 @@ export function serializeWorkBreakdown(breakdown: TimesheetWorkBreakdown) {
   };
 }
 
-export { getTimesheetWorkCategoryLabel };
+export function getWorkCategoryLabel(key: string, lookup: WorkCategoryLookup): string {
+  return lookup.get(key)?.label ?? key;
+}

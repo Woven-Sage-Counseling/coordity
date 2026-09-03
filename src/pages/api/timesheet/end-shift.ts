@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { endShift, getTimesheetSummary, serializeTimesheetSummary } from '../../../lib/timesheet-entries';
+import { getWorkCategoryLookup } from '../../../lib/timesheet-work-categories';
 import {
   resolveTimesheetReturnTo,
   timesheetErrorResponse,
@@ -21,9 +22,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await endShift(employee.id);
     const summary = await getTimesheetSummary(employee.id);
 
+    const categoryLookup = await getWorkCategoryLookup();
     if (wantsJson(request)) {
       return timesheetJsonOk({
-        summary: serializeTimesheetSummary(summary),
+        summary: serializeTimesheetSummary(summary, { categoryLookup }),
       });
     }
 

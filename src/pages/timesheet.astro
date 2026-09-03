@@ -16,7 +16,7 @@ import {
   listTimesheetShiftEditsForUser,
   serializeShiftEditRequest,
 } from '../lib/timesheet-shift-edits';
-import { TIMESHEET_WORK_CATEGORIES } from '../lib/timesheet-categories';
+import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
 import { formatWeekLabel } from '../lib/timesheet';
 import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { canUseTimesheet } from '../lib/timesheet-access';
@@ -34,6 +34,8 @@ const backlogSent = Astro.url.searchParams.get('backlog') === '1';
 const shiftEditSent = Astro.url.searchParams.get('shiftEdit') === '1';
 
 const summary = await getTimesheetSummary(employee.id);
+const categoryLookup = await getWorkCategoryLookup();
+const workCategories = categoryLookup.list();
 const pendingEditShiftIds = await listPendingShiftEditShiftIds(employee.id);
 const backlogRequests = await listTimesheetBacklogForUser(employee.id, 50);
 const shiftEditRequests = await listTimesheetShiftEditsForUser(employee.id, 50);
@@ -43,7 +45,7 @@ const pendingBacklogRequests = backlogRequests
 const pendingShiftEditRequests = shiftEditRequests
   .filter((request) => request.status === 'pending')
   .map(serializeShiftEditRequest);
-const serialized = serializeTimesheetSummary(summary, { pendingEditShiftIds });
+const serialized = serializeTimesheetSummary(summary, { pendingEditShiftIds, categoryLookup });
 const activeShift = summary.activeShift;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
@@ -68,7 +70,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
   <div
     data-timesheet-page
     data-summary={JSON.stringify(serialized)}
-    data-work-categories={JSON.stringify(TIMESHEET_WORK_CATEGORIES)}
+    data-work-categories={JSON.stringify(workCategories)}
     data-backlog-requests={JSON.stringify(pendingBacklogRequests)}
     data-shift-edit-requests={JSON.stringify(pendingShiftEditRequests)}
   >
@@ -173,6 +175,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
               summary.entries.map((entry) => {
                 const serializedEntry = serializeTimesheetShift(entry, {
                   pendingEdit: pendingEditShiftIds.has(entry.id),
+                  categoryLookup,
                 });
                 return (
                   <li
@@ -224,6 +227,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                           shiftId={entry.id}
                           workItems={entry.workItems}
                           canEdit={serializedEntry.canEditWorkItems}
+                          categories={workCategories}
                         />
                       ) : null
                     }

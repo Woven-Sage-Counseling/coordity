@@ -1,4 +1,5 @@
-export const TIMESHEET_WORK_CATEGORIES = [
+/** Seed / fallback list when org categories are unavailable. */
+export const DEFAULT_TIMESHEET_WORK_CATEGORIES = [
   { key: 'quickbooks', label: 'QuickBooks', color: '#2CA01C' },
   { key: 'simple_practice', label: 'SimplePractice', color: '#1a73e8' },
   { key: 'website', label: 'Website', color: '#7c3aed' },
@@ -17,18 +18,5 @@ export const TIMESHEET_WORK_CATEGORIES = [
   { key: 'billing', label: 'Billing', color: '#dc2626' },
 ] as const;
 
-export type TimesheetWorkCategoryKey = (typeof TIMESHEET_WORK_CATEGORIES)[number]['key'];
-
-const CATEGORY_KEYS = new Set<string>(TIMESHEET_WORK_CATEGORIES.map((item) => item.key));
-
-export function isTimesheetWorkCategory(value: string): value is TimesheetWorkCategoryKey {
-  return CATEGORY_KEYS.has(value);
-}
-
-export function getTimesheetWorkCategory(key: string) {
-  return TIMESHEET_WORK_CATEGORIES.find((item) => item.key === key) ?? null;
-}
-
-export function getTimesheetWorkCategoryLabel(key: string): string {
-  return getTimesheetWorkCategory(key)?.label ?? key;
-}
+/** @deprecated Use org categories from the database via timesheet-work-categories. */
+export const TIMESHEET_WORK_CATEGORIES = DEFAULT_TIMESHEET_WORK_CATEGORIES;

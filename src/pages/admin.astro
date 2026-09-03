@@ -8,6 +8,7 @@ import TasksManager from '../components/TasksManager.astro';
 import TimeOffManager from '../components/TimeOffManager.astro';
 import TimesheetBacklogManager from '../components/TimesheetBacklogManager.astro';
 import TimesheetShiftEditManager from '../components/TimesheetShiftEditManager.astro';
+import WorkItemsManager from '../components/WorkItemsManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import {
   listProvidersForLookup,
@@ -22,6 +23,7 @@ import { listTimeOffRequestsForAdmin } from '../lib/time-off-requests';
 import { listTimesheetBacklogForAdmin } from '../lib/timesheet-backlog';
 import { listTimesheetShiftEditsForAdmin } from '../lib/timesheet-shift-edits';
 import { listAssignedTasksForAdmin } from '../lib/tasks';
+import { listWorkCategoriesForAdmin } from '../lib/timesheet-work-categories';
 
 export const prerender = false;
 
@@ -62,11 +64,22 @@ const timesheetError = Astro.url.searchParams.get('timesheetError');
 const credentialingError = Astro.url.searchParams.get('credentialingError');
 const tasksError = tasksLoadError;
 const tasksSaved = Astro.url.searchParams.get('tasksSaved');
+const workCategoriesSaved = Astro.url.searchParams.get('workCategoriesSaved');
+let workCategoriesError: string | null = Astro.url.searchParams.get('workCategoriesError');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetBacklog = timesheetBacklogRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetShiftEdits = timesheetShiftEditRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetRequests = pendingTimesheetBacklog + pendingTimesheetShiftEdits;
 const openAssignedTasks = assignedTasks.filter((task) => task.completedAt == null).length;
+let workCategories: Awaited<ReturnType<typeof listWorkCategoriesForAdmin>> = [];
+try {
+  workCategories = await listWorkCategoriesForAdmin();
+} catch (error) {
+  console.error('admin work categories load failed', error);
+  if (!workCategoriesError) {
+    workCategoriesError = 'Work items are temporarily unavailable. Database migration may still be pending.';
+  }
+}
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
@@ -173,6 +186,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           data-admin-open="credentialing"
         >
           <span class="text-[15px] font-medium text-charcoal">Credentialing</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="work-items"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Work items</span>
           <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
         <div class="mx-4 border-t border-sage-dark/10"></div>
@@ -320,6 +342,29 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
     </section>
 
+    <section class="hidden" data-admin-panel="work-items">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Back
+      </button>
+      <PanelHeading
+        title="Work items"
+        description="Customize the categories employees tag on completed shifts. Names and colors appear on the timesheet and work breakdown chart."
+      />
+      <WorkItemsManager
+        categories={workCategories}
+        error={workCategoriesError}
+        saved={workCategoriesSaved === '1'}
+        embedded
+      />
+    </section>
+
     <section class="hidden" data-admin-panel="roles" id="roles">
       <button
         type="button"
@@ -423,6 +468,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       announcements: '#announcement-history',
       people: '#people',
       tasks: '#tasks',
+      'work-items': '#work-items',
       credentialing: '#credentialing',
       roles: '#roles',
     };
@@ -435,6 +481,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       }
       if (hash === 'people') return 'people';
       if (hash === 'tasks') return 'tasks';
+      if (hash === 'work-items' || hash === 'work-items-admin') return 'work-items';
       if (hash === 'credentialing' || hash === 'credentialing-admin') return 'credentialing';
       if (hash === 'roles' || hash === 'roles-heading') return 'roles';
       return null;
@@ -492,6 +539,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     }
     if (params.has('tasksError') || params.has('tasksSaved')) {
       showPanel('tasks', false);
+      return;
+    }
+    if (params.has('workCategoriesError') || params.has('workCategoriesSaved')) {
+      showPanel('work-items', false);
       return;
     }
     if (params.has('error') || params.has('announcementSaved')) {
