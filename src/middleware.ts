@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createAuth } from './lib/auth';
-import { canAccessManagement, loadEmployee } from './lib/permissions';
+import { canAccessManagement, isPortalOwner, loadEmployee } from './lib/permissions';
 
 const PUBLIC_PATHS = new Set([
   '/sign-in',
@@ -76,6 +76,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (pathname.startsWith('/resources')) {
     return context.redirect('/');
+  }
+
+  if (pathname.startsWith('/bulletin-board') || pathname.startsWith('/api/bulletin-board')) {
+    if (!isPortalOwner(employee)) {
+      return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
+    }
   }
 
   if (

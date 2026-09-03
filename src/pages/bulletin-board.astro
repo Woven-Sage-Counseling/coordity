@@ -1,0 +1,743 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import {
+  BULLETIN_COLORS,
+  getBulletinBoardSettings,
+  listBulletinBoardPins,
+  listBulletinBoardRequests,
+  serializePin,
+  serializeRequest,
+  writingModeForSurface,
+} from '../lib/bulletin-board';
+import { isPortalOwner } from '../lib/permissions';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+if (!isPortalOwner(employee)) {
+  return new Response('Forbidden', { status: 403 });
+}
+
+const settings = await getBulletinBoardSettings();
+const pins = await listBulletinBoardPins();
+const pending = await listBulletinBoardRequests({ status: 'pending' });
+const writingMode = writingModeForSurface(settings.surface);
+const colors = BULLETIN_COLORS[settings.surface];
+
+const payload = {
+  surface: settings.surface,
+  writingMode,
+  colors,
+  pins: pins.map(serializePin),
+  requests: pending.map(serializeRequest),
+};
+---
+
+<PortalLayout title="Board lab" wide>
+  <p class="text-sm text-sage-dark/65">
+    <a href="/" class="hover:text-sage-dark">Home</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Board lab
+  </p>
+
+  <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Board lab</h1>
+      <p class="mt-3 max-w-2xl text-sage-dark/75">
+        Owner-only test bench for the digital bulletin board. Choose a surface, review mock employee
+        requests, then place and arrange pins freely.
+      </p>
+    </div>
+    <p class="rounded-full border border-amber-300/70 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
+      Lab / not public yet
+    </p>
+  </div>
+
+  <div
+    class="mt-8"
+    data-board-lab
+    data-payload={JSON.stringify(payload)}
+  >
+    <div class="flex flex-wrap gap-2 border-b border-sage-dark/10 pb-3" role="tablist" aria-label="Board lab sections">
+      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-semibold" data-lab-tab="board" aria-selected="true">
+        Admin board
+      </button>
+      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="requests" aria-selected="false">
+        Requests
+        <span class="ml-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white" data-request-count>
+          {pending.length}
+        </span>
+      </button>
+      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="surface" aria-selected="false">
+        Surface
+      </button>
+    </div>
+
+    <section class="mt-6" data-lab-panel="board">
+      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div>
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm text-sage-dark/70">
+              Drag pins to move. Select one to edit size, rotation, color, and expiry.
+            </p>
+            <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-add-direct-note>
+              Add note directly
+            </button>
+          </div>
+          <div
+            class="board-surface relative aspect-[4/5] w-full overflow-hidden rounded-2xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] sm:aspect-[5/4]"
+            data-board-canvas
+            data-surface={settings.surface}
+          >
+            <div class="pointer-events-none absolute inset-0 opacity-40" data-board-texture aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <aside class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm" data-pin-inspector>
+          <h2 class="text-sm font-semibold text-charcoal">Pin controls</h2>
+          <p class="mt-2 text-sm text-sage-dark/60" data-inspector-empty>Select a pin on the board.</p>
+          <div class="mt-3 hidden space-y-3" data-inspector-form>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Text</span>
+              <textarea class="field mt-1 min-h-[5rem] resize-y text-sm" data-insp-body></textarea>
+            </label>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Color</span>
+              <div class="mt-2 flex flex-wrap gap-2" data-insp-colors></div>
+            </label>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Width (<span data-insp-width-label>22</span>%)</span>
+              <input class="mt-2 w-full" type="range" min="10" max="55" step="1" data-insp-width />
+            </label>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Rotation (<span data-insp-rotation-label>0</span>°)</span>
+              <input class="mt-2 w-full" type="range" min="-35" max="35" step="1" data-insp-rotation />
+            </label>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Expires</span>
+              <select class="field mt-1" data-insp-expires>
+                <option value="">Permanent until removed</option>
+                <option value="1d">In 1 day</option>
+                <option value="3d">In 3 days</option>
+                <option value="7d">In 7 days</option>
+                <option value="30d">In 30 days</option>
+              </select>
+            </label>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button type="button" class="btn-primary !px-3 !py-1.5 text-xs" data-insp-save>Save placement</button>
+              <button type="button" class="text-xs font-medium text-red-700 hover:text-red-900" data-insp-remove>
+                Take off board
+              </button>
+            </div>
+            <p class="hidden text-xs text-red-700" data-insp-error></p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="mt-6 hidden" data-lab-panel="requests">
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div>
+          <h2 class="text-sm font-semibold text-charcoal">Pending requests</h2>
+          <p class="mt-1 text-sm text-sage-dark/65">Approve by placing on the board, or reject.</p>
+          <div class="mt-4 space-y-3" data-request-list></div>
+          <p class="mt-4 hidden text-sm text-sage-dark/60" data-requests-empty>No pending requests.</p>
+        </div>
+
+        <form class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm" data-request-form>
+          <h3 class="text-sm font-semibold text-charcoal">Simulate employee submission</h3>
+          <p class="mt-1 text-xs text-sage-dark/60">For lab testing until employee submit UI exists.</p>
+          <label class="mt-4 block text-sm">
+            <span class="font-medium text-charcoal">Type</span>
+            <select name="kind" class="field mt-1" data-request-kind>
+              <option value="text">Text / sticky note</option>
+              <option value="image">Photo / poster</option>
+              <option value="pdf">PDF flyer</option>
+            </select>
+          </label>
+          <label class="mt-3 block text-sm">
+            <span class="font-medium text-charcoal">Message / caption</span>
+            <textarea name="body" class="field mt-1 min-h-[5rem] resize-y" placeholder="Have a great weekend!" data-request-body></textarea>
+          </label>
+          <label class="mt-3 block text-sm" data-request-file-wrap>
+            <span class="font-medium text-charcoal">File</span>
+            <input name="file" type="file" class="mt-1 block w-full text-sm" accept="image/*,application/pdf" data-request-file />
+          </label>
+          <button type="submit" class="btn-primary mt-4 !px-4 !py-2 text-sm">Submit request</button>
+          <p class="mt-2 hidden text-xs text-red-700" data-request-error></p>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-6 hidden" data-lab-panel="surface">
+      <h2 class="text-sm font-semibold text-charcoal">Board surface (org-wide)</h2>
+      <p class="mt-1 max-w-xl text-sm text-sage-dark/65">
+        Changing the surface updates the writing style for new pins: sticky notes on cork, chalk on blackboard,
+        marker on whiteboard.
+      </p>
+      <div class="mt-5 grid gap-3 sm:grid-cols-3" data-surface-picker>
+        {
+          [
+            { id: 'cork', label: 'Cork board', hint: 'Sticky notes + tacks' },
+            { id: 'blackboard', label: 'Blackboard', hint: 'Chalk writing' },
+            { id: 'whiteboard', label: 'Whiteboard', hint: 'Marker writing' },
+          ].map((option) => (
+            <button
+              type="button"
+              class:list={[
+                'rounded-2xl border px-4 py-4 text-left transition',
+                settings.surface === option.id
+                  ? 'border-sage-dark/40 bg-sage/15 ring-2 ring-sage-dark/20'
+                  : 'border-sage-dark/10 bg-white/80 hover:border-sage-dark/25',
+              ]}
+              data-surface-option={option.id}
+            >
+              <span class="block text-sm font-semibold text-charcoal">{option.label}</span>
+              <span class="mt-1 block text-xs text-sage-dark/60">{option.hint}</span>
+            </button>
+          ))
+        }
+      </div>
+      <p class="mt-3 text-sm text-sage-dark/70">
+        Current writing mode: <strong data-writing-mode>{writingMode}</strong>
+      </p>
+    </section>
+  </div>
+</PortalLayout>
+
+<style is:global>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap');
+
+  .board-surface[data-surface='cork'] {
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.12), transparent 35%),
+      radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.08), transparent 40%),
+      linear-gradient(135deg, #c4a574 0%, #b08958 45%, #a67c52 100%);
+  }
+
+  .board-surface[data-surface='blackboard'] {
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.05), transparent 40%),
+      linear-gradient(160deg, #1f2933 0%, #111827 55%, #0b1220 100%);
+  }
+
+  .board-surface[data-surface='whiteboard'] {
+    background:
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    box-shadow: inset 0 0 0 10px #d1d5db;
+  }
+
+  .board-pin {
+    position: absolute;
+    transform-origin: center center;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .board-pin[data-selected='true'] {
+    z-index: 50 !important;
+    outline: 2px solid rgba(58, 58, 56, 0.45);
+    outline-offset: 3px;
+  }
+
+  .board-pin[data-dragging='true'] {
+    cursor: grabbing;
+    z-index: 60 !important;
+  }
+
+  .board-pin-tack {
+    position: absolute;
+    left: 50%;
+    top: -0.35rem;
+    z-index: 2;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle at 35% 30%, #fff 0 18%, #b91c1c 19% 100%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  .board-pin-body {
+    width: 100%;
+    min-height: 4.5rem;
+    padding: 0.85rem 0.75rem 0.7rem;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .board-surface[data-surface='cork'] .board-pin-body {
+    font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+    font-size: 1.05rem;
+    line-height: 1.25;
+    color: #1f2937;
+    border-radius: 0.15rem;
+  }
+
+  .board-surface[data-surface='blackboard'] .board-pin-body {
+    font-family: 'Caveat', cursive;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    background: transparent !important;
+    box-shadow: none;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.25);
+  }
+
+  .board-surface[data-surface='blackboard'] .board-pin-tack {
+    display: none;
+  }
+
+  .board-surface[data-surface='whiteboard'] .board-pin-body {
+    font-family: 'Permanent Marker', cursive;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    background: transparent !important;
+    box-shadow: none;
+  }
+
+  .board-surface[data-surface='whiteboard'] .board-pin-tack {
+    display: none;
+  }
+
+  .board-pin-media {
+    display: block;
+    width: 100%;
+    border-radius: 0.25rem;
+    background: #fff;
+  }
+
+  .board-pin-pdf {
+    display: flex;
+    min-height: 5rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border-radius: 0.25rem;
+    background: #fff;
+    padding: 0.75rem;
+    text-align: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    color: #374151;
+  }
+</style>
+
+<script is:inline>
+  function setupBoardLab(root) {
+    let state = JSON.parse(root.dataset.payload || '{}');
+    let selectedId = null;
+    let drag = null;
+
+    const canvas = root.querySelector('[data-board-canvas]');
+    const requestList = root.querySelector('[data-request-list]');
+    const requestsEmpty = root.querySelector('[data-requests-empty]');
+    const requestCount = root.querySelector('[data-request-count]');
+    const inspectorEmpty = root.querySelector('[data-inspector-empty]');
+    const inspectorForm = root.querySelector('[data-inspector-form]');
+    const inspBody = root.querySelector('[data-insp-body]');
+    const inspColors = root.querySelector('[data-insp-colors]');
+    const inspWidth = root.querySelector('[data-insp-width]');
+    const inspWidthLabel = root.querySelector('[data-insp-width-label]');
+    const inspRotation = root.querySelector('[data-insp-rotation]');
+    const inspRotationLabel = root.querySelector('[data-insp-rotation-label]');
+    const inspExpires = root.querySelector('[data-insp-expires]');
+    const inspError = root.querySelector('[data-insp-error]');
+    const writingModeEl = root.querySelector('[data-writing-mode]');
+
+    if (!(canvas instanceof HTMLElement)) return;
+
+    const showTab = (id) => {
+      root.querySelectorAll('[data-lab-tab]').forEach((btn) => {
+        if (!(btn instanceof HTMLButtonElement)) return;
+        const active = btn.dataset.labTab === id;
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.className = active
+          ? 'rounded-full px-3.5 py-1.5 text-sm font-semibold text-charcoal bg-sage/20'
+          : 'rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70 hover:bg-sage/10';
+      });
+      root.querySelectorAll('[data-lab-panel]').forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) return;
+        panel.classList.toggle('hidden', panel.dataset.labPanel !== id);
+      });
+    };
+
+    root.querySelectorAll('[data-lab-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!(btn instanceof HTMLButtonElement)) return;
+        showTab(btn.dataset.labTab || 'board');
+      });
+    });
+    showTab('board');
+
+    async function postForm(url, data) {
+      const form = new FormData();
+      for (const [key, value] of Object.entries(data)) {
+        if (value == null) continue;
+        form.append(key, value instanceof Blob ? value : String(value));
+      }
+      const res = await fetch(url, {
+        method: 'POST',
+        body: form,
+        headers: { Accept: 'application/json' },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Request failed.');
+      return json;
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function renderPin(pin) {
+      const el = document.createElement('div');
+      el.className = 'board-pin';
+      el.dataset.pinId = pin.id;
+      el.dataset.selected = pin.id === selectedId ? 'true' : 'false';
+      el.style.left = `${pin.xPct}%`;
+      el.style.top = `${pin.yPct}%`;
+      el.style.width = `${pin.widthPct}%`;
+      el.style.zIndex = String(pin.zIndex);
+      el.style.transform = `rotate(${pin.rotationDeg}deg)`;
+
+      const tack = `<span class="board-pin-tack" aria-hidden="true"></span>`;
+      let inner = '';
+      if (pin.kind === 'text') {
+        inner = `<div class="board-pin-body" style="background:${pin.color};color:${state.surface === 'cork' ? '#1f2937' : pin.color}">${escapeHtml(pin.body || '')}</div>`;
+      } else if (pin.kind === 'image' && pin.fileUrl) {
+        inner = `<div class="board-pin-body" style="background:${state.surface === 'cork' ? '#fff7ed' : 'transparent'}"><img class="board-pin-media" src="${pin.fileUrl}" alt="" draggable="false" /></div>`;
+      } else {
+        inner = `<div class="board-pin-body" style="background:${state.surface === 'cork' ? '#fff7ed' : 'transparent'}"><a class="board-pin-pdf" href="${pin.fileUrl || '#'}" target="_blank" rel="noreferrer"><span>PDF</span><span>${escapeHtml(pin.fileName || 'Flyer')}</span></a></div>`;
+      }
+      el.innerHTML = tack + inner;
+
+      el.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        if (event.target && event.target.closest && event.target.closest('a')) return;
+        event.preventDefault();
+        selectedId = pin.id;
+        drag = {
+          id: pin.id,
+          startX: event.clientX,
+          startY: event.clientY,
+          origX: pin.xPct,
+          origY: pin.yPct,
+        };
+        el.setPointerCapture(event.pointerId);
+        el.dataset.dragging = 'true';
+        renderBoard();
+        renderInspector();
+      });
+
+      el.addEventListener('pointermove', (event) => {
+        if (!drag || drag.id !== pin.id || !(canvas instanceof HTMLElement)) return;
+        const rect = canvas.getBoundingClientRect();
+        const dx = ((event.clientX - drag.startX) / rect.width) * 100;
+        const dy = ((event.clientY - drag.startY) / rect.height) * 100;
+        pin.xPct = Math.min(92, Math.max(-4, drag.origX + dx));
+        pin.yPct = Math.min(92, Math.max(-4, drag.origY + dy));
+        el.style.left = `${pin.xPct}%`;
+        el.style.top = `${pin.yPct}%`;
+      });
+
+      const endDrag = async () => {
+        if (!drag || drag.id !== pin.id) return;
+        el.dataset.dragging = 'false';
+        drag = null;
+        try {
+          const json = await postForm('/api/bulletin-board/pins/update', {
+            id: pin.id,
+            xPct: pin.xPct,
+            yPct: pin.yPct,
+          });
+          Object.assign(pin, json.pin);
+        } catch (error) {
+          console.error(error);
+        }
+      };
+
+      el.addEventListener('pointerup', endDrag);
+      el.addEventListener('pointercancel', endDrag);
+      return el;
+    }
+
+    function renderBoard() {
+      canvas.dataset.surface = state.surface;
+      canvas.querySelectorAll('[data-pin-id]').forEach((node) => node.remove());
+      state.pins.forEach((pin) => canvas.appendChild(renderPin(pin)));
+    }
+
+    function renderRequests() {
+      if (!(requestList instanceof HTMLElement)) return;
+      requestList.innerHTML = '';
+      if (requestCount) requestCount.textContent = String(state.requests.length);
+      if (requestsEmpty instanceof HTMLElement) {
+        requestsEmpty.classList.toggle('hidden', state.requests.length > 0);
+      }
+      state.requests.forEach((request) => {
+        const card = document.createElement('article');
+        card.className = 'rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm';
+        const preview =
+          request.kind === 'text'
+            ? `<p class="mt-2 text-sm text-charcoal whitespace-pre-wrap">${escapeHtml(request.body || '')}</p>`
+            : request.kind === 'image' && request.fileUrl
+              ? `<img class="mt-2 max-h-40 rounded-lg object-cover" src="${request.fileUrl}" alt="" />`
+              : `<p class="mt-2 text-sm text-sage-dark/70">PDF: ${escapeHtml(request.fileName || 'file')}</p>`;
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-charcoal">${escapeHtml(request.submitterName)}</p>
+              <p class="text-xs uppercase tracking-[0.12em] text-sage-dark/50">${request.kind}</p>
+            </div>
+          </div>
+          ${preview}
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" class="btn-primary !px-3 !py-1.5 text-xs" data-place-request="${request.id}">Place on board</button>
+            <button type="button" class="text-xs font-medium text-red-700 hover:text-red-900" data-reject-request="${request.id}">Reject</button>
+          </div>
+        `;
+        requestList.appendChild(card);
+      });
+    }
+
+    function renderInspector() {
+      const pin = state.pins.find((item) => item.id === selectedId) ?? null;
+      if (!(inspectorEmpty instanceof HTMLElement) || !(inspectorForm instanceof HTMLElement)) return;
+      if (!pin) {
+        inspectorEmpty.classList.remove('hidden');
+        inspectorForm.classList.add('hidden');
+        return;
+      }
+      inspectorEmpty.classList.add('hidden');
+      inspectorForm.classList.remove('hidden');
+      if (inspBody instanceof HTMLTextAreaElement) {
+        inspBody.value = pin.body || '';
+        inspBody.disabled = pin.kind !== 'text';
+      }
+      if (inspWidth instanceof HTMLInputElement) {
+        inspWidth.value = String(Math.round(pin.widthPct));
+      }
+      if (inspWidthLabel) inspWidthLabel.textContent = String(Math.round(pin.widthPct));
+      if (inspRotation instanceof HTMLInputElement) {
+        inspRotation.value = String(Math.round(pin.rotationDeg));
+      }
+      if (inspRotationLabel) inspRotationLabel.textContent = String(Math.round(pin.rotationDeg));
+      if (inspExpires instanceof HTMLSelectElement) {
+        inspExpires.value = '';
+      }
+      if (inspColors instanceof HTMLElement) {
+        inspColors.innerHTML = '';
+        state.colors.forEach((color) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className =
+            'h-7 w-7 rounded-full ring-1 ring-black/10 ' +
+            (color === pin.color ? 'ring-2 ring-offset-2 ring-charcoal' : '');
+          btn.style.background = color;
+          btn.addEventListener('click', () => {
+            pin.color = color;
+            renderBoard();
+            renderInspector();
+          });
+          inspColors.appendChild(btn);
+        });
+      }
+      if (inspError instanceof HTMLElement) {
+        inspError.classList.add('hidden');
+        inspError.textContent = '';
+      }
+    }
+
+    inspWidth?.addEventListener('input', () => {
+      const pin = state.pins.find((item) => item.id === selectedId);
+      if (!pin || !(inspWidth instanceof HTMLInputElement)) return;
+      pin.widthPct = Number(inspWidth.value);
+      if (inspWidthLabel) inspWidthLabel.textContent = inspWidth.value;
+      renderBoard();
+    });
+
+    inspRotation?.addEventListener('input', () => {
+      const pin = state.pins.find((item) => item.id === selectedId);
+      if (!pin || !(inspRotation instanceof HTMLInputElement)) return;
+      pin.rotationDeg = Number(inspRotation.value);
+      if (inspRotationLabel) inspRotationLabel.textContent = inspRotation.value;
+      renderBoard();
+    });
+
+    root.querySelector('[data-insp-save]')?.addEventListener('click', async () => {
+      const pin = state.pins.find((item) => item.id === selectedId);
+      if (!pin) return;
+      const expiresValue = inspExpires instanceof HTMLSelectElement ? inspExpires.value : '';
+      let expiresAt = null;
+      let clearExpires = false;
+      if (!expiresValue) clearExpires = true;
+      else {
+        const days = Number(expiresValue.replace('d', ''));
+        expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
+      }
+      try {
+        const json = await postForm('/api/bulletin-board/pins/update', {
+          id: pin.id,
+          body: inspBody instanceof HTMLTextAreaElement ? inspBody.value : pin.body,
+          color: pin.color,
+          widthPct: pin.widthPct,
+          rotationDeg: pin.rotationDeg,
+          xPct: pin.xPct,
+          yPct: pin.yPct,
+          clearExpires: clearExpires ? '1' : '0',
+          expiresAt,
+        });
+        Object.assign(pin, json.pin);
+        renderBoard();
+        renderInspector();
+      } catch (error) {
+        if (inspError instanceof HTMLElement) {
+          inspError.textContent = error instanceof Error ? error.message : 'Save failed.';
+          inspError.classList.remove('hidden');
+        }
+      }
+    });
+
+    root.querySelector('[data-insp-remove]')?.addEventListener('click', async () => {
+      const pin = state.pins.find((item) => item.id === selectedId);
+      if (!pin) return;
+      if (!confirm('Take this off the board?')) return;
+      await postForm('/api/bulletin-board/pins/remove', { id: pin.id });
+      state.pins = state.pins.filter((item) => item.id !== pin.id);
+      selectedId = null;
+      renderBoard();
+      renderInspector();
+    });
+
+    requestList?.addEventListener('click', async (event) => {
+      const target = event.target instanceof Element ? event.target : event.target.parentElement;
+      if (!target) return;
+      const placeId = target.closest('[data-place-request]')?.getAttribute('data-place-request');
+      const rejectId = target.closest('[data-reject-request]')?.getAttribute('data-reject-request');
+      if (placeId) {
+        const json = await postForm('/api/bulletin-board/pins/place', {
+          requestId: placeId,
+          color: state.colors[0],
+          rotationDeg: Math.round(Math.random() * 10 - 5),
+        });
+        state.pins.push(json.pin);
+        state.requests = state.requests.filter((item) => item.id !== placeId);
+        selectedId = json.pin.id;
+        renderRequests();
+        renderBoard();
+        renderInspector();
+        showTab('board');
+      }
+      if (rejectId) {
+        await postForm('/api/bulletin-board/requests/reject', { id: rejectId });
+        state.requests = state.requests.filter((item) => item.id !== rejectId);
+        renderRequests();
+      }
+    });
+
+    const requestForm = root.querySelector('[data-request-form]');
+    const requestKind = root.querySelector('[data-request-kind]');
+    const requestFileWrap = root.querySelector('[data-request-file-wrap]');
+    const requestError = root.querySelector('[data-request-error]');
+
+    const syncRequestKind = () => {
+      if (!(requestKind instanceof HTMLSelectElement) || !(requestFileWrap instanceof HTMLElement)) return;
+      requestFileWrap.classList.toggle('hidden', requestKind.value === 'text');
+    };
+    requestKind?.addEventListener('change', syncRequestKind);
+    syncRequestKind();
+
+    requestForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(requestForm instanceof HTMLFormElement)) return;
+      if (requestError instanceof HTMLElement) requestError.classList.add('hidden');
+      const form = new FormData(requestForm);
+      try {
+        const res = await fetch('/api/bulletin-board/requests/create', {
+          method: 'POST',
+          body: form,
+          headers: { Accept: 'application/json' },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Could not submit.');
+        state.requests.unshift(json.request);
+        requestForm.reset();
+        syncRequestKind();
+        renderRequests();
+      } catch (error) {
+        if (requestError instanceof HTMLElement) {
+          requestError.textContent = error instanceof Error ? error.message : 'Submit failed.';
+          requestError.classList.remove('hidden');
+        }
+      }
+    });
+
+    root.querySelectorAll('[data-surface-option]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!(btn instanceof HTMLButtonElement)) return;
+        const surface = btn.dataset.surfaceOption;
+        if (!surface) return;
+        const json = await postForm('/api/bulletin-board/surface', { surface });
+        state.surface = json.surface;
+        state.writingMode =
+          surface === 'blackboard' ? 'chalk' : surface === 'whiteboard' ? 'marker' : 'sticky';
+        state.colors =
+          surface === 'blackboard'
+            ? ['#f8fafc', '#fde68a', '#a5f3fc', '#f9a8d4', '#d9f99d']
+            : surface === 'whiteboard'
+              ? ['#111827', '#1d4ed8', '#dc2626', '#15803d', '#7c3aed']
+              : ['#fef3c7', '#fecdd3', '#bfdbfe', '#bbf7d0', '#f5f5f4'];
+        if (writingModeEl) writingModeEl.textContent = state.writingMode;
+        root.querySelectorAll('[data-surface-option]').forEach((node) => {
+          if (!(node instanceof HTMLButtonElement)) return;
+          const active = node.dataset.surfaceOption === surface;
+          node.className = active
+            ? 'rounded-2xl border border-sage-dark/40 bg-sage/15 px-4 py-4 text-left ring-2 ring-sage-dark/20 transition'
+            : 'rounded-2xl border border-sage-dark/10 bg-white/80 px-4 py-4 text-left transition hover:border-sage-dark/25';
+        });
+        renderBoard();
+        renderInspector();
+      });
+    });
+
+    root.querySelector('[data-add-direct-note]')?.addEventListener('click', async () => {
+      const body = prompt('Write a note to place on the board');
+      if (!body) return;
+      const form = new FormData();
+      form.append('kind', 'text');
+      form.append('body', body);
+      const createRes = await fetch('/api/bulletin-board/requests/create', {
+        method: 'POST',
+        body: form,
+        headers: { Accept: 'application/json' },
+      });
+      const created = await createRes.json();
+      if (!createRes.ok) {
+        alert(created.error || 'Could not create note.');
+        return;
+      }
+      const place = await postForm('/api/bulletin-board/pins/place', {
+        requestId: created.request.id,
+        color: state.colors[0],
+        rotationDeg: Math.round(Math.random() * 8 - 4),
+      });
+      state.pins.push(place.pin);
+      selectedId = place.pin.id;
+      renderBoard();
+      renderInspector();
+    });
+
+    renderBoard();
+    renderRequests();
+    renderInspector();
+  }
+
+  document.querySelectorAll('[data-board-lab]').forEach((root) => {
+    if (root instanceof HTMLElement) setupBoardLab(root);
+  });
+</script>

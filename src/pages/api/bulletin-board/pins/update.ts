@@ -1,0 +1,38 @@
+import type { APIRoute } from 'astro';
+import { serializePin, updateBulletinBoardPin } from '../../../../lib/bulletin-board';
+import { requirePortalOwner } from '../../../../lib/owner-access';
+
+export const prerender = false;
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const denied = requirePortalOwner(locals.employee);
+  if (denied) return denied;
+
+  const form = await request.formData();
+  const clearExpires = String(form.get('clearExpires') ?? '') === '1';
+  const expiresRaw = String(form.get('expiresAt') ?? '').trim();
+
+  try {
+    const pin = await updateBulletinBoardPin({
+      id: String(form.get('id') ?? '').trim(),
+      xPct: form.has('xPct') ? Number(form.get('xPct')) : undefined,
+      yPct: form.has('yPct') ? Number(form.get('yPct')) : undefined,
+      widthPct: form.has('widthPct') ? Number(form.get('widthPct')) : undefined,
+      rotationDeg: form.has('rotationDeg') ? Number(form.get('rotationDeg')) : undefined,
+      color: form.has('color') ? String(form.get('color') ?? '') : undefined,
+      body: form.has('body') ? String(form.get('body') ?? '') : undefined,
+      clearExpires,
+      expiresAt: !clearExpires && expiresRaw ? Number(expiresRaw) : undefined,
+    });
+    return new Response(JSON.stringify({ ok: true, pin: serializePin(pin) }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not update pin.';
+    return new Response(JSON.stringify({ error: message }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+};
