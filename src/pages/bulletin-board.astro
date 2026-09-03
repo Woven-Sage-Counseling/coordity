@@ -54,40 +54,36 @@ const payload = {
     Board lab
   </p>
 
-  <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Board lab</h1>
-      <p class="mt-3 max-w-2xl text-sage-dark/75">
-        Private draft of the Home board. Try layouts, notes, and surfaces here — nothing changes on
-        Home until you click Update board.
-      </p>
+  <div data-board-lab data-payload={JSON.stringify(payload)}>
+    <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Board lab</h1>
+        <p class="mt-3 max-w-2xl text-sage-dark/75">
+          Private draft of the Home board. Try layouts, notes, and surfaces here — nothing changes on
+          Home until you click Update board.
+        </p>
+      </div>
+      <div class="flex flex-col items-end gap-2">
+        <p
+          class:list={[
+            'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]',
+            hasUnpublishedChanges
+              ? 'border-amber-300/70 bg-amber-50 text-amber-900'
+              : 'border-sage-dark/15 bg-white/80 text-sage-dark/70',
+          ]}
+          data-draft-badge
+        >
+          {hasUnpublishedChanges ? 'Draft / unpublished changes' : 'Draft matches live board'}
+        </p>
+        <button type="button" class="btn-primary !px-4 !py-2 text-sm" data-publish-board>
+          Update board
+        </button>
+        <p class="hidden max-w-xs text-right text-xs text-sage-dark/60" data-publish-status></p>
+        <p class="hidden max-w-xs text-right text-xs text-red-700" data-publish-error></p>
+      </div>
     </div>
-    <div class="flex flex-col items-end gap-2">
-      <p
-        class:list={[
-          'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]',
-          hasUnpublishedChanges
-            ? 'border-amber-300/70 bg-amber-50 text-amber-900'
-            : 'border-sage-dark/15 bg-white/80 text-sage-dark/70',
-        ]}
-        data-draft-badge
-      >
-        {hasUnpublishedChanges ? 'Draft / unpublished changes' : 'Draft matches live board'}
-      </p>
-      <button type="button" class="btn-primary !px-4 !py-2 text-sm" data-publish-board>
-        Update board
-      </button>
-      <p class="hidden max-w-xs text-right text-xs text-sage-dark/60" data-publish-status></p>
-      <p class="hidden max-w-xs text-right text-xs text-red-700" data-publish-error></p>
-    </div>
-  </div>
 
-  <div
-    class="mt-8"
-    data-board-lab
-    data-payload={JSON.stringify(payload)}
-  >
-    <div class="flex flex-wrap gap-2 border-b border-sage-dark/10 pb-3" role="tablist" aria-label="Board lab sections">
+    <div class="mt-8 flex flex-wrap gap-2 border-b border-sage-dark/10 pb-3" role="tablist" aria-label="Board lab sections">
       <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-semibold" data-lab-tab="board" aria-selected="true">
         Admin board
       </button>
