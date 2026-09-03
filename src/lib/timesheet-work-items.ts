@@ -8,7 +8,9 @@ import {
   TIMESHEET_WORK_CATEGORIES,
   type TimesheetWorkCategoryKey,
 } from './timesheet-categories';
-import { parseHoursInput } from './timesheet';
+
+/** Each row marks that a category was worked during that shift (not hour allocation). */
+export const WORK_ITEM_OCCURRENCE = 1;
 
 export interface TimesheetShiftWorkItem {
   id: string;
@@ -21,8 +23,8 @@ export interface TimesheetShiftWorkItem {
 export interface TimesheetWorkBreakdownSlice {
   category: TimesheetWorkCategoryKey | 'uncategorized';
   label: string;
-  minutes: number;
-  hoursLabel: string;
+  count: number;
+  frequencyLabel: string;
   percent: number;
   color: string;
 }
@@ -30,9 +32,10 @@ export interface TimesheetWorkBreakdownSlice {
 export interface TimesheetWorkBreakdown {
   start: string;
   end: string;
-  totalMinutes: number;
-  categorizedMinutes: number;
-  uncategorizedMinutes: number;
+  totalShiftMinutes: number;
+  taggedShiftCount: number;
+  untaggedShiftCount: number;
+  totalOccurrences: number;
   slices: TimesheetWorkBreakdownSlice[];
 }
 
@@ -56,6 +59,10 @@ function mapWorkItem(row: WorkItemRow): TimesheetShiftWorkItem {
   };
 }
 
+function formatFrequencyLabel(count: number): string {
+  return count === 1 ? '1 day' : `${count} days`;
+}
+
 export function serializeWorkItem(item: TimesheetShiftWorkItem) {
   const category = getTimesheetWorkCategory(item.category);
   return {
@@ -65,7 +72,6 @@ export function serializeWorkItem(item: TimesheetShiftWorkItem) {
     label: category?.label ?? item.category,
     color: category?.color ?? UNCATEGORIZED_COLOR,
     minutes: item.minutes,
-    hoursLabel: formatHours(item.minutes),
   };
 }
 
@@ -75,7 +81,7 @@ export async function listWorkItemsForShift(shiftId: string): Promise<TimesheetS
     `SELECT id, shift_id, category, minutes, created_at
      FROM timesheet_shift_work_item
      WHERE shift_id = ?
-     ORDER BY minutes DESC, category ASC`,
+     ORDER BY category ASC`,
   )
     .bind(shiftId)
     .all<WorkItemRow>();
@@ -95,7 +101,7 @@ export async function listWorkItemsForShifts(
     `SELECT id, shift_id, category, minutes, created_at
      FROM timesheet_shift_work_item
      WHERE shift_id IN (${placeholders})
-     ORDER BY minutes DESC, category ASC`,
+     ORDER BY category ASC`,
   )
     .bind(...shiftIds)
     .all<WorkItemRow>();
@@ -110,31 +116,21 @@ export async function listWorkItemsForShifts(
   return map;
 }
 
-export function parseWorkItemsForm(form: FormData): Array<{ category: TimesheetWorkCategoryKey; minutes: number }> {
-  const categories = form.getAll('category').map((value) => String(value).trim());
-  const hours = form.getAll('hours').map((value) => String(value).trim());
-  const items: Array<{ category: TimesheetWorkCategoryKey; minutes: number }> = [];
+export function parseWorkItemsForm(form: FormData): Array<{ category: TimesheetWorkCategoryKey }> {
+  const categories = form
+    .getAll('category')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const items: Array<{ category: TimesheetWorkCategoryKey }> = [];
   const seen = new Set<string>();
 
-  for (let index = 0; index < categories.length; index += 1) {
-    const category = categories[index];
-    const hoursValue = hours[index] ?? '';
-    if (!category && !hoursValue) continue;
-
+  for (const category of categories) {
     if (!isTimesheetWorkCategory(category)) {
-      throw new Error('Choose a valid work category.');
+      throw new Error('Choose valid work categories.');
     }
-    if (seen.has(category)) {
-      throw new Error('Each work category can only be added once per shift.');
-    }
-
-    const minutes = parseHoursInput(hoursValue);
-    if (minutes <= 0) {
-      throw new Error('Enter hours greater than zero for each work item.');
-    }
-
+    if (seen.has(category)) continue;
     seen.add(category);
-    items.push({ category, minutes });
+    items.push({ category });
   }
 
   return items;
@@ -143,27 +139,22 @@ export function parseWorkItemsForm(form: FormData): Array<{ category: TimesheetW
 export async function setShiftWorkItems(input: {
   userId: string;
   shiftId: string;
-  items: Array<{ category: TimesheetWorkCategoryKey; minutes: number }>;
+  items: Array<{ category: TimesheetWorkCategoryKey }>;
 }): Promise<TimesheetShiftWorkItem[]> {
   const { DB } = getEnv();
   const shift = await DB.prepare(
-    `SELECT id, user_id, minutes, ended_at
+    `SELECT id, user_id, ended_at
      FROM timesheet_shift
      WHERE id = ? AND user_id = ?`,
   )
     .bind(input.shiftId, input.userId)
-    .first<{ id: string; user_id: string; minutes: number; ended_at: number | null }>();
+    .first<{ id: string; user_id: string; ended_at: number | null }>();
 
   if (!shift) {
     throw new Error('Shift not found.');
   }
   if (shift.ended_at == null) {
-    throw new Error('End your shift before adding work items.');
-  }
-
-  const totalMinutes = input.items.reduce((sum, item) => sum + item.minutes, 0);
-  if (totalMinutes > shift.minutes) {
-    throw new Error('Work item hours cannot exceed the shift total.');
+    throw new Error('End your shift before logging work items.');
   }
 
   await DB.prepare(`DELETE FROM timesheet_shift_work_item WHERE shift_id = ?`).bind(input.shiftId).run();
@@ -174,7 +165,7 @@ export async function setShiftWorkItems(input: {
       `INSERT INTO timesheet_shift_work_item (id, shift_id, category, minutes, created_at)
        VALUES (?, ?, ?, ?, ?)`,
     )
-      .bind(randomToken(16), input.shiftId, item.category, item.minutes, now)
+      .bind(randomToken(16), input.shiftId, item.category, WORK_ITEM_OCCURRENCE, now)
       .run();
   }
 
@@ -189,7 +180,7 @@ export async function getWorkBreakdownByCategory(
 
   const [itemRows, shiftRows] = await Promise.all([
     DB.prepare(
-      `SELECT wi.category, SUM(wi.minutes) AS minutes
+      `SELECT wi.category, COUNT(*) AS occurrence_count
        FROM timesheet_shift_work_item wi
        INNER JOIN timesheet_shift s ON s.id = wi.shift_id
        WHERE s.user_id = ?
@@ -199,56 +190,57 @@ export async function getWorkBreakdownByCategory(
        GROUP BY wi.category`,
     )
       .bind(userId, range.start, range.end)
-      .all<{ category: string; minutes: number }>(),
+      .all<{ category: string; occurrence_count: number }>(),
     DB.prepare(
-      `SELECT minutes
-       FROM timesheet_shift
-       WHERE user_id = ?
-         AND work_date >= ?
-         AND work_date <= ?
-         AND ended_at IS NOT NULL`,
+      `SELECT s.id, s.minutes,
+        EXISTS (
+          SELECT 1 FROM timesheet_shift_work_item wi WHERE wi.shift_id = s.id
+        ) AS has_items
+       FROM timesheet_shift s
+       WHERE s.user_id = ?
+         AND s.work_date >= ?
+         AND s.work_date <= ?
+         AND s.ended_at IS NOT NULL`,
     )
       .bind(userId, range.start, range.end)
-      .all<{ minutes: number }>(),
+      .all<{ id: string; minutes: number; has_items: number }>(),
   ]);
 
-  const totalMinutes = (shiftRows.results ?? []).reduce((sum, row) => sum + row.minutes, 0);
-  const categorizedMinutes = (itemRows.results ?? []).reduce((sum, row) => sum + row.minutes, 0);
-  const uncategorizedMinutes = Math.max(0, totalMinutes - categorizedMinutes);
+  const shifts = shiftRows.results ?? [];
+  const totalShiftMinutes = shifts.reduce((sum, row) => sum + row.minutes, 0);
+  const taggedShiftCount = shifts.filter((row) => row.has_items === 1).length;
+  const untaggedShiftCount = shifts.length - taggedShiftCount;
 
   const slices: TimesheetWorkBreakdownSlice[] = (itemRows.results ?? [])
-    .filter((row) => row.minutes > 0 && isTimesheetWorkCategory(row.category))
+    .filter((row) => row.occurrence_count > 0 && isTimesheetWorkCategory(row.category))
     .map((row) => {
       const category = row.category as TimesheetWorkCategoryKey;
       const meta = getTimesheetWorkCategory(category)!;
+      const count = row.occurrence_count;
       return {
         category,
         label: meta.label,
-        minutes: row.minutes,
-        hoursLabel: formatHours(row.minutes),
-        percent: totalMinutes > 0 ? Math.round((row.minutes / totalMinutes) * 1000) / 10 : 0,
+        count,
+        frequencyLabel: formatFrequencyLabel(count),
+        percent: 0,
         color: meta.color,
       };
     })
-    .sort((a, b) => b.minutes - a.minutes);
+    .sort((a, b) => b.count - a.count);
 
-  if (uncategorizedMinutes > 0) {
-    slices.push({
-      category: 'uncategorized',
-      label: 'Uncategorized',
-      minutes: uncategorizedMinutes,
-      hoursLabel: formatHours(uncategorizedMinutes),
-      percent: totalMinutes > 0 ? Math.round((uncategorizedMinutes / totalMinutes) * 1000) / 10 : 0,
-      color: UNCATEGORIZED_COLOR,
-    });
+  const totalOccurrences = slices.reduce((sum, slice) => sum + slice.count, 0);
+  for (const slice of slices) {
+    slice.percent =
+      totalOccurrences > 0 ? Math.round((slice.count / totalOccurrences) * 1000) / 10 : 0;
   }
 
   return {
     start: range.start,
     end: range.end,
-    totalMinutes,
-    categorizedMinutes,
-    uncategorizedMinutes,
+    totalShiftMinutes,
+    taggedShiftCount,
+    untaggedShiftCount,
+    totalOccurrences,
     slices,
   };
 }
@@ -264,12 +256,11 @@ export function workCategoryOptions() {
 export function serializeWorkBreakdown(breakdown: TimesheetWorkBreakdown) {
   return {
     ...breakdown,
-    totalLabel: formatHours(breakdown.totalMinutes),
-    categorizedLabel: formatHours(breakdown.categorizedMinutes),
-    uncategorizedLabel: formatHours(breakdown.uncategorizedMinutes),
+    totalHoursLabel: formatHours(breakdown.totalShiftMinutes),
     slices: breakdown.slices.map((slice) => ({
       ...slice,
-      hoursLabel: formatHours(slice.minutes),
+      minutes: slice.count,
+      hoursLabel: slice.frequencyLabel,
     })),
   };
 }

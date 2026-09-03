@@ -82,9 +82,8 @@ function mapShift(row: ShiftRow, workItems: TimesheetShiftWorkItem[] = []): Time
 
 export function serializeTimesheetShift(shift: TimesheetShift, options: { pendingEdit?: boolean } = {}) {
   const isActive = shift.source === 'clock' && shift.endedAt == null;
-  const workItems = shift.workItems.map(serializeWorkItem);
-  const allocatedMinutes = workItems.reduce((sum, item) => sum + item.minutes, 0);
   const canRequestEdit = !isActive && shift.startedAt != null && shift.endedAt != null;
+  const workItems = shift.workItems.map(serializeWorkItem);
   return {
     id: shift.id,
     workDate: shift.workDate,
@@ -98,9 +97,6 @@ export function serializeTimesheetShift(shift: TimesheetShift, options: { pendin
     canRequestEdit,
     hasPendingEdit: options.pendingEdit ?? false,
     workItems,
-    allocatedMinutes,
-    unallocatedMinutes: Math.max(0, shift.minutes - allocatedMinutes),
-    unallocatedLabel: formatHours(Math.max(0, shift.minutes - allocatedMinutes)),
     timeLabel:
       shift.source === 'backlog'
         ? shift.startedAt != null && shift.endedAt != null

@@ -10,7 +10,6 @@ import {
   minutesBetween,
 } from './timesheet';
 import { applyApprovedShiftEdit, getShiftForUser } from './timesheet-entries';
-import { listWorkItemsForShift } from './timesheet-work-items';
 
 export type TimesheetShiftEditStatus = 'pending' | 'approved' | 'denied';
 
@@ -263,14 +262,6 @@ export async function reviewTimesheetShiftEditRequest(
   const reviewedAt = nowMs();
 
   if (status === 'approved') {
-    const workItems = await listWorkItemsForShift(existing.shift_id);
-    const allocatedMinutes = workItems.reduce((sum, item) => sum + item.minutes, 0);
-    if (allocatedMinutes > existing.minutes) {
-      throw new Error(
-        'Approved hours would be less than allocated work items. Ask the employee to adjust work items first.',
-      );
-    }
-
     await applyApprovedShiftEdit({
       shiftId: existing.shift_id,
       userId: existing.user_id,

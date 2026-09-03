@@ -20,7 +20,7 @@ const breakdown = await getWorkBreakdownByCategory(employee.id, {
 });
 const serialized = serializeWorkBreakdown(breakdown);
 const pieSlices: PieSlicePath[] = buildPieSlices(serialized.slices);
-const hasData = serialized.totalMinutes > 0;
+const hasData = serialized.slices.length > 0;
 ---
 
 <PortalLayout title="Work breakdown" wide>
@@ -36,7 +36,7 @@ const hasData = serialized.totalMinutes > 0;
     <div>
       <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Work breakdown</h1>
       <p class="mt-3 max-w-2xl text-sage-dark/75">
-        See how your logged hours are distributed across work categories.
+        See how often you worked on each category across completed shifts in this period.
       </p>
     </div>
     <a href="/timesheet" class="btn-secondary !px-4 !py-2 text-sm">Back to timesheet</a>
@@ -49,20 +49,20 @@ const hasData = serialized.totalMinutes > 0;
 
   <section class="mt-8 grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
     <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Total hours</p>
-      <p class="mt-2 text-4xl font-semibold text-charcoal">{serialized.totalLabel}</p>
+      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Logged hours</p>
+      <p class="mt-2 text-4xl font-semibold text-charcoal">{serialized.totalHoursLabel}</p>
       <p class="mt-2 text-sm text-sage-dark/70">
-        {serialized.categorizedLabel} categorized
+        {serialized.taggedShiftCount} shift{serialized.taggedShiftCount === 1 ? '' : 's'} with work items
         {
-          serialized.uncategorizedMinutes > 0 ? (
-            <span> · {serialized.uncategorizedLabel} uncategorized</span>
+          serialized.untaggedShiftCount > 0 ? (
+            <span> · {serialized.untaggedShiftCount} without items</span>
           ) : null
         }
       </p>
     </article>
 
     <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
-      <h2 class="text-sm font-semibold text-charcoal">By category</h2>
+      <h2 class="text-sm font-semibold text-charcoal">By category (days worked)</h2>
       {
         hasData && pieSlices.length > 0 ? (
           <div class="mt-4 flex flex-col items-center gap-6 md:flex-row md:items-start">
@@ -70,7 +70,7 @@ const hasData = serialized.totalMinutes > 0;
               {
                 pieSlices.map((slice) => (
                   <path d={slice.path} fill={slice.color} stroke="#ffffff" stroke-width="1.5">
-                    <title>{slice.label}: {slice.hoursLabel ?? ''} ({slice.percent}%)</title>
+                    <title>{slice.label}: {slice.hoursLabel} ({slice.percent}%)</title>
                   </path>
                 ))
               }
@@ -94,7 +94,7 @@ const hasData = serialized.totalMinutes > 0;
           </div>
         ) : (
           <p class="mt-4 text-sm text-sage-dark/70">
-            No completed shifts in this period. Log hours on the timesheet and add work items to see your breakdown.
+            No work items in this period. Log shifts on the timesheet and check the categories you worked on each day.
           </p>
         )
       }

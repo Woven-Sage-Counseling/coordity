@@ -222,7 +222,6 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                       !serializedEntry.isActive ? (
                         <TimesheetShiftWorkItems
                           shiftId={entry.id}
-                          minutes={entry.minutes}
                           workItems={entry.workItems}
                           canEdit={serializedEntry.canEditWorkItems}
                         />
