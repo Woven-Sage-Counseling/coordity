@@ -7,6 +7,7 @@ export const TIMESHEET_WORK_CATEGORIES = [
   { key: 'marketing', label: 'Marketing', color: '#ca8a04' },
   { key: 'banking', label: 'Banking', color: '#0891b2' },
   { key: 'credentialing', label: 'Credentialing', color: '#4f46e5' },
+  { key: 'hr', label: 'HR', color: '#be185d' },
   { key: 'incorporation_documents', label: 'Incorporation Documents', color: '#78716c' },
   { key: 'operating_agreements', label: 'Operating Agreements', color: '#57534e' },
   { key: 'training', label: 'Training', color: '#059669' },
