@@ -106,6 +106,10 @@
   display: none;
 }
 
+.board-pin-body[data-font-size] {
+  font-size: var(--board-font-size) !important;
+}
+
 .board-pin-media {
   display: block;
   width: 100%;

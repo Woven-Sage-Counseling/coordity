@@ -34,8 +34,8 @@ const writingMode = writingModeForSurface(settings.surface);
         const expandable = pin.kind === 'image' || pin.kind === 'pdf' || Boolean(pin.body && pin.body.length > 80);
         const bodyStyle =
           settings.surface === 'cork'
-            ? `background:${pin.color};color:#1f2937`
-            : `background:transparent;color:${pin.color}`;
+            ? `background:${pin.color};color:#1f2937;--board-font-size:${pin.fontSizeRem}rem`
+            : `background:transparent;color:${pin.color};--board-font-size:${pin.fontSizeRem}rem`;
         return (
           <div
             class="board-pin"
@@ -50,7 +50,7 @@ const writingMode = writingModeForSurface(settings.surface);
             <span class="board-pin-tack" aria-hidden="true" />
             {
               pin.kind === 'text' ? (
-                <div class="board-pin-body whitespace-pre-wrap" style={bodyStyle} set:html={linkifyHtml(pin.body || '')} />
+                <div class="board-pin-body whitespace-pre-wrap" data-font-size style={bodyStyle} set:html={linkifyHtml(pin.body || '')} />
               ) : pin.kind === 'image' && pin.fileUrl ? (
                 <div class="board-pin-body" style={settings.surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
                   <img class="board-pin-media" src={pin.fileUrl} alt="" draggable="false" />

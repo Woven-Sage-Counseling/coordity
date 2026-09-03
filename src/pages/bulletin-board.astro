@@ -106,6 +106,10 @@ const payload = {
               <span class="font-medium text-charcoal">Color</span>
               <div class="mt-2 flex flex-wrap gap-2" data-insp-colors></div>
             </label>
+            <label class="block text-sm" data-insp-font-wrap>
+              <span class="font-medium text-charcoal">Font size (<span data-insp-font-label>1.05</span>rem)</span>
+              <input class="mt-2 w-full" type="range" min="0.7" max="2.5" step="0.05" data-insp-font />
+            </label>
             <label class="block text-sm">
               <span class="font-medium text-charcoal">Width (<span data-insp-width-label>22</span>%)</span>
               <input class="mt-2 w-full" type="range" min="10" max="55" step="1" data-insp-width />
@@ -236,6 +240,9 @@ const payload = {
     const inspectorForm = root.querySelector('[data-inspector-form]');
     const inspBody = root.querySelector('[data-insp-body]');
     const inspColors = root.querySelector('[data-insp-colors]');
+    const inspFont = root.querySelector('[data-insp-font]');
+    const inspFontLabel = root.querySelector('[data-insp-font-label]');
+    const inspFontWrap = root.querySelector('[data-insp-font-wrap]');
     const inspWidth = root.querySelector('[data-insp-width]');
     const inspWidthLabel = root.querySelector('[data-insp-width-label]');
     const inspRotation = root.querySelector('[data-insp-rotation]');
@@ -351,7 +358,8 @@ const payload = {
       const tack = `<span class="board-pin-tack" aria-hidden="true"></span>`;
       let inner = '';
       if (pin.kind === 'text') {
-        inner = `<div class="board-pin-body whitespace-pre-wrap" style="background:${pin.color};color:${state.surface === 'cork' ? '#1f2937' : pin.color}">${linkifyHtml(pin.body || '')}</div>`;
+        const fontSize = Number(pin.fontSizeRem) || 1.05;
+        inner = `<div class="board-pin-body whitespace-pre-wrap" data-font-size style="--board-font-size:${fontSize}rem;background:${pin.color};color:${state.surface === 'cork' ? '#1f2937' : pin.color}">${linkifyHtml(pin.body || '')}</div>`;
       } else if (pin.kind === 'image' && pin.fileUrl) {
         inner = `<div class="board-pin-body" style="background:${state.surface === 'cork' ? '#fff7ed' : 'transparent'}"><img class="board-pin-media" src="${pin.fileUrl}" alt="" draggable="false" /></div>`;
       } else {
@@ -475,6 +483,15 @@ const payload = {
         inspBody.value = pin.body || '';
         inspBody.disabled = pin.kind !== 'text';
       }
+      if (inspFontWrap instanceof HTMLElement) {
+        inspFontWrap.classList.toggle('hidden', pin.kind !== 'text');
+      }
+      if (inspFont instanceof HTMLInputElement) {
+        inspFont.value = String(Number(pin.fontSizeRem) || 1.05);
+      }
+      if (inspFontLabel) {
+        inspFontLabel.textContent = (Number(pin.fontSizeRem) || 1.05).toFixed(2);
+      }
       if (inspWidth instanceof HTMLInputElement) {
         inspWidth.value = String(Math.round(pin.widthPct));
       }
@@ -517,6 +534,14 @@ const payload = {
       renderBoard();
     });
 
+    inspFont?.addEventListener('input', () => {
+      const pin = state.pins.find((item) => item.id === selectedId);
+      if (!pin || !(inspFont instanceof HTMLInputElement)) return;
+      pin.fontSizeRem = Number(inspFont.value);
+      if (inspFontLabel) inspFontLabel.textContent = Number(inspFont.value).toFixed(2);
+      renderBoard();
+    });
+
     inspRotation?.addEventListener('input', () => {
       const pin = state.pins.find((item) => item.id === selectedId);
       if (!pin || !(inspRotation instanceof HTMLInputElement)) return;
@@ -541,6 +566,7 @@ const payload = {
           id: pin.id,
           body: inspBody instanceof HTMLTextAreaElement ? inspBody.value : pin.body,
           color: pin.color,
+          fontSizeRem: pin.fontSizeRem,
           widthPct: pin.widthPct,
           rotationDeg: pin.rotationDeg,
           xPct: pin.xPct,

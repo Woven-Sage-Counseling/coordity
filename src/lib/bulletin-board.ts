@@ -21,6 +21,15 @@ export function defaultColorForSurface(surface: BulletinSurface): string {
   return BULLETIN_COLORS[surface][0]!;
 }
 
+export function defaultFontSizeForSurface(surface: BulletinSurface): number {
+  if (surface === 'blackboard') return 1.35;
+  return 1.05;
+}
+
+export function clampFontSizeRem(value: number): number {
+  return clamp(value, 0.65, 2.8);
+}
+
 /** Map a pin color onto the active surface palette (by palette index). */
 export function mapColorToSurface(color: string, surface: BulletinSurface): string {
   const normalized = color.trim().toLowerCase();
@@ -82,6 +91,7 @@ export interface BulletinBoardPin {
   widthPct: number;
   rotationDeg: number;
   color: string;
+  fontSizeRem: number;
   zIndex: number;
   expiresAt: number | null;
   active: boolean;
@@ -121,6 +131,7 @@ type PinRow = {
   width_pct: number;
   rotation_deg: number;
   color: string;
+  font_size_rem: number | null;
   z_index: number;
   expires_at: number | null;
   active: number;
@@ -163,6 +174,11 @@ function mapPin(row: PinRow): BulletinBoardPin {
     widthPct: row.width_pct,
     rotationDeg: row.rotation_deg,
     color: row.color,
+    fontSizeRem: clampFontSizeRem(
+      typeof row.font_size_rem === 'number' && Number.isFinite(row.font_size_rem)
+        ? row.font_size_rem
+        : 1.05,
+    ),
     zIndex: row.z_index,
     expiresAt: row.expires_at,
     active: row.active === 1,
@@ -339,7 +355,7 @@ export async function listBulletinBoardPins(orgId = DEFAULT_ORG_ID): Promise<Bul
   const rows = await DB.prepare(
     `SELECT id, org_id, request_id, kind, body, file_name, file_mime,
             CASE WHEN file_data IS NOT NULL AND file_data != '' THEN 1 ELSE 0 END AS has_file,
-            x_pct, y_pct, width_pct, rotation_deg, color, z_index, expires_at, active,
+            x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
             created_by, created_at, updated_at
      FROM bulletin_board_pin
      WHERE org_id = ?
@@ -372,6 +388,7 @@ export async function placePinFromRequest(input: {
   widthPct?: number;
   rotationDeg?: number;
   color?: string;
+  fontSizeRem?: number;
   expiresAt?: number | null;
 }): Promise<BulletinBoardPin> {
   const orgId = input.orgId ?? DEFAULT_ORG_ID;
@@ -404,14 +421,17 @@ export async function placePinFromRequest(input: {
     input.color ?? defaultColorForSurface(settings.surface),
     settings.surface,
   );
+  const fontSizeRem = clampFontSizeRem(
+    input.fontSizeRem ?? defaultFontSizeForSurface(settings.surface),
+  );
   const zIndex = await nextZIndex(orgId);
 
   await DB.prepare(
     `INSERT INTO bulletin_board_pin
        (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
-        x_pct, y_pct, width_pct, rotation_deg, color, z_index, expires_at, active,
+        x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
         created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -427,6 +447,7 @@ export async function placePinFromRequest(input: {
       input.widthPct ?? (request.kind === 'text' ? 24 : 28),
       input.rotationDeg ?? (Math.random() * 10 - 5),
       color,
+      fontSizeRem,
       zIndex,
       input.expiresAt ?? null,
       input.createdBy,
@@ -462,6 +483,7 @@ export async function createDirectPin(input: {
   widthPct?: number;
   rotationDeg?: number;
   color?: string;
+  fontSizeRem?: number;
   expiresAt?: number | null;
 }): Promise<BulletinBoardPin> {
   const orgId = input.orgId ?? DEFAULT_ORG_ID;
@@ -473,13 +495,16 @@ export async function createDirectPin(input: {
   const now = nowMs();
   const zIndex = await nextZIndex(orgId);
   const { DB } = getEnv();
+  const fontSizeRem = clampFontSizeRem(
+    input.fontSizeRem ?? defaultFontSizeForSurface(settings.surface),
+  );
 
   await DB.prepare(
     `INSERT INTO bulletin_board_pin
        (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
-        x_pct, y_pct, width_pct, rotation_deg, color, z_index, expires_at, active,
+        x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
         created_by, created_at, updated_at)
-     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -497,6 +522,7 @@ export async function createDirectPin(input: {
         input.color ?? defaultColorForSurface(settings.surface),
         settings.surface,
       ),
+      fontSizeRem,
       zIndex,
       input.expiresAt ?? null,
       input.createdBy,
@@ -518,6 +544,7 @@ export async function updateBulletinBoardPin(input: {
   widthPct?: number;
   rotationDeg?: number;
   color?: string;
+  fontSizeRem?: number;
   body?: string | null;
   expiresAt?: number | null;
   clearExpires?: boolean;
@@ -526,7 +553,7 @@ export async function updateBulletinBoardPin(input: {
   const existing = await DB.prepare(
     `SELECT id, org_id, request_id, kind, body, file_name, file_mime,
             CASE WHEN file_data IS NOT NULL AND file_data != '' THEN 1 ELSE 0 END AS has_file,
-            x_pct, y_pct, width_pct, rotation_deg, color, z_index, expires_at, active,
+            x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
             created_by, created_at, updated_at
      FROM bulletin_board_pin WHERE id = ? AND active = 1`,
   )
@@ -536,12 +563,17 @@ export async function updateBulletinBoardPin(input: {
   if (!existing) throw new Error('Pin not found.');
 
   const settings = await getBulletinBoardSettings(existing.org_id);
+  const existingFont =
+    typeof existing.font_size_rem === 'number' && Number.isFinite(existing.font_size_rem)
+      ? existing.font_size_rem
+      : defaultFontSizeForSurface(settings.surface);
   const next = {
     xPct: input.xPct ?? existing.x_pct,
     yPct: input.yPct ?? existing.y_pct,
     widthPct: input.widthPct ?? existing.width_pct,
     rotationDeg: input.rotationDeg ?? existing.rotation_deg,
     color: mapColorToSurface(input.color ?? existing.color, settings.surface),
+    fontSizeRem: clampFontSizeRem(input.fontSizeRem ?? existingFont),
     body: input.body !== undefined ? input.body : existing.body,
     expiresAt: input.clearExpires
       ? null
@@ -553,7 +585,7 @@ export async function updateBulletinBoardPin(input: {
   const now = nowMs();
   await DB.prepare(
     `UPDATE bulletin_board_pin
-     SET x_pct = ?, y_pct = ?, width_pct = ?, rotation_deg = ?, color = ?, body = ?, expires_at = ?, updated_at = ?
+     SET x_pct = ?, y_pct = ?, width_pct = ?, rotation_deg = ?, color = ?, font_size_rem = ?, body = ?, expires_at = ?, updated_at = ?
      WHERE id = ?`,
   )
     .bind(
@@ -562,6 +594,7 @@ export async function updateBulletinBoardPin(input: {
       clamp(next.widthPct, 8, 60),
       next.rotationDeg,
       next.color,
+      next.fontSizeRem,
       next.body,
       next.expiresAt,
       now,
@@ -622,6 +655,7 @@ export function serializePin(pin: BulletinBoardPin, surface?: BulletinSurface) {
     widthPct: pin.widthPct,
     rotationDeg: pin.rotationDeg,
     color,
+    fontSizeRem: pin.fontSizeRem,
     zIndex: pin.zIndex,
     expiresAt: pin.expiresAt,
     fileUrl: pin.hasFile ? `/api/bulletin-board/file/pin/${pin.id}` : null,

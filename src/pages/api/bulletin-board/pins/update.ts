@@ -24,6 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       widthPct: form.has('widthPct') ? Number(form.get('widthPct')) : undefined,
       rotationDeg: form.has('rotationDeg') ? Number(form.get('rotationDeg')) : undefined,
       color: form.has('color') ? String(form.get('color') ?? '') : undefined,
+      fontSizeRem: form.has('fontSizeRem') ? Number(form.get('fontSizeRem')) : undefined,
       body: form.has('body') ? String(form.get('body') ?? '') : undefined,
       clearExpires,
       expiresAt: !clearExpires && expiresRaw ? Number(expiresRaw) : undefined,
