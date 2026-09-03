@@ -8,6 +8,7 @@ export const TIMESHEET_WORK_CATEGORIES = [
   { key: 'banking', label: 'Banking', color: '#0891b2' },
   { key: 'credentialing', label: 'Credentialing', color: '#4f46e5' },
   { key: 'training', label: 'Training', color: '#059669' },
+  { key: 'technology', label: 'Technology', color: '#475569' },
   { key: 'client_outreach', label: 'Client Outreach', color: '#0d9488' },
   { key: 'client_transfer', label: 'Client Transfer', color: '#65a30d' },
   { key: 'billing', label: 'Billing', color: '#dc2626' },
