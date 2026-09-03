@@ -23,20 +23,27 @@ if (!isPortalOwner(employee)) {
 }
 
 const settings = await getBulletinBoardSettings();
-const pins = await listBulletinBoardPins();
+const pins = await listBulletinBoardPins({ channel: 'draft' });
 const pending = await listBulletinBoardRequests({ status: 'pending' });
-const writingMode = writingModeForSurface(settings.surface);
-const colors = BULLETIN_COLORS[settings.surface];
+const writingMode = writingModeForSurface(settings.draftSurface);
+const colors = BULLETIN_COLORS[settings.draftSurface];
+const hasUnpublishedChanges =
+  settings.draftUpdatedAt > (settings.publishedAt ?? 0) ||
+  settings.draftSurface !== settings.surface;
 
 const payload = {
-  surface: settings.surface,
+  surface: settings.draftSurface,
+  liveSurface: settings.surface,
   writingMode,
   colors,
-  pins: pins.map((pin) => serializePin(pin, settings.surface)),
+  pins: pins.map((pin) => serializePin(pin, settings.draftSurface)),
   requests: pending.map(serializeRequest),
   maxImageBytes: BULLETIN_MAX_IMAGE_BYTES,
   maxPdfBytes: BULLETIN_MAX_PDF_BYTES,
   imageMaxEdge: BULLETIN_IMAGE_MAX_EDGE,
+  draftUpdatedAt: settings.draftUpdatedAt,
+  publishedAt: settings.publishedAt,
+  hasUnpublishedChanges,
 };
 ---
 
@@ -51,13 +58,28 @@ const payload = {
     <div>
       <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Board lab</h1>
       <p class="mt-3 max-w-2xl text-sage-dark/75">
-        Owner-only lab. The board matches the Home rail size — no full-board expand. Hover pins for a
-        magnifier to open images, PDFs, or longer notes. URLs in text become links.
+        Private draft of the Home board. Try layouts, notes, and surfaces here — nothing changes on
+        Home until you click Update board.
       </p>
     </div>
-    <p class="rounded-full border border-amber-300/70 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
-      Lab / not public yet
-    </p>
+    <div class="flex flex-col items-end gap-2">
+      <p
+        class:list={[
+          'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]',
+          hasUnpublishedChanges
+            ? 'border-amber-300/70 bg-amber-50 text-amber-900'
+            : 'border-sage-dark/15 bg-white/80 text-sage-dark/70',
+        ]}
+        data-draft-badge
+      >
+        {hasUnpublishedChanges ? 'Draft / unpublished changes' : 'Draft matches live board'}
+      </p>
+      <button type="button" class="btn-primary !px-4 !py-2 text-sm" data-publish-board>
+        Update board
+      </button>
+      <p class="hidden max-w-xs text-right text-xs text-sage-dark/60" data-publish-status></p>
+      <p class="hidden max-w-xs text-right text-xs text-red-700" data-publish-error></p>
+    </div>
   </div>
 
   <div
@@ -84,12 +106,12 @@ const payload = {
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div class="shrink-0">
           <p class="mb-3 max-w-[24rem] text-sm text-sage-dark/70">
-            Same size as Home. Drag to place; hover media for expand.
+            Draft preview (Home size). Changes stay here until you update the live board.
           </p>
           <div
             class="board-surface board-frame relative"
             data-board-canvas
-            data-surface={settings.surface}
+            data-surface={settings.draftSurface}
           >
             <div class="pointer-events-none absolute inset-0 opacity-40" data-board-texture aria-hidden="true"></div>
           </div>
@@ -97,9 +119,9 @@ const payload = {
 
         <div class="flex w-full max-w-sm flex-col gap-4 lg:sticky lg:top-6">
           <form class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm" data-admin-post-form>
-            <h2 class="text-sm font-semibold text-charcoal">Post to board</h2>
+            <h2 class="text-sm font-semibold text-charcoal">Add to draft</h2>
             <p class="mt-1 text-xs text-sage-dark/60">
-              Place your own note, photo, or PDF. Large images are compressed automatically.
+              Places on this draft only. Large images are compressed automatically.
             </p>
             <label class="mt-3 block text-sm">
               <span class="font-medium text-charcoal">Type</span>
@@ -120,7 +142,7 @@ const payload = {
                 Photos compress to about 1MB. PDFs must be under 1.2MB.
               </span>
             </label>
-            <button type="submit" class="btn-primary mt-4 !px-4 !py-2 text-sm" data-admin-submit>Place on board</button>
+            <button type="submit" class="btn-primary mt-4 !px-4 !py-2 text-sm" data-admin-submit>Place on draft</button>
             <p class="mt-2 hidden text-xs text-sage-dark/60" data-admin-status></p>
             <p class="mt-2 hidden text-xs text-red-700" data-admin-error></p>
           </form>
@@ -188,7 +210,7 @@ const payload = {
       <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div>
           <h2 class="text-sm font-semibold text-charcoal">Pending requests</h2>
-          <p class="mt-1 text-sm text-sage-dark/65">Approve by placing on the board, or reject.</p>
+          <p class="mt-1 text-sm text-sage-dark/65">Place onto the draft board, or reject.</p>
           <div class="mt-4 space-y-3" data-request-list></div>
           <p class="mt-4 hidden text-sm text-sage-dark/60" data-requests-empty>No pending requests.</p>
         </div>
@@ -222,10 +244,10 @@ const payload = {
     </section>
 
     <section class="mt-6 hidden" data-lab-panel="surface">
-      <h2 class="text-sm font-semibold text-charcoal">Board surface (org-wide)</h2>
+      <h2 class="text-sm font-semibold text-charcoal">Draft surface</h2>
       <p class="mt-1 max-w-xl text-sm text-sage-dark/65">
-        Changing the surface updates the writing style for new pins: sticky notes on cork, chalk on blackboard,
-        marker on whiteboard.
+        Changes the draft board style only. The Home board keeps its current surface until you click
+        Update board.
       </p>
       <div class="mt-5 grid gap-3 sm:grid-cols-3" data-surface-picker>
         {
@@ -238,7 +260,7 @@ const payload = {
               type="button"
               class:list={[
                 'rounded-2xl border px-4 py-4 text-left transition',
-                settings.surface === option.id
+                settings.draftSurface === option.id
                   ? 'border-sage-dark/40 bg-sage/15 ring-2 ring-sage-dark/20'
                   : 'border-sage-dark/10 bg-white/80 hover:border-sage-dark/25',
               ]}
@@ -251,7 +273,9 @@ const payload = {
         }
       </div>
       <p class="mt-3 text-sm text-sage-dark/70">
-        Current writing mode: <strong data-writing-mode>{writingMode}</strong>
+        Draft writing mode: <strong data-writing-mode>{writingMode}</strong>
+        <span class="mx-2 text-sage-dark/30">·</span>
+        Live Home surface: <strong data-live-surface>{settings.surface}</strong>
       </p>
     </section>
   </div>
@@ -362,6 +386,11 @@ const payload = {
     const inspExpires = root.querySelector('[data-insp-expires]');
     const inspError = root.querySelector('[data-insp-error]');
     const writingModeEl = root.querySelector('[data-writing-mode]');
+    const liveSurfaceEl = root.querySelector('[data-live-surface]');
+    const draftBadge = root.querySelector('[data-draft-badge]');
+    const publishBtn = root.querySelector('[data-publish-board]');
+    const publishStatus = root.querySelector('[data-publish-status]');
+    const publishError = root.querySelector('[data-publish-error]');
     const adminPostForm = root.querySelector('[data-admin-post-form]');
     const adminKind = root.querySelector('[data-admin-kind]');
     const adminBodyWrap = root.querySelector('[data-admin-body-wrap]');
@@ -369,6 +398,26 @@ const payload = {
     const adminStatus = root.querySelector('[data-admin-status]');
     const adminError = root.querySelector('[data-admin-error]');
     const adminSubmit = root.querySelector('[data-admin-submit]');
+
+    function markDraftDirty() {
+      state.hasUnpublishedChanges = true;
+      if (draftBadge instanceof HTMLElement) {
+        draftBadge.textContent = 'Draft / unpublished changes';
+        draftBadge.className =
+          'rounded-full border border-amber-300/70 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900';
+      }
+    }
+
+    function markDraftPublished(liveSurface) {
+      state.hasUnpublishedChanges = false;
+      state.liveSurface = liveSurface || state.surface;
+      if (draftBadge instanceof HTMLElement) {
+        draftBadge.textContent = 'Draft matches live board';
+        draftBadge.className =
+          'rounded-full border border-sage-dark/15 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/70';
+      }
+      if (liveSurfaceEl) liveSurfaceEl.textContent = state.liveSurface;
+    }
 
     if (!(canvas instanceof HTMLElement)) return;
 
@@ -539,6 +588,7 @@ const payload = {
             yPct: pin.yPct,
           });
           Object.assign(pin, json.pin);
+          markDraftDirty();
         } catch (error) {
           console.error(error);
         }
@@ -580,7 +630,7 @@ const payload = {
           </div>
           ${preview}
           <div class="mt-3 flex flex-wrap gap-2">
-            <button type="button" class="btn-primary !px-3 !py-1.5 text-xs" data-place-request="${request.id}">Place on board</button>
+            <button type="button" class="btn-primary !px-3 !py-1.5 text-xs" data-place-request="${request.id}">Place on draft</button>
             <button type="button" class="text-xs font-medium text-red-700 hover:text-red-900" data-reject-request="${request.id}">Reject</button>
           </div>
         `;
@@ -694,6 +744,7 @@ const payload = {
           expiresAt,
         });
         Object.assign(pin, json.pin);
+        markDraftDirty();
         renderBoard();
         renderInspector();
       } catch (error) {
@@ -707,10 +758,11 @@ const payload = {
     root.querySelector('[data-insp-remove]')?.addEventListener('click', async () => {
       const pin = state.pins.find((item) => item.id === selectedId);
       if (!pin) return;
-      if (!confirm('Take this off the board?')) return;
+      if (!confirm('Remove this from the draft board?')) return;
       await postForm('/api/bulletin-board/pins/remove', { id: pin.id });
       state.pins = state.pins.filter((item) => item.id !== pin.id);
       selectedId = null;
+      markDraftDirty();
       renderBoard();
       renderInspector();
     });
@@ -729,6 +781,7 @@ const payload = {
         state.pins.push(json.pin);
         state.requests = state.requests.filter((item) => item.id !== placeId);
         selectedId = json.pin.id;
+        markDraftDirty();
         renderRequests();
         renderBoard();
         renderInspector();
@@ -793,10 +846,13 @@ const payload = {
         if (!surface) return;
         const json = await postForm('/api/bulletin-board/surface', { surface });
         state.surface = json.surface;
+        state.liveSurface = json.liveSurface || state.liveSurface;
         state.writingMode = json.writingMode;
         state.colors = json.colors;
         state.pins = json.pins;
+        markDraftDirty();
         if (writingModeEl) writingModeEl.textContent = state.writingMode;
+        if (liveSurfaceEl && state.liveSurface) liveSurfaceEl.textContent = state.liveSurface;
         root.querySelectorAll('[data-surface-option]').forEach((node) => {
           if (!(node instanceof HTMLButtonElement)) return;
           const active = node.dataset.surfaceOption === surface;
@@ -874,8 +930,9 @@ const payload = {
         selectedId = json.pin.id;
         adminPostForm.reset();
         syncAdminKind();
+        markDraftDirty();
         if (adminStatus instanceof HTMLElement) {
-          adminStatus.textContent = 'Posted.';
+          adminStatus.textContent = 'Added to draft.';
           adminStatus.classList.remove('hidden');
         }
         renderBoard();
@@ -888,6 +945,35 @@ const payload = {
         }
       } finally {
         if (adminSubmit instanceof HTMLButtonElement) adminSubmit.disabled = false;
+      }
+    });
+
+    publishBtn?.addEventListener('click', async () => {
+      if (publishError instanceof HTMLElement) {
+        publishError.classList.add('hidden');
+        publishError.textContent = '';
+      }
+      if (publishStatus instanceof HTMLElement) {
+        publishStatus.textContent = 'Publishing to Home…';
+        publishStatus.classList.remove('hidden');
+      }
+      if (publishBtn instanceof HTMLButtonElement) publishBtn.disabled = true;
+      try {
+        const json = await postForm('/api/bulletin-board/publish', {});
+        markDraftPublished(json.surface);
+        if (publishStatus instanceof HTMLElement) {
+          publishStatus.textContent = 'Live Home board updated.';
+          publishStatus.classList.remove('hidden');
+        }
+      } catch (error) {
+        if (publishStatus instanceof HTMLElement) publishStatus.classList.add('hidden');
+        if (publishError instanceof HTMLElement) {
+          publishError.textContent =
+            error instanceof Error ? error.message : 'Could not update the live board.';
+          publishError.classList.remove('hidden');
+        }
+      } finally {
+        if (publishBtn instanceof HTMLButtonElement) publishBtn.disabled = false;
       }
     });
 

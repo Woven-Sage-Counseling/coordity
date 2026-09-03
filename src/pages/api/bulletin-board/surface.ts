@@ -4,7 +4,7 @@ import {
   isBulletinSurface,
   listBulletinBoardPins,
   serializePin,
-  setBulletinBoardSurface,
+  setBulletinBoardDraftSurface,
   writingModeForSurface,
 } from '../../../lib/bulletin-board';
 import { requirePortalOwner } from '../../../lib/owner-access';
@@ -24,15 +24,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const settings = await setBulletinBoardSurface(surface);
-  const pins = (await listBulletinBoardPins()).map((pin) => serializePin(pin, settings.surface));
+  const settings = await setBulletinBoardDraftSurface(surface);
+  const pins = (await listBulletinBoardPins({ channel: 'draft' })).map((pin) =>
+    serializePin(pin, settings.draftSurface),
+  );
   return new Response(
     JSON.stringify({
       ok: true,
-      surface: settings.surface,
-      writingMode: writingModeForSurface(settings.surface),
-      colors: BULLETIN_COLORS[settings.surface],
+      surface: settings.draftSurface,
+      liveSurface: settings.surface,
+      writingMode: writingModeForSurface(settings.draftSurface),
+      colors: BULLETIN_COLORS[settings.draftSurface],
       pins,
+      draftUpdatedAt: settings.draftUpdatedAt,
+      publishedAt: settings.publishedAt,
     }),
     {
       status: 200,

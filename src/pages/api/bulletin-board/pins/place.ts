@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
     });
     const settings = await getBulletinBoardSettings();
-    return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.surface) }), {
+    return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.draftSurface) }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });

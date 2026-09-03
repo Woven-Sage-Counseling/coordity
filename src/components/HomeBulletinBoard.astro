@@ -9,7 +9,9 @@ import {
 import { BOARD_ZOOM_ICON, linkifyHtml } from '../lib/bulletin-board-format';
 
 const settings = await getBulletinBoardSettings();
-const pins = (await listBulletinBoardPins()).map((pin) => serializePin(pin, settings.surface));
+const pins = (await listBulletinBoardPins({ channel: 'live' })).map((pin) =>
+  serializePin(pin, settings.surface),
+);
 const writingMode = writingModeForSurface(settings.surface);
 ---
 
