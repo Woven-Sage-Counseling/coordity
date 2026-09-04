@@ -18,8 +18,9 @@ import {
 } from '../lib/timesheet-shift-edits';
 import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
 import { formatWeekLabel } from '../lib/timesheet';
-import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
+import { pauseButtonClasses, shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { canUseTimesheet } from '../lib/timesheet-access';
+import { isOnBreak } from '../lib/timesheet-breaks';
 
 export const prerender = false;
 
@@ -30,6 +31,8 @@ if (!canUseTimesheet(employee)) {
 const error = Astro.url.searchParams.get('error');
 const started = Astro.url.searchParams.get('started') === '1';
 const ended = Astro.url.searchParams.get('ended') === '1';
+const paused = Astro.url.searchParams.get('paused') === '1';
+const resumed = Astro.url.searchParams.get('resumed') === '1';
 const backlogSent = Astro.url.searchParams.get('backlog') === '1';
 const shiftEditSent = Astro.url.searchParams.get('shiftEdit') === '1';
 
@@ -47,6 +50,7 @@ const pendingShiftEditRequests = shiftEditRequests
   .map(serializeShiftEditRequest);
 const serialized = serializeTimesheetSummary(summary, { pendingEditShiftIds, categoryLookup });
 const activeShift = summary.activeShift;
+const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
 
@@ -87,6 +91,14 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
         <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
           Shift ended and saved.
         </p>
+      ) : paused ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
+          Shift paused.
+        </p>
+      ) : resumed ? (
+        <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
+          Shift resumed.
+        </p>
       ) : backlogSent ? (
         <p class="mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80" data-timesheet-flash>
           Backlog hours submitted for admin approval.
@@ -123,20 +135,28 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
           </p>
           <p class="mt-1 text-xs text-sage-dark/60" data-timesheet-active-since>
             {
-              activeShift?.startedAt
-                ? `Started ${new Date(activeShift.startedAt).toLocaleTimeString('en-US', {
-                    timeZone: 'America/New_York',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}`
-                : 'Not clocked in'
+              onBreak
+                ? 'On break'
+                : activeShift?.startedAt
+                  ? `Started ${new Date(activeShift.startedAt).toLocaleTimeString('en-US', {
+                      timeZone: 'America/New_York',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}`
+                  : 'Not clocked in'
             }
           </p>
         </div>
       </div>
 
       <div class="mt-6 flex flex-wrap items-center gap-4">
-        <ShiftStatusIndicator onShift={activeShift != null} onTimeOff={onTimeOff} showLabel self />
+        <ShiftStatusIndicator
+          onShift={activeShift != null}
+          onBreak={onBreak}
+          onTimeOff={onTimeOff}
+          showLabel
+          self
+        />
         <div class="flex flex-wrap gap-3">
           <form method="post" action="/api/timesheet/start-shift" data-timesheet-start-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
@@ -158,6 +178,21 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
             disabled={activeShift == null}
           >
             END shift
+          </button>
+        </form>
+        <form
+          method="post"
+          action={onBreak ? '/api/timesheet/resume-shift' : '/api/timesheet/pause-shift'}
+          data-timesheet-break-form
+        >
+          <input type="hidden" name="returnTo" value="/timesheet" />
+          <button
+            class={pauseButtonClasses(activeShift != null, 'page')}
+            type="submit"
+            data-timesheet-pause-btn
+            disabled={activeShift == null}
+          >
+            {onBreak ? 'Resume' : 'Pause'}
           </button>
         </form>
         </div>
@@ -187,6 +222,9 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                       <div>
                         <p class="text-sm font-semibold text-charcoal">{serializedEntry.dateLabel}</p>
                         <p class="mt-1 text-sm text-sage-dark/75">{serializedEntry.timeLabel}</p>
+                        {serializedEntry.pausesLabel ? (
+                          <p class="mt-1 text-xs text-sage-dark/60">{serializedEntry.pausesLabel}</p>
+                        ) : null}
                         {entry.notes ? (
                           <p class="mt-2 text-sm text-sage-dark/70">{entry.notes}</p>
                         ) : null}
@@ -366,11 +404,17 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
     const activeSince = root.querySelector('[data-timesheet-active-since]');
     const startBtn = root.querySelector('[data-timesheet-start-btn]') as HTMLButtonElement | null;
     const endBtn = root.querySelector('[data-timesheet-end-btn]') as HTMLButtonElement | null;
+    const pauseBtn = root.querySelector('[data-timesheet-pause-btn]') as HTMLButtonElement | null;
     const list = root.querySelector('[data-timesheet-list]');
     const empty = root.querySelector('[data-timesheet-empty]');
 
     const week = summary.week as { totalLabel?: string };
-    const activeShift = summary.activeShift as { startedAt?: number | null; timeLabel?: string } | null;
+    const activeShift = summary.activeShift as {
+      startedAt?: number | null;
+      timeLabel?: string;
+      onBreak?: boolean;
+      breaks?: Array<{ startedAt: number; endedAt: number | null }>;
+    } | null;
     const entries = (summary.entries as Array<Record<string, unknown>>) ?? [];
 
     if (weekTotal && week.totalLabel) weekTotal.textContent = week.totalLabel;
@@ -378,7 +422,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       averageTotal.textContent = String(summary.weeklyAverageLabel);
     }
 
-    applyShiftButtonState(startBtn, endBtn, activeShift, 'page');
+    applyShiftButtonState(startBtn, endBtn, activeShift, 'page', pauseBtn);
 
     const categories = JSON.parse(root.dataset.workCategories || '[]') as Array<{
       key: string;
@@ -400,6 +444,9 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
           const notes = entry.notes
             ? `<p class="mt-2 text-sm text-sage-dark/70">${String(entry.notes)}</p>`
             : '';
+          const pauses = entry.pausesLabel
+            ? `<p class="mt-1 text-xs text-sage-dark/60">${String(entry.pausesLabel)}</p>`
+            : '';
           const workItems = isActive ? '' : renderWorkItemsSection(entry, categories);
           return `
             <li class="rounded-xl border border-sage-dark/10 bg-white px-4 py-3" data-timesheet-item data-entry-id="${String(entry.id)}">
@@ -407,6 +454,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                 <div>
                   <p class="text-sm font-semibold text-charcoal">${String(entry.dateLabel)}</p>
                   <p class="mt-1 text-sm text-sage-dark/75">${String(entry.timeLabel)}</p>
+                  ${pauses}
                   ${notes}
                 </div>
                 <div class="text-right">
@@ -430,15 +478,27 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 
     if (activeShift?.startedAt) {
       const startedAt = Number(activeShift.startedAt);
+      const breaks = activeShift.breaks ?? [];
       const updateActive = () => {
-        const minutes = Math.max(1, Math.round((Date.now() - startedAt) / 60_000));
-        if (activeDuration) activeDuration.textContent = formatDuration(minutes);
+        const now = Date.now();
+        let pausedMs = 0;
+        for (const item of breaks) {
+          const end = item.endedAt ?? now;
+          if (end > item.startedAt) pausedMs += end - item.startedAt;
+        }
+        const paidMs = Math.max(0, now - startedAt - pausedMs);
+        const minutes = Math.max(activeShift.onBreak ? 0 : 1, Math.round(paidMs / 60_000));
+        if (activeDuration) {
+          activeDuration.textContent = activeShift.onBreak ? 'On break' : formatDuration(Math.max(1, minutes));
+        }
         if (activeSince) {
-          activeSince.textContent = `Started ${new Date(startedAt).toLocaleTimeString('en-US', {
-            timeZone: 'America/New_York',
-            hour: 'numeric',
-            minute: '2-digit',
-          })}`;
+          activeSince.textContent = activeShift.onBreak
+            ? 'On break'
+            : `Started ${new Date(startedAt).toLocaleTimeString('en-US', {
+                timeZone: 'America/New_York',
+                hour: 'numeric',
+                minute: '2-digit',
+              })}`;
         }
       };
       updateActive();
@@ -636,10 +696,15 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       applySummary(root, payload.summary);
       const flash = root.querySelector('[data-timesheet-flash]') as HTMLElement | null;
       if (flash) {
-        flash.textContent =
-          form.matches('[data-timesheet-start-form]')
-            ? 'Shift started.'
-            : 'Shift ended and saved.';
+        flash.textContent = form.matches('[data-timesheet-start-form]')
+          ? 'Shift started.'
+          : form.matches('[data-timesheet-end-form]')
+            ? 'Shift ended and saved.'
+            : form.matches('[data-timesheet-break-form]')
+              ? form.action.includes('resume-shift')
+                ? 'Shift resumed.'
+                : 'Shift paused.'
+              : 'Timesheet updated.';
         flash.className =
           'mt-6 max-w-2xl rounded-xl border border-sage-dark/15 bg-white px-4 py-3 text-sm text-sage-dark/80';
         flash.hidden = false;
@@ -676,7 +741,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
     initTimesheetWorkItems(node, categories, (nextSummary) => applySummary(node, nextSummary));
 
     node.querySelectorAll(
-      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-backlog-form], [data-timesheet-shift-edit-form]',
+      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-break-form], [data-timesheet-backlog-form], [data-timesheet-shift-edit-form]',
     ).forEach((formNode) => {
       if (!(formNode instanceof HTMLFormElement)) return;
       formNode.addEventListener('submit', (event) => {

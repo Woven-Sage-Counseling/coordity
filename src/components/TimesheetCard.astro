@@ -6,9 +6,10 @@ import {
 } from '../lib/timesheet-entries';
 import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
 import { formatWeekLabel } from '../lib/timesheet';
-import { shiftButtonClasses } from '../lib/timesheet-shift-buttons';
+import { pauseButtonClasses, shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
+import { isOnBreak } from '../lib/timesheet-breaks';
 import ShiftStatusIndicator from './ShiftStatusIndicator.astro';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
@@ -31,6 +32,7 @@ try {
 const categoryLookup = await getWorkCategoryLookup();
 const serialized = summary ? serializeTimesheetSummary(summary, { categoryLookup }) : null;
 const activeShift = summary?.activeShift ?? null;
+const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = summary ? await isUserOnApprovedTimeOffNow(userId) : false;
 const week = summary?.week;
 ---
@@ -84,7 +86,13 @@ const week = summary?.week;
           </div>
 
           <div class="mt-3 flex min-w-0 items-center gap-2">
-            <ShiftStatusIndicator onShift={activeShift != null} onTimeOff={onTimeOff} compact self />
+            <ShiftStatusIndicator
+              onShift={activeShift != null}
+              onBreak={onBreak}
+              onTimeOff={onTimeOff}
+              compact
+              self
+            />
             <form method="post" action="/api/timesheet/start-shift" class="min-w-0 flex-1" data-timesheet-start-form>
               <input type="hidden" name="returnTo" value="/" />
               <button
@@ -109,15 +117,36 @@ const week = summary?.week;
             </form>
           </div>
 
+          <div class="mt-2 flex justify-center">
+            <form
+              method="post"
+              action={onBreak ? '/api/timesheet/resume-shift' : '/api/timesheet/pause-shift'}
+              class="w-[calc(50%-0.25rem)]"
+              data-timesheet-break-form
+            >
+              <input type="hidden" name="returnTo" value="/" />
+              <button
+                type="submit"
+                class={pauseButtonClasses(activeShift != null, 'widget')}
+                data-timesheet-pause-btn
+                disabled={activeShift == null}
+              >
+                {onBreak ? 'RESUME' : 'PAUSE'}
+              </button>
+            </form>
+          </div>
+
           <p class="mt-2 text-[10px] text-[#6b6c72]" data-timesheet-active-since>
             {
-              activeShift?.startedAt
-                ? `On shift since ${new Date(activeShift.startedAt).toLocaleTimeString('en-US', {
-                    timeZone: 'America/New_York',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}`
-                : 'Not clocked in'
+              onBreak
+                ? 'On break'
+                : activeShift?.startedAt
+                  ? `On shift since ${new Date(activeShift.startedAt).toLocaleTimeString('en-US', {
+                      timeZone: 'America/New_York',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}`
+                  : 'Not clocked in'
             }
           </p>
 
@@ -140,6 +169,9 @@ const week = summary?.week;
                         <div class="min-w-0">
                           <p class="text-[12px] font-semibold text-charcoal">{item.dateLabel}</p>
                           <p class="mt-0.5 text-[11px] text-[#6b6c72]">{item.timeLabel}</p>
+                          {item.pausesLabel ? (
+                            <p class="mt-0.5 text-[10px] text-[#6b6c72]">{item.pausesLabel}</p>
+                          ) : null}
                         </div>
                         <p class="text-[12px] font-semibold text-charcoal">{item.hoursLabel}</p>
                       </div>
@@ -169,16 +201,29 @@ const week = summary?.week;
     flash.hidden = false;
   }
 
+  function flashMessageForForm(form: HTMLFormElement): string {
+    if (form.matches('[data-timesheet-start-form]')) return 'Shift started.';
+    if (form.matches('[data-timesheet-end-form]')) return 'Shift ended and saved.';
+    if (form.matches('[data-timesheet-break-form]')) {
+      return form.action.includes('resume-shift') ? 'Shift resumed.' : 'Shift paused.';
+    }
+    return 'Timesheet updated.';
+  }
+
   function applySummary(root: HTMLElement, summary: Record<string, unknown>): void {
     root.dataset.summary = JSON.stringify(summary);
     const week = summary.week as { totalLabel?: string; entries?: Array<Record<string, unknown>> };
-    const activeShift = summary.activeShift as { startedAt?: number | null } | null;
+    const activeShift = summary.activeShift as {
+      startedAt?: number | null;
+      onBreak?: boolean;
+    } | null;
 
     const weekTotal = root.querySelector('[data-timesheet-week-total]');
     const averageTotal = root.querySelector('[data-timesheet-average-total]');
     const activeSince = root.querySelector('[data-timesheet-active-since]');
     const startBtn = root.querySelector('[data-timesheet-start-btn]') as HTMLButtonElement | null;
     const endBtn = root.querySelector('[data-timesheet-end-btn]') as HTMLButtonElement | null;
+    const pauseBtn = root.querySelector('[data-timesheet-pause-btn]') as HTMLButtonElement | null;
     const list = root.querySelector('[data-timesheet-list]');
     const empty = root.querySelector('[data-timesheet-empty]');
 
@@ -186,30 +231,36 @@ const week = summary?.week;
     if (averageTotal && summary.weeklyAverageLabel) {
       averageTotal.textContent = String(summary.weeklyAverageLabel);
     }
-    applyShiftButtonState(startBtn, endBtn, activeShift, 'widget');
+    applyShiftButtonState(startBtn, endBtn, activeShift, 'widget', pauseBtn);
 
     const entries = week.entries ?? [];
     if (list instanceof HTMLElement) {
       list.innerHTML = entries
-        .map(
-          (entry) => `
+        .map((entry) => {
+          const pauses = entry.pausesLabel
+            ? `<p class="mt-0.5 text-[10px] text-[#6b6c72]">${String(entry.pausesLabel)}</p>`
+            : '';
+          return `
           <li class="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-black/[0.06]" data-timesheet-item>
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
                 <p class="text-[12px] font-semibold text-charcoal">${String(entry.dateLabel)}</p>
                 <p class="mt-0.5 text-[11px] text-[#6b6c72]">${String(entry.timeLabel)}</p>
+                ${pauses}
               </div>
               <p class="text-[12px] font-semibold text-charcoal">${String(entry.hoursLabel)}</p>
             </div>
           </li>
-        `,
-        )
+        `;
+        })
         .join('');
       list.hidden = entries.length === 0;
     }
     if (empty instanceof HTMLElement) empty.hidden = entries.length > 0;
 
-    if (activeShift?.startedAt && activeSince) {
+    if (activeShift?.onBreak && activeSince) {
+      activeSince.textContent = 'On break';
+    } else if (activeShift?.startedAt && activeSince) {
       activeSince.textContent = `On shift since ${new Date(Number(activeShift.startedAt)).toLocaleTimeString('en-US', {
         timeZone: 'America/New_York',
         hour: 'numeric',
@@ -238,11 +289,7 @@ const week = summary?.week;
         throw new Error(payload.error ?? 'Unable to update your timesheet.');
       }
       applySummary(root, payload.summary);
-      setFlash(
-        root,
-        'ok',
-        form.matches('[data-timesheet-start-form]') ? 'Shift started.' : 'Shift ended and saved.',
-      );
+      setFlash(root, 'ok', flashMessageForForm(form));
     } catch (error) {
       setFlash(root, 'error', error instanceof Error ? error.message : 'Unable to update your timesheet.');
       const summary = JSON.parse(root.dataset.summary || '{}') as Record<string, unknown>;
@@ -253,12 +300,14 @@ const week = summary?.week;
   document.querySelectorAll('[data-timesheet-widget]').forEach((root) => {
     if (!(root instanceof HTMLElement) || !root.dataset.summary) return;
     applySummary(root, JSON.parse(root.dataset.summary) as Record<string, unknown>);
-    root.querySelectorAll('[data-timesheet-start-form], [data-timesheet-end-form]').forEach((formNode) => {
-      if (!(formNode instanceof HTMLFormElement)) return;
-      formNode.addEventListener('submit', (event) => {
-        event.preventDefault();
-        void submitForm(formNode, root);
+    root
+      .querySelectorAll('[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-break-form]')
+      .forEach((formNode) => {
+        if (!(formNode instanceof HTMLFormElement)) return;
+        formNode.addEventListener('submit', (event) => {
+          event.preventDefault();
+          void submitForm(formNode, root);
+        });
       });
-    });
   });
 </script>

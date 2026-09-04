@@ -1,6 +1,7 @@
 ---
 interface Props {
   onShift: boolean;
+  onBreak?: boolean;
   onTimeOff?: boolean;
   showLabel?: boolean;
   compact?: boolean;
@@ -12,6 +13,7 @@ interface Props {
 
 const {
   onShift,
+  onBreak = false,
   onTimeOff = false,
   showLabel = false,
   compact = false,
@@ -21,15 +23,31 @@ const {
 const iconSize = compact ? 'size-3.5' : 'size-4';
 const travelIconSize = compact ? 'size-4' : 'size-5';
 const dotSize = compact ? 'size-2.5' : 'size-3';
-const state = onTimeOff ? 'traveling' : !showShiftStatus ? 'hidden' : onShift ? 'available' : 'unavailable';
+const state = onTimeOff
+  ? 'traveling'
+  : !showShiftStatus
+    ? 'hidden'
+    : onBreak
+      ? 'on_break'
+      : onShift
+        ? 'available'
+        : 'unavailable';
 const statusLabel =
-  state === 'traveling' ? 'On vacation' : state === 'available' ? 'Available' : 'Unavailable';
+  state === 'traveling'
+    ? 'On vacation'
+    : state === 'on_break'
+      ? 'On break'
+      : state === 'available'
+        ? 'Available'
+        : 'Unavailable';
 const srLabel =
   state === 'traveling'
     ? 'Currently on vacation'
-    : state === 'available'
-      ? 'Currently available'
-      : 'Currently unavailable';
+    : state === 'on_break'
+      ? 'Currently on break'
+      : state === 'available'
+        ? 'Currently available'
+        : 'Currently unavailable';
 const visible = state !== 'hidden';
 ---
 
@@ -41,6 +59,7 @@ const visible = state !== 'hidden';
       data-shift-state={state}
       {...self ? { 'data-shift-status-self': '' } : {}}
       data-on-shift={onShift ? '1' : '0'}
+      data-on-break={onBreak ? '1' : '0'}
       data-on-time-off={onTimeOff ? '1' : '0'}
       data-show-shift-status={showShiftStatus ? '1' : '0'}
     >
@@ -58,6 +77,15 @@ const visible = state !== 'hidden';
           aria-hidden="true"
         >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+        <svg
+          class:list={[iconSize, 'text-[#8a8b90]']}
+          data-shift-status-on-break
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z" />
         </svg>
         <svg
           class:list={[travelIconSize, 'shrink-0 text-sage-dark/70']}
@@ -82,10 +110,16 @@ const visible = state !== 'hidden';
 <style is:global>
   .shift-status[data-shift-state='available'] [data-shift-status-unavailable],
   .shift-status[data-shift-state='available'] [data-shift-status-traveling],
+  .shift-status[data-shift-state='available'] [data-shift-status-on-break],
   .shift-status[data-shift-state='unavailable'] [data-shift-status-available],
   .shift-status[data-shift-state='unavailable'] [data-shift-status-traveling],
+  .shift-status[data-shift-state='unavailable'] [data-shift-status-on-break],
+  .shift-status[data-shift-state='on_break'] [data-shift-status-available],
+  .shift-status[data-shift-state='on_break'] [data-shift-status-unavailable],
+  .shift-status[data-shift-state='on_break'] [data-shift-status-traveling],
   .shift-status[data-shift-state='traveling'] [data-shift-status-available],
-  .shift-status[data-shift-state='traveling'] [data-shift-status-unavailable] {
+  .shift-status[data-shift-state='traveling'] [data-shift-status-unavailable],
+  .shift-status[data-shift-state='traveling'] [data-shift-status-on-break] {
     display: none !important;
   }
 </style>

@@ -5,12 +5,14 @@ import type { DirectoryPerson } from '../lib/employees';
 interface Props {
   people: DirectoryPerson[];
   onShiftUserIds: string[];
+  onBreakUserIds?: string[];
   travelingUserIds: string[];
   clinicianUserIds: string[];
 }
 
-const { people, onShiftUserIds, travelingUserIds, clinicianUserIds } = Astro.props;
+const { people, onShiftUserIds, onBreakUserIds = [], travelingUserIds, clinicianUserIds } = Astro.props;
 const onShiftIds = new Set(onShiftUserIds);
+const onBreakIds = new Set(onBreakUserIds);
 const travelingIds = new Set(travelingUserIds);
 const clinicianIds = new Set(clinicianUserIds);
 
@@ -73,6 +75,7 @@ function initials(name: string): string {
                 <div class="flex justify-center">
                   <ShiftStatusIndicator
                     onShift={onShiftIds.has(person.id)}
+                    onBreak={onBreakIds.has(person.id)}
                     onTimeOff={travelingIds.has(person.id)}
                     showShiftStatus={!clinicianIds.has(person.id)}
                     compact

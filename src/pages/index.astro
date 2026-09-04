@@ -14,6 +14,7 @@ import { canSeeCredentialing } from '../lib/credentialing';
 import { canSeeCaseload } from '../lib/caseload';
 import { canUseTimesheet } from '../lib/timesheet-access';
 import { getActiveShift } from '../lib/timesheet-entries';
+import { isOnBreak } from '../lib/timesheet-breaks';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 
 export const prerender = false;
@@ -33,6 +34,7 @@ const notificationUnreadCount = await countUnreadNotifications(employee.id);
 
 const activeShift = canSeeTimesheet ? await getActiveShift(employee.id) : null;
 const onShift = activeShift != null;
+const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 ---
 
@@ -43,6 +45,7 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
         <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
         <ShiftStatusIndicator
           onShift={onShift}
+          onBreak={onBreak}
           onTimeOff={onTimeOff}
           showLabel
           self

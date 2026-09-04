@@ -7,12 +7,22 @@ import {
   formatHours,
   formatShiftRange,
   formatWorkDate,
-  minutesBetween,
   weekEndSunday,
   weekStartMonday,
 } from './timesheet';
 import { listWorkItemsForShifts, serializeWorkItem, type TimesheetShiftWorkItem } from './timesheet-work-items';
 import { type WorkCategoryLookup } from './timesheet-work-categories';
+import {
+  closeOpenBreak,
+  formatPauseIntervals,
+  isOnBreak,
+  listBreaksForShifts,
+  paidMinutesForShift,
+  pauseShift,
+  resumeShift,
+  serializeBreak,
+  type TimesheetShiftBreak,
+} from './timesheet-breaks';
 
 export type TimesheetShiftSource = 'clock' | 'backlog';
 
@@ -29,6 +39,7 @@ export interface TimesheetShift {
   createdAt: number;
   updatedAt: number;
   workItems: TimesheetShiftWorkItem[];
+  breaks: TimesheetShiftBreak[];
 }
 
 export interface TimesheetWeekSummary {
@@ -64,7 +75,11 @@ const SHIFT_SELECT = `
   FROM timesheet_shift
 `;
 
-function mapShift(row: ShiftRow, workItems: TimesheetShiftWorkItem[] = []): TimesheetShift {
+function mapShift(
+  row: ShiftRow,
+  workItems: TimesheetShiftWorkItem[] = [],
+  breaks: TimesheetShiftBreak[] = [],
+): TimesheetShift {
   return {
     id: row.id,
     userId: row.user_id,
@@ -78,6 +93,7 @@ function mapShift(row: ShiftRow, workItems: TimesheetShiftWorkItem[] = []): Time
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     workItems,
+    breaks,
   };
 }
 
@@ -86,8 +102,10 @@ export function serializeTimesheetShift(
   options: { pendingEdit?: boolean; categoryLookup: WorkCategoryLookup },
 ) {
   const isActive = shift.source === 'clock' && shift.endedAt == null;
+  const onBreak = isActive && isOnBreak(shift.breaks);
   const canRequestEdit = !isActive && shift.startedAt != null && shift.endedAt != null;
   const workItems = shift.workItems.map((item) => serializeWorkItem(item, options.categoryLookup));
+  const pausesLabel = formatPauseIntervals(shift.breaks);
   return {
     id: shift.id,
     workDate: shift.workDate,
@@ -97,17 +115,22 @@ export function serializeTimesheetShift(
     notes: shift.notes,
     source: shift.source,
     isActive,
+    onBreak,
     canEditWorkItems: !isActive,
     canRequestEdit,
     hasPendingEdit: options.pendingEdit ?? false,
     workItems,
+    breaks: shift.breaks.map(serializeBreak),
+    pausesLabel,
     timeLabel:
       shift.source === 'backlog'
         ? shift.startedAt != null && shift.endedAt != null
           ? formatShiftRange(shift.startedAt, shift.endedAt)
           : 'Backlog entry'
         : isActive && shift.startedAt != null
-          ? `Started ${formatClockTime(shift.startedAt)}`
+          ? onBreak
+            ? `On break · started ${formatClockTime(shift.startedAt)}`
+            : `Started ${formatClockTime(shift.startedAt)}`
           : formatShiftRange(shift.startedAt, shift.endedAt),
     startedAt: shift.startedAt,
     endedAt: shift.endedAt,
@@ -164,7 +187,9 @@ export async function getActiveShift(userId: string): Promise<TimesheetShift | n
     .bind(userId)
     .first<ShiftRow>();
 
-  return row ? mapShift(row) : null;
+  if (!row) return null;
+  const [withMeta] = await attachWorkItems([mapShift(row)]);
+  return withMeta ?? mapShift(row);
 }
 
 export async function listActiveShiftUserIds(): Promise<Set<string>> {
@@ -173,6 +198,18 @@ export async function listActiveShiftUserIds(): Promise<Set<string>> {
     `SELECT DISTINCT user_id
      FROM timesheet_shift
      WHERE source = 'clock' AND ended_at IS NULL`,
+  ).all<{ user_id: string }>();
+
+  return new Set((rows.results ?? []).map((row) => row.user_id));
+}
+
+export async function listOnBreakUserIds(): Promise<Set<string>> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT DISTINCT s.user_id
+     FROM timesheet_shift s
+     JOIN timesheet_shift_break b ON b.shift_id = s.id
+     WHERE s.source = 'clock' AND s.ended_at IS NULL AND b.ended_at IS NULL`,
   ).all<{ user_id: string }>();
 
   return new Set((rows.results ?? []).map((row) => row.user_id));
@@ -215,23 +252,30 @@ export async function listTimesheetShiftsForUser(
 
 async function attachWorkItems(shifts: TimesheetShift[]): Promise<TimesheetShift[]> {
   if (shifts.length === 0) return shifts;
-  const workItemsByShift = await listWorkItemsForShifts(shifts.map((shift) => shift.id));
-  return shifts.map((shift) => mapShift(
-    {
-      id: shift.id,
-      user_id: shift.userId,
-      work_date: shift.workDate,
-      started_at: shift.startedAt,
-      ended_at: shift.endedAt,
-      minutes: shift.minutes,
-      notes: shift.notes,
-      source: shift.source,
-      backlog_id: shift.backlogId,
-      created_at: shift.createdAt,
-      updated_at: shift.updatedAt,
-    },
-    workItemsByShift.get(shift.id) ?? [],
-  ));
+  const ids = shifts.map((shift) => shift.id);
+  const [workItemsByShift, breaksByShift] = await Promise.all([
+    listWorkItemsForShifts(ids),
+    listBreaksForShifts(ids),
+  ]);
+  return shifts.map((shift) =>
+    mapShift(
+      {
+        id: shift.id,
+        user_id: shift.userId,
+        work_date: shift.workDate,
+        started_at: shift.startedAt,
+        ended_at: shift.endedAt,
+        minutes: shift.minutes,
+        notes: shift.notes,
+        source: shift.source,
+        backlog_id: shift.backlogId,
+        created_at: shift.createdAt,
+        updated_at: shift.updatedAt,
+      },
+      workItemsByShift.get(shift.id) ?? [],
+      breaksByShift.get(shift.id) ?? [],
+    ),
+  );
 }
 
 export async function getWeekSummary(userId: string, weekStart?: string): Promise<TimesheetWeekSummary> {
@@ -363,7 +407,15 @@ export async function endShift(userId: string): Promise<TimesheetShift> {
 
   const { DB } = getEnv();
   const endedAt = nowMs();
-  const minutes = minutesBetween(active.startedAt, endedAt);
+  await closeOpenBreak(active.id, endedAt);
+
+  const breaksByShift = await listBreaksForShifts([active.id]);
+  const breaks = breaksByShift.get(active.id) ?? [];
+  const minutes = paidMinutesForShift({
+    startedAt: active.startedAt,
+    endedAt,
+    breaks,
+  });
   const workDate = easternDateFromMs(active.startedAt);
 
   await DB.prepare(
@@ -376,7 +428,8 @@ export async function endShift(userId: string): Promise<TimesheetShift> {
 
   const row = await DB.prepare(`${SHIFT_SELECT} WHERE id = ?`).bind(active.id).first<ShiftRow>();
   if (!row) throw new Error('Unable to end your shift.');
-  return mapShift(row);
+  const [withMeta] = await attachWorkItems([mapShift(row)]);
+  return withMeta ?? mapShift(row, [], breaks);
 }
 
 export async function getShiftForUser(shiftId: string, userId: string): Promise<TimesheetShift | null> {
@@ -385,7 +438,27 @@ export async function getShiftForUser(shiftId: string, userId: string): Promise<
     .bind(shiftId, userId)
     .first<ShiftRow>();
 
-  return row ? mapShift(row) : null;
+  if (!row) return null;
+  const [withMeta] = await attachWorkItems([mapShift(row)]);
+  return withMeta ?? mapShift(row);
+}
+
+export async function pauseActiveShift(userId: string): Promise<TimesheetShift> {
+  const active = await getActiveShift(userId);
+  if (!active) throw new Error('No active shift to pause.');
+  await pauseShift(active.id, userId);
+  const refreshed = await getActiveShift(userId);
+  if (!refreshed) throw new Error('Unable to pause your shift.');
+  return refreshed;
+}
+
+export async function resumeActiveShift(userId: string): Promise<TimesheetShift> {
+  const active = await getActiveShift(userId);
+  if (!active) throw new Error('No active shift to resume.');
+  await resumeShift(active.id, userId);
+  const refreshed = await getActiveShift(userId);
+  if (!refreshed) throw new Error('Unable to resume your shift.');
+  return refreshed;
 }
 
 export async function applyApprovedShiftEdit(input: {
@@ -398,6 +471,13 @@ export async function applyApprovedShiftEdit(input: {
 }): Promise<TimesheetShift> {
   const { DB } = getEnv();
   const updatedAt = nowMs();
+  const breaksByShift = await listBreaksForShifts([input.shiftId]);
+  const breaks = breaksByShift.get(input.shiftId) ?? [];
+  const minutes = paidMinutesForShift({
+    startedAt: input.startedAt,
+    endedAt: input.endedAt,
+    breaks,
+  });
 
   const result = await DB.prepare(
     `UPDATE timesheet_shift
@@ -408,7 +488,7 @@ export async function applyApprovedShiftEdit(input: {
       input.workDate,
       input.startedAt,
       input.endedAt,
-      input.minutes,
+      minutes,
       updatedAt,
       input.shiftId,
       input.userId,
@@ -421,7 +501,8 @@ export async function applyApprovedShiftEdit(input: {
 
   const row = await DB.prepare(`${SHIFT_SELECT} WHERE id = ?`).bind(input.shiftId).first<ShiftRow>();
   if (!row) throw new Error('Unable to load updated shift.');
-  return mapShift(row);
+  const [withMeta] = await attachWorkItems([mapShift(row)]);
+  return withMeta ?? mapShift(row, [], breaks);
 }
 
 export async function createBacklogShift(input: {
