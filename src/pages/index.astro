@@ -50,7 +50,6 @@ const railWidgets = layout.railWidgets;
 const railImageUrl = layout.railImageUrl;
 const belowBoard = layout.belowSlot === 'board';
 const belowWidgets = layout.belowSlot === 'widgets';
-const boardShape = layout.boardShape;
 const suggestOnRail = railBoard;
 const suggestOnBelow = belowBoard && !railBoard;
 
@@ -93,6 +92,14 @@ const widgetProps = {
       />
 
       <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
+
+      {
+        belowBoard ? (
+          <div class="mt-8">
+            <HomeBulletinBoard shape="landscape" showSuggest={suggestOnBelow} />
+          </div>
+        ) : null
+      }
     </div>
 
     {
@@ -123,14 +130,6 @@ const widgetProps = {
       ) : null
     }
   </div>
-
-  {
-    belowBoard ? (
-      <div class="mt-10">
-        <HomeBulletinBoard shape={boardShape} showSuggest={suggestOnBelow} />
-      </div>
-    ) : null
-  }
 
   {
     belowWidgets ? (
