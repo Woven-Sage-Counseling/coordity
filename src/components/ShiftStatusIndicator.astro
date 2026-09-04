@@ -21,23 +21,24 @@ const {
 const iconSize = compact ? 'size-3.5' : 'size-4';
 const travelIconSize = compact ? 'size-4' : 'size-5';
 const dotSize = compact ? 'size-2.5' : 'size-3';
-const traveling = onTimeOff;
-const available = showShiftStatus && !traveling && onShift;
-const unavailable = showShiftStatus && !traveling && !onShift;
-const statusLabel = traveling ? 'On vacation' : onShift ? 'Available' : 'Unavailable';
-const srLabel = traveling
-  ? 'Currently on vacation'
-  : onShift
-    ? 'Currently available'
-    : 'Currently unavailable';
-const visible = traveling || showShiftStatus;
+const state = onTimeOff ? 'traveling' : !showShiftStatus ? 'hidden' : onShift ? 'available' : 'unavailable';
+const statusLabel =
+  state === 'traveling' ? 'On vacation' : state === 'available' ? 'Available' : 'Unavailable';
+const srLabel =
+  state === 'traveling'
+    ? 'Currently on vacation'
+    : state === 'available'
+      ? 'Currently available'
+      : 'Currently unavailable';
+const visible = state !== 'hidden';
 ---
 
 {
   visible ? (
     <div
-      class="inline-flex items-center gap-2"
+      class="shift-status inline-flex items-center gap-2"
       data-shift-status
+      data-shift-state={state}
       {...self ? { 'data-shift-status-self': '' } : {}}
       data-on-shift={onShift ? '1' : '0'}
       data-on-time-off={onTimeOff ? '1' : '0'}
@@ -45,17 +46,12 @@ const visible = traveling || showShiftStatus;
     >
       <span class="inline-flex shrink-0 items-center justify-center" data-shift-status-icon>
         <span
-          class:list={[
-            'rounded-full',
-            dotSize,
-            'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]',
-            !available && 'hidden',
-          ]}
+          class:list={['rounded-full', dotSize, 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]']}
           data-shift-status-available
           aria-hidden="true"
         />
         <svg
-          class:list={[iconSize, 'text-sage-dark/45', !unavailable && 'hidden']}
+          class:list={[iconSize, 'text-sage-dark/45']}
           data-shift-status-unavailable
           viewBox="0 0 24 24"
           fill="currentColor"
@@ -64,7 +60,7 @@ const visible = traveling || showShiftStatus;
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
         <svg
-          class:list={[travelIconSize, 'shrink-0 text-sage-dark/70', !traveling && 'hidden']}
+          class:list={[travelIconSize, 'shrink-0 text-sage-dark/70']}
           data-shift-status-traveling
           viewBox="0 0 24 24"
           fill="currentColor"
@@ -78,7 +74,18 @@ const visible = traveling || showShiftStatus;
           {statusLabel}
         </span>
       ) : null}
-      <span class="sr-only">{srLabel}</span>
+      <span class="sr-only" data-shift-status-sr>{srLabel}</span>
     </div>
   ) : null
 }
+
+<style is:global>
+  .shift-status[data-shift-state='available'] [data-shift-status-unavailable],
+  .shift-status[data-shift-state='available'] [data-shift-status-traveling],
+  .shift-status[data-shift-state='unavailable'] [data-shift-status-available],
+  .shift-status[data-shift-state='unavailable'] [data-shift-status-traveling],
+  .shift-status[data-shift-state='traveling'] [data-shift-status-available],
+  .shift-status[data-shift-state='traveling'] [data-shift-status-unavailable] {
+    display: none !important;
+  }
+</style>

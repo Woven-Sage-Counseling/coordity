@@ -40,16 +40,13 @@ export function applyShiftStatus(activeShift: unknown): void {
     if (node.dataset.showShiftStatus === '0') return;
 
     const onShift = Boolean(activeShift);
+    const state = onShift ? 'available' : 'unavailable';
     node.dataset.onShift = onShift ? '1' : '0';
-
-    const available = node.querySelector('[data-shift-status-available]');
-    const unavailable = node.querySelector('[data-shift-status-unavailable]');
-    const traveling = node.querySelector('[data-shift-status-traveling]');
-    if (available instanceof HTMLElement) available.classList.toggle('hidden', !onShift);
-    if (unavailable instanceof HTMLElement) unavailable.classList.toggle('hidden', onShift);
-    if (traveling instanceof HTMLElement) traveling.classList.add('hidden');
+    node.dataset.shiftState = state;
 
     const label = node.querySelector('[data-shift-status-label]');
     if (label) label.textContent = onShift ? 'Available' : 'Unavailable';
+    const sr = node.querySelector('[data-shift-status-sr]');
+    if (sr) sr.textContent = onShift ? 'Currently available' : 'Currently unavailable';
   });
 }
