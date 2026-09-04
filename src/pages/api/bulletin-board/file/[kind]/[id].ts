@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getBulletinPinFile, getBulletinRequestFile } from '../../../../../lib/bulletin-board';
-import { isPortalOwner } from '../../../../../lib/permissions';
+import { canAccessManagement } from '../../../../../lib/permissions';
 
 export const prerender = false;
 
@@ -13,8 +13,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
   const kind = String(params.kind ?? '');
   const id = String(params.id ?? '');
 
-  // Pending request files stay owner-only; live pin files are visible to the org.
-  if (kind === 'request' && !isPortalOwner(employee)) {
+  // Pending request files stay admin-only; live pin files are visible to the org.
+  if (kind === 'request' && !canAccessManagement(employee)) {
     return new Response('Forbidden', { status: 403 });
   }
 

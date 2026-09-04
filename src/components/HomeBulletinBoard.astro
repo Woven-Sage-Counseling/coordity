@@ -1,6 +1,9 @@
 ---
 import '../styles/bulletin-board.css';
 import {
+  BULLETIN_IMAGE_MAX_EDGE,
+  BULLETIN_MAX_IMAGE_BYTES,
+  BULLETIN_MAX_PDF_BYTES,
   getBulletinBoardSettings,
   listBulletinBoardPins,
   serializePin,
@@ -21,13 +24,16 @@ const writingMode = writingModeForSurface(settings.surface);
   data-home-board
   data-surface={settings.surface}
   data-writing-mode={writingMode}
+  data-max-image-bytes={BULLETIN_MAX_IMAGE_BYTES}
+  data-max-pdf-bytes={BULLETIN_MAX_PDF_BYTES}
+  data-image-max-edge={BULLETIN_IMAGE_MAX_EDGE}
 >
   <link
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap"
   />
   <div
-    class="board-surface board-frame relative"
+    class="board-surface board-frame relative mx-auto"
     data-board-canvas
     data-surface={settings.surface}
   >
@@ -83,6 +89,44 @@ const writingMode = writingModeForSurface(settings.surface);
       ) : null
     }
   </div>
+
+  <details class="mt-3 rounded-xl border border-sage-dark/10 bg-white/80 px-3 py-2 shadow-sm">
+    <summary class="cursor-pointer text-sm font-semibold text-charcoal">Suggest a post</summary>
+    <form class="mt-3 space-y-3" data-board-suggest-form>
+      <label class="block text-sm">
+        <span class="font-medium text-charcoal">Type</span>
+        <select name="kind" class="field mt-1" data-suggest-kind>
+          <option value="text">Sticky note</option>
+          <option value="image">Photo / poster</option>
+          <option value="pdf">PDF flyer</option>
+        </select>
+      </label>
+      <label class="block text-sm" data-suggest-body-wrap>
+        <span class="font-medium text-charcoal">Message</span>
+        <textarea
+          name="body"
+          class="field mt-1 min-h-[4.5rem] resize-y text-sm"
+          placeholder="Something for the team board…"
+          data-suggest-body
+        ></textarea>
+      </label>
+      <label class="block text-sm hidden" data-suggest-file-wrap>
+        <span class="font-medium text-charcoal">File</span>
+        <input
+          name="file"
+          type="file"
+          class="mt-1 block w-full text-sm"
+          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+          data-suggest-file
+        />
+      </label>
+      <button type="submit" class="btn-secondary !px-3 !py-1.5 text-xs" data-suggest-submit>
+        Submit for approval
+      </button>
+      <p class="hidden text-xs text-sage-dark/70" data-suggest-status></p>
+      <p class="hidden text-xs text-red-700" data-suggest-error></p>
+    </form>
+  </details>
 
   <dialog class="board-expand-dialog" data-board-expand>
     <div class="board-expand-panel">
@@ -140,6 +184,143 @@ const writingMode = writingModeForSurface(settings.surface);
     closeBtn?.addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
+    });
+
+    const form = root.querySelector('[data-board-suggest-form]');
+    const kindSelect = root.querySelector('[data-suggest-kind]');
+    const bodyWrap = root.querySelector('[data-suggest-body-wrap]');
+    const fileWrap = root.querySelector('[data-suggest-file-wrap]');
+    const statusEl = root.querySelector('[data-suggest-status]');
+    const errorEl = root.querySelector('[data-suggest-error]');
+    const submitBtn = root.querySelector('[data-suggest-submit]');
+    const maxImageBytes = Number(root.dataset.maxImageBytes) || 1_000_000;
+    const maxPdfBytes = Number(root.dataset.maxPdfBytes) || 1_200_000;
+    const imageMaxEdge = Number(root.dataset.imageMaxEdge) || 1600;
+
+    const syncKind = () => {
+      const kind = kindSelect instanceof HTMLSelectElement ? kindSelect.value : 'text';
+      if (bodyWrap instanceof HTMLElement) bodyWrap.classList.toggle('hidden', kind !== 'text');
+      if (fileWrap instanceof HTMLElement) fileWrap.classList.toggle('hidden', kind === 'text');
+    };
+    kindSelect?.addEventListener('change', syncKind);
+    syncKind();
+
+    const loadImage = (file: File) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Could not read that image.'));
+        };
+        img.src = url;
+      });
+
+    const blobToFile = (blob: Blob, name: string, type: string) =>
+      new File([blob], name, { type });
+
+    const compressImage = async (file: File) => {
+      if (file.size <= maxImageBytes) return file;
+      const img = await loadImage(file);
+      const scale = Math.min(1, imageMaxEdge / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not compress image.');
+      ctx.drawImage(img, 0, 0, width, height);
+      let quality = 0.88;
+      let best: Blob | null = null;
+      for (let i = 0; i < 8; i += 1) {
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((result) => resolve(result), 'image/jpeg', quality),
+        );
+        if (!blob) break;
+        best = blob;
+        if (blob.size <= maxImageBytes) break;
+        quality -= 0.08;
+      }
+      if (!best || best.size > maxImageBytes) {
+        throw new Error('Image is still too large after compression (max about 1MB).');
+      }
+      return blobToFile(best, file.name.replace(/\.\w+$/, '') + '.jpg', 'image/jpeg');
+    };
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(form instanceof HTMLFormElement)) return;
+      if (errorEl instanceof HTMLElement) {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+      }
+      if (statusEl instanceof HTMLElement) {
+        statusEl.classList.add('hidden');
+        statusEl.textContent = '';
+      }
+
+      const kind = kindSelect instanceof HTMLSelectElement ? kindSelect.value : 'text';
+      const bodyInput = form.querySelector('[data-suggest-body]');
+      const fileInput = form.querySelector('[data-suggest-file]');
+      const note = bodyInput instanceof HTMLTextAreaElement ? bodyInput.value.trim() : '';
+
+      try {
+        if (kind === 'text' && !note) throw new Error('Write something for the sticky note.');
+        if (submitBtn instanceof HTMLButtonElement) submitBtn.disabled = true;
+
+        const payload = new FormData();
+        payload.append('kind', kind);
+        if (kind === 'text') payload.append('body', note);
+
+        if (kind === 'image' || kind === 'pdf') {
+          const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
+          if (!file) throw new Error('Choose a file to upload.');
+          if (kind === 'pdf') {
+            if (file.type !== 'application/pdf') throw new Error('Upload a PDF file.');
+            if (file.size > maxPdfBytes) throw new Error('PDF is too large (max about 1.2MB).');
+            payload.append('file', file);
+          } else {
+            if (statusEl instanceof HTMLElement) {
+              statusEl.textContent = 'Preparing image…';
+              statusEl.classList.remove('hidden');
+            }
+            payload.append('file', await compressImage(file));
+          }
+        }
+
+        if (statusEl instanceof HTMLElement) {
+          statusEl.textContent = 'Submitting…';
+          statusEl.classList.remove('hidden');
+        }
+
+        const res = await fetch('/api/bulletin-board/requests/create', {
+          method: 'POST',
+          body: payload,
+          headers: { Accept: 'application/json' },
+        });
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) throw new Error(json.error || 'Could not submit.');
+
+        form.reset();
+        syncKind();
+        if (statusEl instanceof HTMLElement) {
+          statusEl.textContent = 'Submitted for admin approval.';
+          statusEl.classList.remove('hidden');
+        }
+      } catch (error) {
+        if (errorEl instanceof HTMLElement) {
+          errorEl.textContent = error instanceof Error ? error.message : 'Submit failed.';
+          errorEl.classList.remove('hidden');
+        }
+        if (statusEl instanceof HTMLElement) statusEl.classList.add('hidden');
+      } finally {
+        if (submitBtn instanceof HTMLButtonElement) submitBtn.disabled = false;
+      }
     });
   }
 

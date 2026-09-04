@@ -13,12 +13,12 @@ import {
   serializeRequest,
   writingModeForSurface,
 } from '../lib/bulletin-board';
-import { isPortalOwner } from '../lib/permissions';
+import { canAccessManagement } from '../lib/permissions';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
-if (!isPortalOwner(employee)) {
+if (!canAccessManagement(employee)) {
   return new Response('Forbidden', { status: 403 });
 }
 
@@ -47,20 +47,22 @@ const payload = {
 };
 ---
 
-<PortalLayout title="Board lab" wide>
+<PortalLayout title="Bulletin board" wide>
   <p class="text-sm text-sage-dark/65">
     <a href="/" class="hover:text-sage-dark">Home</a>
     <span class="mx-1.5 text-sage-dark/35">/</span>
-    Board lab
+    <a href="/admin" class="hover:text-sage-dark">Admin</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Bulletin board
   </p>
 
   <div data-board-lab data-payload={JSON.stringify(payload)}>
     <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Board lab</h1>
+        <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Bulletin board</h1>
         <p class="mt-3 max-w-2xl text-sage-dark/75">
-          Private draft of the Home board. Try layouts, notes, and surfaces here — nothing changes on
-          Home until you click Update board.
+          Edit a private draft of the Home board. Nothing changes for the team until you click Update
+          board.
         </p>
       </div>
       <div class="flex flex-col items-end gap-2">
@@ -83,9 +85,9 @@ const payload = {
       </div>
     </div>
 
-    <div class="mt-8 flex flex-wrap gap-2 border-b border-sage-dark/10 pb-3" role="tablist" aria-label="Board lab sections">
+    <div class="mt-8 flex flex-wrap gap-2 border-b border-sage-dark/10 pb-3" role="tablist" aria-label="Bulletin board sections">
       <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-semibold" data-lab-tab="board" aria-selected="true">
-        Admin board
+        Draft board
       </button>
       <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="requests" aria-selected="false">
         Requests
@@ -212,8 +214,10 @@ const payload = {
         </div>
 
         <form class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm" data-request-form>
-          <h3 class="text-sm font-semibold text-charcoal">Simulate employee submission</h3>
-          <p class="mt-1 text-xs text-sage-dark/60">For lab testing until employee submit UI exists.</p>
+          <h3 class="text-sm font-semibold text-charcoal">Create a pending request</h3>
+          <p class="mt-1 text-xs text-sage-dark/60">
+            Same flow employees use from Home — place it from the Requests list when ready.
+          </p>
           <label class="mt-4 block text-sm">
             <span class="font-medium text-charcoal">Type</span>
             <select name="kind" class="field mt-1" data-request-kind>

@@ -7,7 +7,7 @@ import {
   serializePin,
   type BulletinKind,
 } from '../../../../lib/bulletin-board';
-import { requirePortalOwner } from '../../../../lib/owner-access';
+import { requireManagementAccess } from '../../../../lib/management-access';
 
 export const prerender = false;
 
@@ -22,7 +22,7 @@ async function fileToBase64(file: File): Promise<string> {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const denied = requirePortalOwner(locals.employee);
+  const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
   const employee = locals.employee!;
 

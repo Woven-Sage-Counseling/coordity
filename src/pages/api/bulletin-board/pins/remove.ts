@@ -1,11 +1,11 @@
 import type { APIRoute } from 'astro';
 import { removeBulletinBoardPin } from '../../../../lib/bulletin-board';
-import { requirePortalOwner } from '../../../../lib/owner-access';
+import { requireManagementAccess } from '../../../../lib/management-access';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const denied = requirePortalOwner(locals.employee);
+  const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
 
   const form = await request.formData();

@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createAuth } from './lib/auth';
-import { canAccessManagement, isPortalOwner, loadEmployee } from './lib/permissions';
+import { canAccessManagement, loadEmployee } from './lib/permissions';
 
 const PUBLIC_PATHS = new Set([
   '/sign-in',
@@ -79,14 +79,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (pathname.startsWith('/bulletin-board')) {
-    if (!isPortalOwner(employee)) {
+    if (!canAccessManagement(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }
   }
 
   if (pathname.startsWith('/api/bulletin-board')) {
     const pinFileRead = /^\/api\/bulletin-board\/file\/pin\//.test(pathname);
-    if (!pinFileRead && !isPortalOwner(employee)) {
+    const employeeSubmit = pathname === '/api/bulletin-board/requests/create';
+    if (!pinFileRead && !employeeSubmit && !canAccessManagement(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }
   }

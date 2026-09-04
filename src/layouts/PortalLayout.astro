@@ -3,7 +3,7 @@ import '../styles/global.css';
 import PreviewBanner from '../components/PreviewBanner.astro';
 import PortalFooter from '../components/PortalFooter.astro';
 import { getEnv } from '../lib/env';
-import { canAccessManagement, hasPermission, isPortalOwner } from '../lib/permissions';
+import { canAccessManagement, hasPermission } from '../lib/permissions';
 
 interface Props {
   title: string;
@@ -14,7 +14,6 @@ const { title, wide = false } = Astro.props;
 const employee = Astro.locals.employee;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
-const canSeeBoardLab = isPortalOwner(employee);
 const showFooter = employee?.status === 'active';
 const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
 ---
@@ -92,11 +91,6 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
                     Admin
                   </span>
                 )}
-                {canSeeBoardLab ? (
-                  <a href="/bulletin-board" class="font-medium text-sage-dark hover:text-charcoal">
-                    Board
-                  </a>
-                ) : null}
               </div>
               <a href="/account" class="text-sage-dark/80 hover:text-sage-dark">Account</a>
               <a

@@ -25,6 +25,7 @@ import { listTimesheetBacklogForAdmin } from '../lib/timesheet-backlog';
 import { listTimesheetShiftEditsForAdmin } from '../lib/timesheet-shift-edits';
 import { listAssignedTasksForAdmin } from '../lib/tasks';
 import { listWorkCategoriesForAdmin } from '../lib/timesheet-work-categories';
+import { listBulletinBoardRequests } from '../lib/bulletin-board';
 
 export const prerender = false;
 
@@ -37,6 +38,7 @@ const announcements = await listActiveAnnouncements(50);
 const timeOffRequests = await listTimeOffRequestsForAdmin();
 const timesheetBacklogRequests = await listTimesheetBacklogForAdmin();
 const timesheetShiftEditRequests = await listTimesheetShiftEditsForAdmin();
+const pendingBoardRequests = await listBulletinBoardRequests({ status: 'pending' });
 const roles = await listRolesWithPermissions();
 const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
@@ -71,6 +73,7 @@ const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'p
 const pendingTimesheetBacklog = timesheetBacklogRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetShiftEdits = timesheetShiftEditRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetRequests = pendingTimesheetBacklog + pendingTimesheetShiftEdits;
+const pendingBulletinRequests = pendingBoardRequests.length;
 const openAssignedTasks = assignedTasks.filter((task) => task.completedAt == null).length;
 let workCategories: Awaited<ReturnType<typeof listWorkCategoriesForAdmin>> = [];
 try {
@@ -159,6 +162,26 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           <span class="text-[15px] font-medium text-charcoal">Announcements</span>
           <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <a
+          href="/bulletin-board"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Bulletin board</span>
+          <span class="inline-flex shrink-0 items-center gap-2">
+            {
+              pendingBulletinRequests > 0 ? (
+                <span
+                  class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold leading-none text-white"
+                  aria-label={`${pendingBulletinRequests} pending board ${pendingBulletinRequests === 1 ? 'request' : 'requests'}`}
+                >
+                  {pendingBulletinRequests > 9 ? '9+' : pendingBulletinRequests}
+                </span>
+              ) : null
+            }
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </span>
+        </a>
         <div class="mx-4 border-t border-sage-dark/10"></div>
         <button
           type="button"

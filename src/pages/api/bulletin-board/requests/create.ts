@@ -6,7 +6,6 @@ import {
   serializeRequest,
   type BulletinKind,
 } from '../../../../lib/bulletin-board';
-import { requirePortalOwner } from '../../../../lib/owner-access';
 
 export const prerender = false;
 
@@ -21,9 +20,10 @@ async function fileToBase64(file: File): Promise<string> {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const denied = requirePortalOwner(locals.employee);
-  if (denied) return denied;
-  const employee = locals.employee!;
+  const employee = locals.employee;
+  if (!employee || employee.status !== 'active') {
+    return new Response('Forbidden', { status: 403 });
+  }
 
   const form = await request.formData();
   const kind = String(form.get('kind') ?? '').trim() as BulletinKind;
