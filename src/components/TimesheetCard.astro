@@ -201,13 +201,18 @@ const week = summary?.week;
     flash.hidden = false;
   }
 
-  function flashMessageForForm(form: HTMLFormElement): string {
+  function flashMessageForForm(form: HTMLFormElement): string | null {
+    if (form.matches('[data-timesheet-break-form]')) return null;
     if (form.matches('[data-timesheet-start-form]')) return 'Shift started.';
     if (form.matches('[data-timesheet-end-form]')) return 'Shift ended and saved.';
-    if (form.matches('[data-timesheet-break-form]')) {
-      return form.action.includes('resume-shift') ? 'Shift resumed.' : 'Shift paused.';
-    }
     return 'Timesheet updated.';
+  }
+
+  function clearFlash(root: HTMLElement): void {
+    const flash = root.querySelector('[data-timesheet-flash]');
+    if (!(flash instanceof HTMLElement)) return;
+    flash.innerHTML = '';
+    flash.hidden = true;
   }
 
   function applySummary(root: HTMLElement, summary: Record<string, unknown>): void {
@@ -289,7 +294,9 @@ const week = summary?.week;
         throw new Error(payload.error ?? 'Unable to update your timesheet.');
       }
       applySummary(root, payload.summary);
-      setFlash(root, 'ok', flashMessageForForm(form));
+      const message = flashMessageForForm(form);
+      if (message) setFlash(root, 'ok', message);
+      else clearFlash(root);
     } catch (error) {
       setFlash(root, 'error', error instanceof Error ? error.message : 'Unable to update your timesheet.');
       const summary = JSON.parse(root.dataset.summary || '{}') as Record<string, unknown>;
