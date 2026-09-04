@@ -1,6 +1,7 @@
 const PAGE_PROMINENT = 'btn-primary';
 const PAGE_MUTED = 'btn-secondary cursor-not-allowed';
-const WIDGET_BASE = 'w-full whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-semibold';
+const WIDGET_BASE =
+  'inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-semibold leading-none';
 const WIDGET_PROMINENT = `widget-accent-btn ${WIDGET_BASE}`;
 const WIDGET_MUTED = `${WIDGET_BASE} border border-sage-dark/20 bg-white text-charcoal/55 cursor-not-allowed`;
 
