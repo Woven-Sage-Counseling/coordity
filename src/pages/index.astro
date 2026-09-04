@@ -16,6 +16,12 @@ import { canUseTimesheet } from '../lib/timesheet-access';
 import { getActiveShift } from '../lib/timesheet-entries';
 import { isOnBreak } from '../lib/timesheet-breaks';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
+import {
+  COMPANY_WORDMARK_SRC,
+  getHomeLayoutSettings,
+  PORTAL_MARK_SRC,
+  serializeHomeLayout,
+} from '../lib/home-layout';
 
 export const prerender = false;
 
@@ -36,11 +42,36 @@ const activeShift = canSeeTimesheet ? await getActiveShift(employee.id) : null;
 const onShift = activeShift != null;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
+
+const layout = serializeHomeLayout(await getHomeLayoutSettings());
+const showRail = layout.showRail;
+const railBoard = layout.railBoard;
+const railWidgets = layout.railWidgets;
+const railImageUrl = layout.railImageUrl;
+const belowBoard = layout.belowSlot === 'board';
+const belowWidgets = layout.belowSlot === 'widgets';
+const boardShape = layout.boardShape;
+const suggestOnRail = railBoard;
+const suggestOnBelow = belowBoard && !railBoard;
+
+const widgetProps = {
+  userId: employee.id,
+  employee,
+  canSeeFinancials,
+  canSeeCredentialing: canSeeCredentialingWidget,
+  canSeeClinical: canSeeCaseloadWidget,
+  canSeeTimesheet,
+};
 ---
 
 <PortalLayout title="Home" wide>
-  <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-8">
-    <div class="order-1 lg:order-1">
+  <div
+    class:list={[
+      'flex flex-col lg:items-start lg:gap-8',
+      showRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_24rem]' : '',
+    ]}
+  >
+    <div class="order-1 min-w-0 lg:order-1">
       <div class="flex flex-wrap items-center gap-3">
         <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
         <ShiftStatusIndicator
@@ -64,21 +95,50 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
     </div>
 
-    <aside class="order-2 mt-8 lg:order-2 lg:mt-0">
-      <HomeBulletinBoard />
-    </aside>
+    {
+      showRail ? (
+        <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
+          {railBoard ? <HomeBulletinBoard shape="portrait" showSuggest={suggestOnRail} /> : null}
+          {railWidgets ? (
+            <div class="min-w-0">
+              <HomeWidgetCarousel {...widgetProps} />
+            </div>
+          ) : null}
+          {!railBoard && !railWidgets && railImageUrl ? (
+            <div class="overflow-hidden rounded-[1.05rem] bg-white/80 p-6 shadow-sm ring-1 ring-black/10">
+              <img
+                src={
+                  layout.railImageKind === 'portal'
+                    ? PORTAL_MARK_SRC
+                    : layout.railImageKind === 'company' && !layout.hasRailImage
+                      ? COMPANY_WORDMARK_SRC
+                      : railImageUrl
+                }
+                alt=""
+                class="mx-auto max-h-64 w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </aside>
+      ) : null
+    }
   </div>
 
-  <div class="mt-10">
-    <HomeWidgetCarousel
-      userId={employee.id}
-      employee={employee}
-      canSeeFinancials={canSeeFinancials}
-      canSeeCredentialing={canSeeCredentialingWidget}
-      canSeeClinical={canSeeCaseloadWidget}
-      canSeeTimesheet={canSeeTimesheet}
-    />
-  </div>
+  {
+    belowBoard ? (
+      <div class="mt-10">
+        <HomeBulletinBoard shape={boardShape} showSuggest={suggestOnBelow} />
+      </div>
+    ) : null
+  }
+
+  {
+    belowWidgets ? (
+      <div class="mt-10">
+        <HomeWidgetCarousel {...widgetProps} />
+      </div>
+    ) : null
+  }
 
   {
     appCategories.map((category) => {

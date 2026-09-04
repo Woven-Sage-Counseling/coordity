@@ -13,6 +13,7 @@ import {
   serializeRequest,
   writingModeForSurface,
 } from '../lib/bulletin-board';
+import { getHomeLayoutSettings, serializeHomeLayout } from '../lib/home-layout';
 import { canAccessManagement } from '../lib/permissions';
 
 export const prerender = false;
@@ -23,6 +24,7 @@ if (!canAccessManagement(employee)) {
 }
 
 const settings = await getBulletinBoardSettings();
+const homeLayout = await getHomeLayoutSettings();
 const pins = await listBulletinBoardPins({ channel: 'draft' });
 const pending = await listBulletinBoardRequests({ status: 'pending' });
 const writingMode = writingModeForSurface(settings.draftSurface);
@@ -30,6 +32,7 @@ const colors = BULLETIN_COLORS[settings.draftSurface];
 const hasUnpublishedChanges =
   settings.draftUpdatedAt > (settings.publishedAt ?? 0) ||
   settings.draftSurface !== settings.surface;
+const boardShape = homeLayout.boardShape;
 
 const payload = {
   surface: settings.draftSurface,
@@ -44,6 +47,8 @@ const payload = {
   draftUpdatedAt: settings.draftUpdatedAt,
   publishedAt: settings.publishedAt,
   hasUnpublishedChanges,
+  boardShape,
+  layout: serializeHomeLayout(homeLayout),
 };
 ---
 
@@ -98,17 +103,22 @@ const payload = {
       <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="surface" aria-selected="false">
         Surface
       </button>
+      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="layout" aria-selected="false">
+        Home layout
+      </button>
     </div>
 
     <section class="mt-6" data-lab-panel="board">
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div class="shrink-0">
-          <p class="mb-3 max-w-[24rem] text-sm text-sage-dark/70">
-            Draft preview (Home size). Changes stay here until you update the live board.
+        <div class:list={[boardShape === 'landscape' ? 'min-w-0 flex-1' : 'shrink-0']}>
+          <p class="mb-3 text-sm text-sage-dark/70" data-board-shape-hint>
+            Draft preview matches Home ({boardShape === 'landscape' ? 'wide below' : 'tall rail'}).
+            Changes stay here until you update the live board.
           </p>
           <div
             class="board-surface board-frame relative"
             data-board-canvas
+            data-board-shape={boardShape}
             data-surface={settings.draftSurface}
           >
             <div class="pointer-events-none absolute inset-0 opacity-40" data-board-texture aria-hidden="true"></div>
@@ -277,6 +287,74 @@ const payload = {
         <span class="mx-2 text-sage-dark/30">·</span>
         Live Home surface: <strong data-live-surface>{settings.surface}</strong>
       </p>
+    </section>
+
+    <section class="mt-6 hidden" data-lab-panel="layout">
+      <h2 class="text-sm font-semibold text-charcoal">Home layout</h2>
+      <p class="mt-1 max-w-2xl text-sm text-sage-dark/65">
+        Choose what appears in the right rail and what sits under the welcome section. Putting the
+        board below makes it a wide rectangle; the draft board above matches that shape.
+      </p>
+
+      <form class="mt-6 max-w-xl space-y-6" data-home-layout-form>
+        <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+          <legend class="px-1 text-sm font-semibold text-charcoal">Right rail</legend>
+          <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
+            <input type="checkbox" name="railBoard" value="1" data-layout-rail-board checked={homeLayout.railBoard} />
+            Bulletin board (tall)
+          </label>
+          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+            <input type="checkbox" name="railWidgets" value="1" data-layout-rail-widgets checked={homeLayout.railWidgets} />
+            Widgets
+          </label>
+          <label class="mt-4 block text-sm">
+            <span class="font-medium text-charcoal">Static picture (when rail has no board/widgets)</span>
+            <select name="railImageKind" class="field mt-1" data-layout-image-kind>
+              <option value="none" selected={homeLayout.railImageKind === 'none'}>None</option>
+              <option value="custom" selected={homeLayout.railImageKind === 'custom'}>Custom picture</option>
+              <option value="company" selected={homeLayout.railImageKind === 'company'}>Company logo</option>
+              <option value="portal" selected={homeLayout.railImageKind === 'portal'}>Portal mark</option>
+            </select>
+          </label>
+          <label class="mt-3 block text-sm" data-layout-image-upload-wrap>
+            <span class="font-medium text-charcoal">Upload image</span>
+            <input name="railImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="mt-1 block w-full text-sm" />
+            <span class="mt-1 block text-[11px] text-sage-dark/55">
+              Used for custom or company logo. Max about 1.2MB.
+              {homeLayout.hasRailImage ? ' A picture is already saved.' : ''}
+            </span>
+          </label>
+          {
+            homeLayout.hasRailImage ? (
+              <label class="mt-2 flex items-center gap-2 text-sm text-sage-dark/80">
+                <input type="checkbox" name="clearRailImage" value="1" />
+                Remove saved picture
+              </label>
+            ) : null
+          }
+        </fieldset>
+
+        <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
+          <legend class="px-1 text-sm font-semibold text-charcoal">Underneath</legend>
+          <p class="mt-1 text-xs text-sage-dark/60">Only one option here. Board underneath becomes wide.</p>
+          <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="belowSlot" value="none" data-layout-below checked={homeLayout.belowSlot === 'none'} />
+            Nothing
+          </label>
+          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="belowSlot" value="board" data-layout-below checked={homeLayout.belowSlot === 'board'} />
+            Bulletin board (wide)
+          </label>
+          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="belowSlot" value="widgets" data-layout-below checked={homeLayout.belowSlot === 'widgets'} />
+            Widgets
+          </label>
+        </fieldset>
+
+        <button type="submit" class="btn-primary !px-4 !py-2 text-sm" data-layout-save>Save home layout</button>
+        <p class="hidden text-sm text-sage-dark/70" data-layout-status></p>
+        <p class="hidden text-sm text-red-700" data-layout-error></p>
+      </form>
     </section>
   </div>
 </PortalLayout>
@@ -601,6 +679,15 @@ const payload = {
 
     function renderBoard() {
       canvas.dataset.surface = state.surface;
+      canvas.dataset.boardShape = state.boardShape || 'portrait';
+      const hint = root.querySelector('[data-board-shape-hint]');
+      if (hint) {
+        hint.textContent =
+          (state.boardShape === 'landscape'
+            ? 'Draft preview matches Home (wide below). '
+            : 'Draft preview matches Home (tall rail). ') +
+          'Changes stay here until you update the live board.';
+      }
       canvas.querySelectorAll('[data-pin-id]').forEach((node) => node.remove());
       state.pins.forEach((pin) => canvas.appendChild(renderPin(pin)));
     }
@@ -974,6 +1061,102 @@ const payload = {
         }
       } finally {
         if (publishBtn instanceof HTMLButtonElement) publishBtn.disabled = false;
+      }
+    });
+
+    const layoutForm = root.querySelector('[data-home-layout-form]');
+    const layoutStatus = root.querySelector('[data-layout-status]');
+    const layoutError = root.querySelector('[data-layout-error]');
+    const layoutRailBoard = root.querySelector('[data-layout-rail-board]');
+    const layoutRailWidgets = root.querySelector('[data-layout-rail-widgets]');
+    const layoutImageKind = root.querySelector('[data-layout-image-kind]');
+    const layoutImageUploadWrap = root.querySelector('[data-layout-image-upload-wrap]');
+
+    const syncLayoutForm = () => {
+      const below = root.querySelector('[data-layout-below]:checked');
+      const belowVal = below instanceof HTMLInputElement ? below.value : 'none';
+      if (layoutRailBoard instanceof HTMLInputElement && belowVal === 'board') {
+        layoutRailBoard.checked = false;
+      }
+      if (layoutRailWidgets instanceof HTMLInputElement && belowVal === 'widgets') {
+        layoutRailWidgets.checked = false;
+      }
+      const kind = layoutImageKind instanceof HTMLSelectElement ? layoutImageKind.value : 'none';
+      const showUpload = kind === 'custom' || kind === 'company';
+      if (layoutImageUploadWrap instanceof HTMLElement) {
+        layoutImageUploadWrap.classList.toggle('hidden', !showUpload);
+      }
+    };
+
+    root.querySelectorAll('[data-layout-below]').forEach((node) => {
+      node.addEventListener('change', syncLayoutForm);
+    });
+    layoutRailBoard?.addEventListener('change', () => {
+      if (layoutRailBoard instanceof HTMLInputElement && layoutRailBoard.checked) {
+        const belowBoard = root.querySelector('[data-layout-below][value="board"]');
+        if (belowBoard instanceof HTMLInputElement && belowBoard.checked) {
+          const none = root.querySelector('[data-layout-below][value="none"]');
+          if (none instanceof HTMLInputElement) none.checked = true;
+        }
+      }
+      syncLayoutForm();
+    });
+    layoutRailWidgets?.addEventListener('change', () => {
+      if (layoutRailWidgets instanceof HTMLInputElement && layoutRailWidgets.checked) {
+        const belowWidgets = root.querySelector('[data-layout-below][value="widgets"]');
+        if (belowWidgets instanceof HTMLInputElement && belowWidgets.checked) {
+          const none = root.querySelector('[data-layout-below][value="none"]');
+          if (none instanceof HTMLInputElement) none.checked = true;
+        }
+      }
+      syncLayoutForm();
+    });
+    layoutImageKind?.addEventListener('change', syncLayoutForm);
+    syncLayoutForm();
+
+    layoutForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(layoutForm instanceof HTMLFormElement)) return;
+      if (layoutStatus instanceof HTMLElement) {
+        layoutStatus.classList.add('hidden');
+        layoutStatus.textContent = '';
+      }
+      if (layoutError instanceof HTMLElement) {
+        layoutError.classList.add('hidden');
+        layoutError.textContent = '';
+      }
+      try {
+        const form = new FormData(layoutForm);
+        if (!(layoutRailBoard instanceof HTMLInputElement && layoutRailBoard.checked)) {
+          form.set('railBoard', '0');
+        }
+        if (!(layoutRailWidgets instanceof HTMLInputElement && layoutRailWidgets.checked)) {
+          form.set('railWidgets', '0');
+        }
+        const res = await fetch('/api/home-layout/update', {
+          method: 'POST',
+          body: form,
+          headers: { Accept: 'application/json' },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Could not save layout.');
+        state.layout = json.layout;
+        state.boardShape = json.layout.boardShape;
+        if (json.reflowed) {
+          // Reload pins so admin canvas matches reflowed positions.
+          window.location.reload();
+          return;
+        }
+        renderBoard();
+        if (layoutStatus instanceof HTMLElement) {
+          layoutStatus.textContent = 'Home layout saved.';
+          layoutStatus.classList.remove('hidden');
+        }
+      } catch (error) {
+        if (layoutError instanceof HTMLElement) {
+          layoutError.textContent = error instanceof Error ? error.message : 'Save failed.';
+          layoutError.classList.remove('hidden');
+        }
       }
     });
 

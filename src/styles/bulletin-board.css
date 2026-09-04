@@ -9,6 +9,18 @@
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
+.board-frame[data-board-shape='landscape'] {
+  max-width: none;
+  width: 100%;
+  height: 16rem;
+}
+
+@media (min-width: 1024px) {
+  .board-frame[data-board-shape='landscape'] {
+    height: 18rem;
+  }
+}
+
 .board-surface[data-surface='cork'] {
   background-color: #b08958;
   background-image: url('/board/cork.png');

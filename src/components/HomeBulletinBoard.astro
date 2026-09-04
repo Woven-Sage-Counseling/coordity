@@ -10,6 +10,14 @@ import {
   writingModeForSurface,
 } from '../lib/bulletin-board';
 import { BOARD_ZOOM_ICON, linkifyHtml } from '../lib/bulletin-board-format';
+import type { BoardShape } from '../lib/home-layout';
+
+interface Props {
+  shape?: BoardShape;
+  showSuggest?: boolean;
+}
+
+const { shape = 'portrait', showSuggest = true } = Astro.props;
 
 const settings = await getBulletinBoardSettings();
 const pins = (await listBulletinBoardPins({ channel: 'live' })).map((pin) =>
@@ -19,11 +27,12 @@ const writingMode = writingModeForSurface(settings.surface);
 ---
 
 <aside
-  class="lg:sticky lg:top-6"
+  class:list={[shape === 'landscape' ? 'w-full' : 'lg:sticky lg:top-6']}
   aria-label="Bulletin board"
   data-home-board
   data-surface={settings.surface}
   data-writing-mode={writingMode}
+  data-board-shape={shape}
   data-max-image-bytes={BULLETIN_MAX_IMAGE_BYTES}
   data-max-pdf-bytes={BULLETIN_MAX_PDF_BYTES}
   data-image-max-edge={BULLETIN_IMAGE_MAX_EDGE}
@@ -33,8 +42,9 @@ const writingMode = writingModeForSurface(settings.surface);
     href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap"
   />
   <div
-    class="board-surface board-frame relative mx-auto"
+    class:list={['board-surface board-frame relative', shape === 'portrait' ? 'mx-auto' : '']}
     data-board-canvas
+    data-board-shape={shape}
     data-surface={settings.surface}
   >
     {
@@ -90,61 +100,69 @@ const writingMode = writingModeForSurface(settings.surface);
     }
   </div>
 
-  <div class="mt-3 flex justify-center">
-    <button
-      type="button"
-      class="inline-flex items-center rounded-full border border-sage-dark/20 bg-white/90 px-3 py-1 text-xs font-semibold text-sage-dark/80 shadow-sm transition hover:border-sage-dark/35 hover:bg-white hover:text-charcoal"
-      data-suggest-open
-    >
-      Suggest a post
-    </button>
-  </div>
-
-  <dialog class="board-expand-dialog" data-board-suggest>
-    <div class="board-expand-panel w-[min(24rem,calc(100vw-2rem))]">
-      <div class="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3">
-        <p class="text-sm font-semibold text-charcoal">Suggest a post</p>
-        <button type="button" class="text-sm font-medium text-sage-dark/70 hover:text-charcoal" data-suggest-close>
-          Close
+  {
+    showSuggest ? (
+      <div class="mt-3 flex justify-center">
+        <button
+          type="button"
+          class="inline-flex items-center rounded-full border border-sage-dark/20 bg-white/90 px-3 py-1 text-xs font-semibold text-sage-dark/80 shadow-sm transition hover:border-sage-dark/35 hover:bg-white hover:text-charcoal"
+          data-suggest-open
+        >
+          Suggest a post
         </button>
       </div>
-      <form class="space-y-3 px-4 py-4" data-board-suggest-form>
-        <p class="text-xs text-sage-dark/65">Submitted posts need admin approval before they appear on the board.</p>
-        <label class="block text-sm">
-          <span class="font-medium text-charcoal">Type</span>
-          <select name="kind" class="field mt-1" data-suggest-kind>
-            <option value="text">Sticky note</option>
-            <option value="image">Photo / poster</option>
-            <option value="pdf">PDF flyer</option>
-          </select>
-        </label>
-        <label class="block text-sm" data-suggest-body-wrap>
-          <span class="font-medium text-charcoal">Message</span>
-          <textarea
-            name="body"
-            class="field mt-1 min-h-[4.5rem] resize-y text-sm"
-            placeholder="Something for the team board…"
-            data-suggest-body
-          ></textarea>
-        </label>
-        <label class="block text-sm hidden" data-suggest-file-wrap>
-          <span class="font-medium text-charcoal">File</span>
-          <input
-            name="file"
-            type="file"
-            class="mt-1 block w-full text-sm"
-            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-            data-suggest-file
-          />
-        </label>
-        <button type="submit" class="btn-primary !px-4 !py-2 text-sm" data-suggest-submit>
-          Submit for approval
-        </button>
-        <p class="hidden text-xs text-sage-dark/70" data-suggest-status></p>
-        <p class="hidden text-xs text-red-700" data-suggest-error></p>
-      </form>
-    </div>
-  </dialog>
+    ) : null
+  }
+
+  {
+    showSuggest ? (
+      <dialog class="board-expand-dialog" data-board-suggest>
+        <div class="board-expand-panel w-[min(24rem,calc(100vw-2rem))]">
+          <div class="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3">
+            <p class="text-sm font-semibold text-charcoal">Suggest a post</p>
+            <button type="button" class="text-sm font-medium text-sage-dark/70 hover:text-charcoal" data-suggest-close>
+              Close
+            </button>
+          </div>
+          <form class="space-y-3 px-4 py-4" data-board-suggest-form>
+            <p class="text-xs text-sage-dark/65">Submitted posts need admin approval before they appear on the board.</p>
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Type</span>
+              <select name="kind" class="field mt-1" data-suggest-kind>
+                <option value="text">Sticky note</option>
+                <option value="image">Photo / poster</option>
+                <option value="pdf">PDF flyer</option>
+              </select>
+            </label>
+            <label class="block text-sm" data-suggest-body-wrap>
+              <span class="font-medium text-charcoal">Message</span>
+              <textarea
+                name="body"
+                class="field mt-1 min-h-[4.5rem] resize-y text-sm"
+                placeholder="Something for the team board…"
+                data-suggest-body
+              ></textarea>
+            </label>
+            <label class="block text-sm hidden" data-suggest-file-wrap>
+              <span class="font-medium text-charcoal">File</span>
+              <input
+                name="file"
+                type="file"
+                class="mt-1 block w-full text-sm"
+                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                data-suggest-file
+              />
+            </label>
+            <button type="submit" class="btn-primary !px-4 !py-2 text-sm" data-suggest-submit>
+              Submit for approval
+            </button>
+            <p class="hidden text-xs text-sage-dark/70" data-suggest-status></p>
+            <p class="hidden text-xs text-red-700" data-suggest-error></p>
+          </form>
+        </div>
+      </dialog>
+    ) : null
+  }
 
   <dialog class="board-expand-dialog" data-board-expand>
     <div class="board-expand-panel">
