@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import {
-  BULLETIN_COLORS,
+  BULLETIN_AUTHOR_COLORS,
   listBulletinBoardPins,
   publishBulletinBoard,
   serializePin,
@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ locals }) => {
         surface: settings.surface,
         draftSurface: settings.draftSurface,
         writingMode: writingModeForSurface(settings.surface),
-        colors: BULLETIN_COLORS[settings.surface],
+        colors: BULLETIN_AUTHOR_COLORS,
         pins,
         publishedAt: settings.publishedAt,
         draftUpdatedAt: settings.draftUpdatedAt,

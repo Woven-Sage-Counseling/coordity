@@ -8,29 +8,33 @@ import {
   listBulletinBoardPins,
   serializePin,
   writingModeForSurface,
+  type BulletinSurface,
 } from '../lib/bulletin-board';
 import { BOARD_ZOOM_ICON, linkifyHtml } from '../lib/bulletin-board-format';
 import type { BoardShape } from '../lib/home-layout';
 
 interface Props {
   shape?: BoardShape;
+  /** Viewer surface override; falls back to org live surface. */
+  surface?: BulletinSurface;
   showSuggest?: boolean;
 }
 
-const { shape = 'portrait', showSuggest = true } = Astro.props;
+const { shape = 'portrait', surface: surfaceProp, showSuggest = true } = Astro.props;
 
 const settings = await getBulletinBoardSettings();
-const pins = (await listBulletinBoardPins({ channel: 'live' })).map((pin) =>
-  serializePin(pin, settings.surface),
-);
-const writingMode = writingModeForSurface(settings.surface);
+const surface = surfaceProp ?? settings.surface;
+const pins = (
+  await listBulletinBoardPins({ channel: 'live', variant: shape })
+).map((pin) => serializePin(pin, surface));
+const writingMode = writingModeForSurface(surface);
 ---
 
 <aside
   class:list={[shape === 'landscape' ? 'w-full' : 'lg:sticky lg:top-6']}
   aria-label="Bulletin board"
   data-home-board
-  data-surface={settings.surface}
+  data-surface={surface}
   data-writing-mode={writingMode}
   data-board-shape={shape}
   data-max-image-bytes={BULLETIN_MAX_IMAGE_BYTES}
@@ -45,13 +49,13 @@ const writingMode = writingModeForSurface(settings.surface);
     class:list={['board-surface board-frame relative', shape === 'portrait' ? 'mx-auto' : '']}
     data-board-canvas
     data-board-shape={shape}
-    data-surface={settings.surface}
+    data-surface={surface}
   >
     {
       pins.map((pin) => {
         const expandable = pin.kind === 'image' || pin.kind === 'pdf' || Boolean(pin.body && pin.body.length > 80);
         const bodyStyle =
-          settings.surface === 'cork'
+          surface === 'cork'
             ? `background:${pin.color};color:#1f2937;--board-font-size:${pin.fontSizeRem}rem`
             : `background:transparent;color:${pin.color};--board-font-size:${pin.fontSizeRem}rem`;
         return (
@@ -70,11 +74,11 @@ const writingMode = writingModeForSurface(settings.surface);
               pin.kind === 'text' ? (
                 <div class="board-pin-body whitespace-pre-wrap" data-font-size style={bodyStyle} set:html={linkifyHtml(pin.body || '')} />
               ) : pin.kind === 'image' && pin.fileUrl ? (
-                <div class="board-pin-body" style={settings.surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
+                <div class="board-pin-body" style={surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
                   <img class="board-pin-media" src={pin.fileUrl} alt="" draggable="false" />
                 </div>
               ) : (
-                <div class="board-pin-body" style={settings.surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
+                <div class="board-pin-body" style={surface === 'cork' ? 'background:#fff7ed' : 'background:transparent'}>
                   <div class="board-pin-pdf">
                     <span>PDF</span>
                     <span>{pin.fileName || 'Flyer'}</span>

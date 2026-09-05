@@ -4,7 +4,9 @@ import {
   BULLETIN_MAX_PDF_BYTES,
   createDirectPin,
   getBulletinBoardSettings,
+  isBulletinBoardVariant,
   serializePin,
+  type BulletinBoardVariant,
   type BulletinKind,
 } from '../../../../lib/bulletin-board';
 import { requireManagementAccess } from '../../../../lib/management-access';
@@ -32,10 +34,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const file = form.get('file');
   const expiresRaw = String(form.get('expiresAt') ?? '').trim();
   const expiresAt = expiresRaw ? Number(expiresRaw) : null;
+  const variantRaw = String(form.get('boardVariant') ?? 'portrait').trim();
 
   try {
     if (kind !== 'text' && kind !== 'image' && kind !== 'pdf') {
       throw new Error('Choose text, image, or PDF.');
+    }
+    if (!isBulletinBoardVariant(variantRaw)) {
+      throw new Error('Choose tall or wide board.');
     }
 
     let fileName: string | null = null;
@@ -76,6 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       rotationDeg: form.has('rotationDeg') ? Number(form.get('rotationDeg')) : undefined,
       widthPct: form.has('widthPct') ? Number(form.get('widthPct')) : undefined,
       expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
+      boardVariant: variantRaw as BulletinBoardVariant,
     });
     const settings = await getBulletinBoardSettings();
     return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.draftSurface) }), {

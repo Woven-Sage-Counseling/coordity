@@ -5,6 +5,10 @@ import { DEFAULT_ORG_ID } from './organization';
 export const HOME_BELOW_SLOTS = ['none', 'board', 'widgets'] as const;
 export type HomeBelowSlot = (typeof HOME_BELOW_SLOTS)[number];
 
+/** Single choice for the right rail (board may also appear below). */
+export const HOME_RAIL_SLOTS = ['none', 'board', 'widgets', 'company', 'portal', 'custom'] as const;
+export type HomeRailSlot = (typeof HOME_RAIL_SLOTS)[number];
+
 export const HOME_RAIL_IMAGE_KINDS = ['none', 'custom', 'company', 'portal'] as const;
 export type HomeRailImageKind = (typeof HOME_RAIL_IMAGE_KINDS)[number];
 
@@ -13,18 +17,22 @@ export type BoardShape = (typeof BOARD_SHAPES)[number];
 
 export interface HomeLayoutSettings {
   orgId: string;
+  railSlot: HomeRailSlot;
+  /** Derived from railSlot for older callers. */
   railBoard: boolean;
   railWidgets: boolean;
   railImageKind: HomeRailImageKind;
   hasRailImage: boolean;
   railImageMime: string | null;
   belowSlot: HomeBelowSlot;
+  /** Soft hint only — shape is determined by which slot renders the board. */
   boardShape: BoardShape;
   updatedAt: number;
 }
 
 type LayoutRow = {
   org_id: string;
+  rail_slot: string | null;
   rail_board: number;
   rail_widgets: number;
   rail_image_kind: string;
@@ -39,8 +47,12 @@ export const HOME_LAYOUT_IMAGE_MAX_BYTES = 1_200_000;
 export const PORTAL_MARK_SRC = '/brand/portal-mark.png';
 export const COMPANY_WORDMARK_SRC = '/brand/company-wordmark.png';
 
-function isBelowSlot(value: string): value is HomeBelowSlot {
+export function isBelowSlot(value: string): value is HomeBelowSlot {
   return (HOME_BELOW_SLOTS as readonly string[]).includes(value);
+}
+
+export function isRailSlot(value: string): value is HomeRailSlot {
+  return (HOME_RAIL_SLOTS as readonly string[]).includes(value);
 }
 
 function isRailImageKind(value: string): value is HomeRailImageKind {
@@ -51,84 +63,101 @@ function isBoardShape(value: string): value is BoardShape {
   return (BOARD_SHAPES as readonly string[]).includes(value);
 }
 
+function deriveRailSlot(row: LayoutRow): HomeRailSlot {
+  if (row.rail_slot && isRailSlot(row.rail_slot)) return row.rail_slot;
+  if (row.rail_board === 1) return 'board';
+  if (row.rail_widgets === 1) return 'widgets';
+  if (isRailImageKind(row.rail_image_kind) && row.rail_image_kind !== 'none') {
+    return row.rail_image_kind;
+  }
+  return 'none';
+}
+
+function railSlotToLegacy(slot: HomeRailSlot): {
+  railBoard: boolean;
+  railWidgets: boolean;
+  railImageKind: HomeRailImageKind;
+} {
+  return {
+    railBoard: slot === 'board',
+    railWidgets: slot === 'widgets',
+    railImageKind:
+      slot === 'custom' || slot === 'company' || slot === 'portal' ? slot : 'none',
+  };
+}
+
+function resolveBoardShapeHint(input: {
+  railSlot: HomeRailSlot;
+  belowSlot: HomeBelowSlot;
+}): BoardShape {
+  if (input.belowSlot === 'board') return 'landscape';
+  if (input.railSlot === 'board') return 'portrait';
+  return 'portrait';
+}
+
 function mapRow(row: LayoutRow): HomeLayoutSettings {
+  const railSlot = deriveRailSlot(row);
+  const legacy = railSlotToLegacy(railSlot);
   return {
     orgId: row.org_id,
-    railBoard: row.rail_board === 1,
-    railWidgets: row.rail_widgets === 1,
-    railImageKind: isRailImageKind(row.rail_image_kind) ? row.rail_image_kind : 'none',
+    railSlot,
+    railBoard: legacy.railBoard,
+    railWidgets: legacy.railWidgets,
+    railImageKind: legacy.railImageKind,
     hasRailImage: Boolean(row.rail_image_data && row.rail_image_mime),
     railImageMime: row.rail_image_mime,
     belowSlot: isBelowSlot(row.below_slot) ? row.below_slot : 'widgets',
-    boardShape: isBoardShape(row.board_shape) ? row.board_shape : 'portrait',
+    boardShape: isBoardShape(row.board_shape)
+      ? row.board_shape
+      : resolveBoardShapeHint({ railSlot, belowSlot: isBelowSlot(row.below_slot) ? row.below_slot : 'widgets' }),
     updatedAt: row.updated_at,
   };
 }
 
-export function resolveBoardShape(input: {
-  railBoard: boolean;
-  belowSlot: HomeBelowSlot;
-}): BoardShape {
-  if (input.belowSlot === 'board') return 'landscape';
-  if (input.railBoard) return 'portrait';
-  return 'portrait';
-}
-
-/** Normalize conflicting placements so board/widgets live in one slot at a time. */
+/** Normalize rail/below enums. Board may appear in both slots. */
 export function normalizeHomeLayoutInput(input: {
-  railBoard: boolean;
-  railWidgets: boolean;
-  railImageKind: HomeRailImageKind;
+  railSlot: HomeRailSlot;
   belowSlot: HomeBelowSlot;
 }): {
+  railSlot: HomeRailSlot;
+  belowSlot: HomeBelowSlot;
+  boardShape: BoardShape;
   railBoard: boolean;
   railWidgets: boolean;
   railImageKind: HomeRailImageKind;
-  belowSlot: HomeBelowSlot;
-  boardShape: BoardShape;
 } {
-  let { railBoard, railWidgets, railImageKind, belowSlot } = input;
-
-  if (belowSlot === 'board') railBoard = false;
-  if (belowSlot === 'widgets') railWidgets = false;
-
-  const railHasContent = railBoard || railWidgets;
-  if (railHasContent && railImageKind !== 'none') {
-    // Image is only for an empty rail; keep toggles and clear image kind.
-    railImageKind = 'none';
-  }
-  if (!railHasContent && railImageKind === 'none') {
-    // Empty rail with no image is fine.
-  }
-
+  const railSlot = isRailSlot(input.railSlot) ? input.railSlot : 'none';
+  const belowSlot = isBelowSlot(input.belowSlot) ? input.belowSlot : 'none';
+  const legacy = railSlotToLegacy(railSlot);
   return {
-    railBoard,
-    railWidgets,
-    railImageKind,
+    railSlot,
     belowSlot,
-    boardShape: resolveBoardShape({ railBoard, belowSlot }),
+    boardShape: resolveBoardShapeHint({ railSlot, belowSlot }),
+    ...legacy,
   };
 }
 
 export function serializeHomeLayout(settings: HomeLayoutSettings) {
+  const imageKind = settings.railImageKind;
   return {
+    railSlot: settings.railSlot,
     railBoard: settings.railBoard,
     railWidgets: settings.railWidgets,
-    railImageKind: settings.railImageKind,
+    railImageKind: imageKind,
     hasRailImage: settings.hasRailImage,
     railImageUrl:
-      settings.railImageKind === 'custom' || settings.railImageKind === 'company'
+      imageKind === 'custom' || imageKind === 'company'
         ? settings.hasRailImage
           ? '/api/home-layout/rail-image'
           : null
-        : settings.railImageKind === 'portal'
+        : imageKind === 'portal'
           ? PORTAL_MARK_SRC
           : null,
     portalMarkSrc: PORTAL_MARK_SRC,
     companyWordmarkSrc: COMPANY_WORDMARK_SRC,
     belowSlot: settings.belowSlot,
     boardShape: settings.boardShape,
-    showRail: settings.railBoard || settings.railWidgets || settings.railImageKind !== 'none',
+    showRail: settings.railSlot !== 'none',
   };
 }
 
@@ -137,8 +166,8 @@ async function ensureHomeLayoutRow(orgId: string): Promise<void> {
   const now = nowMs();
   await DB.prepare(
     `INSERT INTO home_layout (
-       org_id, rail_board, rail_widgets, rail_image_kind, below_slot, board_shape, updated_at
-     ) VALUES (?, 1, 0, 'none', 'widgets', 'portrait', ?)
+       org_id, rail_board, rail_widgets, rail_image_kind, below_slot, board_shape, rail_slot, updated_at
+     ) VALUES (?, 1, 0, 'none', 'widgets', 'portrait', 'board', ?)
      ON CONFLICT(org_id) DO NOTHING`,
   )
     .bind(orgId, now)
@@ -149,7 +178,7 @@ export async function getHomeLayoutSettings(orgId = DEFAULT_ORG_ID): Promise<Hom
   const { DB } = getEnv();
   await ensureHomeLayoutRow(orgId);
   const row = await DB.prepare(
-    `SELECT org_id, rail_board, rail_widgets, rail_image_kind, rail_image_mime, rail_image_data,
+    `SELECT org_id, rail_slot, rail_board, rail_widgets, rail_image_kind, rail_image_mime, rail_image_data,
             below_slot, board_shape, updated_at
      FROM home_layout WHERE org_id = ?`,
   )
@@ -159,6 +188,7 @@ export async function getHomeLayoutSettings(orgId = DEFAULT_ORG_ID): Promise<Hom
   if (!row) {
     return {
       orgId,
+      railSlot: 'board',
       railBoard: true,
       railWidgets: false,
       railImageKind: 'none',
@@ -177,25 +207,25 @@ export async function getHomeLayoutRailImage(
 ): Promise<{ mime: string; dataBase64: string } | null> {
   const { DB } = getEnv();
   const row = await DB.prepare(
-    `SELECT rail_image_kind, rail_image_mime, rail_image_data FROM home_layout WHERE org_id = ?`,
+    `SELECT rail_slot, rail_image_kind, rail_image_mime, rail_image_data FROM home_layout WHERE org_id = ?`,
   )
     .bind(orgId)
     .first<{
+      rail_slot: string | null;
       rail_image_kind: string;
       rail_image_mime: string | null;
       rail_image_data: string | null;
     }>();
 
   if (!row?.rail_image_data || !row.rail_image_mime) return null;
-  if (row.rail_image_kind !== 'custom' && row.rail_image_kind !== 'company') return null;
+  const kind = row.rail_slot && isRailSlot(row.rail_slot) ? row.rail_slot : row.rail_image_kind;
+  if (kind !== 'custom' && kind !== 'company') return null;
   return { mime: row.rail_image_mime, dataBase64: row.rail_image_data };
 }
 
 export async function updateHomeLayout(input: {
   orgId?: string;
-  railBoard: boolean;
-  railWidgets: boolean;
-  railImageKind: HomeRailImageKind;
+  railSlot: HomeRailSlot;
   belowSlot: HomeBelowSlot;
   railImageMime?: string | null;
   railImageData?: string | null;
@@ -203,9 +233,7 @@ export async function updateHomeLayout(input: {
 }): Promise<HomeLayoutSettings> {
   const orgId = input.orgId ?? DEFAULT_ORG_ID;
   const normalized = normalizeHomeLayoutInput({
-    railBoard: input.railBoard,
-    railWidgets: input.railWidgets,
-    railImageKind: input.railImageKind,
+    railSlot: input.railSlot,
     belowSlot: input.belowSlot,
   });
 
@@ -215,7 +243,7 @@ export async function updateHomeLayout(input: {
   const now = nowMs();
 
   const keepImage =
-    normalized.railImageKind === 'custom' || normalized.railImageKind === 'company';
+    normalized.railSlot === 'custom' || normalized.railSlot === 'company';
 
   let mimeToStore: string | null = existing.railImageMime;
   let dataToStore: string | null | 'KEEP' = 'KEEP';
@@ -231,11 +259,12 @@ export async function updateHomeLayout(input: {
   if (dataToStore === 'KEEP') {
     await DB.prepare(
       `UPDATE home_layout
-       SET rail_board = ?, rail_widgets = ?, rail_image_kind = ?,
+       SET rail_slot = ?, rail_board = ?, rail_widgets = ?, rail_image_kind = ?,
            below_slot = ?, board_shape = ?, updated_at = ?
        WHERE org_id = ?`,
     )
       .bind(
+        normalized.railSlot,
         normalized.railBoard ? 1 : 0,
         normalized.railWidgets ? 1 : 0,
         normalized.railImageKind,
@@ -248,12 +277,13 @@ export async function updateHomeLayout(input: {
   } else {
     await DB.prepare(
       `UPDATE home_layout
-       SET rail_board = ?, rail_widgets = ?, rail_image_kind = ?,
+       SET rail_slot = ?, rail_board = ?, rail_widgets = ?, rail_image_kind = ?,
            rail_image_mime = ?, rail_image_data = ?,
            below_slot = ?, board_shape = ?, updated_at = ?
        WHERE org_id = ?`,
     )
       .bind(
+        normalized.railSlot,
         normalized.railBoard ? 1 : 0,
         normalized.railWidgets ? 1 : 0,
         normalized.railImageKind,
@@ -282,7 +312,6 @@ export function reflowPinForShape(
   if (from === to) return { ...pin };
 
   if (from === 'portrait' && to === 'landscape') {
-    // Tall → wide: pull items toward the horizontal band and shrink relative width.
     return {
       xPct: clamp(pin.xPct * 0.92 + 4, -2, 88),
       yPct: clamp(12 + pin.yPct * 0.55, 2, 72),
@@ -290,7 +319,6 @@ export function reflowPinForShape(
     };
   }
 
-  // Wide → tall: restore vertical spread and slightly larger width.
   return {
     xPct: clamp(pin.xPct * 0.9 + 2, -2, 78),
     yPct: clamp(pin.yPct * 1.35 - 4, -2, 86),
@@ -302,22 +330,28 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** @deprecated Shape is per variant now; kept for twin seeding. */
 export async function reflowBoardPinsForShape(input: {
   orgId?: string;
   from: BoardShape;
   to: BoardShape;
+  variant?: BoardShape;
 }): Promise<number> {
   if (input.from === input.to) return 0;
   const orgId = input.orgId ?? DEFAULT_ORG_ID;
   const { DB } = getEnv();
   const now = nowMs();
+  const variantClause = input.variant ? ' AND board_variant = ?' : '';
+  const binds: Array<string | number> = [orgId];
+  if (input.variant) binds.push(input.variant);
+
   const rows = await DB.prepare(
-    `SELECT id, x_pct, y_pct, width_pct, channel
+    `SELECT id, x_pct, y_pct, width_pct
      FROM bulletin_board_pin
-     WHERE org_id = ? AND active = 1`,
+     WHERE org_id = ? AND active = 1${variantClause}`,
   )
-    .bind(orgId)
-    .all<{ id: string; x_pct: number; y_pct: number; width_pct: number; channel: string }>();
+    .bind(...binds)
+    .all<{ id: string; x_pct: number; y_pct: number; width_pct: number }>();
 
   let changed = 0;
   for (const row of rows.results ?? []) {

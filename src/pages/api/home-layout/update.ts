@@ -2,11 +2,12 @@ import type { APIRoute } from 'astro';
 import {
   getHomeLayoutSettings,
   HOME_LAYOUT_IMAGE_MAX_BYTES,
-  reflowBoardPinsForShape,
+  isBelowSlot,
+  isRailSlot,
   serializeHomeLayout,
   updateHomeLayout,
   type HomeBelowSlot,
-  type HomeRailImageKind,
+  type HomeRailSlot,
 } from '../../../lib/home-layout';
 import { requireManagementAccess } from '../../../lib/management-access';
 
@@ -22,30 +23,31 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-function parseBool(value: FormDataEntryValue | null): boolean {
-  const raw = String(value ?? '').trim().toLowerCase();
-  return raw === '1' || raw === 'true' || raw === 'on' || raw === 'yes';
-}
-
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
 
   const form = await request.formData();
-  const belowSlot = String(form.get('belowSlot') ?? 'none').trim() as HomeBelowSlot;
-  const railImageKind = String(form.get('railImageKind') ?? 'none').trim() as HomeRailImageKind;
-  const clearRailImage = parseBool(form.get('clearRailImage'));
+  const belowSlotRaw = String(form.get('belowSlot') ?? 'none').trim();
+  const railSlotRaw = String(form.get('railSlot') ?? 'none').trim();
+  const clearRailImage = ['1', 'true', 'on', 'yes'].includes(
+    String(form.get('clearRailImage') ?? '')
+      .trim()
+      .toLowerCase(),
+  );
   const file = form.get('railImage');
 
   try {
-    if (!['none', 'board', 'widgets'].includes(belowSlot)) {
-      throw new Error('Choose a valid below-area option.');
+    if (!isBelowSlot(belowSlotRaw)) {
+      throw new Error('Choose a valid underneath option.');
     }
-    if (!['none', 'custom', 'company', 'portal'].includes(railImageKind)) {
-      throw new Error('Choose a valid rail image option.');
+    if (!isRailSlot(railSlotRaw)) {
+      throw new Error('Choose a valid right-rail option.');
     }
 
-    const previous = await getHomeLayoutSettings();
+    const belowSlot = belowSlotRaw as HomeBelowSlot;
+    const railSlot = railSlotRaw as HomeRailSlot;
+
     let railImageMime: string | null = null;
     let railImageData: string | null = null;
 
@@ -60,28 +62,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       railImageData = await fileToBase64(file);
     }
 
+    // Touch read so missing rows are ensured before update.
+    await getHomeLayoutSettings();
+
     const updated = await updateHomeLayout({
-      railBoard: parseBool(form.get('railBoard')),
-      railWidgets: parseBool(form.get('railWidgets')),
-      railImageKind,
+      railSlot,
       belowSlot,
       railImageMime,
       railImageData,
       clearRailImage,
     });
 
-    if (previous.boardShape !== updated.boardShape) {
-      await reflowBoardPinsForShape({
-        from: previous.boardShape,
-        to: updated.boardShape,
-      });
-    }
-
     return new Response(
       JSON.stringify({
         ok: true,
         layout: serializeHomeLayout(updated),
-        reflowed: previous.boardShape !== updated.boardShape,
       }),
       { status: 200, headers: { 'content-type': 'application/json' } },
     );

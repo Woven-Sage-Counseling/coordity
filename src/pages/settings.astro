@@ -5,6 +5,9 @@ import { canSeeCredentialing } from '../lib/credentialing';
 import { canSeeCaseload } from '../lib/caseload';
 import { canUseTimesheet } from '../lib/timesheet-access';
 import { availableWidgets, HOME_WIDGET_MAX } from '../lib/home-widgets';
+import { getHomeLayoutSettings } from '../lib/home-layout';
+import { getHomeUserPrefs, resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
+import { getBulletinBoardSettings } from '../lib/bulletin-board';
 import { hasPermission } from '../lib/permissions';
 import { GoogleCalendarProvider } from '../lib/schedule/google-calendar';
 
@@ -21,6 +24,28 @@ const widgets = availableWidgets({
   canSeeClinical: canSeeClinicalWidget,
   canSeeTimesheet,
 });
+
+const orgLayout = await getHomeLayoutSettings();
+const boardSettings = await getBulletinBoardSettings();
+const userHomePrefs = await getHomeUserPrefs(employee.id);
+const effectiveHome = await resolveEffectiveHomeComposition({ userId: employee.id });
+const homePrefsPayload = {
+  prefs: {
+    surfaceOverride: userHomePrefs.surfaceOverride,
+    railSlot: userHomePrefs.railSlot,
+    belowSlot: userHomePrefs.belowSlot,
+  },
+  org: {
+    surface: boardSettings.surface,
+    railSlot: orgLayout.railSlot,
+    belowSlot: orgLayout.belowSlot,
+  },
+  effective: {
+    surface: effectiveHome.surface,
+    railSlot: effectiveHome.railSlot,
+    belowSlot: effectiveHome.belowSlot,
+  },
+};
 
 const calendarProvider = new GoogleCalendarProvider();
 let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection']>> = {
@@ -96,6 +121,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           data-settings-open="widgets"
         >
           <span class="text-[15px] font-medium text-charcoal">Home widgets</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-settings-open="home-layout"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Home board &amp; layout</span>
           <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
         <div class="mx-4 border-t border-sage-dark/10"></div>
@@ -202,6 +236,131 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           Saved.
         </span>
       </div>
+    </section>
+
+    <section
+      class="hidden"
+      data-settings-panel="home-layout"
+      data-home-layout-settings
+      data-home-prefs={JSON.stringify(homePrefsPayload)}
+    >
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
+        data-settings-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Back
+      </button>
+      <PanelHeading
+        title="Home board & layout"
+        description="Personalize your Home page. Leave an option on Company default to follow what admins set for everyone."
+      />
+
+      <p
+        class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        data-home-layout-error
+      ></p>
+
+      <form class="mt-6 space-y-6" data-home-prefs-form>
+        <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
+          <legend class="px-1 text-sm font-semibold text-charcoal">Board style</legend>
+          <p class="mt-1 text-xs text-sage-dark/60">
+            Company default: {boardSettings.surface}. Switching styles keeps pin positions; sticky
+            notes become chalk or marker ink in matching colors.
+          </p>
+          <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="surfaceOverride" value="default" data-home-surface checked={!userHomePrefs.surfaceOverride} />
+            Company default
+          </label>
+          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="surfaceOverride" value="cork" data-home-surface checked={userHomePrefs.surfaceOverride === 'cork'} />
+            Cork board
+          </label>
+          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="surfaceOverride" value="blackboard" data-home-surface checked={userHomePrefs.surfaceOverride === 'blackboard'} />
+            Blackboard
+          </label>
+          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+            <input type="radio" name="surfaceOverride" value="whiteboard" data-home-surface checked={userHomePrefs.surfaceOverride === 'whiteboard'} />
+            Whiteboard
+          </label>
+        </fieldset>
+
+        <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
+          <legend class="px-1 text-sm font-semibold text-charcoal">Right rail</legend>
+          <p class="mt-1 text-xs text-sage-dark/60">Company default: {orgLayout.railSlot}.</p>
+          {
+            (
+              [
+                { value: 'default', label: 'Company default' },
+                { value: 'board', label: 'Bulletin board (tall)' },
+                { value: 'widgets', label: 'Widgets' },
+                { value: 'company', label: 'Company logo' },
+                { value: 'portal', label: 'Portal mark' },
+                { value: 'custom', label: 'Custom picture' },
+                { value: 'none', label: 'Nothing' },
+              ] as const
+            ).map((option) => (
+              <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+                <input
+                  type="radio"
+                  name="railSlot"
+                  value={option.value}
+                  checked={
+                    option.value === 'default'
+                      ? !userHomePrefs.railSlot
+                      : userHomePrefs.railSlot === option.value
+                  }
+                />
+                {option.label}
+              </label>
+            ))
+          }
+        </fieldset>
+
+        <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
+          <legend class="px-1 text-sm font-semibold text-charcoal">Underneath</legend>
+          <p class="mt-1 text-xs text-sage-dark/60">Company default: {orgLayout.belowSlot}.</p>
+          {
+            (
+              [
+                { value: 'default', label: 'Company default' },
+                { value: 'board', label: 'Bulletin board (wide)' },
+                { value: 'widgets', label: 'Widgets' },
+                { value: 'none', label: 'Nothing' },
+              ] as const
+            ).map((option) => (
+              <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+                <input
+                  type="radio"
+                  name="belowSlot"
+                  value={option.value}
+                  checked={
+                    option.value === 'default'
+                      ? !userHomePrefs.belowSlot
+                      : userHomePrefs.belowSlot === option.value
+                  }
+                />
+                {option.label}
+              </label>
+            ))
+          }
+        </fieldset>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="submit" class="btn-primary" data-home-prefs-save>Save home layout</button>
+          <span
+            class="hidden text-sm font-medium text-sage-dark/45"
+            data-home-prefs-saved
+            aria-live="polite"
+          >
+            Saved.
+          </span>
+        </div>
+      </form>
     </section>
 
     <section class="hidden" data-settings-panel="google-calendar" id="google-calendar" data-calendar-settings>
@@ -473,7 +632,12 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     });
 
     const hash = window.location.hash.replace(/^#/, '');
-    if (hash === 'google-calendar' || hash === 'appearance' || hash === 'widgets') {
+    if (
+      hash === 'google-calendar' ||
+      hash === 'appearance' ||
+      hash === 'widgets' ||
+      hash === 'home-layout'
+    ) {
       showPanel(hash, false);
     }
   }
@@ -1069,6 +1233,46 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   document.querySelectorAll('[data-settings-shell]').forEach((root) => setupSettingsNav(root));
   document.querySelectorAll('[data-theme-settings]').forEach((root) => setupTheme(root));
   document.querySelectorAll('[data-widget-settings]').forEach((root) => setupSettings(root));
+  document.querySelectorAll('[data-home-layout-settings]').forEach((root) => setupHomeLayoutPrefs(root));
+
+  function setupHomeLayoutPrefs(root: Element) {
+    if (!(root instanceof HTMLElement)) return;
+    const form = root.querySelector('[data-home-prefs-form]');
+    const errorEl = root.querySelector('[data-home-layout-error]');
+    const savedEl = root.querySelector('[data-home-prefs-saved]');
+    if (!(form instanceof HTMLFormElement)) return;
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (errorEl instanceof HTMLElement) {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+      }
+      if (savedEl instanceof HTMLElement) savedEl.classList.add('hidden');
+      try {
+        const data = new FormData(form);
+        const res = await fetch('/api/home-prefs/update', {
+          method: 'POST',
+          body: data,
+          headers: { Accept: 'application/json' },
+        });
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) throw new Error(json.error || 'Could not save preferences.');
+        if (savedEl instanceof HTMLElement) {
+          const flash =
+            typeof window.showSaveFlash === 'function'
+              ? window.showSaveFlash
+              : (el: HTMLElement) => el.classList.remove('hidden');
+          flash(savedEl);
+        }
+      } catch (error) {
+        if (errorEl instanceof HTMLElement) {
+          errorEl.textContent = error instanceof Error ? error.message : 'Save failed.';
+          errorEl.classList.remove('hidden');
+        }
+      }
+    });
+  }
 
   function setupCalendarSettings(root: Element) {
     if (!(root instanceof HTMLElement)) return;

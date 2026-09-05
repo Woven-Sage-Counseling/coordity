@@ -16,12 +16,8 @@ import { canUseTimesheet } from '../lib/timesheet-access';
 import { getActiveShift } from '../lib/timesheet-entries';
 import { isOnBreak } from '../lib/timesheet-breaks';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
-import {
-  COMPANY_WORDMARK_SRC,
-  getHomeLayoutSettings,
-  PORTAL_MARK_SRC,
-  serializeHomeLayout,
-} from '../lib/home-layout';
+import { COMPANY_WORDMARK_SRC, PORTAL_MARK_SRC } from '../lib/home-layout';
+import { resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
 
 export const prerender = false;
 
@@ -43,15 +39,15 @@ const onShift = activeShift != null;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 
-const layout = serializeHomeLayout(await getHomeLayoutSettings());
+const layout = await resolveEffectiveHomeComposition({ userId: employee.id });
 const showRail = layout.showRail;
-const railBoard = layout.railBoard;
-const railWidgets = layout.railWidgets;
+const railBoard = layout.showRailBoard;
+const railWidgets = layout.showRailWidgets;
 const railImageUrl = layout.railImageUrl;
-const belowBoard = layout.belowSlot === 'board';
-const belowWidgets = layout.belowSlot === 'widgets';
+const belowBoard = layout.showBelowBoard;
+const belowWidgets = layout.showBelowWidgets;
 const suggestOnRail = railBoard;
-const suggestOnBelow = belowBoard && !railBoard;
+const suggestOnBelow = belowBoard;
 
 const widgetProps = {
   userId: employee.id,
@@ -96,7 +92,11 @@ const widgetProps = {
       {
         belowBoard ? (
           <div class="mt-8">
-            <HomeBulletinBoard shape="landscape" showSuggest={suggestOnBelow} />
+            <HomeBulletinBoard
+              shape="landscape"
+              surface={layout.surface}
+              showSuggest={suggestOnBelow}
+            />
           </div>
         ) : null
       }
@@ -105,19 +105,21 @@ const widgetProps = {
     {
       showRail ? (
         <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
-          {railBoard ? <HomeBulletinBoard shape="portrait" showSuggest={suggestOnRail} /> : null}
+          {railBoard ? (
+            <HomeBulletinBoard shape="portrait" surface={layout.surface} showSuggest={suggestOnRail} />
+          ) : null}
           {railWidgets ? (
             <div class="min-w-0">
               <HomeWidgetCarousel {...widgetProps} />
             </div>
           ) : null}
-          {!railBoard && !railWidgets && railImageUrl ? (
+          {layout.showRailImage && railImageUrl ? (
             <div class="overflow-hidden rounded-[1.05rem] bg-white/80 p-6 shadow-sm ring-1 ring-black/10">
               <img
                 src={
-                  layout.railImageKind === 'portal'
+                  layout.railSlot === 'portal'
                     ? PORTAL_MARK_SRC
-                    : layout.railImageKind === 'company' && !layout.hasRailImage
+                    : layout.railSlot === 'company' && !layout.hasRailImage
                       ? COMPANY_WORDMARK_SRC
                       : railImageUrl
                 }

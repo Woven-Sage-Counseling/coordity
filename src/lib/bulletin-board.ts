@@ -1,5 +1,6 @@
 import { randomToken, nowMs } from './crypto';
 import { getEnv } from './env';
+import { reflowPinForShape, type BoardShape } from './home-layout';
 import { DEFAULT_ORG_ID } from './organization';
 
 export const BULLETIN_SURFACES = ['cork', 'blackboard', 'whiteboard'] as const;
@@ -11,14 +12,36 @@ export type BulletinKind = (typeof BULLETIN_KINDS)[number];
 export const BULLETIN_REQUEST_STATUSES = ['pending', 'approved', 'rejected', 'cancelled'] as const;
 export type BulletinRequestStatus = (typeof BULLETIN_REQUEST_STATUSES)[number];
 
+export const BULLETIN_BOARD_MODES = ['duplicate', 'separate'] as const;
+export type BulletinBoardMode = (typeof BULLETIN_BOARD_MODES)[number];
+
+export const BULLETIN_BOARD_VARIANTS = ['portrait', 'landscape'] as const;
+export type BulletinBoardVariant = (typeof BULLETIN_BOARD_VARIANTS)[number];
+
+/** Canonical sticky-note palette. Chalk/marker colors are derived by index at render time. */
 export const BULLETIN_COLORS: Record<BulletinSurface, string[]> = {
   cork: ['#fef3c7', '#fecdd3', '#bfdbfe', '#bbf7d0', '#f5f5f4'],
   blackboard: ['#f8fafc', '#fde68a', '#a5f3fc', '#f9a8d4', '#d9f99d'],
   whiteboard: ['#111827', '#1d4ed8', '#dc2626', '#15803d', '#7c3aed'],
 };
 
+export const BULLETIN_AUTHOR_COLORS = BULLETIN_COLORS.cork;
+
 export function defaultColorForSurface(surface: BulletinSurface): string {
   return BULLETIN_COLORS[surface][0]!;
+}
+
+/** Always persist cork palette colors; remap only when rendering. */
+export function storePinColor(color: string | null | undefined): string {
+  return mapColorToSurface(color?.trim() || defaultColorForSurface('cork'), 'cork');
+}
+
+export function isBulletinBoardMode(value: string): value is BulletinBoardMode {
+  return (BULLETIN_BOARD_MODES as readonly string[]).includes(value);
+}
+
+export function isBulletinBoardVariant(value: string): value is BulletinBoardVariant {
+  return (BULLETIN_BOARD_VARIANTS as readonly string[]).includes(value);
 }
 
 export function defaultFontSizeForSurface(surface: BulletinSurface): number {
@@ -58,6 +81,7 @@ export interface BulletinBoardSettings {
   orgId: string;
   surface: BulletinSurface;
   draftSurface: BulletinSurface;
+  boardMode: BulletinBoardMode;
   updatedAt: number;
   draftUpdatedAt: number;
   publishedAt: number | null;
@@ -107,6 +131,8 @@ export interface BulletinBoardPin {
   zIndex: number;
   expiresAt: number | null;
   active: boolean;
+  boardVariant: BulletinBoardVariant;
+  linkId: string | null;
   createdBy: string | null;
   createdAt: number;
   updatedAt: number;
@@ -116,6 +142,7 @@ type SettingsRow = {
   org_id: string;
   surface: string;
   draft_surface: string | null;
+  board_mode: string | null;
   updated_at: number;
   draft_updated_at: number | null;
   published_at: number | null;
@@ -155,6 +182,8 @@ type PinRow = {
   expires_at: number | null;
   active: number;
   channel: string | null;
+  board_variant: string | null;
+  link_id: string | null;
   created_by: string | null;
   created_at: number;
   updated_at: number;
@@ -202,6 +231,10 @@ function mapPin(row: PinRow): BulletinBoardPin {
     zIndex: row.z_index,
     expiresAt: row.expires_at,
     active: row.active === 1,
+    boardVariant: isBulletinBoardVariant(row.board_variant ?? '')
+      ? (row.board_variant as BulletinBoardVariant)
+      : 'portrait',
+    linkId: row.link_id,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -211,7 +244,7 @@ function mapPin(row: PinRow): BulletinBoardPin {
 export async function getBulletinBoardSettings(orgId = DEFAULT_ORG_ID): Promise<BulletinBoardSettings> {
   const { DB } = getEnv();
   const row = await DB.prepare(
-    `SELECT org_id, surface, draft_surface, updated_at, draft_updated_at, published_at
+    `SELECT org_id, surface, draft_surface, board_mode, updated_at, draft_updated_at, published_at
      FROM bulletin_board WHERE org_id = ?`,
   )
     .bind(orgId)
@@ -221,10 +254,14 @@ export async function getBulletinBoardSettings(orgId = DEFAULT_ORG_ID): Promise<
     const draftSurface = isBulletinSurface(row.draft_surface ?? '')
       ? (row.draft_surface as BulletinSurface)
       : row.surface;
+    const boardMode = isBulletinBoardMode(row.board_mode ?? '')
+      ? (row.board_mode as BulletinBoardMode)
+      : 'duplicate';
     return {
       orgId: row.org_id,
       surface: row.surface,
       draftSurface,
+      boardMode,
       updatedAt: row.updated_at,
       draftUpdatedAt: row.draft_updated_at ?? row.updated_at,
       publishedAt: row.published_at,
@@ -233,8 +270,8 @@ export async function getBulletinBoardSettings(orgId = DEFAULT_ORG_ID): Promise<
 
   const now = nowMs();
   await DB.prepare(
-    `INSERT INTO bulletin_board (org_id, surface, draft_surface, updated_at, draft_updated_at, published_at)
-     VALUES (?, 'cork', 'cork', ?, ?, ?)
+    `INSERT INTO bulletin_board (org_id, surface, draft_surface, board_mode, updated_at, draft_updated_at, published_at)
+     VALUES (?, 'cork', 'cork', 'duplicate', ?, ?, ?)
      ON CONFLICT(org_id) DO NOTHING`,
   )
     .bind(orgId, now, now, now)
@@ -244,6 +281,7 @@ export async function getBulletinBoardSettings(orgId = DEFAULT_ORG_ID): Promise<
     orgId,
     surface: 'cork',
     draftSurface: 'cork',
+    boardMode: 'duplicate',
     updatedAt: now,
     draftUpdatedAt: now,
     publishedAt: now,
@@ -259,7 +297,8 @@ async function touchDraftBoard(orgId: string, now = nowMs()): Promise<void> {
     .run();
 }
 
-/** Lab-only: change the draft surface without touching the live Home board. */
+/** Lab-only: change the draft surface without touching the live Home board.
+ * Pin colors stay in the cork palette; display remaps at render time. */
 export async function setBulletinBoardDraftSurface(
   surface: BulletinSurface,
   orgId = DEFAULT_ORG_ID,
@@ -269,31 +308,199 @@ export async function setBulletinBoardDraftSurface(
   const current = await getBulletinBoardSettings(orgId);
 
   await DB.prepare(
-    `INSERT INTO bulletin_board (org_id, surface, draft_surface, updated_at, draft_updated_at, published_at)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO bulletin_board (org_id, surface, draft_surface, board_mode, updated_at, draft_updated_at, published_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(org_id) DO UPDATE SET
        draft_surface = excluded.draft_surface,
        draft_updated_at = excluded.draft_updated_at,
        updated_at = excluded.updated_at`,
   )
-    .bind(orgId, current.surface, surface, now, now, current.publishedAt)
+    .bind(
+      orgId,
+      current.surface,
+      surface,
+      current.boardMode,
+      now,
+      now,
+      current.publishedAt,
+    )
     .run();
 
-  const pins = await DB.prepare(
-    `SELECT id, color FROM bulletin_board_pin WHERE org_id = ? AND channel = 'draft' AND active = 1`,
-  )
-    .bind(orgId)
-    .all<{ id: string; color: string }>();
+  return getBulletinBoardSettings(orgId);
+}
 
-  for (const pin of pins.results ?? []) {
-    const nextColor = mapColorToSurface(pin.color, surface);
-    if (nextColor.toLowerCase() === pin.color.trim().toLowerCase()) continue;
-    await DB.prepare(`UPDATE bulletin_board_pin SET color = ?, updated_at = ? WHERE id = ?`)
-      .bind(nextColor, now, pin.id)
-      .run();
+export async function setBulletinBoardMode(
+  mode: BulletinBoardMode,
+  orgId = DEFAULT_ORG_ID,
+): Promise<{ settings: BulletinBoardSettings; converted: number }> {
+  const current = await getBulletinBoardSettings(orgId);
+  if (current.boardMode === mode) {
+    return { settings: current, converted: 0 };
   }
 
-  return getBulletinBoardSettings(orgId);
+  const { DB } = getEnv();
+  const now = nowMs();
+  let converted = 0;
+
+  if (mode === 'separate') {
+    // Unlink twins — keep both variants as independent pins.
+    const result = await DB.prepare(
+      `UPDATE bulletin_board_pin
+       SET link_id = NULL, updated_at = ?
+       WHERE org_id = ? AND active = 1 AND link_id IS NOT NULL`,
+    )
+      .bind(now, orgId)
+      .run();
+    converted = result.meta?.changes ?? 0;
+  } else {
+    // Link / seed missing twins from portrait → landscape (then landscape orphans → portrait).
+    converted = await ensureDuplicatePinTwins(orgId);
+  }
+
+  await DB.prepare(
+    `UPDATE bulletin_board SET board_mode = ?, draft_updated_at = ?, updated_at = ? WHERE org_id = ?`,
+  )
+    .bind(mode, now, now, orgId)
+    .run();
+
+  return { settings: await getBulletinBoardSettings(orgId), converted };
+}
+
+/** Ensure every active pin has a linked twin on the other variant (duplicate mode). */
+export async function ensureDuplicatePinTwins(orgId = DEFAULT_ORG_ID): Promise<number> {
+  const { DB } = getEnv();
+  const now = nowMs();
+  const rows = await DB.prepare(
+    `SELECT id, org_id, request_id, kind, body, file_name, file_mime, file_data,
+            x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index,
+            expires_at, active, channel, board_variant, link_id, created_by, created_at, updated_at,
+            CASE WHEN file_data IS NOT NULL AND file_data != '' THEN 1 ELSE 0 END AS has_file
+     FROM bulletin_board_pin
+     WHERE org_id = ? AND active = 1`,
+  )
+    .bind(orgId)
+    .all<PinRow & { file_data?: string | null }>();
+
+  const pins = rows.results ?? [];
+  const byLink = new Map<string, PinRow[]>();
+  const unlinked = pins.filter((p) => !p.link_id);
+
+  for (const pin of pins) {
+    if (!pin.link_id) continue;
+    const group = byLink.get(pin.link_id) ?? [];
+    group.push(pin);
+    byLink.set(pin.link_id, group);
+  }
+
+  let created = 0;
+
+  // Fix incomplete link groups
+  for (const [linkId, group] of byLink) {
+    const variants = new Set(group.map((p) => p.board_variant || 'portrait'));
+    if (variants.has('portrait') && variants.has('landscape')) continue;
+    const source = group[0]!;
+    const targetVariant: BulletinBoardVariant =
+      source.board_variant === 'landscape' ? 'portrait' : 'landscape';
+    const from: BoardShape = source.board_variant === 'landscape' ? 'landscape' : 'portrait';
+    const geom = reflowPinForShape(
+      { xPct: source.x_pct, yPct: source.y_pct, widthPct: source.width_pct },
+      from,
+      targetVariant,
+    );
+    await insertPinTwin({
+      source,
+      linkId,
+      variant: targetVariant,
+      geom,
+      now,
+    });
+    created += 1;
+  }
+
+  // Unlinked pins get a link_id + twin
+  for (const source of unlinked) {
+    const linkId = randomToken(12);
+    const sourceVariant: BulletinBoardVariant =
+      source.board_variant === 'landscape' ? 'landscape' : 'portrait';
+    const targetVariant: BulletinBoardVariant =
+      sourceVariant === 'portrait' ? 'landscape' : 'portrait';
+
+    await DB.prepare(
+      `UPDATE bulletin_board_pin SET link_id = ?, board_variant = ?, updated_at = ? WHERE id = ?`,
+    )
+      .bind(linkId, sourceVariant, now, source.id)
+      .run();
+
+    const geom = reflowPinForShape(
+      { xPct: source.x_pct, yPct: source.y_pct, widthPct: source.width_pct },
+      sourceVariant,
+      targetVariant,
+    );
+    await insertPinTwin({
+      source: { ...source, link_id: linkId, board_variant: sourceVariant },
+      linkId,
+      variant: targetVariant,
+      geom,
+      now,
+    });
+    created += 1;
+  }
+
+  return created;
+}
+
+async function insertPinTwin(input: {
+  source: PinRow & { file_data?: string | null };
+  linkId: string;
+  variant: BulletinBoardVariant;
+  geom: { xPct: number; yPct: number; widthPct: number };
+  now: number;
+}): Promise<void> {
+  const { DB } = getEnv();
+  let fileData = input.source.file_data ?? null;
+  if (fileData == null && input.source.has_file === 1) {
+    const fileRow = await DB.prepare(`SELECT file_data FROM bulletin_board_pin WHERE id = ?`)
+      .bind(input.source.id)
+      .first<{ file_data: string | null }>();
+    fileData = fileRow?.file_data ?? null;
+  }
+
+  await DB.prepare(
+    `INSERT INTO bulletin_board_pin
+       (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
+        x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
+        created_by, created_at, updated_at, channel, board_variant, link_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      randomToken(16),
+      input.source.org_id,
+      input.source.request_id,
+      input.source.kind,
+      input.source.body,
+      input.source.file_name,
+      input.source.file_mime,
+      fileData,
+      input.geom.xPct,
+      input.geom.yPct,
+      input.geom.widthPct,
+      input.source.rotation_deg,
+      storePinColor(input.source.color),
+      clampFontSizeRem(
+        typeof input.source.font_size_rem === 'number' && Number.isFinite(input.source.font_size_rem)
+          ? input.source.font_size_rem
+          : 1.05,
+      ),
+      input.source.z_index,
+      input.source.expires_at,
+      input.source.created_by,
+      input.now,
+      input.now,
+      input.source.channel ?? 'draft',
+      input.variant,
+      input.linkId,
+    )
+    .run();
 }
 
 /** Publish draft surface + pins to the live Home board. */
@@ -313,7 +520,7 @@ export async function publishBulletinBoard(orgId = DEFAULT_ORG_ID): Promise<Bull
   const draftPins = await DB.prepare(
     `SELECT org_id, request_id, kind, body, file_name, file_mime, file_data,
             x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index,
-            expires_at, created_by
+            expires_at, created_by, board_variant, link_id
      FROM bulletin_board_pin
      WHERE org_id = ?
        AND channel = 'draft'
@@ -338,6 +545,8 @@ export async function publishBulletinBoard(orgId = DEFAULT_ORG_ID): Promise<Bull
       z_index: number;
       expires_at: number | null;
       created_by: string | null;
+      board_variant: string | null;
+      link_id: string | null;
     }>();
 
   for (const pin of draftPins.results ?? []) {
@@ -345,8 +554,8 @@ export async function publishBulletinBoard(orgId = DEFAULT_ORG_ID): Promise<Bull
       `INSERT INTO bulletin_board_pin
          (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
           x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
-          created_by, created_at, updated_at, channel)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'live')`,
+          created_by, created_at, updated_at, channel, board_variant, link_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'live', ?, ?)`,
     )
       .bind(
         randomToken(16),
@@ -361,7 +570,7 @@ export async function publishBulletinBoard(orgId = DEFAULT_ORG_ID): Promise<Bull
         pin.y_pct,
         pin.width_pct,
         pin.rotation_deg,
-        mapColorToSurface(pin.color, settings.draftSurface),
+        storePinColor(pin.color),
         clampFontSizeRem(
           typeof pin.font_size_rem === 'number' && Number.isFinite(pin.font_size_rem)
             ? pin.font_size_rem
@@ -372,6 +581,8 @@ export async function publishBulletinBoard(orgId = DEFAULT_ORG_ID): Promise<Bull
         pin.created_by,
         now,
         now,
+        isBulletinBoardVariant(pin.board_variant ?? '') ? pin.board_variant : 'portrait',
+        pin.link_id,
       )
       .run();
   }
@@ -504,42 +715,126 @@ export async function rejectBulletinBoardRequest(input: {
 }
 
 export async function listBulletinBoardPins(
-  orgIdOrOptions: string | { orgId?: string; channel?: BulletinChannel } = DEFAULT_ORG_ID,
+  orgIdOrOptions:
+    | string
+    | {
+        orgId?: string;
+        channel?: BulletinChannel;
+        variant?: BulletinBoardVariant;
+      } = DEFAULT_ORG_ID,
 ): Promise<BulletinBoardPin[]> {
   const orgId =
     typeof orgIdOrOptions === 'string' ? orgIdOrOptions : (orgIdOrOptions.orgId ?? DEFAULT_ORG_ID);
   const channel: BulletinChannel =
     typeof orgIdOrOptions === 'string' ? 'live' : (orgIdOrOptions.channel ?? 'live');
+  const variant =
+    typeof orgIdOrOptions === 'string' ? undefined : orgIdOrOptions.variant;
   const { DB } = getEnv();
   const now = nowMs();
+
+  const clauses = [
+    'org_id = ?',
+    'channel = ?',
+    'active = 1',
+    '(expires_at IS NULL OR expires_at > ?)',
+  ];
+  const binds: Array<string | number> = [orgId, channel, now];
+  if (variant) {
+    clauses.push('board_variant = ?');
+    binds.push(variant);
+  }
+
   const rows = await DB.prepare(
     `SELECT id, org_id, request_id, kind, body, file_name, file_mime,
             CASE WHEN file_data IS NOT NULL AND file_data != '' THEN 1 ELSE 0 END AS has_file,
             x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
-            channel, created_by, created_at, updated_at
+            channel, board_variant, link_id, created_by, created_at, updated_at
      FROM bulletin_board_pin
-     WHERE org_id = ?
-       AND channel = ?
-       AND active = 1
-       AND (expires_at IS NULL OR expires_at > ?)
+     WHERE ${clauses.join(' AND ')}
      ORDER BY z_index ASC, created_at ASC`,
   )
-    .bind(orgId, channel, now)
+    .bind(...binds)
     .all<PinRow>();
 
   return (rows.results ?? []).map(mapPin);
 }
 
-async function nextZIndex(orgId: string, channel: BulletinChannel): Promise<number> {
+async function nextZIndex(
+  orgId: string,
+  channel: BulletinChannel,
+  variant?: BulletinBoardVariant,
+): Promise<number> {
   const { DB } = getEnv();
+  const clauses = ['org_id = ?', 'channel = ?', 'active = 1'];
+  const binds: Array<string | number> = [orgId, channel];
+  if (variant) {
+    clauses.push('board_variant = ?');
+    binds.push(variant);
+  }
   const row = await DB.prepare(
     `SELECT COALESCE(MAX(z_index), 0) AS max_z
      FROM bulletin_board_pin
-     WHERE org_id = ? AND channel = ? AND active = 1`,
+     WHERE ${clauses.join(' AND ')}`,
   )
-    .bind(orgId, channel)
+    .bind(...binds)
     .first<{ max_z: number }>();
   return (row?.max_z ?? 0) + 1;
+}
+
+async function insertDraftPinRow(input: {
+  id: string;
+  orgId: string;
+  requestId: string | null;
+  kind: BulletinKind | string;
+  body: string | null;
+  fileName: string | null;
+  fileMime: string | null;
+  fileData: string | null;
+  xPct: number;
+  yPct: number;
+  widthPct: number;
+  rotationDeg: number;
+  color: string;
+  fontSizeRem: number;
+  zIndex: number;
+  expiresAt: number | null;
+  createdBy: string;
+  now: number;
+  boardVariant: BulletinBoardVariant;
+  linkId: string | null;
+}): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(
+    `INSERT INTO bulletin_board_pin
+       (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
+        x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
+        created_by, created_at, updated_at, channel, board_variant, link_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'draft', ?, ?)`,
+  )
+    .bind(
+      input.id,
+      input.orgId,
+      input.requestId,
+      input.kind,
+      input.body,
+      input.fileName,
+      input.fileMime,
+      input.fileData,
+      input.xPct,
+      input.yPct,
+      input.widthPct,
+      input.rotationDeg,
+      input.color,
+      input.fontSizeRem,
+      input.zIndex,
+      input.expiresAt,
+      input.createdBy,
+      input.now,
+      input.now,
+      input.boardVariant,
+      input.linkId,
+    )
+    .run();
 }
 
 export async function placePinFromRequest(input: {
@@ -553,10 +848,10 @@ export async function placePinFromRequest(input: {
   color?: string;
   fontSizeRem?: number;
   expiresAt?: number | null;
+  boardVariant?: BulletinBoardVariant;
 }): Promise<BulletinBoardPin> {
   const orgId = input.orgId ?? DEFAULT_ORG_ID;
   const settings = await getBulletinBoardSettings(orgId);
-  const surface = settings.draftSurface;
   const { DB } = getEnv();
 
   const request = await DB.prepare(
@@ -579,43 +874,74 @@ export async function placePinFromRequest(input: {
     throw new Error('Request not found or already reviewed.');
   }
 
-  const id = randomToken(16);
   const now = nowMs();
-  const color = mapColorToSurface(input.color ?? defaultColorForSurface(surface), surface);
+  const color = storePinColor(input.color);
   const fontSizeRem = clampFontSizeRem(
-    input.fontSizeRem ?? defaultFontSizeForSurface(surface),
+    input.fontSizeRem ?? defaultFontSizeForSurface(settings.draftSurface),
   );
-  const zIndex = await nextZIndex(orgId, 'draft');
+  const variant: BulletinBoardVariant = input.boardVariant ?? 'portrait';
+  const xPct = input.xPct ?? 38;
+  const yPct = input.yPct ?? 36;
+  const widthPct = input.widthPct ?? (request.kind === 'text' ? 24 : 28);
+  const rotationDeg = input.rotationDeg ?? Math.random() * 10 - 5;
+  const zIndex = await nextZIndex(orgId, 'draft', variant);
+  const duplicate = settings.boardMode === 'duplicate';
+  const linkId = duplicate ? randomToken(12) : null;
+  const id = randomToken(16);
 
-  await DB.prepare(
-    `INSERT INTO bulletin_board_pin
-       (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
-        x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
-        created_by, created_at, updated_at, channel)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'draft')`,
-  )
-    .bind(
-      id,
+  await insertDraftPinRow({
+    id,
+    orgId,
+    requestId: request.id,
+    kind: request.kind,
+    body: request.body,
+    fileName: request.file_name,
+    fileMime: request.file_mime,
+    fileData: request.file_data,
+    xPct,
+    yPct,
+    widthPct,
+    rotationDeg,
+    color,
+    fontSizeRem,
+    zIndex,
+    expiresAt: input.expiresAt ?? null,
+    createdBy: input.createdBy,
+    now,
+    boardVariant: variant,
+    linkId,
+  });
+
+  if (duplicate && linkId) {
+    const otherVariant: BulletinBoardVariant = variant === 'portrait' ? 'landscape' : 'portrait';
+    const geom = reflowPinForShape(
+      { xPct, yPct, widthPct },
+      variant,
+      otherVariant,
+    );
+    await insertDraftPinRow({
+      id: randomToken(16),
       orgId,
-      request.id,
-      request.kind,
-      request.body,
-      request.file_name,
-      request.file_mime,
-      request.file_data,
-      input.xPct ?? 38,
-      input.yPct ?? 36,
-      input.widthPct ?? (request.kind === 'text' ? 24 : 28),
-      input.rotationDeg ?? (Math.random() * 10 - 5),
+      requestId: request.id,
+      kind: request.kind,
+      body: request.body,
+      fileName: request.file_name,
+      fileMime: request.file_mime,
+      fileData: request.file_data,
+      xPct: geom.xPct,
+      yPct: geom.yPct,
+      widthPct: geom.widthPct,
+      rotationDeg,
       color,
       fontSizeRem,
-      zIndex,
-      input.expiresAt ?? null,
-      input.createdBy,
+      zIndex: await nextZIndex(orgId, 'draft', otherVariant),
+      expiresAt: input.expiresAt ?? null,
+      createdBy: input.createdBy,
       now,
-      now,
-    )
-    .run();
+      boardVariant: otherVariant,
+      linkId,
+    });
+  }
 
   await DB.prepare(
     `UPDATE bulletin_board_request
@@ -627,7 +953,7 @@ export async function placePinFromRequest(input: {
 
   await touchDraftBoard(orgId, now);
 
-  const pins = await listBulletinBoardPins({ orgId, channel: 'draft' });
+  const pins = await listBulletinBoardPins({ orgId, channel: 'draft', variant });
   const pin = pins.find((item) => item.id === id);
   if (!pin) throw new Error('Could not place pin.');
   return pin;
@@ -648,10 +974,10 @@ export async function createDirectPin(input: {
   color?: string;
   fontSizeRem?: number;
   expiresAt?: number | null;
+  boardVariant?: BulletinBoardVariant;
 }): Promise<BulletinBoardPin> {
   const orgId = input.orgId ?? DEFAULT_ORG_ID;
   const settings = await getBulletinBoardSettings(orgId);
-  const surface = settings.draftSurface;
   const body = input.body?.trim() || null;
   if (input.kind === 'text' && !body) throw new Error('Write something for the note.');
   if ((input.kind === 'image' || input.kind === 'pdf') && !input.fileData) {
@@ -660,44 +986,72 @@ export async function createDirectPin(input: {
 
   const id = randomToken(16);
   const now = nowMs();
-  const zIndex = await nextZIndex(orgId, 'draft');
-  const { DB } = getEnv();
+  const variant: BulletinBoardVariant = input.boardVariant ?? 'portrait';
+  const zIndex = await nextZIndex(orgId, 'draft', variant);
   const fontSizeRem = clampFontSizeRem(
-    input.fontSizeRem ?? defaultFontSizeForSurface(surface),
+    input.fontSizeRem ?? defaultFontSizeForSurface(settings.draftSurface),
   );
+  const color = storePinColor(input.color);
+  const xPct = input.xPct ?? 40;
+  const yPct = input.yPct ?? 40;
+  const widthPct = input.widthPct ?? 22;
+  const rotationDeg = input.rotationDeg ?? 0;
+  const duplicate = settings.boardMode === 'duplicate';
+  const linkId = duplicate ? randomToken(12) : null;
 
-  await DB.prepare(
-    `INSERT INTO bulletin_board_pin
-       (id, org_id, request_id, kind, body, file_name, file_mime, file_data,
-        x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
-        created_by, created_at, updated_at, channel)
-     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'draft')`,
-  )
-    .bind(
-      id,
+  await insertDraftPinRow({
+    id,
+    orgId,
+    requestId: null,
+    kind: input.kind,
+    body,
+    fileName: input.fileName ?? null,
+    fileMime: input.fileMime ?? null,
+    fileData: input.fileData ?? null,
+    xPct,
+    yPct,
+    widthPct,
+    rotationDeg,
+    color,
+    fontSizeRem,
+    zIndex,
+    expiresAt: input.expiresAt ?? null,
+    createdBy: input.createdBy,
+    now,
+    boardVariant: variant,
+    linkId,
+  });
+
+  if (duplicate && linkId) {
+    const otherVariant: BulletinBoardVariant = variant === 'portrait' ? 'landscape' : 'portrait';
+    const geom = reflowPinForShape({ xPct, yPct, widthPct }, variant, otherVariant);
+    await insertDraftPinRow({
+      id: randomToken(16),
       orgId,
-      input.kind,
+      requestId: null,
+      kind: input.kind,
       body,
-      input.fileName ?? null,
-      input.fileMime ?? null,
-      input.fileData ?? null,
-      input.xPct ?? 40,
-      input.yPct ?? 40,
-      input.widthPct ?? 22,
-      input.rotationDeg ?? 0,
-      mapColorToSurface(input.color ?? defaultColorForSurface(surface), surface),
+      fileName: input.fileName ?? null,
+      fileMime: input.fileMime ?? null,
+      fileData: input.fileData ?? null,
+      xPct: geom.xPct,
+      yPct: geom.yPct,
+      widthPct: geom.widthPct,
+      rotationDeg,
+      color,
       fontSizeRem,
-      zIndex,
-      input.expiresAt ?? null,
-      input.createdBy,
+      zIndex: await nextZIndex(orgId, 'draft', otherVariant),
+      expiresAt: input.expiresAt ?? null,
+      createdBy: input.createdBy,
       now,
-      now,
-    )
-    .run();
+      boardVariant: otherVariant,
+      linkId,
+    });
+  }
 
   await touchDraftBoard(orgId, now);
 
-  const pins = await listBulletinBoardPins({ orgId, channel: 'draft' });
+  const pins = await listBulletinBoardPins({ orgId, channel: 'draft', variant });
   const pin = pins.find((item) => item.id === id);
   if (!pin) throw new Error('Could not create pin.');
   return pin;
@@ -720,7 +1074,7 @@ export async function updateBulletinBoardPin(input: {
     `SELECT id, org_id, request_id, kind, body, file_name, file_mime,
             CASE WHEN file_data IS NOT NULL AND file_data != '' THEN 1 ELSE 0 END AS has_file,
             x_pct, y_pct, width_pct, rotation_deg, color, font_size_rem, z_index, expires_at, active,
-            channel, created_by, created_at, updated_at
+            channel, board_variant, link_id, created_by, created_at, updated_at
      FROM bulletin_board_pin WHERE id = ? AND active = 1`,
   )
     .bind(input.id)
@@ -732,17 +1086,24 @@ export async function updateBulletinBoardPin(input: {
   }
 
   const settings = await getBulletinBoardSettings(existing.org_id);
-  const surface = settings.draftSurface;
   const existingFont =
     typeof existing.font_size_rem === 'number' && Number.isFinite(existing.font_size_rem)
       ? existing.font_size_rem
-      : defaultFontSizeForSurface(surface);
+      : defaultFontSizeForSurface(settings.draftSurface);
+
+  const contentChanged =
+    input.color !== undefined ||
+    input.fontSizeRem !== undefined ||
+    input.body !== undefined ||
+    input.clearExpires ||
+    input.expiresAt !== undefined;
+
   const next = {
     xPct: input.xPct ?? existing.x_pct,
     yPct: input.yPct ?? existing.y_pct,
     widthPct: input.widthPct ?? existing.width_pct,
     rotationDeg: input.rotationDeg ?? existing.rotation_deg,
-    color: mapColorToSurface(input.color ?? existing.color, surface),
+    color: input.color !== undefined ? storePinColor(input.color) : storePinColor(existing.color),
     fontSizeRem: clampFontSizeRem(input.fontSizeRem ?? existingFont),
     body: input.body !== undefined ? input.body : existing.body,
     expiresAt: input.clearExpires
@@ -772,6 +1133,17 @@ export async function updateBulletinBoardPin(input: {
     )
     .run();
 
+  // Duplicate mode: sync content (not geometry) to the twin.
+  if (settings.boardMode === 'duplicate' && existing.link_id && contentChanged) {
+    await DB.prepare(
+      `UPDATE bulletin_board_pin
+       SET color = ?, font_size_rem = ?, body = ?, expires_at = ?, updated_at = ?
+       WHERE link_id = ? AND id != ? AND channel = 'draft' AND active = 1`,
+    )
+      .bind(next.color, next.fontSizeRem, next.body, next.expiresAt, now, existing.link_id, input.id)
+      .run();
+  }
+
   await touchDraftBoard(existing.org_id, now);
 
   return {
@@ -784,20 +1156,31 @@ export async function updateBulletinBoardPin(input: {
 export async function removeBulletinBoardPin(id: string): Promise<void> {
   const { DB } = getEnv();
   const existing = await DB.prepare(
-    `SELECT id, org_id, channel FROM bulletin_board_pin WHERE id = ? AND active = 1`,
+    `SELECT id, org_id, channel, link_id FROM bulletin_board_pin WHERE id = ? AND active = 1`,
   )
     .bind(id)
-    .first<{ id: string; org_id: string; channel: string | null }>();
+    .first<{ id: string; org_id: string; channel: string | null; link_id: string | null }>();
   if (!existing) throw new Error('Pin not found.');
   if (existing.channel !== 'draft') {
     throw new Error('Only draft pins can be removed in the board lab.');
   }
   const now = nowMs();
-  await DB.prepare(
-    `UPDATE bulletin_board_pin SET active = 0, updated_at = ? WHERE id = ? AND channel = 'draft'`,
-  )
-    .bind(now, id)
-    .run();
+  const settings = await getBulletinBoardSettings(existing.org_id);
+
+  if (settings.boardMode === 'duplicate' && existing.link_id) {
+    await DB.prepare(
+      `UPDATE bulletin_board_pin SET active = 0, updated_at = ?
+       WHERE link_id = ? AND channel = 'draft' AND active = 1`,
+    )
+      .bind(now, existing.link_id)
+      .run();
+  } else {
+    await DB.prepare(
+      `UPDATE bulletin_board_pin SET active = 0, updated_at = ? WHERE id = ? AND channel = 'draft'`,
+    )
+      .bind(now, id)
+      .run();
+  }
   await touchDraftBoard(existing.org_id, now);
 }
 
@@ -843,6 +1226,8 @@ export function serializePin(pin: BulletinBoardPin, surface?: BulletinSurface) {
     fontSizeRem: pin.fontSizeRem,
     zIndex: pin.zIndex,
     expiresAt: pin.expiresAt,
+    boardVariant: pin.boardVariant,
+    linkId: pin.linkId,
     fileUrl: pin.hasFile ? `/api/bulletin-board/file/pin/${pin.id}` : null,
   };
 }
