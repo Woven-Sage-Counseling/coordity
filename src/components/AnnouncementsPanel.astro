@@ -1,6 +1,7 @@
 ---
 import type { Announcement } from '../lib/announcements';
 import { formatAnnouncementDate } from '../lib/announcements';
+import { MESSAGE_SOURCE } from '../lib/messages';
 import { CALENDAR_CONFLICT_SOURCE, TIME_OFF_REQUEST_SOURCE, type PortalNotification } from '../lib/notifications';
 
 interface Props {
@@ -141,6 +142,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
               {notifications.map((item) => {
                 const isConflict = item.sourceType === CALENDAR_CONFLICT_SOURCE;
                 const isTimeOff = item.sourceType === TIME_OFF_REQUEST_SOURCE;
+                const isMessage = item.sourceType === MESSAGE_SOURCE && Boolean(item.sourceId);
                 const isTimeOffDecision =
                   isTimeOff &&
                   typeof item.sourceId === 'string' &&
@@ -200,7 +202,14 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                         </div>
                         <p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sage-dark/80">{item.body}</p>
                         {
-                          isTimeOffDecision ? (
+                          isMessage ? (
+                            <a
+                              href={`/messages?c=${encodeURIComponent(item.sourceId!)}`}
+                              class="mt-2 inline-block text-[11px] font-semibold text-sage-dark/70 transition hover:text-charcoal"
+                            >
+                              Open conversation
+                            </a>
+                          ) : isTimeOffDecision ? (
                             <a
                               href="/time-off"
                               class="mt-2 inline-block text-[11px] font-semibold text-sage-dark/70 transition hover:text-charcoal"

@@ -3,6 +3,7 @@ import '../styles/global.css';
 import PreviewBanner from '../components/PreviewBanner.astro';
 import PortalFooter from '../components/PortalFooter.astro';
 import { getEnv } from '../lib/env';
+import { countUnreadMessages } from '../lib/messages';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
 
 interface Props {
@@ -16,6 +17,8 @@ const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active';
 const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
+const messagesUnread =
+  employee?.status === 'active' ? await countUnreadMessages(employee.id).catch(() => 0) : 0;
 ---
 
 <!doctype html>
@@ -61,6 +64,18 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
               <a href="/workspace" class="text-sage-dark/80 hover:text-sage-dark">WorkHub</a>
               <a href="/apps" class="text-sage-dark/80 hover:text-sage-dark">Quick links</a>
               <a href="/directory" class="text-sage-dark/80 hover:text-sage-dark">Directory</a>
+              <a href="/messages" class="inline-flex items-center gap-1.5 text-sage-dark/80 hover:text-sage-dark">
+                Messages
+                <span
+                  class:list={[
+                    'rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white',
+                    messagesUnread > 0 ? '' : 'hidden',
+                  ]}
+                  data-messages-nav-badge
+                >
+                  {messagesUnread > 99 ? '99+' : messagesUnread}
+                </span>
+              </a>
               <div
                 class="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-sage/25 px-3 py-1 ring-1 ring-sage-dark/15"
                 aria-label="Special access"
@@ -189,7 +204,7 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
         >
           (function () {
             var path = window.location.pathname.replace(/\/$/, '') || '/';
-            var allowed = ['/apps', '/directory', '/account', '/announcements', '/notifications', '/workspace'];
+            var allowed = ['/apps', '/directory', '/account', '/announcements', '/notifications', '/workspace', '/messages'];
             if (canSeeFinancials) allowed.push('/financials');
             if (canSeeManagement) allowed.push('/admin');
             if (allowed.indexOf(path) === -1) return;
@@ -201,6 +216,29 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
               counts[path] = (counts[path] || 0) + 1;
               localStorage.setItem(key, JSON.stringify(counts));
             } catch (e) {}
+          })();
+        </script>
+        <script is:inline>
+          (function () {
+            var badge = document.querySelector('[data-messages-nav-badge]');
+            if (!badge) return;
+            function refresh() {
+              if (document.visibilityState !== 'visible') return;
+              fetch('/api/messages/unread-count', { headers: { Accept: 'application/json' } })
+                .then(function (res) {
+                  return res.json().then(function (json) {
+                    return { ok: res.ok, json: json };
+                  });
+                })
+                .then(function (result) {
+                  if (!result.ok) return;
+                  var count = Number(result.json.count || 0);
+                  badge.textContent = count > 99 ? '99+' : String(count);
+                  badge.classList.toggle('hidden', count <= 0);
+                })
+                .catch(function () {});
+            }
+            window.setInterval(refresh, 60000);
           })();
         </script>
       )

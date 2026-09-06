@@ -47,6 +47,7 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
                   onBreakUserIds={onBreakIds}
                   travelingUserIds={travelingUserIds}
                   clinicianUserIds={clinicianUserIds}
+                  currentUserId={Astro.locals.employee!.id}
                 />
               )
             }
@@ -65,6 +66,7 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
                 onBreakUserIds={onBreakIds}
                 travelingUserIds={travelingUserIds}
                 clinicianUserIds={clinicianUserIds}
+                currentUserId={Astro.locals.employee!.id}
               />
             </section>
           ) : null
@@ -73,3 +75,32 @@ const { groups, unassigned } = groupDirectoryByTeam(people);
     )
   }
 </PortalLayout>
+
+<script>
+  document.querySelectorAll('[data-directory-message]').forEach((node) => {
+    node.addEventListener('click', async () => {
+      if (!(node instanceof HTMLButtonElement)) return;
+      const recipientId = node.dataset.directoryMessage;
+      if (!recipientId) return;
+      node.disabled = true;
+      try {
+        const res = await fetch('/api/messages/dm', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ recipientId }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          conversationId?: string;
+          error?: string;
+        };
+        if (!res.ok) throw new Error(json.error || 'Could not start conversation.');
+        if (json.conversationId) {
+          window.location.href = `/messages?c=${encodeURIComponent(json.conversationId)}`;
+        }
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : 'Could not start conversation.');
+        node.disabled = false;
+      }
+    });
+  });
+</script>

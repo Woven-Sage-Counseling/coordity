@@ -7,6 +7,7 @@ export const SHORTCUT_CATALOG: ShortcutTarget[] = [
   { path: '/workspace', label: 'WorkHub' },
   { path: '/apps', label: 'Quick links' },
   { path: '/directory', label: 'Directory' },
+  { path: '/messages', label: 'Messages' },
   { path: '/account', label: 'Account' },
   { path: '/financials', label: 'Financials' },
   { path: '/announcements', label: 'Announcements' },

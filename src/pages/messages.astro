@@ -1,0 +1,418 @@
+---
+import PortalLayout from '../layouts/PortalLayout.astro';
+import { listDirectory } from '../lib/employees';
+import { listInbox } from '../lib/messages';
+import { DEFAULT_ORG_ID } from '../lib/organization';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+const initialConversationId = String(Astro.url.searchParams.get('c') ?? '').trim();
+const [conversations, directory] = await Promise.all([
+  listInbox(employee.id, DEFAULT_ORG_ID),
+  listDirectory(),
+]);
+
+const people = directory
+  .filter((person) => person.id !== employee.id)
+  .map((person) => ({ id: person.id, name: person.name, jobTitle: person.jobTitle }));
+
+const payload = {
+  userId: employee.id,
+  userName: employee.name,
+  initialConversationId,
+  conversations,
+  people,
+};
+---
+
+<PortalLayout title="Messages" wide>
+  <p class="text-sm text-sage-dark/65">
+    <a href="/" class="hover:text-sage-dark">Home</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Messages
+  </p>
+
+  <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Messages</h1>
+      <p class="mt-3 max-w-2xl text-sage-dark/75">
+        Direct messages and team channels. Conversations refresh while this page is open.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
+      data-messages-new
+    >
+      New message
+    </button>
+  </div>
+
+  <div
+    class="mt-8 grid min-h-[32rem] gap-4 lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]"
+    data-messages-app
+    data-payload={JSON.stringify(payload)}
+  >
+    <aside class="flex min-h-0 flex-col rounded-2xl border border-sage-dark/10 bg-white/70">
+      <div class="border-b border-sage-dark/10 px-4 py-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Inbox</p>
+      </div>
+      <div class="min-h-0 flex-1 overflow-y-auto" data-messages-list>
+        <p class="px-4 py-6 text-sm text-sage-dark/60" data-messages-list-empty>No conversations yet.</p>
+      </div>
+    </aside>
+
+    <section class="flex min-h-0 flex-col rounded-2xl border border-sage-dark/10 bg-white/70">
+      <div class="border-b border-sage-dark/10 px-4 py-3" data-messages-thread-header>
+        <p class="text-sm font-semibold text-charcoal" data-messages-thread-title>Select a conversation</p>
+        <p class="mt-0.5 text-xs text-sage-dark/55" data-messages-thread-meta></p>
+      </div>
+      <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4" data-messages-thread>
+        <p class="text-sm text-sage-dark/60" data-messages-thread-empty>
+          Choose a conversation from the inbox, or start a new message.
+        </p>
+      </div>
+      <form class="hidden border-t border-sage-dark/10 p-4" data-messages-compose>
+        <label class="sr-only" for="message-body">Message</label>
+        <textarea
+          id="message-body"
+          name="body"
+          rows="3"
+          class="field min-h-[4.5rem] resize-y text-sm"
+          placeholder="Write a message…"
+          data-messages-body
+        ></textarea>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p class="hidden text-sm text-red-700" data-messages-error></p>
+          <button type="submit" class="btn-primary ml-auto !px-4 !py-2 text-sm" data-messages-send>
+            Send
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <dialog
+    class="w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-sage-dark/10 bg-cream p-0 shadow-xl backdrop:bg-charcoal/30"
+    data-messages-picker
+  >
+    <div class="border-b border-sage-dark/10 px-4 py-3">
+      <p class="text-sm font-semibold text-charcoal">New message</p>
+      <p class="mt-1 text-xs text-sage-dark/60">Choose someone from the directory.</p>
+    </div>
+    <div class="max-h-80 overflow-y-auto p-2" data-messages-picker-list></div>
+    <div class="flex justify-end border-t border-sage-dark/10 px-4 py-3">
+      <button
+        type="button"
+        class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark"
+        data-messages-picker-close
+      >
+        Cancel
+      </button>
+    </div>
+  </dialog>
+</PortalLayout>
+
+<script>
+  type Conversation = {
+    id: string;
+    kind: 'dm' | 'channel';
+    title: string;
+    unreadCount: number;
+    updatedAt: number;
+    lastMessage: {
+      body: string;
+      senderName: string;
+      createdAt: number;
+    } | null;
+  };
+
+  type Message = {
+    id: string;
+    senderId: string;
+    senderName: string;
+    body: string;
+    createdAt: number;
+    deleted: boolean;
+  };
+
+  function setupMessages(root: Element) {
+    if (!(root instanceof HTMLElement)) return;
+    let state = JSON.parse(root.dataset.payload || '{}') as {
+      userId: string;
+      userName: string;
+      initialConversationId: string;
+      conversations: Conversation[];
+      people: { id: string; name: string; jobTitle: string | null }[];
+    };
+
+    let activeId: string | null = state.initialConversationId || null;
+    let messages: Message[] = [];
+    let threadTitle = '';
+    let pollTimer: number | null = null;
+
+    const listEl = root.querySelector('[data-messages-list]');
+    const listEmpty = root.querySelector('[data-messages-list-empty]');
+    const threadEl = root.querySelector('[data-messages-thread]');
+    const threadEmpty = root.querySelector('[data-messages-thread-empty]');
+    const threadTitleEl = root.querySelector('[data-messages-thread-title]');
+    const threadMetaEl = root.querySelector('[data-messages-thread-meta]');
+    const compose = root.querySelector('[data-messages-compose]');
+    const bodyInput = root.querySelector('[data-messages-body]');
+    const errorEl = root.querySelector('[data-messages-error]');
+    const sendBtn = root.querySelector('[data-messages-send]');
+    const newBtn = document.querySelector('[data-messages-new]');
+    const picker = document.querySelector('[data-messages-picker]');
+    const pickerList = document.querySelector('[data-messages-picker-list]');
+    const pickerClose = document.querySelector('[data-messages-picker-close]');
+
+    function escapeHtml(value: string) {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatTime(ts: number) {
+      try {
+        return new Date(ts).toLocaleString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      } catch {
+        return '';
+      }
+    }
+
+    function setError(message: string) {
+      if (!(errorEl instanceof HTMLElement)) return;
+      if (!message) {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+        return;
+      }
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    function renderList() {
+      if (!(listEl instanceof HTMLElement)) return;
+      const items = state.conversations || [];
+      listEl.querySelectorAll('[data-conversation-id]').forEach((node) => node.remove());
+      if (listEmpty instanceof HTMLElement) {
+        listEmpty.classList.toggle('hidden', items.length > 0);
+      }
+      for (const item of items) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.conversationId = item.id;
+        const active = item.id === activeId;
+        btn.className = active
+          ? 'flex w-full flex-col gap-1 border-b border-sage-dark/10 bg-sage/15 px-4 py-3 text-left'
+          : 'flex w-full flex-col gap-1 border-b border-sage-dark/10 px-4 py-3 text-left transition hover:bg-sage/10';
+        const preview = item.lastMessage
+          ? escapeHtml(item.lastMessage.body)
+          : '<span class="text-sage-dark/45">No messages yet</span>';
+        const unread =
+          item.unreadCount > 0
+            ? `<span class="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">${item.unreadCount > 99 ? '99+' : item.unreadCount}</span>`
+            : '';
+        btn.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <span class="truncate text-sm font-semibold text-charcoal">${escapeHtml(item.title)}</span>
+            ${unread}
+          </div>
+          <span class="truncate text-xs text-sage-dark/60">${preview}</span>
+          <span class="text-[11px] text-sage-dark/45">${item.kind === 'channel' ? 'Channel' : 'Direct'} · ${formatTime(item.updatedAt)}</span>
+        `;
+        btn.addEventListener('click', () => {
+          void openConversation(item.id);
+        });
+        listEl.appendChild(btn);
+      }
+    }
+
+    function renderThread() {
+      if (!(threadEl instanceof HTMLElement)) return;
+      threadEl.querySelectorAll('[data-message-id]').forEach((node) => node.remove());
+      if (threadEmpty instanceof HTMLElement) {
+        threadEmpty.classList.toggle('hidden', Boolean(activeId) && messages.length > 0);
+        if (!activeId) {
+          threadEmpty.textContent = 'Choose a conversation from the inbox, or start a new message.';
+        } else if (messages.length === 0) {
+          threadEmpty.textContent = 'No messages yet. Say hello.';
+        }
+      }
+      if (threadTitleEl instanceof HTMLElement) {
+        threadTitleEl.textContent = activeId ? threadTitle || 'Conversation' : 'Select a conversation';
+      }
+      if (threadMetaEl instanceof HTMLElement) {
+        const conv = state.conversations.find((item) => item.id === activeId);
+        threadMetaEl.textContent = conv
+          ? conv.kind === 'channel'
+            ? 'Channel'
+            : 'Direct message'
+          : '';
+      }
+      if (compose instanceof HTMLElement) {
+        compose.classList.toggle('hidden', !activeId);
+      }
+
+      for (const message of messages) {
+        const mine = message.senderId === state.userId;
+        const row = document.createElement('div');
+        row.dataset.messageId = message.id;
+        row.className = mine ? 'flex justify-end' : 'flex justify-start';
+        const bubble = message.deleted
+          ? `<p class="italic text-sage-dark/50">Message deleted</p>`
+          : `<p class="whitespace-pre-wrap break-words text-sm text-charcoal">${escapeHtml(message.body)}</p>`;
+        row.innerHTML = `
+          <div class="${mine ? 'max-w-[85%] rounded-2xl bg-sage/25 px-3.5 py-2.5' : 'max-w-[85%] rounded-2xl bg-[#f3f5f2] px-3.5 py-2.5'}">
+            <div class="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span class="text-xs font-semibold text-charcoal">${escapeHtml(message.senderName)}</span>
+              <span class="text-[11px] text-sage-dark/45">${formatTime(message.createdAt)}</span>
+            </div>
+            ${bubble}
+          </div>
+        `;
+        threadEl.appendChild(row);
+      }
+      if (messages.length > 0) {
+        threadEl.scrollTop = threadEl.scrollHeight;
+      }
+    }
+
+    async function refreshList() {
+      const res = await fetch('/api/messages/list', { headers: { Accept: 'application/json' } });
+      const json = (await res.json().catch(() => ({}))) as {
+        conversations?: Conversation[];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error || 'Could not refresh inbox.');
+      state.conversations = json.conversations || [];
+      renderList();
+    }
+
+    async function openConversation(id: string) {
+      activeId = id;
+      setError('');
+      const res = await fetch(`/api/messages/thread?id=${encodeURIComponent(id)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        conversation?: { title: string };
+        messages?: Message[];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error || 'Could not open conversation.');
+      threadTitle = json.conversation?.title || 'Conversation';
+      messages = json.messages || [];
+      const url = new URL(window.location.href);
+      url.searchParams.set('c', id);
+      history.replaceState(null, '', url.pathname + url.search);
+      await refreshList().catch(() => undefined);
+      renderList();
+      renderThread();
+    }
+
+    async function sendMessage(event: Event) {
+      event.preventDefault();
+      if (!activeId || !(bodyInput instanceof HTMLTextAreaElement)) return;
+      const body = bodyInput.value;
+      setError('');
+      if (sendBtn instanceof HTMLButtonElement) sendBtn.disabled = true;
+      try {
+        const res = await fetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ conversationId: activeId, body }),
+        });
+        const json = (await res.json().catch(() => ({}))) as { message?: Message; error?: string };
+        if (!res.ok) throw new Error(json.error || 'Could not send.');
+        if (json.message) messages.push(json.message);
+        bodyInput.value = '';
+        renderThread();
+        await refreshList();
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Could not send.');
+      } finally {
+        if (sendBtn instanceof HTMLButtonElement) sendBtn.disabled = false;
+      }
+    }
+
+    function renderPicker() {
+      if (!(pickerList instanceof HTMLElement)) return;
+      pickerList.innerHTML = '';
+      for (const person of state.people || []) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className =
+          'flex w-full flex-col rounded-xl px-3 py-2.5 text-left transition hover:bg-sage/15';
+        btn.innerHTML = `
+          <span class="text-sm font-medium text-charcoal">${escapeHtml(person.name)}</span>
+          <span class="text-xs text-sage-dark/55">${escapeHtml(person.jobTitle || person.id)}</span>
+        `;
+        btn.addEventListener('click', async () => {
+          try {
+            const res = await fetch('/api/messages/dm', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ recipientId: person.id }),
+            });
+            const json = (await res.json().catch(() => ({}))) as {
+              conversationId?: string;
+              error?: string;
+            };
+            if (!res.ok) throw new Error(json.error || 'Could not start conversation.');
+            if (picker instanceof HTMLDialogElement) picker.close();
+            if (json.conversationId) await openConversation(json.conversationId);
+          } catch (error) {
+            setError(error instanceof Error ? error.message : 'Could not start conversation.');
+            if (picker instanceof HTMLDialogElement) picker.close();
+          }
+        });
+        pickerList.appendChild(btn);
+      }
+    }
+
+    function startPoll() {
+      if (pollTimer) window.clearInterval(pollTimer);
+      pollTimer = window.setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        void refreshList().catch(() => undefined);
+        if (activeId) {
+          void openConversation(activeId).catch(() => undefined);
+        }
+      }, 15000);
+    }
+
+    compose?.addEventListener('submit', (event) => {
+      void sendMessage(event);
+    });
+
+    newBtn?.addEventListener('click', () => {
+      renderPicker();
+      if (picker instanceof HTMLDialogElement) picker.showModal();
+    });
+    pickerClose?.addEventListener('click', () => {
+      if (picker instanceof HTMLDialogElement) picker.close();
+    });
+
+    renderList();
+    renderThread();
+    if (activeId) {
+      void openConversation(activeId).catch((error) => {
+        setError(error instanceof Error ? error.message : 'Could not open conversation.');
+        activeId = null;
+        renderThread();
+      });
+    }
+    startPoll();
+  }
+
+  document.querySelectorAll('[data-messages-app]').forEach((root) => setupMessages(root));
+</script>
