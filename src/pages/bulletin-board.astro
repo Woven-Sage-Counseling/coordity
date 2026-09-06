@@ -105,11 +105,8 @@ const payload = {
           {pending.length}
         </span>
       </button>
-      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="surface" aria-selected="false">
-        Surface
-      </button>
-      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="layout" aria-selected="false">
-        Home layout
+      <button type="button" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-sage-dark/70" data-lab-tab="defaults" aria-selected="false">
+        Organization defaults
       </button>
     </div>
 
@@ -248,12 +245,16 @@ const payload = {
       <p class="mt-4 hidden text-sm text-sage-dark/60" data-requests-empty>No pending requests.</p>
     </section>
 
-    <section class="mt-6 hidden" data-lab-panel="surface">
-      <h2 class="text-sm font-semibold text-charcoal">Draft surface</h2>
+    <section class="mt-6 hidden" data-lab-panel="defaults">
+      <h2 class="text-sm font-semibold text-charcoal">Organization defaults</h2>
       <p class="mt-1 max-w-2xl text-sm text-sage-dark/65">
-        Sets the company default board style on Home. Teammates can override their own view in
-        Settings. Pin positions stay the same — sticky notes become chalk or marker ink in matching
-        colors. Changes apply to the live board only after you click Update board.
+        Company-wide board style and Home layout. Teammates can override their own view in Settings.
+      </p>
+
+      <h3 class="mt-8 text-sm font-semibold text-charcoal">Board style</h3>
+      <p class="mt-1 max-w-2xl text-sm text-sage-dark/65">
+        Pin positions stay the same — sticky notes become chalk or marker ink in matching colors.
+        Changes apply to the live board only after you click Update board.
       </p>
       <div class="mt-5 grid gap-3 sm:grid-cols-3" data-surface-picker>
         {
@@ -284,7 +285,7 @@ const payload = {
         Live Home surface: <strong data-live-surface>{settings.surface}</strong>
       </p>
 
-      <h2 class="mt-10 text-sm font-semibold text-charcoal">Tall vs wide boards</h2>
+      <h3 class="mt-10 text-sm font-semibold text-charcoal">Tall vs wide boards</h3>
       <div class="mt-3 max-w-2xl rounded-2xl border border-amber-300/50 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
         <p class="font-semibold">How the two shapes relate</p>
         <p class="mt-1.5 text-amber-950/85">
@@ -326,14 +327,11 @@ const payload = {
       </div>
       <p class="mt-2 hidden text-sm text-sage-dark/70" data-board-mode-status></p>
       <p class="mt-2 hidden text-sm text-red-700" data-board-mode-error></p>
-    </section>
 
-    <section class="mt-6 hidden" data-lab-panel="layout">
-      <h2 class="text-sm font-semibold text-charcoal">Home layout defaults</h2>
+      <h3 class="mt-10 text-sm font-semibold text-charcoal">Home layout</h3>
       <p class="mt-1 max-w-2xl text-sm text-sage-dark/65">
-        Company defaults for the right header and bottom header. Each person can override these in
-        Settings. Bulletin board and widgets can each appear in only one place — not both slots at
-        once.
+        Defaults for the right header and bottom header. Bulletin board and widgets can each appear
+        in only one place — not both slots at once.
       </p>
 
       <form class="mt-6 max-w-xl space-y-6" data-home-layout-form>
