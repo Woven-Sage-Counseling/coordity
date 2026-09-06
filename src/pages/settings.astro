@@ -297,23 +297,39 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             colors.
           </p>
           <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
-            <input type="radio" name="surfaceOverride" value="default" data-home-surface checked={!userHomePrefs.surfaceOverride} />
+            <input
+              type="radio"
+              name="surfaceOverride"
+              value="default"
+              data-home-surface
+              checked={!userHomePrefs.surfaceOverride || userHomePrefs.surfaceOverride === boardSettings.surface}
+            />
             <span>
               Company default: <span class="font-medium text-sage">{surfaceDefaultLabel}</span>
             </span>
           </label>
-          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
-            <input type="radio" name="surfaceOverride" value="cork" data-home-surface checked={userHomePrefs.surfaceOverride === 'cork'} />
-            Cork board
-          </label>
-          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
-            <input type="radio" name="surfaceOverride" value="blackboard" data-home-surface checked={userHomePrefs.surfaceOverride === 'blackboard'} />
-            Blackboard
-          </label>
-          <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
-            <input type="radio" name="surfaceOverride" value="whiteboard" data-home-surface checked={userHomePrefs.surfaceOverride === 'whiteboard'} />
-            Whiteboard
-          </label>
+          {
+            (
+              [
+                { value: 'cork', label: 'Cork board' },
+                { value: 'blackboard', label: 'Blackboard' },
+                { value: 'whiteboard', label: 'Whiteboard' },
+              ] as const
+            )
+              .filter((option) => option.value !== boardSettings.surface)
+              .map((option) => (
+                <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
+                  <input
+                    type="radio"
+                    name="surfaceOverride"
+                    value={option.value}
+                    data-home-surface
+                    checked={userHomePrefs.surfaceOverride === option.value}
+                  />
+                  {option.label}
+                </label>
+              ))
+          }
         </fieldset>
 
         <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
@@ -322,14 +338,16 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             (
               [
                 { value: 'default', label: '' },
-                { value: 'board', label: 'Bulletin board (tall)' },
+                { value: 'board', label: 'Bulletin board' },
                 { value: 'widgets', label: 'Widgets' },
                 { value: 'company', label: 'Company logo' },
                 { value: 'portal', label: 'Portal mark' },
                 { value: 'custom', label: 'Custom picture' },
                 { value: 'none', label: 'Nothing' },
               ] as const
-            ).map((option) => (
+            )
+              .filter((option) => option.value === 'default' || option.value !== orgLayout.railSlot)
+              .map((option) => (
               <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
                 <input
                   type="radio"
@@ -338,7 +356,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                   data-home-rail
                   checked={
                     option.value === 'default'
-                      ? !userHomePrefs.railSlot
+                      ? !userHomePrefs.railSlot || userHomePrefs.railSlot === orgLayout.railSlot
                       : userHomePrefs.railSlot === option.value
                   }
                 />
@@ -363,11 +381,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             (
               [
                 { value: 'default', label: '' },
-                { value: 'board', label: 'Bulletin board (wide)' },
+                { value: 'board', label: 'Bulletin board' },
                 { value: 'widgets', label: 'Widgets' },
                 { value: 'none', label: 'Nothing' },
               ] as const
-            ).map((option) => (
+            )
+              .filter((option) => option.value === 'default' || option.value !== orgLayout.belowSlot)
+              .map((option) => (
               <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
                 <input
                   type="radio"
@@ -376,7 +396,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                   data-home-below
                   checked={
                     option.value === 'default'
-                      ? !userHomePrefs.belowSlot
+                      ? !userHomePrefs.belowSlot || userHomePrefs.belowSlot === orgLayout.belowSlot
                       : userHomePrefs.belowSlot === option.value
                   }
                 />

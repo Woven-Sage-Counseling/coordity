@@ -130,9 +130,25 @@ export async function updateHomeUserPrefs(input: {
           : null;
 
   const layout = await getHomeLayoutSettings(orgId);
-  const effectiveRail = railSlot ?? layout.railSlot;
-  const effectiveBelow = belowSlot ?? layout.belowSlot;
-  if (slotsConflict(effectiveRail, effectiveBelow)) {
+  let effectiveRailSlot = railSlot;
+  let effectiveBelowSlot = belowSlot;
+  let effectiveSurface = surfaceOverride;
+
+  // Prefer following company default when the chosen override matches it.
+  if (effectiveRailSlot != null && effectiveRailSlot === layout.railSlot) {
+    effectiveRailSlot = null;
+  }
+  if (effectiveBelowSlot != null && effectiveBelowSlot === layout.belowSlot) {
+    effectiveBelowSlot = null;
+  }
+  if (effectiveSurface != null) {
+    const board = await getBulletinBoardSettings(orgId);
+    if (effectiveSurface === board.surface) effectiveSurface = null;
+  }
+
+  const resolvedRail = effectiveRailSlot ?? layout.railSlot;
+  const resolvedBelow = effectiveBelowSlot ?? layout.belowSlot;
+  if (slotsConflict(resolvedRail, resolvedBelow)) {
     throw new Error(
       'Bulletin board and widgets can each only appear in one place. Choose different options for the right header and bottom header.',
     );
@@ -149,7 +165,7 @@ export async function updateHomeUserPrefs(input: {
        below_slot = excluded.below_slot,
        updated_at = excluded.updated_at`,
   )
-    .bind(input.userId, orgId, surfaceOverride, railSlot, belowSlot, now)
+    .bind(input.userId, orgId, effectiveSurface, effectiveRailSlot, effectiveBelowSlot, now)
     .run();
 
   return getHomeUserPrefs(input.userId, orgId);
