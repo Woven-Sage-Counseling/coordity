@@ -5,7 +5,7 @@ import { DEFAULT_ORG_ID } from './organization';
 export const HOME_BELOW_SLOTS = ['none', 'board', 'widgets'] as const;
 export type HomeBelowSlot = (typeof HOME_BELOW_SLOTS)[number];
 
-/** Single choice for the right rail (board may also appear below). */
+/** Single choice for the right rail. */
 export const HOME_RAIL_SLOTS = ['none', 'board', 'widgets', 'company', 'portal', 'custom'] as const;
 export type HomeRailSlot = (typeof HOME_RAIL_SLOTS)[number];
 
@@ -96,28 +96,45 @@ function resolveBoardShapeHint(input: {
 }
 
 function mapRow(row: LayoutRow): HomeLayoutSettings {
-  const railSlot = deriveRailSlot(row);
-  const legacy = railSlotToLegacy(railSlot);
+  const derivedRail = deriveRailSlot(row);
+  const derivedBelow = isBelowSlot(row.below_slot) ? row.below_slot : 'widgets';
+  const normalized = normalizeHomeLayoutInput({
+    railSlot: derivedRail,
+    belowSlot: derivedBelow,
+    prefer: 'rail',
+  });
   return {
     orgId: row.org_id,
-    railSlot,
-    railBoard: legacy.railBoard,
-    railWidgets: legacy.railWidgets,
-    railImageKind: legacy.railImageKind,
+    railSlot: normalized.railSlot,
+    railBoard: normalized.railBoard,
+    railWidgets: normalized.railWidgets,
+    railImageKind: normalized.railImageKind,
     hasRailImage: Boolean(row.rail_image_data && row.rail_image_mime),
     railImageMime: row.rail_image_mime,
-    belowSlot: isBelowSlot(row.below_slot) ? row.below_slot : 'widgets',
+    belowSlot: normalized.belowSlot,
     boardShape: isBoardShape(row.board_shape)
       ? row.board_shape
-      : resolveBoardShapeHint({ railSlot, belowSlot: isBelowSlot(row.below_slot) ? row.below_slot : 'widgets' }),
+      : normalized.boardShape,
     updatedAt: row.updated_at,
   };
 }
 
-/** Normalize rail/below enums. Board may appear in both slots. */
+/** True when board or widgets would appear in both rail and underneath. */
+export function slotsConflict(railSlot: HomeRailSlot, belowSlot: HomeBelowSlot): boolean {
+  return (
+    (railSlot === 'board' && belowSlot === 'board') ||
+    (railSlot === 'widgets' && belowSlot === 'widgets')
+  );
+}
+
+/**
+ * Normalize rail/below enums. Board and widgets may each appear in only one slot.
+ * `prefer` decides which side wins when both request the same content type.
+ */
 export function normalizeHomeLayoutInput(input: {
   railSlot: HomeRailSlot;
   belowSlot: HomeBelowSlot;
+  prefer?: 'rail' | 'below';
 }): {
   railSlot: HomeRailSlot;
   belowSlot: HomeBelowSlot;
@@ -126,8 +143,15 @@ export function normalizeHomeLayoutInput(input: {
   railWidgets: boolean;
   railImageKind: HomeRailImageKind;
 } {
-  const railSlot = isRailSlot(input.railSlot) ? input.railSlot : 'none';
-  const belowSlot = isBelowSlot(input.belowSlot) ? input.belowSlot : 'none';
+  let railSlot = isRailSlot(input.railSlot) ? input.railSlot : 'none';
+  let belowSlot = isBelowSlot(input.belowSlot) ? input.belowSlot : 'none';
+  const prefer = input.prefer ?? 'below';
+
+  if (slotsConflict(railSlot, belowSlot)) {
+    if (prefer === 'rail') belowSlot = 'none';
+    else railSlot = 'none';
+  }
+
   const legacy = railSlotToLegacy(railSlot);
   return {
     railSlot,

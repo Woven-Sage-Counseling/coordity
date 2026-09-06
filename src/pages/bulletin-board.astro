@@ -364,7 +364,8 @@ const payload = {
       <h2 class="text-sm font-semibold text-charcoal">Home layout defaults</h2>
       <p class="mt-1 max-w-2xl text-sm text-sage-dark/65">
         Company defaults for the right rail and underneath area. Each person can override these in
-        Settings. The board may appear in both places at once (tall in the rail, wide underneath).
+        Settings. Bulletin board and widgets can each appear in only one place — not both slots at
+        once.
       </p>
 
       <form class="mt-6 max-w-xl space-y-6" data-home-layout-form>
@@ -1292,9 +1293,41 @@ const payload = {
     const layoutError = root.querySelector('[data-layout-error]');
     const layoutImageUploadWrap = root.querySelector('[data-layout-image-upload-wrap]');
 
-    const syncLayoutForm = () => {
+    const syncLayoutForm = (changed) => {
       const rail = root.querySelector('[data-layout-rail]:checked');
-      const railVal = rail instanceof HTMLInputElement ? rail.value : 'none';
+      const below = root.querySelector('[data-layout-below]:checked');
+      let railVal = rail instanceof HTMLInputElement ? rail.value : 'none';
+      let belowVal = below instanceof HTMLInputElement ? below.value : 'none';
+      const exclusive = railVal === 'board' || railVal === 'widgets';
+      if (exclusive && railVal === belowVal) {
+        if (changed === 'below') {
+          const noneRail = root.querySelector('[data-layout-rail][value="none"]');
+          if (noneRail instanceof HTMLInputElement) noneRail.checked = true;
+          railVal = 'none';
+        } else {
+          const noneBelow = root.querySelector('[data-layout-below][value="none"]');
+          if (noneBelow instanceof HTMLInputElement) noneBelow.checked = true;
+          belowVal = 'none';
+        }
+      }
+      root.querySelectorAll('[data-layout-rail]').forEach((node) => {
+        if (!(node instanceof HTMLInputElement)) return;
+        const blocked =
+          (node.value === 'board' && belowVal === 'board') ||
+          (node.value === 'widgets' && belowVal === 'widgets');
+        node.disabled = blocked;
+        const label = node.closest('label');
+        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', blocked);
+      });
+      root.querySelectorAll('[data-layout-below]').forEach((node) => {
+        if (!(node instanceof HTMLInputElement)) return;
+        const blocked =
+          (node.value === 'board' && railVal === 'board') ||
+          (node.value === 'widgets' && railVal === 'widgets');
+        node.disabled = blocked;
+        const label = node.closest('label');
+        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', blocked);
+      });
       const showUpload = railVal === 'custom' || railVal === 'company';
       if (layoutImageUploadWrap instanceof HTMLElement) {
         layoutImageUploadWrap.classList.toggle('hidden', !showUpload);
@@ -1302,7 +1335,10 @@ const payload = {
     };
 
     root.querySelectorAll('[data-layout-rail]').forEach((node) => {
-      node.addEventListener('change', syncLayoutForm);
+      node.addEventListener('change', () => syncLayoutForm('rail'));
+    });
+    root.querySelectorAll('[data-layout-below]').forEach((node) => {
+      node.addEventListener('change', () => syncLayoutForm('below'));
     });
     syncLayoutForm();
 

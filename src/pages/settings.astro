@@ -256,7 +256,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </button>
       <PanelHeading
         title="Home board & layout"
-        description="Personalize your Home page. Leave an option on Company default to follow what admins set for everyone."
+        description="Personalize your Home page. Leave an option on Company default to follow what admins set. Bulletin board and widgets can each appear in only one place."
       />
 
       <p
@@ -309,6 +309,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                   type="radio"
                   name="railSlot"
                   value={option.value}
+                  data-home-rail
                   checked={
                     option.value === 'default'
                       ? !userHomePrefs.railSlot
@@ -338,6 +339,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                   type="radio"
                   name="belowSlot"
                   value={option.value}
+                  data-home-below
                   checked={
                     option.value === 'default'
                       ? !userHomePrefs.belowSlot
@@ -1241,6 +1243,76 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const errorEl = root.querySelector('[data-home-layout-error]');
     const savedEl = root.querySelector('[data-home-prefs-saved]');
     if (!(form instanceof HTMLFormElement)) return;
+
+    let payload: { org?: { railSlot?: string; belowSlot?: string } } = {};
+    try {
+      payload = JSON.parse(root.dataset.homePrefs || '{}') as typeof payload;
+    } catch {
+      payload = {};
+    }
+    const orgRail = payload.org?.railSlot || 'board';
+    const orgBelow = payload.org?.belowSlot || 'widgets';
+
+    const resolveRail = () => {
+      const checked = form.querySelector('[data-home-rail]:checked');
+      const value = checked instanceof HTMLInputElement ? checked.value : 'default';
+      return value === 'default' ? orgRail : value;
+    };
+    const resolveBelow = () => {
+      const checked = form.querySelector('[data-home-below]:checked');
+      const value = checked instanceof HTMLInputElement ? checked.value : 'default';
+      return value === 'default' ? orgBelow : value;
+    };
+    const exclusivePair = (a: string, b: string) =>
+      (a === 'board' && b === 'board') || (a === 'widgets' && b === 'widgets');
+
+    const syncExclusive = (changed: 'rail' | 'below') => {
+      let rail = resolveRail();
+      let below = resolveBelow();
+      if (exclusivePair(rail, below)) {
+        if (changed === 'below') {
+          const noneRail = form.querySelector('[data-home-rail][value="none"]');
+          if (noneRail instanceof HTMLInputElement) noneRail.checked = true;
+          rail = 'none';
+        } else {
+          const noneBelow = form.querySelector('[data-home-below][value="none"]');
+          if (noneBelow instanceof HTMLInputElement) noneBelow.checked = true;
+          below = 'none';
+        }
+      }
+      form.querySelectorAll('[data-home-rail]').forEach((node) => {
+        if (!(node instanceof HTMLInputElement)) return;
+        if (node.value === 'default') {
+          node.disabled = exclusivePair(orgRail, below);
+        } else {
+          node.disabled =
+            (node.value === 'board' && below === 'board') ||
+            (node.value === 'widgets' && below === 'widgets');
+        }
+        const label = node.closest('label');
+        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', node.disabled);
+      });
+      form.querySelectorAll('[data-home-below]').forEach((node) => {
+        if (!(node instanceof HTMLInputElement)) return;
+        if (node.value === 'default') {
+          node.disabled = exclusivePair(rail, orgBelow);
+        } else {
+          node.disabled =
+            (node.value === 'board' && rail === 'board') ||
+            (node.value === 'widgets' && rail === 'widgets');
+        }
+        const label = node.closest('label');
+        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', node.disabled);
+      });
+    };
+
+    form.querySelectorAll('[data-home-rail]').forEach((node) => {
+      node.addEventListener('change', () => syncExclusive('rail'));
+    });
+    form.querySelectorAll('[data-home-below]').forEach((node) => {
+      node.addEventListener('change', () => syncExclusive('below'));
+    });
+    syncExclusive('rail');
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();

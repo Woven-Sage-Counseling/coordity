@@ -7,8 +7,10 @@ import {
   getHomeLayoutSettings,
   isBelowSlot,
   isRailSlot,
+  normalizeHomeLayoutInput,
   PORTAL_MARK_SRC,
   serializeHomeLayout,
+  slotsConflict,
   type HomeBelowSlot,
   type HomeLayoutSettings,
   type HomeRailSlot,
@@ -127,6 +129,15 @@ export async function updateHomeUserPrefs(input: {
           ? input.belowSlot
           : null;
 
+  const layout = await getHomeLayoutSettings(orgId);
+  const effectiveRail = railSlot ?? layout.railSlot;
+  const effectiveBelow = belowSlot ?? layout.belowSlot;
+  if (slotsConflict(effectiveRail, effectiveBelow)) {
+    throw new Error(
+      'Bulletin board and widgets can each only appear in one place. Choose different options for the rail and underneath.',
+    );
+  }
+
   const { DB } = getEnv();
   await DB.prepare(
     `INSERT INTO home_user_prefs (user_id, org_id, surface_override, rail_slot, below_slot, updated_at)
@@ -166,8 +177,19 @@ export async function resolveEffectiveHomeComposition(input: {
     getBulletinBoardSettings(orgId),
   ]);
 
-  const railSlot = prefs.railSlot ?? layout.railSlot;
-  const belowSlot = prefs.belowSlot ?? layout.belowSlot;
+  const prefer: 'rail' | 'below' =
+    prefs.railSlot != null && prefs.belowSlot == null
+      ? 'rail'
+      : prefs.belowSlot != null && prefs.railSlot == null
+        ? 'below'
+        : 'rail';
+  const normalized = normalizeHomeLayoutInput({
+    railSlot: prefs.railSlot ?? layout.railSlot,
+    belowSlot: prefs.belowSlot ?? layout.belowSlot,
+    prefer,
+  });
+  const railSlot = normalized.railSlot;
+  const belowSlot = normalized.belowSlot;
   const surface = prefs.surfaceOverride ?? board.surface;
   const serialized = serializeHomeLayout(layout);
 
