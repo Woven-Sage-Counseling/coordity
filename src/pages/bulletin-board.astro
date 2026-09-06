@@ -114,7 +114,7 @@ const payload = {
     </div>
 
     <section class="mt-6" data-lab-panel="board">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-start" data-board-lab-layout>
         <div class="min-w-0 flex-1" data-board-canvas-wrap>
           <div class="mb-3 flex flex-wrap items-center gap-2">
             <p class="text-sm text-sage-dark/70">Edit arrangement for:</p>
@@ -151,7 +151,7 @@ const payload = {
           </div>
         </div>
 
-        <div class="flex w-full max-w-sm flex-col gap-4 lg:sticky lg:top-6">
+        <div class="flex w-full max-w-sm flex-col gap-4 lg:sticky lg:top-6" data-board-lab-controls>
           <form class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm" data-admin-post-form>
             <h2 class="text-sm font-semibold text-charcoal">Add to draft</h2>
             <p class="mt-1 text-xs text-sage-dark/60">
@@ -902,6 +902,26 @@ const payload = {
       return (state.pins || []).filter((pin) => (pin.boardVariant || 'portrait') === variant);
     }
 
+    function syncLabChrome() {
+      const wide = state.boardVariant === 'landscape';
+      const layout = root.querySelector('[data-board-lab-layout]');
+      const controls = root.querySelector('[data-board-lab-controls]');
+      const wrap = root.querySelector('[data-board-canvas-wrap]');
+      if (layout instanceof HTMLElement) {
+        layout.className = wide
+          ? 'flex flex-col gap-6'
+          : 'flex flex-col gap-6 lg:flex-row lg:items-start';
+      }
+      if (wrap instanceof HTMLElement) {
+        wrap.className = wide ? 'min-w-0 w-full' : 'min-w-0 flex-1';
+      }
+      if (controls instanceof HTMLElement) {
+        controls.className = wide
+          ? 'grid w-full gap-4 md:grid-cols-2 md:items-start'
+          : 'flex w-full max-w-sm flex-col gap-4 lg:sticky lg:top-6';
+      }
+    }
+
     function setBoardVariant(variant) {
       state.boardVariant = variant === 'landscape' ? 'landscape' : 'portrait';
       root.querySelectorAll('[data-variant-tab]').forEach((btn) => {
@@ -913,6 +933,7 @@ const payload = {
           : 'rounded-full px-3 py-1 text-xs font-medium text-sage-dark/70 hover:bg-sage/10';
       });
       selectedId = null;
+      syncLabChrome();
       renderBoard();
       renderInspector();
     }
@@ -927,11 +948,6 @@ const payload = {
     function renderBoard() {
       canvas.dataset.surface = state.surface;
       canvas.dataset.boardShape = state.boardVariant || 'portrait';
-      const wrap = root.querySelector('[data-board-canvas-wrap]');
-      if (wrap instanceof HTMLElement) {
-        wrap.classList.toggle('shrink-0', state.boardVariant !== 'landscape');
-        wrap.classList.toggle('flex-1', state.boardVariant === 'landscape');
-      }
       const hint = root.querySelector('[data-board-shape-hint]');
       if (hint) {
         hint.textContent =
