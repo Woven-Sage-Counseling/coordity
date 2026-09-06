@@ -1253,66 +1253,51 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const orgRail = payload.org?.railSlot || 'board';
     const orgBelow = payload.org?.belowSlot || 'widgets';
 
-    const resolveRail = () => {
-      const checked = form.querySelector('[data-home-rail]:checked');
-      const value = checked instanceof HTMLInputElement ? checked.value : 'default';
-      return value === 'default' ? orgRail : value;
+    const checkedChoice = (selector: string) => {
+      const node = form.querySelector(selector);
+      return node instanceof HTMLInputElement ? node.value : 'default';
     };
-    const resolveBelow = () => {
-      const checked = form.querySelector('[data-home-below]:checked');
-      const value = checked instanceof HTMLInputElement ? checked.value : 'default';
-      return value === 'default' ? orgBelow : value;
+    const setChoice = (name: string, value: string) => {
+      const node = form.querySelector(`[name="${name}"][value="${value}"]`);
+      if (node instanceof HTMLInputElement) node.checked = true;
     };
+    const effective = (choice: string, org: string) => (choice === 'default' ? org : choice);
     const exclusivePair = (a: string, b: string) =>
       (a === 'board' && b === 'board') || (a === 'widgets' && b === 'widgets');
+    const belowAllowed = (value: string) =>
+      value === 'none' || value === 'board' || value === 'widgets';
 
-    const syncExclusive = (changed: 'rail' | 'below') => {
-      let rail = resolveRail();
-      let below = resolveBelow();
+    let lastRailChoice = checkedChoice('[data-home-rail]:checked');
+    let lastBelowChoice = checkedChoice('[data-home-below]:checked');
+
+    const onSlotChange = (changed: 'rail' | 'below') => {
+      const railChoice = checkedChoice('[data-home-rail]:checked');
+      const belowChoice = checkedChoice('[data-home-below]:checked');
+      const rail = effective(railChoice, orgRail);
+      const below = effective(belowChoice, orgBelow);
+
       if (exclusivePair(rail, below)) {
         if (changed === 'below') {
-          const noneRail = form.querySelector('[data-home-rail][value="none"]');
-          if (noneRail instanceof HTMLInputElement) noneRail.checked = true;
-          rail = 'none';
+          const prevBelow = effective(lastBelowChoice, orgBelow);
+          const move = belowAllowed(prevBelow) && prevBelow !== below ? prevBelow : 'none';
+          setChoice('railSlot', move);
         } else {
-          const noneBelow = form.querySelector('[data-home-below][value="none"]');
-          if (noneBelow instanceof HTMLInputElement) noneBelow.checked = true;
-          below = 'none';
+          const prevRail = effective(lastRailChoice, orgRail);
+          const move = belowAllowed(prevRail) && prevRail !== rail ? prevRail : 'none';
+          setChoice('belowSlot', move);
         }
       }
-      form.querySelectorAll('[data-home-rail]').forEach((node) => {
-        if (!(node instanceof HTMLInputElement)) return;
-        if (node.value === 'default') {
-          node.disabled = exclusivePair(orgRail, below);
-        } else {
-          node.disabled =
-            (node.value === 'board' && below === 'board') ||
-            (node.value === 'widgets' && below === 'widgets');
-        }
-        const label = node.closest('label');
-        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', node.disabled);
-      });
-      form.querySelectorAll('[data-home-below]').forEach((node) => {
-        if (!(node instanceof HTMLInputElement)) return;
-        if (node.value === 'default') {
-          node.disabled = exclusivePair(rail, orgBelow);
-        } else {
-          node.disabled =
-            (node.value === 'board' && rail === 'board') ||
-            (node.value === 'widgets' && rail === 'widgets');
-        }
-        const label = node.closest('label');
-        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', node.disabled);
-      });
+
+      lastRailChoice = checkedChoice('[data-home-rail]:checked');
+      lastBelowChoice = checkedChoice('[data-home-below]:checked');
     };
 
     form.querySelectorAll('[data-home-rail]').forEach((node) => {
-      node.addEventListener('change', () => syncExclusive('rail'));
+      node.addEventListener('change', () => onSlotChange('rail'));
     });
     form.querySelectorAll('[data-home-below]').forEach((node) => {
-      node.addEventListener('change', () => syncExclusive('below'));
+      node.addEventListener('change', () => onSlotChange('below'));
     });
-    syncExclusive('rail');
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();

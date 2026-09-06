@@ -1293,54 +1293,55 @@ const payload = {
     const layoutError = root.querySelector('[data-layout-error]');
     const layoutImageUploadWrap = root.querySelector('[data-layout-image-upload-wrap]');
 
-    const syncLayoutForm = (changed) => {
-      const rail = root.querySelector('[data-layout-rail]:checked');
-      const below = root.querySelector('[data-layout-below]:checked');
-      let railVal = rail instanceof HTMLInputElement ? rail.value : 'none';
-      let belowVal = below instanceof HTMLInputElement ? below.value : 'none';
-      const exclusive = railVal === 'board' || railVal === 'widgets';
-      if (exclusive && railVal === belowVal) {
-        if (changed === 'below') {
-          const noneRail = root.querySelector('[data-layout-rail][value="none"]');
-          if (noneRail instanceof HTMLInputElement) noneRail.checked = true;
-          railVal = 'none';
-        } else {
-          const noneBelow = root.querySelector('[data-layout-below][value="none"]');
-          if (noneBelow instanceof HTMLInputElement) noneBelow.checked = true;
-          belowVal = 'none';
-        }
-      }
-      root.querySelectorAll('[data-layout-rail]').forEach((node) => {
-        if (!(node instanceof HTMLInputElement)) return;
-        const blocked =
-          (node.value === 'board' && belowVal === 'board') ||
-          (node.value === 'widgets' && belowVal === 'widgets');
-        node.disabled = blocked;
-        const label = node.closest('label');
-        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', blocked);
-      });
-      root.querySelectorAll('[data-layout-below]').forEach((node) => {
-        if (!(node instanceof HTMLInputElement)) return;
-        const blocked =
-          (node.value === 'board' && railVal === 'board') ||
-          (node.value === 'widgets' && railVal === 'widgets');
-        node.disabled = blocked;
-        const label = node.closest('label');
-        if (label instanceof HTMLElement) label.classList.toggle('opacity-40', blocked);
-      });
+    const checkedValue = (selector) => {
+      const node = root.querySelector(selector);
+      return node instanceof HTMLInputElement ? node.value : 'none';
+    };
+    const setChecked = (name, value) => {
+      const node = root.querySelector(`[name="${name}"][value="${value}"]`);
+      if (node instanceof HTMLInputElement) node.checked = true;
+    };
+    const isExclusive = (value) => value === 'board' || value === 'widgets';
+    const belowAllowed = (value) => value === 'none' || value === 'board' || value === 'widgets';
+
+    let lastRail = checkedValue('[data-layout-rail]:checked');
+    let lastBelow = checkedValue('[data-layout-below]:checked');
+
+    const syncImageUpload = () => {
+      const railVal = checkedValue('[data-layout-rail]:checked');
       const showUpload = railVal === 'custom' || railVal === 'company';
       if (layoutImageUploadWrap instanceof HTMLElement) {
         layoutImageUploadWrap.classList.toggle('hidden', !showUpload);
       }
     };
 
+    const onSlotChange = (changed) => {
+      const railVal = checkedValue('[data-layout-rail]:checked');
+      const belowVal = checkedValue('[data-layout-below]:checked');
+      if (isExclusive(railVal) && railVal === belowVal) {
+        if (changed === 'below') {
+          // Flip: move the previous underneath choice into the rail when possible.
+          const move = belowAllowed(lastBelow) ? lastBelow : 'none';
+          setChecked('railSlot', move === belowVal ? 'none' : move);
+          lastRail = checkedValue('[data-layout-rail]:checked');
+        } else {
+          const move = belowAllowed(lastRail) ? lastRail : 'none';
+          setChecked('belowSlot', move === railVal ? 'none' : move);
+          lastBelow = checkedValue('[data-layout-below]:checked');
+        }
+      }
+      lastRail = checkedValue('[data-layout-rail]:checked');
+      lastBelow = checkedValue('[data-layout-below]:checked');
+      syncImageUpload();
+    };
+
     root.querySelectorAll('[data-layout-rail]').forEach((node) => {
-      node.addEventListener('change', () => syncLayoutForm('rail'));
+      node.addEventListener('change', () => onSlotChange('rail'));
     });
     root.querySelectorAll('[data-layout-below]').forEach((node) => {
-      node.addEventListener('change', () => syncLayoutForm('below'));
+      node.addEventListener('change', () => onSlotChange('below'));
     });
-    syncLayoutForm();
+    syncImageUpload();
 
     layoutForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
