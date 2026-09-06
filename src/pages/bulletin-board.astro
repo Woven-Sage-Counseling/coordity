@@ -662,6 +662,94 @@ const payload = {
       expandDialog.showModal();
     }
 
+    function syncLinkedPinContent(sourcePin) {
+      if (!sourcePin?.linkId) return;
+      state.pins.forEach((other) => {
+        if (other.id === sourcePin.id || other.linkId !== sourcePin.linkId) return;
+        other.body = sourcePin.body;
+        other.color = sourcePin.color;
+        other.fontSizeRem = sourcePin.fontSizeRem;
+        other.expiresAt = sourcePin.expiresAt;
+      });
+    }
+
+    async function savePinPlacement(pin, options = {}) {
+      if (!pin) return null;
+      const body =
+        options.body !== undefined
+          ? options.body
+          : inspBody instanceof HTMLTextAreaElement && selectedId === pin.id
+            ? inspBody.value
+            : pin.body;
+      const expiresValue =
+        options.expiresValue !== undefined
+          ? options.expiresValue
+          : inspExpires instanceof HTMLSelectElement && selectedId === pin.id
+            ? inspExpires.value
+            : '';
+      let expiresAt = null;
+      let clearExpires = false;
+      if (!expiresValue) clearExpires = true;
+      else {
+        const days = Number(String(expiresValue).replace('d', ''));
+        expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
+      }
+
+      const json = await postForm('/api/bulletin-board/pins/update', {
+        id: pin.id,
+        body,
+        color: pin.color,
+        fontSizeRem: pin.fontSizeRem,
+        widthPct: pin.widthPct,
+        rotationDeg: pin.rotationDeg,
+        xPct: pin.xPct,
+        yPct: pin.yPct,
+        clearExpires: clearExpires ? '1' : '0',
+        expiresAt,
+      });
+
+      // Keep geometry from local state; only take content fields from the response
+      // so a remapped color/body cannot fight with concurrent position saves.
+      if (json.pin) {
+        pin.body = json.pin.body;
+        pin.color = json.pin.color;
+        pin.fontSizeRem = json.pin.fontSizeRem;
+        pin.widthPct = json.pin.widthPct;
+        pin.rotationDeg = json.pin.rotationDeg;
+        pin.expiresAt = json.pin.expiresAt;
+        pin.xPct = json.pin.xPct ?? pin.xPct;
+        pin.yPct = json.pin.yPct ?? pin.yPct;
+      } else {
+        pin.body = body;
+      }
+      syncLinkedPinContent(pin);
+      markDraftDirty();
+      return json.pin;
+    }
+
+    async function flushInspectorForPin(pinId) {
+      const pin = state.pins.find((item) => item.id === pinId);
+      if (!pin) return;
+      const nextBody = inspBody instanceof HTMLTextAreaElement ? inspBody.value : pin.body;
+      const bodyChanged = String(nextBody ?? '') !== String(pin.body ?? '');
+      const dirty =
+        bodyChanged ||
+        (inspWidth instanceof HTMLInputElement && Number(inspWidth.value) !== Number(pin.widthPct)) ||
+        (inspFont instanceof HTMLInputElement && Number(inspFont.value) !== Number(pin.fontSizeRem)) ||
+        (inspRotation instanceof HTMLInputElement &&
+          Number(inspRotation.value) !== Number(pin.rotationDeg));
+      if (!dirty) return;
+      try {
+        if (inspWidth instanceof HTMLInputElement) pin.widthPct = Number(inspWidth.value);
+        if (inspFont instanceof HTMLInputElement) pin.fontSizeRem = Number(inspFont.value);
+        if (inspRotation instanceof HTMLInputElement) pin.rotationDeg = Number(inspRotation.value);
+        await savePinPlacement(pin, { body: nextBody });
+        renderBoard();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
     function renderPin(pin) {
       const el = document.createElement('div');
       el.className = 'board-pin';
@@ -705,6 +793,7 @@ const payload = {
         if (event.button !== 0) return;
         if (event.target && event.target.closest && (event.target.closest('a') || event.target.closest('[data-board-zoom]'))) return;
         event.preventDefault();
+        const previousId = selectedId;
         selectedId = pin.id;
         drag = {
           id: pin.id,
@@ -712,9 +801,13 @@ const payload = {
           startY: event.clientY,
           origX: pin.xPct,
           origY: pin.yPct,
+          moved: false,
         };
         el.setPointerCapture(event.pointerId);
         el.dataset.dragging = 'true';
+        if (previousId && previousId !== pin.id) {
+          void flushInspectorForPin(previousId);
+        }
         renderBoard();
         renderInspector();
       });
@@ -724,6 +817,7 @@ const payload = {
         const rect = canvas.getBoundingClientRect();
         const dx = ((event.clientX - drag.startX) / rect.width) * 100;
         const dy = ((event.clientY - drag.startY) / rect.height) * 100;
+        if (Math.abs(dx) > 0.15 || Math.abs(dy) > 0.15) drag.moved = true;
         pin.xPct = Math.min(92, Math.max(-4, drag.origX + dx));
         pin.yPct = Math.min(92, Math.max(-4, drag.origY + dy));
         el.style.left = `${pin.xPct}%`;
@@ -732,15 +826,17 @@ const payload = {
 
       const endDrag = async () => {
         if (!drag || drag.id !== pin.id) return;
+        const didMove = Boolean(drag.moved);
         el.dataset.dragging = 'false';
         drag = null;
+        if (!didMove) return;
         try {
-          const json = await postForm('/api/bulletin-board/pins/update', {
+          await postForm('/api/bulletin-board/pins/update', {
             id: pin.id,
             xPct: pin.xPct,
             yPct: pin.yPct,
           });
-          Object.assign(pin, json.pin);
+          // Do not Object.assign the full pin — a stale position response can wipe a newer body edit.
           markDraftDirty();
         } catch (error) {
           console.error(error);
@@ -915,29 +1011,8 @@ const payload = {
     root.querySelector('[data-insp-save]')?.addEventListener('click', async () => {
       const pin = state.pins.find((item) => item.id === selectedId);
       if (!pin) return;
-      const expiresValue = inspExpires instanceof HTMLSelectElement ? inspExpires.value : '';
-      let expiresAt = null;
-      let clearExpires = false;
-      if (!expiresValue) clearExpires = true;
-      else {
-        const days = Number(expiresValue.replace('d', ''));
-        expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
-      }
       try {
-        const json = await postForm('/api/bulletin-board/pins/update', {
-          id: pin.id,
-          body: inspBody instanceof HTMLTextAreaElement ? inspBody.value : pin.body,
-          color: pin.color,
-          fontSizeRem: pin.fontSizeRem,
-          widthPct: pin.widthPct,
-          rotationDeg: pin.rotationDeg,
-          xPct: pin.xPct,
-          yPct: pin.yPct,
-          clearExpires: clearExpires ? '1' : '0',
-          expiresAt,
-        });
-        Object.assign(pin, json.pin);
-        markDraftDirty();
+        await savePinPlacement(pin);
         renderBoard();
         renderInspector();
       } catch (error) {
