@@ -919,13 +919,6 @@ const payload = {
     function renderBoard() {
       canvas.dataset.surface = state.surface;
       canvas.dataset.boardShape = state.boardVariant || 'portrait';
-      const hint = root.querySelector('[data-board-shape-hint]');
-      if (hint) {
-        hint.textContent =
-          state.boardVariant === 'landscape'
-            ? 'Editing the wide (bottom header) board. Changes stay here until you update the live board.'
-            : 'Editing the tall (right header) board. Changes stay here until you update the live board.';
-      }
       canvas.querySelectorAll('[data-pin-id]').forEach((node) => node.remove());
       visiblePins().forEach((pin) => canvas.appendChild(renderPin(pin)));
     }
