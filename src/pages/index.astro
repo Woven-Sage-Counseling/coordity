@@ -100,6 +100,14 @@ const widgetProps = {
           </div>
         ) : null
       }
+
+      {
+        belowWidgets ? (
+          <div class="mt-8">
+            <HomeWidgetCarousel {...widgetProps} />
+          </div>
+        ) : null
+      }
     </div>
 
     {
@@ -132,14 +140,6 @@ const widgetProps = {
       ) : null
     }
   </div>
-
-  {
-    belowWidgets ? (
-      <div class="mt-10">
-        <HomeWidgetCarousel {...widgetProps} />
-      </div>
-    ) : null
-  }
 
   {
     appCategories.map((category) => {
