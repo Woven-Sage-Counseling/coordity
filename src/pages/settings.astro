@@ -47,6 +47,31 @@ const homePrefsPayload = {
   },
 };
 
+const surfaceDefaultLabel =
+  boardSettings.surface === 'cork'
+    ? 'Cork board'
+    : boardSettings.surface === 'blackboard'
+      ? 'Blackboard'
+      : boardSettings.surface === 'whiteboard'
+        ? 'Whiteboard'
+        : boardSettings.surface;
+
+const railDefaultLabels: Record<string, string> = {
+  board: 'Bulletin board (tall)',
+  widgets: 'Widgets',
+  company: 'Company logo',
+  portal: 'Portal mark',
+  custom: 'Custom picture',
+  none: 'Nothing',
+};
+const belowDefaultLabels: Record<string, string> = {
+  board: 'Bulletin board (wide)',
+  widgets: 'Widgets',
+  none: 'Nothing',
+};
+const railCompanyDefaultLabel = railDefaultLabels[orgLayout.railSlot] ?? orgLayout.railSlot;
+const belowCompanyDefaultLabel = belowDefaultLabels[orgLayout.belowSlot] ?? orgLayout.belowSlot;
+
 const calendarProvider = new GoogleCalendarProvider();
 let calendarConnection: Awaited<ReturnType<GoogleCalendarProvider['getConnection']>> = {
   status: 'disconnected',
@@ -268,12 +293,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
           <legend class="px-1 text-sm font-semibold text-charcoal">Board style</legend>
           <p class="mt-1 text-xs text-sage-dark/60">
-            Company default: {boardSettings.surface}. Switching styles keeps pin positions; sticky
-            notes become chalk or marker ink in matching colors.
+            Switching styles keeps pin positions; sticky notes become chalk or marker ink in matching
+            colors.
           </p>
           <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
             <input type="radio" name="surfaceOverride" value="default" data-home-surface checked={!userHomePrefs.surfaceOverride} />
-            Company default
+            <span>
+              Company default: <span class="font-medium text-sage">{surfaceDefaultLabel}</span>
+            </span>
           </label>
           <label class="mt-2 flex items-center gap-2 text-sm text-charcoal">
             <input type="radio" name="surfaceOverride" value="cork" data-home-surface checked={userHomePrefs.surfaceOverride === 'cork'} />
@@ -291,11 +318,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
           <legend class="px-1 text-sm font-semibold text-charcoal">Right header</legend>
-          <p class="mt-1 text-xs text-sage-dark/60">Company default: {orgLayout.railSlot}.</p>
           {
             (
               [
-                { value: 'default', label: 'Company default' },
+                { value: 'default', label: '' },
                 { value: 'board', label: 'Bulletin board (tall)' },
                 { value: 'widgets', label: 'Widgets' },
                 { value: 'company', label: 'Company logo' },
@@ -316,7 +342,16 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                       : userHomePrefs.railSlot === option.value
                   }
                 />
-                {option.label}
+                {
+                  option.value === 'default' ? (
+                    <span>
+                      Company default:{' '}
+                      <span class="font-medium text-sage">{railCompanyDefaultLabel}</span>
+                    </span>
+                  ) : (
+                    option.label
+                  )
+                }
               </label>
             ))
           }
@@ -324,11 +359,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
         <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
           <legend class="px-1 text-sm font-semibold text-charcoal">Bottom header</legend>
-          <p class="mt-1 text-xs text-sage-dark/60">Company default: {orgLayout.belowSlot}.</p>
           {
             (
               [
-                { value: 'default', label: 'Company default' },
+                { value: 'default', label: '' },
                 { value: 'board', label: 'Bulletin board (wide)' },
                 { value: 'widgets', label: 'Widgets' },
                 { value: 'none', label: 'Nothing' },
@@ -346,7 +380,16 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                       : userHomePrefs.belowSlot === option.value
                   }
                 />
-                {option.label}
+                {
+                  option.value === 'default' ? (
+                    <span>
+                      Company default:{' '}
+                      <span class="font-medium text-sage">{belowCompanyDefaultLabel}</span>
+                    </span>
+                  ) : (
+                    option.label
+                  )
+                }
               </label>
             ))
           }
