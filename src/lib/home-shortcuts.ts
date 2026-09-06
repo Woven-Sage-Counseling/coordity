@@ -14,9 +14,15 @@ export const SHORTCUT_CATALOG: ShortcutTarget[] = [
   { path: '/admin', label: 'Admin' },
 ];
 
-export const SHORTCUT_SEED_PATHS = ['/directory', '/apps', '/account'] as const;
+export const SHORTCUT_SEED_PATHS = [
+  '/directory',
+  '/apps',
+  '/account',
+  '/workspace',
+  '/announcements',
+] as const;
 
-export const SHORTCUT_TOP_N = 3;
+export const SHORTCUT_TOP_N = 5;
 
 export function shortcutLabel(path: string): string {
   return SHORTCUT_CATALOG.find((item) => item.path === path)?.label ?? path;

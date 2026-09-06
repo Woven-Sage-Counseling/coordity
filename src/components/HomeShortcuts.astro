@@ -2,6 +2,8 @@
 import {
   allowedShortcutPaths,
   seedShortcuts,
+  SHORTCUT_SEED_PATHS,
+  SHORTCUT_TOP_N,
   type ShortcutTarget,
 } from '../lib/home-shortcuts';
 
@@ -45,6 +47,8 @@ const initial: ShortcutTarget[] = seedShortcuts(allowed);
     define:vars={{
       userId,
       allowed,
+      topN: SHORTCUT_TOP_N,
+      seed: [...SHORTCUT_SEED_PATHS],
     }}
   >
     (function () {
@@ -54,8 +58,8 @@ const initial: ShortcutTarget[] = seedShortcuts(allowed);
       if (!list) return;
 
       var STORAGE_PREFIX = 'portal:home-visits:';
-      var TOP_N = 3;
-      var SEED = ['/directory', '/apps', '/account'];
+      var TOP_N = typeof topN === 'number' ? topN : 5;
+      var SEED = Array.isArray(seed) ? seed : ['/directory', '/apps', '/account', '/workspace', '/announcements'];
       var LABELS = {
         '/workspace': 'WorkHub',
         '/apps': 'Quick links',
