@@ -125,7 +125,7 @@ const payload = {
                 data-variant-tab="portrait"
                 aria-pressed="true"
               >
-                Tall (rail)
+                Tall (right header)
               </button>
               <button
                 type="button"
@@ -133,13 +133,13 @@ const payload = {
                 data-variant-tab="landscape"
                 aria-pressed="false"
               >
-                Wide (underneath)
+                Wide (bottom header)
               </button>
             </div>
           </div>
           <p class="mb-3 text-sm text-sage-dark/70" data-board-shape-hint>
-            Tall pins appear in the right rail; wide pins appear underneath. Duplicate mode keeps
-            the same notes with separate layouts.
+            Tall pins appear in the right header; wide pins appear in the bottom header. Duplicate
+            mode keeps the same notes with separate layouts.
           </p>
           <div
             class="board-surface board-frame relative"
@@ -363,14 +363,14 @@ const payload = {
     <section class="mt-6 hidden" data-lab-panel="layout">
       <h2 class="text-sm font-semibold text-charcoal">Home layout defaults</h2>
       <p class="mt-1 max-w-2xl text-sm text-sage-dark/65">
-        Company defaults for the right rail and underneath area. Each person can override these in
+        Company defaults for the right header and bottom header. Each person can override these in
         Settings. Bulletin board and widgets can each appear in only one place — not both slots at
         once.
       </p>
 
       <form class="mt-6 max-w-xl space-y-6" data-home-layout-form>
         <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
-          <legend class="px-1 text-sm font-semibold text-charcoal">Right rail</legend>
+          <legend class="px-1 text-sm font-semibold text-charcoal">Right header</legend>
           {
             (
               [
@@ -413,7 +413,7 @@ const payload = {
         </fieldset>
 
         <fieldset class="rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
-          <legend class="px-1 text-sm font-semibold text-charcoal">Underneath</legend>
+          <legend class="px-1 text-sm font-semibold text-charcoal">Bottom header</legend>
           <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
             <input type="radio" name="belowSlot" value="none" data-layout-below checked={homeLayout.belowSlot === 'none'} />
             Nothing
@@ -936,8 +936,8 @@ const payload = {
       if (hint) {
         hint.textContent =
           state.boardVariant === 'landscape'
-            ? 'Editing the wide (underneath) board. Changes stay here until you update the live board.'
-            : 'Editing the tall (rail) board. Changes stay here until you update the live board.';
+            ? 'Editing the wide (bottom header) board. Changes stay here until you update the live board.'
+            : 'Editing the tall (right header) board. Changes stay here until you update the live board.';
       }
       canvas.querySelectorAll('[data-pin-id]').forEach((node) => node.remove());
       visiblePins().forEach((pin) => canvas.appendChild(renderPin(pin)));
@@ -1320,7 +1320,7 @@ const payload = {
       const belowVal = checkedValue('[data-layout-below]:checked');
       if (isExclusive(railVal) && railVal === belowVal) {
         if (changed === 'below') {
-          // Flip: move the previous underneath choice into the rail when possible.
+          // Flip: move the previous bottom-header choice into the right header when possible.
           const move = belowAllowed(lastBelow) ? lastBelow : 'none';
           setChecked('railSlot', move === belowVal ? 'none' : move);
           lastRail = checkedValue('[data-layout-rail]:checked');

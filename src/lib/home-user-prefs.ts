@@ -134,7 +134,7 @@ export async function updateHomeUserPrefs(input: {
   const effectiveBelow = belowSlot ?? layout.belowSlot;
   if (slotsConflict(effectiveRail, effectiveBelow)) {
     throw new Error(
-      'Bulletin board and widgets can each only appear in one place. Choose different options for the rail and underneath.',
+      'Bulletin board and widgets can each only appear in one place. Choose different options for the right header and bottom header.',
     );
   }
 

@@ -53,14 +53,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (form.has('railSlot')) {
       if (!railRaw || railRaw === 'default') railSlot = null;
       else if (isRailSlot(railRaw)) railSlot = railRaw;
-      else throw new Error('Choose a valid right-rail option.');
+      else throw new Error('Choose a valid right header option.');
     }
 
     let belowSlot: HomeBelowSlot | null | '' = '';
     if (form.has('belowSlot')) {
       if (!belowRaw || belowRaw === 'default') belowSlot = null;
       else if (isBelowSlot(belowRaw)) belowSlot = belowRaw;
-      else throw new Error('Choose a valid underneath option.');
+      else throw new Error('Choose a valid bottom header option.');
     }
 
     const prefs = await updateHomeUserPrefs({

@@ -39,10 +39,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     if (!isBelowSlot(belowSlotRaw)) {
-      throw new Error('Choose a valid underneath option.');
+      throw new Error('Choose a valid bottom header option.');
     }
     if (!isRailSlot(railSlotRaw)) {
-      throw new Error('Choose a valid right-rail option.');
+      throw new Error('Choose a valid right header option.');
     }
 
     const belowSlot = belowSlotRaw as HomeBelowSlot;

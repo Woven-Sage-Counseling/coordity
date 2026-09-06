@@ -5,7 +5,7 @@ import { DEFAULT_ORG_ID } from './organization';
 export const HOME_BELOW_SLOTS = ['none', 'board', 'widgets'] as const;
 export type HomeBelowSlot = (typeof HOME_BELOW_SLOTS)[number];
 
-/** Single choice for the right rail. */
+/** Single choice for the right header. */
 export const HOME_RAIL_SLOTS = ['none', 'board', 'widgets', 'company', 'portal', 'custom'] as const;
 export type HomeRailSlot = (typeof HOME_RAIL_SLOTS)[number];
 
@@ -119,7 +119,7 @@ function mapRow(row: LayoutRow): HomeLayoutSettings {
   };
 }
 
-/** True when board or widgets would appear in both rail and underneath. */
+/** True when board or widgets would appear in both right and bottom headers. */
 export function slotsConflict(railSlot: HomeRailSlot, belowSlot: HomeBelowSlot): boolean {
   return (
     (railSlot === 'board' && belowSlot === 'board') ||
