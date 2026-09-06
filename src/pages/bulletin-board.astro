@@ -242,42 +242,10 @@ const payload = {
     </section>
 
     <section class="mt-6 hidden" data-lab-panel="requests">
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div>
-          <h2 class="text-sm font-semibold text-charcoal">Pending requests</h2>
-          <p class="mt-1 text-sm text-sage-dark/65">Place onto the draft board, or reject.</p>
-          <div class="mt-4 space-y-3" data-request-list></div>
-          <p class="mt-4 hidden text-sm text-sage-dark/60" data-requests-empty>No pending requests.</p>
-        </div>
-
-        <form class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm" data-request-form>
-          <h3 class="text-sm font-semibold text-charcoal">Create a pending request</h3>
-          <p class="mt-1 text-xs text-sage-dark/60">
-            Same flow employees use from Home — place it from the Requests list when ready.
-          </p>
-          <label class="mt-4 block text-sm">
-            <span class="font-medium text-charcoal">Type</span>
-            <select name="kind" class="field mt-1" data-request-kind>
-              <option value="text">Text / sticky note</option>
-              <option value="image">Photo / poster</option>
-              <option value="pdf">PDF flyer</option>
-            </select>
-          </label>
-          <label class="mt-3 block text-sm">
-            <span class="font-medium text-charcoal">Message / caption</span>
-            <textarea name="body" class="field mt-1 min-h-[5rem] resize-y" placeholder="Have a great weekend!" data-request-body></textarea>
-          </label>
-          <label class="mt-3 block text-sm" data-request-file-wrap>
-            <span class="font-medium text-charcoal">File</span>
-            <input name="file" type="file" class="mt-1 block w-full text-sm" accept="image/*,application/pdf" data-request-file />
-            <span class="mt-1 block text-[11px] text-sage-dark/55">
-              Photos compress to about 1MB. PDFs must be under 1.2MB.
-            </span>
-          </label>
-          <button type="submit" class="btn-primary mt-4 !px-4 !py-2 text-sm">Submit request</button>
-          <p class="mt-2 hidden text-xs text-red-700" data-request-error></p>
-        </form>
-      </div>
+      <h2 class="text-sm font-semibold text-charcoal">Pending requests</h2>
+      <p class="mt-1 text-sm text-sage-dark/65">Place onto the draft board, or reject.</p>
+      <div class="mt-4 max-w-2xl space-y-3" data-request-list></div>
+      <p class="mt-4 hidden text-sm text-sage-dark/60" data-requests-empty>No pending requests.</p>
     </section>
 
     <section class="mt-6 hidden" data-lab-panel="surface">
@@ -1125,51 +1093,6 @@ const payload = {
         await postForm('/api/bulletin-board/requests/reject', { id: rejectId });
         state.requests = state.requests.filter((item) => item.id !== rejectId);
         renderRequests();
-      }
-    });
-
-    const requestForm = root.querySelector('[data-request-form]');
-    const requestKind = root.querySelector('[data-request-kind]');
-    const requestFileWrap = root.querySelector('[data-request-file-wrap]');
-    const requestError = root.querySelector('[data-request-error]');
-
-    const syncRequestKind = () => {
-      if (!(requestKind instanceof HTMLSelectElement) || !(requestFileWrap instanceof HTMLElement)) return;
-      requestFileWrap.classList.toggle('hidden', requestKind.value === 'text');
-    };
-    requestKind?.addEventListener('change', syncRequestKind);
-    syncRequestKind();
-
-    requestForm?.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (!(requestForm instanceof HTMLFormElement)) return;
-      if (requestError instanceof HTMLElement) requestError.classList.add('hidden');
-      const kind = requestKind instanceof HTMLSelectElement ? requestKind.value : 'text';
-      const fileInput = requestForm.querySelector('[data-request-file]');
-      try {
-        const prepared = await prepareUploadFile(
-          kind,
-          fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null,
-        );
-        const form = new FormData(requestForm);
-        if (prepared) form.set('file', prepared);
-        else form.delete('file');
-        const res = await fetch('/api/bulletin-board/requests/create', {
-          method: 'POST',
-          body: form,
-          headers: { Accept: 'application/json' },
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Could not submit.');
-        state.requests.unshift(json.request);
-        requestForm.reset();
-        syncRequestKind();
-        renderRequests();
-      } catch (error) {
-        if (requestError instanceof HTMLElement) {
-          requestError.textContent = error instanceof Error ? error.message : 'Submit failed.';
-          requestError.classList.remove('hidden');
-        }
       }
     });
 
