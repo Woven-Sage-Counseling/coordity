@@ -24,6 +24,21 @@
   }
 }
 
+/* Admin lab: match Home bottom-header board (main column beside 24rem rail), not full page width. */
+[data-board-lab-layout] .board-frame[data-board-shape='landscape'] {
+  width: min(100%, 42rem);
+  max-width: min(100%, 42rem);
+  height: 10.5rem;
+}
+
+@media (min-width: 1024px) {
+  [data-board-lab-layout] .board-frame[data-board-shape='landscape'] {
+    width: 42rem;
+    max-width: 42rem;
+    height: 11.5rem;
+  }
+}
+
 .board-surface[data-surface='cork'] {
   background-color: #b08958;
   background-image: url('/board/cork.png');

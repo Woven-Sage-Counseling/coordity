@@ -913,7 +913,7 @@ const payload = {
           : 'flex flex-col gap-6 lg:flex-row lg:items-start';
       }
       if (wrap instanceof HTMLElement) {
-        wrap.className = wide ? 'min-w-0 w-full' : 'min-w-0 flex-1';
+        wrap.className = wide ? 'min-w-0 w-full max-w-[42rem]' : 'min-w-0 flex-1';
       }
       if (controls instanceof HTMLElement) {
         controls.className = wide
