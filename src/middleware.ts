@@ -82,13 +82,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
   const employee = context.locals.employee;
 
-  // Coordity apex: product shell (workspace finder + signup).
+  // Coordity apex: product landing + signup. App routes require a tenant host.
   if (isApex) {
-    if (pathname === '/') {
-      return context.redirect('/sign-in');
-    }
     if (
-      pathname === '/sign-in' ||
+      pathname === '/' ||
       pathname === '/sign-up' ||
       pathname === '/api/orgs/resolve' ||
       pathname === '/api/orgs/create' ||
@@ -97,13 +94,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ) {
       return next();
     }
+    if (pathname === '/sign-in') {
+      return context.redirect('/#workspace');
+    }
     if (pathname.startsWith('/api/')) {
       return new Response(JSON.stringify({ error: 'Open your organization workspace to continue.' }), {
         status: 400,
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
       });
     }
-    return context.redirect('/sign-in');
+    return context.redirect('/');
   }
 
   if (isPublicPath(pathname)) {

@@ -1,0 +1,350 @@
+---
+import '../styles/global.css';
+/**
+ * Apex product landing for coordity.com.
+ * Workspace login lives in the hero; tenant app home stays on org hosts.
+ */
+import CoordityMark from './CoordityMark.astro';
+import { COORDITY_PRODUCT_NAME } from '../lib/organization';
+
+interface Props {
+  error?: string | null;
+}
+
+const { error = null } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content={`${COORDITY_PRODUCT_NAME} — invite-only employee workspaces for practices and teams.`}
+    />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>{COORDITY_PRODUCT_NAME} — employee workspaces that stay on brand</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="coordity-landing font-sans text-white antialiased">
+    <header class="absolute inset-x-0 top-0 z-20">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+        <a href="/" class="coordity-fade-in">
+          <CoordityMark variant="light" class="text-[1.5rem]" />
+        </a>
+        <a
+          href="/sign-up"
+          class="coordity-fade-in text-sm font-medium text-white/80 underline-offset-4 transition hover:text-coordity-soft hover:underline"
+          style="animation-delay: 80ms"
+        >
+          Create a workspace
+        </a>
+      </div>
+    </header>
+
+    <section class="coordity-hero relative flex min-h-[100svh] items-center overflow-hidden">
+      <div class="coordity-hero__glow" aria-hidden="true"></div>
+      <div class="coordity-hero__grid" aria-hidden="true"></div>
+
+      <div class="relative z-10 mx-auto grid w-full max-w-6xl gap-12 px-5 py-24 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16 lg:py-28">
+        <div class="coordity-rise max-w-xl">
+          <p class="text-sm font-semibold uppercase tracking-[0.22em] text-coordity-soft">
+            {COORDITY_PRODUCT_NAME}
+          </p>
+          <h1 class="mt-4 font-[Fraunces] text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.02em] text-white sm:text-5xl lg:text-[3.4rem]">
+            Employee workspaces for practices that need to stay coordinated
+          </h1>
+          <p class="mt-5 max-w-md text-base leading-relaxed text-white/75 sm:text-lg">
+            One branded portal per organization — messaging, schedules, and staff tools behind invite-only access.
+          </p>
+        </div>
+
+        <div id="workspace" class="coordity-rise coordity-hero-panel scroll-mt-28" style="animation-delay: 120ms">
+          <h2 class="font-[Fraunces] text-2xl font-semibold text-white">Log in to your workspace</h2>
+          <p class="mt-2 text-sm text-white/70">
+            Enter your company name to open your organization&rsquo;s sign-in page.
+          </p>
+
+          {
+            error && (
+              <p class="mt-4 rounded-xl border border-red-200/40 bg-red-950/40 px-4 py-3 text-sm text-red-100">
+                {error}
+              </p>
+            )
+          }
+
+          <form id="workspace-finder" class="mt-6 space-y-4" autocomplete="off">
+            <label class="block text-sm font-medium text-white/90">
+              Company name
+              <input
+                class="field-coordity"
+                type="search"
+                name="q"
+                id="workspace-query"
+                placeholder="e.g. Woven Sage"
+                required
+                minlength="2"
+                autofocus
+              />
+            </label>
+            <button class="btn-coordity" type="submit">Continue</button>
+            <p id="workspace-error" class="hidden text-sm text-coordity-soft" role="alert"></p>
+          </form>
+
+          <ul
+            id="workspace-results"
+            class="mt-4 divide-y divide-white/10 overflow-hidden rounded-xl border border-white/15 bg-black/10"
+            hidden
+          ></ul>
+
+          <p class="mt-5 text-center text-xs text-white/55">
+            Or go to <span class="font-medium text-coordity-soft">yourcompany.coordity.com</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="coordity-section border-t border-white/10 bg-[#003a5c]">
+      <div class="mx-auto max-w-3xl px-5 py-20 text-center sm:px-8">
+        <h2 class="font-[Fraunces] text-3xl font-semibold text-white sm:text-4xl">
+          Your practice, your subdomain
+        </h2>
+        <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/70">
+          Each organization gets its own Coordity workspace URL and login screen — ready to embed on a practice site when you want staff to sign in without leaving your brand.
+        </p>
+      </div>
+    </section>
+
+    <footer class="border-t border-white/10 bg-[#002d48]">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8 sm:px-8">
+        <CoordityMark variant="light" class="text-base" />
+        <p class="text-xs text-white/45">© {new Date().getFullYear()} {COORDITY_PRODUCT_NAME}</p>
+      </div>
+    </footer>
+
+    <script is:inline>
+      (function () {
+        var form = document.getElementById('workspace-finder');
+        var input = document.getElementById('workspace-query');
+        var results = document.getElementById('workspace-results');
+        var errorEl = document.getElementById('workspace-error');
+        if (!form || !input || !results || !errorEl) return;
+
+        var debounceTimer = 0;
+
+        function showError(message) {
+          errorEl.textContent = message || '';
+          errorEl.classList.toggle('hidden', !message);
+        }
+
+        function renderOrgs(organizations) {
+          results.innerHTML = '';
+          if (!organizations.length) {
+            results.hidden = true;
+            return;
+          }
+          results.hidden = false;
+          organizations.forEach(function (org) {
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.href = org.origin + '/sign-in';
+            a.className = 'coordity-result-link';
+            if (org.logoUrl) {
+              var img = document.createElement('img');
+              img.src = org.logoUrl;
+              img.alt = '';
+              img.className = 'h-7 w-auto rounded bg-white/90 px-1 py-0.5';
+              a.appendChild(img);
+            }
+            var text = document.createElement('span');
+            text.className = 'font-medium';
+            text.textContent = org.name;
+            a.appendChild(text);
+            var slug = document.createElement('span');
+            slug.className = 'ml-auto text-xs text-white/55';
+            slug.textContent = org.slug + '.coordity.com';
+            a.appendChild(slug);
+            li.appendChild(a);
+            results.appendChild(li);
+          });
+        }
+
+        function search(q) {
+          showError('');
+          if (q.length < 2) {
+            renderOrgs([]);
+            return;
+          }
+          fetch('/api/orgs/resolve?q=' + encodeURIComponent(q), {
+            headers: { Accept: 'application/json' },
+          })
+            .then(function (res) {
+              return res.json().then(function (json) {
+                return { ok: res.ok, json: json };
+              });
+            })
+            .then(function (result) {
+              if (!result.ok) {
+                showError(result.json.error || 'Could not find workspaces.');
+                renderOrgs([]);
+                return;
+              }
+              renderOrgs(result.json.organizations || []);
+              if (!(result.json.organizations || []).length) {
+                showError('No matching workspace. Try another company name.');
+              }
+            })
+            .catch(function () {
+              showError('Could not search workspaces.');
+            });
+        }
+
+        input.addEventListener('input', function () {
+          window.clearTimeout(debounceTimer);
+          debounceTimer = window.setTimeout(function () {
+            search(String(input.value || '').trim());
+          }, 280);
+        });
+
+        form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          var q = String(input.value || '').trim();
+          if (q.length < 2) {
+            showError('Enter at least 2 characters.');
+            return;
+          }
+          fetch('/api/orgs/resolve?q=' + encodeURIComponent(q), {
+            headers: { Accept: 'application/json' },
+          })
+            .then(function (res) {
+              return res.json().then(function (json) {
+                return { ok: res.ok, json: json };
+              });
+            })
+            .then(function (result) {
+              var orgs = (result.json && result.json.organizations) || [];
+              if (result.ok && orgs.length === 1) {
+                window.location.href = orgs[0].origin + '/sign-in';
+                return;
+              }
+              renderOrgs(orgs);
+              if (!orgs.length) {
+                showError('No matching workspace. Try another company name.');
+              } else {
+                showError('Pick your workspace from the list.');
+              }
+            })
+            .catch(function () {
+              showError('Could not search workspaces.');
+            });
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  .coordity-landing {
+    margin: 0;
+    min-height: 100%;
+    background: #003a5c;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  .coordity-hero {
+    background:
+      radial-gradient(ellipse 70% 55% at 15% 20%, rgb(59 130 246 / 0.35), transparent 55%),
+      radial-gradient(ellipse 55% 45% at 90% 75%, rgb(254 203 0 / 0.16), transparent 50%),
+      linear-gradient(155deg, #00293f 0%, #005284 48%, #00466f 100%);
+  }
+
+  .coordity-hero__glow {
+    pointer-events: none;
+    position: absolute;
+    inset: -20% auto auto 40%;
+    height: 70%;
+    width: 50%;
+    background: radial-gradient(circle, rgb(255 224 102 / 0.12), transparent 65%);
+    animation: coordity-glow 8s ease-in-out infinite alternate;
+  }
+
+  .coordity-hero__grid {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, black 20%, transparent 90%);
+    opacity: 0.5;
+  }
+
+  .coordity-hero-panel {
+    border: 1px solid rgb(255 255 255 / 0.16);
+    border-radius: 1.25rem;
+    background: rgb(0 30 50 / 0.35);
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 24px 60px rgb(0 20 40 / 0.35);
+  }
+
+  @media (min-width: 640px) {
+    .coordity-hero-panel {
+      padding: 1.75rem;
+    }
+  }
+
+  .coordity-fade-in {
+    animation: coordity-fade 0.7s ease both;
+  }
+
+  .coordity-rise {
+    animation: coordity-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes coordity-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes coordity-rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes coordity-glow {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 0.7;
+    }
+    to {
+      transform: translate3d(-8%, 6%, 0) scale(1.08);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .coordity-fade-in,
+    .coordity-rise,
+    .coordity-hero__glow {
+      animation: none;
+    }
+  }
+</style>
