@@ -16,6 +16,10 @@
   --portal-muted: 244 245 248;
   --portal-panel: 247 248 246;
   --portal-soft: 232 235 231;
+  --coordity-blue: 0 82 132;
+  --coordity-blue-bright: 59 130 246;
+  --coordity-yellow: 254 203 0;
+  --coordity-yellow-soft: 255 224 102;
 }
 
 html.dark {
@@ -70,6 +74,49 @@ html.dark {
 
   .app-tile {
     @apply flex h-full flex-col rounded-2xl border border-sage-dark/10 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sage-dark/25 hover:shadow-md;
+  }
+
+  .coordity-mark {
+    color: rgb(var(--coordity-blue));
+    font-weight: 600;
+  }
+
+  .btn-coordity {
+    @apply inline-flex w-full items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+    background: rgb(var(--coordity-yellow));
+    color: rgb(var(--coordity-blue));
+    outline-color: rgb(var(--coordity-yellow-soft));
+  }
+
+  .btn-coordity:hover {
+    background: rgb(var(--coordity-yellow-soft));
+  }
+
+  .field-coordity {
+    @apply mt-1 w-full rounded-xl border bg-white/95 px-3.5 py-2.5 text-sm outline-none;
+    border-color: rgb(var(--coordity-blue-bright) / 0.35);
+    color: rgb(var(--coordity-blue));
+  }
+
+  .field-coordity:focus {
+    box-shadow: 0 0 0 2px rgb(var(--coordity-yellow) / 0.85);
+  }
+
+  .coordity-shell {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgb(var(--coordity-blue-bright) / 0.35), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 90% 80%, rgb(var(--coordity-yellow) / 0.18), transparent 50%),
+      linear-gradient(160deg, #003a5c 0%, rgb(var(--coordity-blue)) 45%, #00466f 100%);
+    color: #f5f8fb;
+  }
+
+  .coordity-result-link {
+    @apply flex items-center gap-3 px-4 py-3 text-sm text-white transition;
+  }
+
+  .coordity-result-link:hover {
+    background: rgb(var(--coordity-blue-bright) / 0.25);
   }
 
   .financials-scroll-shell {

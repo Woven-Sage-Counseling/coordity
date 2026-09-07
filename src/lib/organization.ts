@@ -5,6 +5,12 @@ export const DEFAULT_ORG_ID = 'org_wovensage';
 export const DEFAULT_ORG_SLUG = 'wovensage';
 
 export const COORDITY_PRODUCT_NAME = 'Coordity';
+export const COORDITY_COLORS = {
+  primaryBlue: '#005284',
+  secondaryBlue: '#3B82F6',
+  primaryYellow: '#FECB00',
+  secondaryYellow: '#FFE066',
+} as const;
 export const COORDITY_APEX_HOSTS = new Set([
   'coordity.com',
   'www.coordity.com',

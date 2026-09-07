@@ -22,6 +22,8 @@ const { employeeName, reportIssueEnabled } = Astro.props;
     <ReportIssueDialog employeeName={employeeName} enabled={reportIssueEnabled} />
     <span class="text-sage-dark/25" aria-hidden="true">·</span>
     <SuggestFeatureDialog employeeName={employeeName} enabled={reportIssueEnabled} />
-    <span class="ml-auto text-xs text-sage-dark/45">Powered by Coordity</span>
+    <span class="ml-auto text-xs text-sage-dark/45">
+      Powered by <span class="coordity-mark">Coordity</span>
+    </span>
   </div>
 </footer>

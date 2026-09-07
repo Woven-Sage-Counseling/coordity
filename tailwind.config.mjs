@@ -15,6 +15,12 @@ export default {
         charcoal: { DEFAULT: 'rgb(var(--portal-charcoal) / <alpha-value>)' },
         surface: { DEFAULT: 'rgb(var(--portal-surface) / <alpha-value>)' },
         muted: { DEFAULT: 'rgb(var(--portal-muted) / <alpha-value>)' },
+        coordity: {
+          blue: 'rgb(var(--coordity-blue) / <alpha-value>)',
+          bright: 'rgb(var(--coordity-blue-bright) / <alpha-value>)',
+          yellow: 'rgb(var(--coordity-yellow) / <alpha-value>)',
+          soft: 'rgb(var(--coordity-yellow-soft) / <alpha-value>)',
+        },
       },
       fontFamily: {
         serif: ['Fraunces', 'Georgia', 'serif'],

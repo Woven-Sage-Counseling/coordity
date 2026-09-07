@@ -59,7 +59,9 @@ const next = String(Astro.url.searchParams.get('next') ?? '/').trim() || '/';
         <button class="btn-primary w-full" type="submit">Sign in</button>
       </form>
 
-      <p class="mt-6 text-center text-xs text-sage-dark/50">Powered by {COORDITY_PRODUCT_NAME}</p>
+      <p class="mt-6 text-center text-xs text-sage-dark/50">
+        Powered by <span class="coordity-mark">{COORDITY_PRODUCT_NAME}</span>
+      </p>
     </div>
   </body>
 </html>
