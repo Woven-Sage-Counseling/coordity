@@ -350,19 +350,32 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   color: rgb(var(--portal-sage-dark) / 0.58) !important;
 }
 
-/* Home widgets — keep in sync with HomeWidgetCarousel inline critical CSS. */
+/* Home widgets — keep in sync with HomeWidgetCarousel critical CSS. */
 [data-home-widgets-grid] {
   display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)) !important;
+  grid-template-columns: minmax(0, 1fr) !important;
   gap: 0.75rem !important;
   align-items: stretch !important;
   width: 100% !important;
+}
+
+@media (min-width: 640px) {
+  [data-home-widgets-grid] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-home-widgets-grid] {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
 }
 
 .home-widget-slot {
   min-width: 0 !important;
   max-width: 100% !important;
   height: 26rem !important;
+  overflow: hidden !important;
 }
 
 .home-widget-slot > [data-widget-card] {
@@ -370,6 +383,7 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   flex-direction: column !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   height: 26rem !important;
   max-height: 26rem !important;
   overflow: hidden !important;
@@ -382,8 +396,11 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
 }
 
 .home-widget-slot > [data-widget-card] > [data-widget-body] {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
   flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   color: #393a3d !important;

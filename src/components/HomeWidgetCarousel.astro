@@ -54,23 +54,12 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
       class="min-w-0"
       aria-label="Home widgets"
       data-home-widgets
-      data-widgets-build="2026-09-07d"
+      data-widgets-build="2026-09-07e"
       data-user-id={userId}
     >
-      {/*
-        Inline grid styles on purpose: Tailwind utilities were not reliably
-        constraining width, which left a single full-bleed card.
-      */}
-      <div
-        data-home-widgets-grid
-        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)); gap: 0.75rem; align-items: stretch; width: 100%;"
-      >
+      <div data-home-widgets-grid>
         {defaultOrder.map((id) => (
-          <div
-            class="home-widget-slot"
-            data-widget-id={id}
-            style="min-width: 0; max-width: 100%; height: 26rem;"
-          >
+          <div class="home-widget-slot" data-widget-id={id}>
             {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
             {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
             {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
@@ -96,18 +85,35 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
 }
 
 <style is:global>
+  /*
+    Explicit columns + minmax(0,…) so wide inner grids (Calendar week view)
+    cannot force a single full-bleed column the way auto-fit does.
+  */
   [data-home-widgets-grid] {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 0.75rem !important;
     align-items: stretch !important;
     width: 100% !important;
+  }
+
+  @media (min-width: 640px) {
+    [data-home-widgets-grid] {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    [data-home-widgets-grid] {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
   }
 
   .home-widget-slot {
     min-width: 0 !important;
     max-width: 100% !important;
     height: 26rem !important;
+    overflow: hidden !important;
   }
 
   .home-widget-slot > [data-widget-card] {
@@ -115,6 +121,7 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
     flex-direction: column !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     height: 26rem !important;
     max-height: 26rem !important;
     overflow: hidden !important;
@@ -126,23 +133,19 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
     flex: 0 0 auto !important;
   }
 
+  /* Must stay flex column — block breaks inner flex-1 bodies (empty Calendar). */
   .home-widget-slot > [data-widget-card] > [data-widget-body] {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     flex: 1 1 auto !important;
-    height: auto !important;
+    min-width: 0 !important;
     min-height: 0 !important;
-    max-height: none !important;
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
     color: #393a3d !important;
     background-color: #f4f5f8 !important;
     opacity: 1 !important;
     visibility: visible !important;
-  }
-
-  .home-widget-slot > [data-widget-card] > [data-widget-body] * {
-    opacity: 1;
-    visibility: visible;
   }
 
   html.dark .home-widget-slot > [data-widget-card] {
