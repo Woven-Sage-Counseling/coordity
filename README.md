@@ -1,15 +1,31 @@
-# Woven Sage employee portal
+# Coordity employee workspace (Woven Sage tenant)
 
-Private invite-only portal for clinicians and staff. It is a **separate** Cloudflare Pages app from the public marketing site.
+Private invite-only staff app. Product brand is **Coordity**; **Woven Sage Counseling** is the first organization tenant.
 
-| | Employee portal | Public website |
+| | Workspace app | Woven Sage marketing site |
 |--|--|--|
-| What | Invite-only staff app | wovensage.com |
+| What | Multi-tenant Coordity portal | Practice website |
 | Cloudflare project | `wovensage-portal-preview` | `wovensage` |
-| Live domain | https://portal.wovensage.com | https://wovensage.com |
+| Tenant URL | https://wovensage.coordity.com | https://wovensage.com |
+| Product entry | https://coordity.com (workspace finder) | — |
+| Legacy host | https://portal.wovensage.com (still resolves to Woven Sage) | — |
 | Auto-deploy | GitHub Action on `master` (`portal/**`) | GitHub Action on `master` (root site) |
 
 Do not deploy this app to the `wovensage` Pages project.
+
+## Domains (ops)
+
+1. In Cloudflare Pages for `wovensage-portal-preview`, attach custom domains:
+   - `wovensage.coordity.com`
+   - `coordity.com` / `www.coordity.com` (apex product shell)
+   - keep `portal.wovensage.com` until cutover is complete
+2. In DNS for **coordity.com**:
+   - `wovensage` → CNAME `wovensage-portal-preview.pages.dev` (proxied)
+   - apex/`www` → same Pages project (or Cloudflare recommended apex setup)
+3. Optional later: redirect `portal.wovensage.com` → `https://wovensage.coordity.com`
+4. Marketing site `providerPortalUrl` points at `https://wovensage.coordity.com`
+
+Wildcard `*.coordity.com` can be added when onboarding more tenants (Pages custom domains or Workers route).
 
 ## What this portal includes
 
@@ -22,6 +38,8 @@ Do not deploy this app to the `wovensage` Pages project.
 - QuickBooks OAuth scaffolding (connects later; secrets stay on the server)
 - Audit log for invite, disable, and role changes
 - No patient, clinical, appointment, or insurance data
+- Org-branded sign-in + Coordity apex workspace finder (`/sign-in` on coordity.com)
+- Embeddable org sign-in at `/embed/sign-in` (same auth; for practice-site iframes later)
 
 ## Local development
 
@@ -36,6 +54,8 @@ npm run dev
 ```
 
 Open http://localhost:4321/bootstrap, enter the bootstrap token and a password for `admin@wovensage.com`.
+
+Localhost resolves to the Woven Sage tenant (slug `wovensage`).
 
 ## Manual deploy
 

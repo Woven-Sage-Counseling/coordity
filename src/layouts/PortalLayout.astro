@@ -13,12 +13,18 @@ interface Props {
 
 const { title, wide = false } = Astro.props;
 const employee = Astro.locals.employee;
+const organization = Astro.locals.organization;
+const orgName = organization?.displayName ?? organization?.name ?? 'Employee portal';
+const orgLogo = organization?.logoUrl ?? 'https://wovensage.com/images/logo-text-header-transparent.png';
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active';
 const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
+const orgId = organization?.id;
 const messagesUnread =
-  employee?.status === 'active' ? await countUnreadMessages(employee.id).catch(() => 0) : 0;
+  employee?.status === 'active'
+    ? await countUnreadMessages(employee.id, orgId).catch(() => 0)
+    : 0;
 ---
 
 <!doctype html>
@@ -27,9 +33,9 @@ const messagesUnread =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="description" content="Private employee portal for Woven Sage Counseling." />
+    <meta name="description" content={`Private employee workspace for ${orgName}, powered by Coordity.`} />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <title>{title} | Woven Sage Employee Portal</title>
+    <title>{title} | {orgName}</title>
     <script is:inline define:vars={{ themeUserId: employee?.id ?? null }}>
       (function () {
         try {
@@ -49,14 +55,14 @@ const messagesUnread =
           <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
             <a href="/" class="flex items-center gap-3">
               <img
-                src="https://wovensage.com/images/logo-text-header-transparent.png"
-                alt="Woven Sage Counseling"
+                src={orgLogo}
+                alt={orgName}
                 class="h-7 w-auto"
                 width="220"
                 height="38"
               />
               <span class="hidden text-xs uppercase tracking-[0.18em] text-sage-dark/70 sm:inline">
-                Employee portal
+                Workspace
               </span>
             </a>
             <nav class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-sm">

@@ -2,14 +2,15 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import { listDirectory } from '../lib/employees';
 import { listInbox } from '../lib/messages';
-import { DEFAULT_ORG_ID } from '../lib/organization';
+import { orgIdFromLocals } from '../lib/organization';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+const orgId = orgIdFromLocals(Astro.locals.organization);
 const initialConversationId = String(Astro.url.searchParams.get('c') ?? '').trim();
 const [conversations, directory] = await Promise.all([
-  listInbox(employee.id, DEFAULT_ORG_ID),
+  listInbox(employee.id, orgId),
   listDirectory(),
 ]);
 

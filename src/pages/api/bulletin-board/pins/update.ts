@@ -5,6 +5,7 @@ import {
   updateBulletinBoardPin,
 } from '../../../../lib/bulletin-board';
 import { requireManagementAccess } from '../../../../lib/management-access';
+import { orgIdFromLocals } from '../../../../lib/organization';
 
 export const prerender = false;
 
@@ -29,7 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       clearExpires,
       expiresAt: !clearExpires && expiresRaw ? Number(expiresRaw) : undefined,
     });
-    const settings = await getBulletinBoardSettings();
+    const settings = await getBulletinBoardSettings(orgIdFromLocals(locals.organization));
     return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.draftSurface) }), {
       status: 200,
       headers: { 'content-type': 'application/json' },

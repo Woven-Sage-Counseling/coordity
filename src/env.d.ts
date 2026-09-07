@@ -28,11 +28,22 @@ interface PortalEmployee {
   permissions: PortalPermission[];
 }
 
+interface PortalOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  displayName: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+}
+
 type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
 
 declare namespace App {
   interface Locals extends Runtime {
     employee: PortalEmployee | null;
+    organization: PortalOrganization | null;
+    isCoordityApex: boolean;
   }
 }
 

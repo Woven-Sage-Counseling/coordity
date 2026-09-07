@@ -4,10 +4,12 @@ import { getEnv } from './env';
 export function createAuth(request?: Request) {
   const env = getEnv();
   const origin = request ? new URL(request.url).origin : env.BETTER_AUTH_URL;
+  // Prefer request origin so each {org}.coordity.com keeps host-only cookies.
+  const baseURL = origin || env.BETTER_AUTH_URL;
 
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL || origin,
+    baseURL,
     database: env.DB,
     emailAndPassword: {
       enabled: true,
@@ -17,6 +19,9 @@ export function createAuth(request?: Request) {
     trustedOrigins: [
       origin,
       env.BETTER_AUTH_URL,
+      'https://coordity.com',
+      'https://www.coordity.com',
+      'https://wovensage.coordity.com',
       'https://portal.wovensage.com',
       'https://wovensage-portal-preview.pages.dev',
     ].filter(Boolean),
@@ -66,7 +71,7 @@ export function createAuth(request?: Request) {
     advanced: {
       defaultCookieAttributes: {
         httpOnly: true,
-        secure: !origin.startsWith('http://localhost'),
+        secure: !baseURL.startsWith('http://localhost'),
         sameSite: 'lax',
         path: '/',
       },

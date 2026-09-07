@@ -1,44 +1,228 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
+import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 
 export const prerender = false;
 
 const error = Astro.url.searchParams.get('error');
+const isApex = Astro.locals.isCoordityApex;
+const organization = Astro.locals.organization;
+const orgName = organization?.displayName ?? organization?.name ?? 'Workspace';
+const orgLogo = organization?.logoUrl;
 ---
 
 <PortalLayout title="Sign in">
-  <div class="mx-auto max-w-md">
-    <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">Woven Sage Counseling</p>
-    <h1 class="mt-3 font-display text-4xl text-charcoal">Employee sign in</h1>
-    <p class="mt-4 text-sm leading-relaxed text-sage-dark/75">
-      Individual accounts only. There is no public registration — an owner must invite you.
-    </p>
-
-    {
-      error && (
-        <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
+  {
+    isApex ? (
+      <div class="mx-auto max-w-md">
+        <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">{COORDITY_PRODUCT_NAME}</p>
+        <h1 class="mt-3 font-display text-4xl text-charcoal">Find your workspace</h1>
+        <p class="mt-4 text-sm leading-relaxed text-sage-dark/75">
+          Enter your company name to open your organization&rsquo;s sign-in page.
         </p>
-      )
-    }
 
-    <form method="post" action="/api/session/sign-in" class="mt-8 space-y-4">
-      <label class="block text-sm font-medium">
-        Email
-        <input class="field" type="email" name="email" autocomplete="username" required />
-      </label>
-      <label class="block text-sm font-medium">
-        Password
-        <input
-          class="field"
-          type="password"
-          name="password"
-          autocomplete="current-password"
-          required
-          minlength="12"
-        />
-      </label>
-      <button class="btn-primary w-full" type="submit">Sign in</button>
-    </form>
-  </div>
+        {
+          error && (
+            <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error}
+            </p>
+          )
+        }
+
+        <form id="workspace-finder" class="mt-8 space-y-4" autocomplete="off">
+          <label class="block text-sm font-medium">
+            Company name
+            <input
+              class="field"
+              type="search"
+              name="q"
+              id="workspace-query"
+              placeholder="e.g. Woven Sage"
+              required
+              minlength="2"
+              autofocus
+            />
+          </label>
+          <button class="btn-primary w-full" type="submit">Continue</button>
+          <p id="workspace-error" class="hidden text-sm text-red-700" role="alert"></p>
+        </form>
+
+        <ul id="workspace-results" class="mt-4 divide-y divide-sage-dark/10 rounded-xl border border-sage-dark/10 bg-cream/60" hidden></ul>
+
+        <p class="mt-8 text-center text-xs text-sage-dark/55">
+          Already know your workspace URL? Go to{' '}
+          <span class="font-medium text-sage-dark/70">yourcompany.coordity.com</span>
+        </p>
+      </div>
+    ) : (
+      <div class="mx-auto max-w-md">
+        {
+          orgLogo ? (
+            <img src={orgLogo} alt={orgName} class="h-9 w-auto" width="220" height="38" />
+          ) : (
+            <p class="text-xs uppercase tracking-[0.2em] text-sage-dark/60">{orgName}</p>
+          )
+        }
+        <h1 class="mt-3 font-display text-4xl text-charcoal">Sign in</h1>
+        <p class="mt-4 text-sm leading-relaxed text-sage-dark/75">
+          Individual accounts only. There is no public registration — an owner must invite you.
+        </p>
+
+        {
+          error && (
+            <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error}
+            </p>
+          )
+        }
+
+        <form method="post" action="/api/session/sign-in" class="mt-8 space-y-4">
+          <label class="block text-sm font-medium">
+            Email
+            <input class="field" type="email" name="email" autocomplete="username" required />
+          </label>
+          <label class="block text-sm font-medium">
+            Password
+            <input
+              class="field"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              required
+              minlength="12"
+            />
+          </label>
+          <button class="btn-primary w-full" type="submit">Sign in</button>
+        </form>
+
+        <p class="mt-8 text-center text-xs text-sage-dark/55">
+          Powered by {COORDITY_PRODUCT_NAME}
+        </p>
+      </div>
+    )
+  }
 </PortalLayout>
+
+{
+  isApex && (
+    <script is:inline>
+      (function () {
+        var form = document.getElementById('workspace-finder');
+        var input = document.getElementById('workspace-query');
+        var results = document.getElementById('workspace-results');
+        var errorEl = document.getElementById('workspace-error');
+        if (!form || !input || !results || !errorEl) return;
+
+        var debounceTimer = 0;
+
+        function showError(message) {
+          errorEl.textContent = message || '';
+          errorEl.classList.toggle('hidden', !message);
+        }
+
+        function renderOrgs(organizations) {
+          results.innerHTML = '';
+          if (!organizations.length) {
+            results.hidden = true;
+            return;
+          }
+          results.hidden = false;
+          organizations.forEach(function (org) {
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.href = org.origin + '/sign-in';
+            a.className =
+              'flex items-center gap-3 px-4 py-3 text-sm text-sage-dark hover:bg-sage/15';
+            if (org.logoUrl) {
+              var img = document.createElement('img');
+              img.src = org.logoUrl;
+              img.alt = '';
+              img.className = 'h-7 w-auto';
+              a.appendChild(img);
+            }
+            var text = document.createElement('span');
+            text.className = 'font-medium';
+            text.textContent = org.name;
+            a.appendChild(text);
+            var slug = document.createElement('span');
+            slug.className = 'ml-auto text-xs text-sage-dark/50';
+            slug.textContent = org.slug + '.coordity.com';
+            a.appendChild(slug);
+            li.appendChild(a);
+            results.appendChild(li);
+          });
+        }
+
+        function search(q) {
+          showError('');
+          if (q.length < 2) {
+            renderOrgs([]);
+            return;
+          }
+          fetch('/api/orgs/resolve?q=' + encodeURIComponent(q), {
+            headers: { Accept: 'application/json' },
+          })
+            .then(function (res) {
+              return res.json().then(function (json) {
+                return { ok: res.ok, json: json };
+              });
+            })
+            .then(function (result) {
+              if (!result.ok) {
+                showError(result.json.error || 'Could not find workspaces.');
+                renderOrgs([]);
+                return;
+              }
+              renderOrgs(result.json.organizations || []);
+              if (!(result.json.organizations || []).length) {
+                showError('No matching workspace. Try another company name.');
+              }
+            })
+            .catch(function () {
+              showError('Could not search workspaces.');
+            });
+        }
+
+        input.addEventListener('input', function () {
+          window.clearTimeout(debounceTimer);
+          debounceTimer = window.setTimeout(function () {
+            search(String(input.value || '').trim());
+          }, 280);
+        });
+
+        form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          var q = String(input.value || '').trim();
+          if (q.length < 2) {
+            showError('Enter at least 2 characters.');
+            return;
+          }
+          fetch('/api/orgs/resolve?q=' + encodeURIComponent(q), {
+            headers: { Accept: 'application/json' },
+          })
+            .then(function (res) {
+              return res.json().then(function (json) {
+                return { ok: res.ok, json: json };
+              });
+            })
+            .then(function (result) {
+              var orgs = (result.json && result.json.organizations) || [];
+              if (result.ok && orgs.length === 1) {
+                window.location.href = orgs[0].origin + '/sign-in';
+                return;
+              }
+              renderOrgs(orgs);
+              if (!orgs.length) {
+                showError('No matching workspace. Try another company name.');
+              } else {
+                showError('Pick your workspace from the list.');
+              }
+            })
+            .catch(function () {
+              showError('Could not search workspaces.');
+            });
+        });
+      })();
+    </script>
+  )
+}

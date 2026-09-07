@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  site: 'https://portal.wovensage.com',
+  site: 'https://wovensage.coordity.com',
   output: 'server',
   adapter: cloudflare({
     imageService: 'passthrough',

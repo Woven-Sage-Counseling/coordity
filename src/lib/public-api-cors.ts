@@ -1,4 +1,6 @@
 const EXACT_ORIGINS = new Set([
+  'https://coordity.com',
+  'https://www.coordity.com',
   'https://wovensage.com',
   'https://www.wovensage.com',
   'http://localhost:4321',
@@ -15,8 +17,11 @@ export function isPublicApiOrigin(origin: string): boolean {
     const { hostname, protocol } = new URL(origin);
     if (protocol !== 'http:' && protocol !== 'https:') return false;
     if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    if (hostname === 'coordity.com' || hostname.endsWith('.coordity.com')) return true;
     if (hostname === 'wovensage.com' || hostname.endsWith('.wovensage.com')) return true;
-    if (hostname.endsWith('.pages.dev') && hostname.includes('wovensage')) return true;
+    if (hostname.endsWith('.pages.dev') && (hostname.includes('wovensage') || hostname.includes('coordity'))) {
+      return true;
+    }
   } catch {
     return false;
   }

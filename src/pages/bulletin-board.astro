@@ -16,6 +16,7 @@ import {
 } from '../lib/bulletin-board';
 import { getHomeLayoutSettings, serializeHomeLayout } from '../lib/home-layout';
 import { canAccessManagement } from '../lib/permissions';
+import { orgIdFromLocals } from '../lib/organization';
 
 export const prerender = false;
 
@@ -24,11 +25,12 @@ if (!canAccessManagement(employee)) {
   return new Response('Forbidden', { status: 403 });
 }
 
-const settings = await getBulletinBoardSettings();
+const orgId = orgIdFromLocals(Astro.locals.organization);
+const settings = await getBulletinBoardSettings(orgId);
 if (settings.boardMode === 'duplicate') {
-  await ensureDuplicatePinTwins();
+  await ensureDuplicatePinTwins(orgId);
 }
-const homeLayout = await getHomeLayoutSettings();
+const homeLayout = await getHomeLayoutSettings(orgId);
 const allDraftPins = await listBulletinBoardPins({ channel: 'draft' });
 const pending = await listBulletinBoardRequests({ status: 'pending' });
 const writingMode = writingModeForSurface(settings.draftSurface);

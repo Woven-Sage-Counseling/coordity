@@ -18,10 +18,12 @@ import { isOnBreak } from '../lib/timesheet-breaks';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import { COMPANY_WORDMARK_SRC, PORTAL_MARK_SRC } from '../lib/home-layout';
 import { resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
+import { orgIdFromLocals } from '../lib/organization';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+const orgId = orgIdFromLocals(Astro.locals.organization);
 const visibleApps = portalApps.filter((app) => hasPermission(employee, app.permission));
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
@@ -39,7 +41,7 @@ const onShift = activeShift != null;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 
-const layout = await resolveEffectiveHomeComposition({ userId: employee.id });
+const layout = await resolveEffectiveHomeComposition({ userId: employee.id, orgId });
 const showRail = layout.showRail;
 const railBoard = layout.showRailBoard;
 const railWidgets = layout.showRailWidgets;

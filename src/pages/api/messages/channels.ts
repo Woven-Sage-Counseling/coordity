@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { listChannelsForUser } from '../../../lib/messages';
-import { DEFAULT_ORG_ID } from '../../../lib/organization';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 
   try {
-    const channels = await listChannelsForUser(employee.id, DEFAULT_ORG_ID);
+    const channels = await listChannelsForUser(employee.id, orgIdFromLocals(locals.organization));
     return new Response(JSON.stringify({ ok: true, channels }), {
       status: 200,
       headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

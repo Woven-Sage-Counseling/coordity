@@ -6,7 +6,7 @@ import {
   updateHomeUserPrefs,
 } from '../../../lib/home-user-prefs';
 import { isBelowSlot, isRailSlot, type HomeBelowSlot, type HomeRailSlot } from '../../../lib/home-layout';
-import { DEFAULT_ORG_ID } from '../../../lib/organization';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const prefs = await getHomeUserPrefs(employee.id, DEFAULT_ORG_ID);
+  const prefs = await getHomeUserPrefs(employee.id, orgIdFromLocals(locals.organization));
   return new Response(JSON.stringify({ ok: true, prefs: serializeHomeUserPrefs(prefs) }), {
     status: 200,
     headers: { 'content-type': 'application/json' },
@@ -65,6 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const prefs = await updateHomeUserPrefs({
       userId: employee.id,
+      orgId: orgIdFromLocals(locals.organization),
       surfaceOverride: form.has('surfaceOverride') ? surfaceOverride : undefined,
       railSlot: form.has('railSlot') ? railSlot : undefined,
       belowSlot: form.has('belowSlot') ? belowSlot : undefined,

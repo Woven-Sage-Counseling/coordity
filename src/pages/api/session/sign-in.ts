@@ -9,6 +9,8 @@ export const POST: APIRoute = async ({ request }) => {
   const form = await request.formData();
   const email = String(form.get('email') ?? '').trim();
   const password = String(form.get('password') ?? '');
+  const nextRaw = String(form.get('next') ?? '').trim();
+  const nextPath = nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/';
 
   if (!email || !password) {
     return formErrorRedirect('/sign-in', 'Email and password are required.');
@@ -36,7 +38,7 @@ export const POST: APIRoute = async ({ request }) => {
       return formErrorRedirect('/sign-in', 'This account does not have portal access.');
     }
 
-    const headers = new Headers({ Location: '/', 'Cache-Control': 'no-store' });
+    const headers = new Headers({ Location: nextPath, 'Cache-Control': 'no-store' });
     if ('headers' in result && result.headers) {
       applySetCookieHeaders(result.headers, headers);
     }

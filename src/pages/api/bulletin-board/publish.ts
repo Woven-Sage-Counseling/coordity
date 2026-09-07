@@ -7,6 +7,7 @@ import {
   writingModeForSurface,
 } from '../../../lib/bulletin-board';
 import { requireManagementAccess } from '../../../lib/management-access';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -15,7 +16,7 @@ export const POST: APIRoute = async ({ locals }) => {
   if (denied) return denied;
 
   try {
-    const settings = await publishBulletinBoard();
+    const settings = await publishBulletinBoard(orgIdFromLocals(locals.organization));
     const pins = (await listBulletinBoardPins({ channel: 'live' })).map((pin) =>
       serializePin(pin, settings.surface),
     );

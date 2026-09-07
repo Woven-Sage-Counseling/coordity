@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getHomeLayoutRailImage } from '../../../lib/home-layout';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -9,7 +10,7 @@ export const GET: APIRoute = async ({ locals }) => {
     return new Response('Forbidden', { status: 403 });
   }
 
-  const file = await getHomeLayoutRailImage();
+  const file = await getHomeLayoutRailImage(orgIdFromLocals(locals.organization));
   if (!file) return new Response('Not found', { status: 404 });
 
   const binary = Uint8Array.from(atob(file.dataBase64), (char) => char.charCodeAt(0));

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { countUnreadMessages } from '../../../lib/messages';
-import { DEFAULT_ORG_ID } from '../../../lib/organization';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 
   try {
-    const count = await countUnreadMessages(employee.id, DEFAULT_ORG_ID);
+    const count = await countUnreadMessages(employee.id, orgIdFromLocals(locals.organization));
     return new Response(JSON.stringify({ ok: true, count }), {
       status: 200,
       headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

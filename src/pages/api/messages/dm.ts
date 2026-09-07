@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { findOrCreateDm } from '../../../lib/messages';
-import { DEFAULT_ORG_ID } from '../../../lib/organization';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const result = await findOrCreateDm({
       userId: employee.id,
       recipientId,
-      orgId: DEFAULT_ORG_ID,
+      orgId: orgIdFromLocals(locals.organization),
     });
 
     return new Response(JSON.stringify({ ok: true, conversationId: result.id, created: result.created }), {

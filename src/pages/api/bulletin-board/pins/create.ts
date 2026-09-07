@@ -10,6 +10,7 @@ import {
   type BulletinKind,
 } from '../../../../lib/bulletin-board';
 import { requireManagementAccess } from '../../../../lib/management-access';
+import { orgIdFromLocals } from '../../../../lib/organization';
 
 export const prerender = false;
 
@@ -72,6 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const pin = await createDirectPin({
+      orgId: orgIdFromLocals(locals.organization),
       createdBy: employee.id,
       kind,
       body,
@@ -84,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
       boardVariant: variantRaw as BulletinBoardVariant,
     });
-    const settings = await getBulletinBoardSettings();
+    const settings = await getBulletinBoardSettings(orgIdFromLocals(locals.organization));
     return new Response(JSON.stringify({ ok: true, pin: serializePin(pin, settings.draftSurface) }), {
       status: 200,
       headers: { 'content-type': 'application/json' },

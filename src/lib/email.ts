@@ -24,7 +24,7 @@ async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: `Woven Sage Portal <${fromEmail}>`,
+      from: `Coordity <${fromEmail}>`,
       to: [TIME_OFF_RECIPIENT],
       reply_to: payload.replyTo,
       subject: payload.subject,

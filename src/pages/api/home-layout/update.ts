@@ -10,6 +10,7 @@ import {
   type HomeRailSlot,
 } from '../../../lib/home-layout';
 import { requireManagementAccess } from '../../../lib/management-access';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -62,10 +63,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       railImageData = await fileToBase64(file);
     }
 
+    const orgId = orgIdFromLocals(locals.organization);
     // Touch read so missing rows are ensured before update.
-    await getHomeLayoutSettings();
+    await getHomeLayoutSettings(orgId);
 
     const updated = await updateHomeLayout({
+      orgId,
       railSlot,
       belowSlot,
       railImageMime,

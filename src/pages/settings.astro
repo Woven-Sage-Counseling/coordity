@@ -9,11 +9,13 @@ import { getHomeLayoutSettings } from '../lib/home-layout';
 import { getHomeUserPrefs, resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
 import { getBulletinBoardSettings } from '../lib/bulletin-board';
 import { hasPermission } from '../lib/permissions';
+import { orgIdFromLocals } from '../lib/organization';
 import { GoogleCalendarProvider } from '../lib/schedule/google-calendar';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
+const orgId = orgIdFromLocals(Astro.locals.organization);
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeCredentialingWidget = canSeeCredentialing(employee);
 const canSeeClinicalWidget = canSeeCaseload(employee);
@@ -25,10 +27,10 @@ const widgets = availableWidgets({
   canSeeTimesheet,
 });
 
-const orgLayout = await getHomeLayoutSettings();
-const boardSettings = await getBulletinBoardSettings();
-const userHomePrefs = await getHomeUserPrefs(employee.id);
-const effectiveHome = await resolveEffectiveHomeComposition({ userId: employee.id });
+const orgLayout = await getHomeLayoutSettings(orgId);
+const boardSettings = await getBulletinBoardSettings(orgId);
+const userHomePrefs = await getHomeUserPrefs(employee.id, orgId);
+const effectiveHome = await resolveEffectiveHomeComposition({ userId: employee.id, orgId });
 const homePrefsPayload = {
   prefs: {
     surfaceOverride: userHomePrefs.surfaceOverride,
