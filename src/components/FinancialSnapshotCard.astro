@@ -17,37 +17,12 @@ const snapshot = summary?.snapshot ?? null;
 const period = summary?.period ?? resolvePeriodFromSearch(Astro.url.searchParams);
 const ratio = summary?.reserveProgressRatio ?? null;
 const percent = ratio == null ? null : Math.round(ratio * 100);
-const reserveTargetMonths = summary?.reserveTargetMonths ?? 3;
-const ringRatio = ratio == null ? 0 : Math.min(Math.max(ratio, 0), 1);
-const ringRadius = 22;
-const ringCircumference = 2 * Math.PI * ringRadius;
-const ringOffset = ringCircumference * (1 - ringRatio);
-const revenue = snapshot?.revenueCents ?? 0;
-const therapist = snapshot?.therapistCompensationCents ?? 0;
-const management = snapshot?.managementCompensationCents ?? 0;
-const software = snapshot?.softwareAndTechnologyCents ?? 0;
-const scale = Math.max(revenue, therapist, management, software, 1);
-const therapistWidth = `${Math.round((therapist / scale) * 100)}%`;
-const managementWidth = `${Math.round((management / scale) * 100)}%`;
-const softwareWidth = `${Math.round((software / scale) * 100)}%`;
-const therapistShare = revenue > 0 ? `${Math.round((therapist / revenue) * 100)}%` : null;
-const managementShare = revenue > 0 ? `${Math.round((management / revenue) * 100)}%` : null;
-const softwareShare = revenue > 0 ? `${Math.round((software / revenue) * 100)}%` : null;
 
 function formatPeriod(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-function formatMonthYear(iso: string): string {
-  const [year, month] = iso.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
-    month: 'short',
     year: 'numeric',
     timeZone: 'UTC',
   });
@@ -63,7 +38,7 @@ const periodLabel = snapshot
   aria-labelledby="home-financials-heading"
   data-widget-card
   data-widget-id="quickbooks"
-  style={widgetAccentVarsStyle('quickbooks')}
+  style={`${widgetAccentVarsStyle('quickbooks')}; min-height: 28rem; background: #fff;`}
 >
   <WidgetHeaderBar
     widgetId="quickbooks"
@@ -73,109 +48,49 @@ const periodLabel = snapshot
   />
 
   <div
-    class="flex flex-1 flex-col overflow-y-auto overscroll-contain bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]"
     data-widget-body
-    style="min-height: 22rem; color: #393a3d; background: #f4f5f8;"
+    style="flex: 1 1 auto; min-height: 22rem; padding: 0.75rem 1rem 1rem; color: #393a3d !important; background: #f4f5f8 !important; overflow: auto; font-family: 'DM Sans', system-ui, sans-serif; opacity: 1; visibility: visible;"
   >
-    <div class="flex items-start justify-between gap-2">
-      <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reports</p>
-        <p class="mt-1 text-base font-semibold leading-tight">Profit and Loss</p>
-      </div>
-      <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#2CA01C] ring-1 ring-[#2CA01C]/25">
-        Cash
-      </span>
+    <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6c72;">
+      Reports
+    </p>
+    <p style="margin: 0.25rem 0 0; font-size: 16px; font-weight: 600; color: #393a3d;">
+      Profit and Loss
+    </p>
+    <p style="margin: 0.25rem 0 0; font-size: 11px; color: #6b6c72;">{periodLabel}</p>
+    <div style="margin-top: 0.5rem;">
+      <PeriodPicker period={period} action="/" compact />
     </div>
-    <p class="mt-1 text-[11px] text-[#6b6c72]">{periodLabel}</p>
-    <PeriodPicker period={period} action="/" compact />
 
-    <div class="mt-4 space-y-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/[0.06]">
-      <div>
-        <div class="flex items-baseline justify-between gap-3 text-[12px]">
-          <span class="font-medium">Income</span>
-          <span class="font-semibold tabular-nums">{formatUsd(snapshot?.revenueCents ?? null)}</span>
-        </div>
+    <div style="margin-top: 1rem; padding: 0.75rem; border-radius: 0.5rem; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);">
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem;">
+        <span style="font-weight: 500; color: #393a3d;">Income</span>
+        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.revenueCents ?? null)}</span>
       </div>
-      <div>
-        <div class="flex items-baseline justify-between gap-3 text-[12px]">
-          <span class="font-medium">Therapist comp.</span>
-          <span class="flex items-baseline gap-1.5 tabular-nums">
-            <span class="font-semibold">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
-            {therapistShare ? (
-              <span class="font-medium text-[#b0b1b6]">{therapistShare}</span>
-            ) : null}
-          </span>
-        </div>
-        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-          <div class="h-full rounded-full bg-[#3d8b37]" style={`width: ${snapshot ? therapistWidth : '0%'}`}></div>
-        </div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem;">
+        <span style="font-weight: 500; color: #393a3d;">Therapist comp.</span>
+        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
       </div>
-      <div>
-        <div class="flex items-baseline justify-between gap-3 text-[12px]">
-          <span class="font-medium">Manager comp.</span>
-          <span class="flex items-baseline gap-1.5 tabular-nums">
-            <span class="font-semibold">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
-            {managementShare ? (
-              <span class="font-medium text-[#b0b1b6]">{managementShare}</span>
-            ) : null}
-          </span>
-        </div>
-        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-          <div class="h-full rounded-full bg-[#6aa84f]" style={`width: ${snapshot ? managementWidth : '0%'}`}></div>
-        </div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem;">
+        <span style="font-weight: 500; color: #393a3d;">Manager comp.</span>
+        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
       </div>
-      <div>
-        <div class="flex items-baseline justify-between gap-3 text-[12px]">
-          <span class="font-medium">Software &amp; tech</span>
-          <span class="flex items-baseline gap-1.5 tabular-nums">
-            <span class="font-semibold">{formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}</span>
-            {softwareShare ? (
-              <span class="font-medium text-[#b0b1b6]">{softwareShare}</span>
-            ) : null}
-          </span>
-        </div>
-        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-          <div class="h-full rounded-full bg-[#8fbc8f]" style={`width: ${snapshot ? softwareWidth : '0%'}`}></div>
-        </div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px;">
+        <span style="font-weight: 500; color: #393a3d;">Software &amp; tech</span>
+        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}</span>
       </div>
     </div>
 
-    <div class="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 text-[12px] shadow-sm ring-1 ring-black/[0.06]">
-      <div class="min-w-0">
-        <p class="font-medium">Reserve</p>
-        <p class="mt-0.5 text-[11px] text-[#6b6c72]">
+    <div style="margin-top: 0.75rem; padding: 0.75rem; border-radius: 0.5rem; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); display: flex; justify-content: space-between; gap: 0.75rem; align-items: center;">
+      <div>
+        <p style="margin: 0; font-size: 12px; font-weight: 500; color: #393a3d;">Reserve</p>
+        <p style="margin: 0.25rem 0 0; font-size: 11px; color: #6b6c72;">
           {formatUsd(summary?.cash.boaReserveCents ?? null)} of {formatUsd(summary?.reserveTargetCents ?? null)}
         </p>
-        <p class="mt-0.5 text-[11px] text-[#b0b1b6]">
-          {reserveTargetMonths}-month target
-          {summary?.reserveAveragingStart
-            ? ` since ${formatMonthYear(summary.reserveAveragingStart)}`
-            : ''}
-        </p>
       </div>
-      <div
-        class="relative h-16 w-16 shrink-0"
-        role="img"
-        aria-label={percent == null ? 'Reserve progress unavailable' : `Reserve ${percent} percent of target`}
-      >
-        <svg class="h-16 w-16 -rotate-90" viewBox="0 0 56 56" aria-hidden="true">
-          <circle cx="28" cy="28" r={ringRadius} fill="none" stroke="#e3e5e8" stroke-width="5"></circle>
-          <circle
-            cx="28"
-            cy="28"
-            r={ringRadius}
-            fill="none"
-            stroke={percent != null && percent >= 100 ? '#2CA01C' : '#3d8b37'}
-            stroke-width="5"
-            stroke-linecap="round"
-            stroke-dasharray={ringCircumference.toFixed(2)}
-            stroke-dashoffset={ringOffset.toFixed(2)}
-          ></circle>
-        </svg>
-        <p class="absolute inset-0 flex items-center justify-center text-[11px] font-semibold tabular-nums text-[#393a3d]">
-          {percent == null ? '—' : `${percent}%`}
-        </p>
-      </div>
+      <p style="margin: 0; font-size: 14px; font-weight: 700; color: #393a3d;">
+        {percent == null ? '—' : `${percent}%`}
+      </p>
     </div>
   </div>
 </aside>

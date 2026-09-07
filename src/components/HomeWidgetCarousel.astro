@@ -35,7 +35,6 @@ const available = availableWidgets({
 });
 const availableIds = available.map((w) => w.id);
 
-/** Server-side default order — first paint shows real widgets without waiting on JS. */
 const preferredOrder: HomeWidgetId[] = [
   'schedule',
   'caseload',
@@ -46,7 +45,9 @@ const preferredOrder: HomeWidgetId[] = [
   'credentialing',
   'quickbooks',
 ];
+/** Always SSR every allowed widget — no client filtering. */
 const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
+const widgetCount = defaultOrder.length;
 ---
 
 {
@@ -54,24 +55,23 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
     <section
       class="min-w-0"
       aria-label="Home widgets"
-      data-widget-carousel
+      data-home-widgets
+      data-widgets-build="2026-09-07c"
       data-user-id={userId}
-      data-available={JSON.stringify(availableIds)}
       data-can-financials={canSeeFinancials ? '1' : '0'}
       data-can-credentialing={canSeeCredentialing ? '1' : '0'}
       data-can-clinical={canSeeClinical ? '1' : '0'}
       data-can-timesheet={canSeeTimesheet ? '1' : '0'}
     >
-      <div
-        class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        data-carousel-track
+      <p
+        class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/55"
+        data-widgets-count
       >
+        Home widgets · {widgetCount}
+      </p>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {defaultOrder.map((id) => (
-          <div
-            class="home-widget-slot min-w-0"
-            data-carousel-slide
-            data-widget-id={id}
-          >
+          <div class="home-widget-slot min-w-0" data-widget-id={id}>
             {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
             {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
             {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
@@ -96,36 +96,53 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
   )
 }
 
+<style is:global>
+  /* Inline with the component so card bodies cannot miss the stylesheet. */
+  .home-widget-slot,
+  .widget-carousel-slide {
+    min-width: 0;
+    height: 28rem;
+  }
+
+  .home-widget-slot > [data-widget-card],
+  .widget-carousel-slide > [data-widget-card] {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 28rem !important;
+    max-height: 28rem !important;
+    min-height: 28rem !important;
+    overflow: hidden;
+    background-color: #fff;
+  }
+
+  .home-widget-slot > [data-widget-card] > [data-widget-header],
+  .widget-carousel-slide > [data-widget-card] > [data-widget-header] {
+    flex: 0 0 auto !important;
+  }
+
+  .home-widget-slot > [data-widget-card] > [data-widget-body],
+  .widget-carousel-slide > [data-widget-card] > [data-widget-body] {
+    flex: 1 1 auto !important;
+    min-height: 12rem !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+    color: #393a3d !important;
+    background-color: #f4f5f8 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+</style>
+
 <script>
   import { applyWidgetHeaderPrefs } from '../lib/home-widget-header';
   import type { WidgetIconId } from '../lib/home-widget-icons';
 
   type Prefs = {
+    v?: number;
     enabled: string[];
     headerColors?: Record<string, string>;
     headerIcons?: Record<string, WidgetIconId>;
   };
-
-  function defaultPrefs(
-    canFinancials: boolean,
-    canCredentialing: boolean,
-    canClinical: boolean,
-    canTimesheet: boolean,
-  ): Prefs {
-    const enabled = ['schedule', 'time_off', 'my_progress', 'tasks'];
-    if (canClinical) enabled.splice(1, 0, 'caseload');
-    if (canTimesheet) {
-      const timeOffIdx = enabled.indexOf('time_off');
-      enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'timesheet');
-    }
-    if (canCredentialing) enabled.push('credentialing');
-    if (canFinancials) enabled.push('quickbooks');
-    return { enabled };
-  }
-
-  function migrateWidgetId(id: string): string {
-    return id === 'coming_soon' ? 'my_progress' : id;
-  }
 
   function sanitizeHeaderColors(raw: unknown): Record<string, string> {
     if (!raw || typeof raw !== 'object') return {};
@@ -166,146 +183,38 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
     return icons;
   }
 
-  function readPrefs(
-    userId: string,
-    canFinancials: boolean,
-    canCredentialing: boolean,
-    canClinical: boolean,
-    canTimesheet: boolean,
-    available: string[],
-  ): Prefs {
-    const fallback = defaultPrefs(canFinancials, canCredentialing, canClinical, canTimesheet);
-    try {
-      const raw = localStorage.getItem('portal:home-widgets:' + userId);
-      if (!raw) return fallback;
-      const parsed = JSON.parse(raw) as Prefs & { v?: number };
-      const allowed = new Set(available);
-      let enabled = (parsed.enabled || [])
-        .map(migrateWidgetId)
-        .filter((id) => allowed.has(id))
-        .slice(0, 10);
-
-      // v2+: wipe sparse/legacy prefs that left only QuickBooks (or one widget).
-      if (parsed.v !== 2 || enabled.length <= 1) {
-        enabled = fallback.enabled.filter((id) => allowed.has(id));
-        try {
-          localStorage.setItem(
-            'portal:home-widgets:' + userId,
-            JSON.stringify({
-              v: 2,
-              enabled,
-              ...(parsed.headerColors ? { headerColors: sanitizeHeaderColors(parsed.headerColors) } : {}),
-              ...(parsed.headerIcons ? { headerIcons: sanitizeHeaderIcons(parsed.headerIcons) } : {}),
-            }),
-          );
-        } catch {
-          /* ignore */
-        }
-        return { enabled };
-      }
-
-      let mutated = false;
-      if (allowed.has('time_off') && !enabled.includes('time_off') && enabled.length < 10) {
-        const scheduleIdx = enabled.indexOf('schedule');
-        enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
-        mutated = true;
-      }
-      if (allowed.has('caseload') && !enabled.includes('caseload') && enabled.length < 10) {
-        const scheduleIdx = enabled.indexOf('schedule');
-        enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'caseload');
-        mutated = true;
-      }
-      if (allowed.has('my_progress') && !enabled.includes('my_progress') && enabled.length < 10) {
-        const timeOffIdx = enabled.indexOf('time_off');
-        enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
-        mutated = true;
-      }
-      if (allowed.has('timesheet') && !enabled.includes('timesheet') && enabled.length < 10) {
-        const timeOffIdx = enabled.indexOf('time_off');
-        enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'timesheet');
-        mutated = true;
-      }
-      if (allowed.has('tasks') && !enabled.includes('tasks') && enabled.length < 10) {
-        const progressIdx = enabled.indexOf('my_progress');
-        enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'tasks');
-        mutated = true;
-      }
-      if (allowed.has('credentialing') && !enabled.includes('credentialing') && enabled.length < 10) {
-        const tasksIdx = enabled.indexOf('tasks');
-        enabled.splice(tasksIdx >= 0 ? tasksIdx + 1 : enabled.length, 0, 'credentialing');
-        mutated = true;
-      }
-      const finalEnabled = enabled.length ? enabled : fallback.enabled.filter((id) => allowed.has(id));
-      const headerColors = sanitizeHeaderColors(parsed.headerColors);
-      const headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
-      const next: Prefs = {
-        enabled: finalEnabled,
-        ...(Object.keys(headerColors).length ? { headerColors } : {}),
-        ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
-      };
-      if (mutated || (parsed.enabled || []).includes('coming_soon') || parsed.v !== 2) {
-        try {
-          localStorage.setItem(
-            'portal:home-widgets:' + userId,
-            JSON.stringify({ v: 2, ...next }),
-          );
-        } catch {
-          /* ignore */
-        }
-      }
-      return next;
-    } catch {
-      return fallback;
-    }
-  }
-
+  /** Header colors/icons only — never hide or remove widget cards. */
   function setupWidgets(root: Element) {
     if (!(root instanceof HTMLElement)) return;
-    if (root.dataset.carouselReady === '1') return;
-    root.dataset.carouselReady = '1';
+    if (root.dataset.widgetsReady === '1') return;
+    root.dataset.widgetsReady = '1';
 
     const userId = root.dataset.userId ?? '';
-    const canFinancials = root.dataset.canFinancials === '1';
-    const canCredentialing = root.dataset.canCredentialing === '1';
-    const canClinical = root.dataset.canClinical === '1';
-    const canTimesheet = root.dataset.canTimesheet === '1';
-    let available: string[] = [];
     try {
-      available = JSON.parse(root.dataset.available || '[]') as string[];
+      // Drop broken legacy prefs that collapsed the home grid to one empty card.
+      localStorage.removeItem('portal:home-widgets:' + userId);
     } catch {
-      available = [];
+      /* ignore */
     }
 
-    const prefs = readPrefs(userId, canFinancials, canCredentialing, canClinical, canTimesheet, available);
-    applyWidgetHeaderPrefs(root, prefs);
-
-    const track = root.querySelector('[data-carousel-track]');
-    if (!(track instanceof HTMLElement)) return;
-
-    const allSlides = Array.from(root.querySelectorAll('[data-carousel-slide]')).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement,
-    );
-
-    const enabledSlides = prefs.enabled
-      .map((id) => allSlides.find((el) => el.dataset.widgetId === id))
-      .filter((el): el is HTMLElement => Boolean(el));
-
-    allSlides.forEach((slide) => {
-      if (!enabledSlides.includes(slide)) slide.remove();
-    });
-    enabledSlides.forEach((slide) => {
-      slide.hidden = false;
-      slide.style.removeProperty('display');
-      track.appendChild(slide);
-    });
-
-    if (enabledSlides.length === 0) {
-      root.hidden = true;
+    let headerColors: Record<string, string> = {};
+    let headerIcons: Record<string, WidgetIconId> = {};
+    try {
+      const raw = localStorage.getItem('portal:home-widgets-headers:' + userId);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Prefs;
+        headerColors = sanitizeHeaderColors(parsed.headerColors);
+        headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
+      }
+    } catch {
+      /* ignore */
     }
+
+    applyWidgetHeaderPrefs(root, { headerColors, headerIcons });
   }
 
   function init() {
-    document.querySelectorAll('[data-widget-carousel]').forEach((root) => {
+    document.querySelectorAll('[data-home-widgets]').forEach((root) => {
       try {
         setupWidgets(root);
       } catch (error) {

@@ -44,12 +44,10 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 const layout = await resolveEffectiveHomeComposition({ userId: employee.id, orgId });
 const showRail = layout.showRail;
 const railBoard = layout.showRailBoard;
-const railWidgets = layout.showRailWidgets;
 const railImageUrl = layout.railImageUrl;
 const belowBoard = layout.showBelowBoard;
-const belowWidgets = layout.showBelowWidgets;
-/** Always render widgets full-width below — never in the narrow 24rem rail. */
-const showWidgets = belowWidgets || railWidgets;
+/** Always render widgets full-width below — ignore rail placement and never hide them. */
+const showWidgets = true;
 const suggestOnRail = railBoard;
 const suggestOnBelow = belowBoard;
 
