@@ -40,6 +40,8 @@ const arrowClass =
       aria-roledescription="carousel"
       aria-label="Home widgets"
       data-widget-carousel
+      data-per-page="4"
+      data-scrollable="false"
       data-user-id={userId}
       data-available={JSON.stringify(availableIds)}
       data-can-financials={canSeeFinancials ? '1' : '0'}
@@ -50,9 +52,10 @@ const arrowClass =
       <div class="relative" data-carousel-shell>
         <button
           type="button"
-          class:list={[arrowClass, 'left-0 -translate-x-1/3']}
+          class:list={[arrowClass, 'left-0 -translate-x-1/3', 'invisible']}
           aria-label="Previous widgets"
           data-carousel-prev
+          disabled
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
@@ -70,44 +73,44 @@ const arrowClass =
           data-carousel-viewport
         >
           <div class="widget-carousel-track flex items-start" data-carousel-track>
-            {availableIds.includes('quickbooks') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="quickbooks">
-                <FinancialSnapshotCard />
-              </div>
-            )}
             {availableIds.includes('schedule') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule" data-active="true">
                 <ScheduleCard userId={userId} />
               </div>
             )}
             {availableIds.includes('caseload') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="caseload">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="caseload" data-active="true">
                 <CaseloadCard userId={userId} />
               </div>
             )}
             {availableIds.includes('time_off') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="time_off">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="time_off" data-active="true">
                 <TimeOffCard userId={userId} />
               </div>
             )}
             {availableIds.includes('timesheet') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="timesheet">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="timesheet" data-active="true">
                 <TimesheetCard userId={userId} />
               </div>
             )}
             {availableIds.includes('my_progress') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="my_progress">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="my_progress" data-active="true">
                 <MyProgressCard userId={userId} />
               </div>
             )}
             {availableIds.includes('tasks') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="tasks">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="tasks" data-active="true">
                 <TasksCard userId={userId} />
               </div>
             )}
             {availableIds.includes('credentialing') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="credentialing">
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="credentialing" data-active="true">
                 <CredentialingCard employee={employee} />
+              </div>
+            )}
+            {availableIds.includes('quickbooks') && (
+              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="quickbooks" data-active="true">
+                <FinancialSnapshotCard />
               </div>
             )}
           </div>
@@ -115,9 +118,10 @@ const arrowClass =
 
         <button
           type="button"
-          class:list={[arrowClass, 'right-0 translate-x-1/3']}
+          class:list={[arrowClass, 'right-0 translate-x-1/3', 'invisible']}
           aria-label="Next widgets"
           data-carousel-next
+          disabled
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
@@ -292,6 +296,9 @@ const arrowClass =
 
   function setupCarousel(root: Element) {
     if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.carouselReady === '1') return;
+    root.dataset.carouselReady = '1';
+
     const userId = root.dataset.userId ?? '';
     const canFinancials = root.dataset.canFinancials === '1';
     const canCredentialing = root.dataset.canCredentialing === '1';
@@ -347,6 +354,7 @@ const arrowClass =
 
     const perPage = () => {
       const width = viewport.clientWidth;
+      if (width <= 0) return Number.parseInt(root.dataset.perPage || '4', 10) || 4;
       if (width < 640) return 1;
       if (width < 1024) return 2;
       return 4;
@@ -399,6 +407,8 @@ const arrowClass =
       root.dataset.scrollable = canScroll ? 'true' : 'false';
       const viewportWidth = viewport.clientWidth;
       const gap = gapSize();
+
+      if (viewportWidth <= 0) return;
 
       if (count === 1) {
         enabledSlides.forEach((el) => {
@@ -458,16 +468,44 @@ const arrowClass =
     prevBtn?.addEventListener('click', () => show(index - 1));
     nextBtn?.addEventListener('click', () => show(index + 1));
 
-    track.style.transition = 'none';
-    show(index);
-    requestAnimationFrame(() => {
+    const start = () => {
+      track.style.transition = 'none';
+      show(index);
       requestAnimationFrame(() => {
-        track.style.transition = '';
+        requestAnimationFrame(() => {
+          track.style.transition = '';
+        });
       });
-    });
+    };
+
+    // Wait until the viewport has a real width so we don't lock into a 0px layout.
+    let tries = 0;
+    const startWhenReady = () => {
+      if (viewport.clientWidth > 0 || tries > 30) {
+        start();
+        return;
+      }
+      tries += 1;
+      requestAnimationFrame(startWhenReady);
+    };
+    startWhenReady();
 
     window.addEventListener('resize', () => show(index));
   }
 
-  document.querySelectorAll('[data-widget-carousel]').forEach((root) => setupCarousel(root));
+  function initCarousels() {
+    document.querySelectorAll('[data-widget-carousel]').forEach((root) => {
+      try {
+        setupCarousel(root);
+      } catch (error) {
+        console.error('home widget carousel failed', error);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCarousels);
+  } else {
+    initCarousels();
+  }
 </script>
