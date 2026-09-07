@@ -87,8 +87,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Coordity apex: product landing + signup. App routes require a tenant host.
   if (isApex) {
+    // Keep `/` in the address bar but render a dedicated page so tenant home
+    // never shares a full-document component (breaks Astro CSS propagation).
+    if (pathname === '/') {
+      return context.rewrite('/apex-landing');
+    }
     if (
-      pathname === '/' ||
+      pathname === '/apex-landing' ||
       pathname === '/sign-up' ||
       pathname === '/api/orgs/resolve' ||
       pathname === '/api/orgs/create' ||

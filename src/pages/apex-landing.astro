@@ -1,0 +1,19 @@
+---
+/**
+ * Coordity apex product landing (coordity.com).
+ * Served for `/` on apex hosts via middleware rewrite so tenant home
+ * (`index.astro`) never shares a full-document component tree — that
+ * broke Astro head/CSS propagation for home widgets.
+ */
+import CoordityLanding from '../components/CoordityLanding.astro';
+
+export const prerender = false;
+
+if (!Astro.locals.isCoordityApex) {
+  return Astro.redirect('/');
+}
+
+const error = Astro.url.searchParams.get('error');
+---
+
+<CoordityLanding error={error} />
