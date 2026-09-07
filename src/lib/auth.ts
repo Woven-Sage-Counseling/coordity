@@ -1,10 +1,11 @@
 import { betterAuth } from 'better-auth';
 import { getEnv } from './env';
+import { requestPublicOrigin } from './request-host';
 
 export function createAuth(request?: Request) {
   const env = getEnv();
-  const origin = request ? new URL(request.url).origin : env.BETTER_AUTH_URL;
-  // Prefer request origin so each {org}.coordity.com keeps host-only cookies.
+  const origin = request ? requestPublicOrigin(request) : env.BETTER_AUTH_URL;
+  // Prefer public request origin so each {org}.coordity.com keeps host-only cookies.
   const baseURL = origin || env.BETTER_AUTH_URL;
 
   return betterAuth({

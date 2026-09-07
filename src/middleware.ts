@@ -8,6 +8,7 @@ import {
   resolveOrganizationFromHost,
 } from './lib/organization';
 import { canAccessManagement, loadEmployee } from './lib/permissions';
+import { requestHostname } from './lib/request-host';
 
 const PUBLIC_PATHS = new Set([
   '/sign-in',
@@ -36,7 +37,7 @@ function isPublicPath(pathname: string): boolean {
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
-  const hostname = context.url.hostname;
+  const hostname = requestHostname(context.request, context.url.hostname);
 
   // Permanent cutover from legacy Woven Sage portal host.
   if (hostname === 'portal.wovensage.com') {

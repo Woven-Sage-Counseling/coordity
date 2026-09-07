@@ -24,11 +24,10 @@ Do not deploy this app to the `wovensage` Pages project.
    - `wovensage` → CNAME `wovensage-portal-preview.pages.dev` (proxied)
    - `*` → CNAME `wovensage-portal-preview.pages.dev` (proxied) for new workspaces
    - apex/`www` → same Pages project
-3. Marketing site `providerPortalUrl` points at `https://wovensage.coordity.com`
-
-## Create a workspace
-
-Apex **Create a workspace** (`https://coordity.com/sign-up`) creates the org, then sends the first owner to `{slug}.coordity.com/accept-invite` to set a password.
+3. **Tenant wildcard** (Pages cannot bind `*.coordity.com` directly):
+   - DNS: proxied CNAME `*` → `wovensage-portal-preview.pages.dev`
+   - Worker `coordity-tenant-router` route `*.coordity.com/*` proxies to Pages with `X-Forwarded-Host`
+   - Setup: `node scripts/ensure-coordity-wildcard.mjs` then `cd tenant-router && npx wrangler deploy`
 
 ## Embed sign-in
 

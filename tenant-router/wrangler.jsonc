@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "coordity-tenant-router",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-18",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "*.coordity.com/*",
+      "zone_name": "coordity.com"
+    }
+  ]
+}
