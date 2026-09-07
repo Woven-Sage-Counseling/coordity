@@ -28,6 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
     name: invite.name,
     password,
     roleId: invite.role_id,
+    orgId: invite.org_id ?? undefined,
   });
   await markInvitationAccepted(invite.id, user.id);
 

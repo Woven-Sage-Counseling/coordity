@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { hasPermission, isOwnerEmail } from '../../../lib/permissions';
 import { createInvitation } from '../../../lib/invites';
 import { formErrorRedirect } from '../../../lib/http';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -34,6 +35,7 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     roleId,
     actorUserId: actor!.id,
     origin: url.origin,
+    orgId: orgIdFromLocals(locals.organization),
   });
 
   const location = `/admin?inviteUrl=${encodeURIComponent(invite.inviteUrl)}#people`;

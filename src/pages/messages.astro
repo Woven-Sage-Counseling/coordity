@@ -11,7 +11,7 @@ const orgId = orgIdFromLocals(Astro.locals.organization);
 const initialConversationId = String(Astro.url.searchParams.get('c') ?? '').trim();
 const [conversations, directory] = await Promise.all([
   listInbox(employee.id, orgId),
-  listDirectory(),
+  listDirectory(orgId),
 ]);
 
 const people = directory

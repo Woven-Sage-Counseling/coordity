@@ -18,14 +18,23 @@ Do not deploy this app to the `wovensage` Pages project.
 1. In Cloudflare Pages for `wovensage-portal-preview`, attach custom domains:
    - `wovensage.coordity.com`
    - `coordity.com` / `www.coordity.com` (apex product shell)
-   - keep `portal.wovensage.com` until cutover is complete
+   - **`*.coordity.com` wildcard** (required for self-serve / new tenants)
+   - keep `portal.wovensage.com` if you want the legacy host (app 301s to `wovensage.coordity.com`)
 2. In DNS for **coordity.com**:
    - `wovensage` → CNAME `wovensage-portal-preview.pages.dev` (proxied)
-   - apex/`www` → same Pages project (or Cloudflare recommended apex setup)
-3. Optional later: redirect `portal.wovensage.com` → `https://wovensage.coordity.com`
-4. Marketing site `providerPortalUrl` points at `https://wovensage.coordity.com`
+   - `*` → CNAME `wovensage-portal-preview.pages.dev` (proxied) for new workspaces
+   - apex/`www` → same Pages project
+3. Marketing site `providerPortalUrl` points at `https://wovensage.coordity.com`
 
-Wildcard `*.coordity.com` can be added when onboarding more tenants (Pages custom domains or Workers route).
+## Create a workspace
+
+Apex **Create a workspace** (`https://coordity.com/sign-up`) creates the org, then sends the first owner to `{slug}.coordity.com/accept-invite` to set a password.
+
+## Embed sign-in
+
+- Live form: `https://{slug}.coordity.com/embed/sign-in` (iframe-friendly)
+- Snippet + copy UI (signed-in): `https://{slug}.coordity.com/embed`
+- Also linked from Settings
 
 ## What this portal includes
 
@@ -39,7 +48,7 @@ Wildcard `*.coordity.com` can be added when onboarding more tenants (Pages custo
 - Audit log for invite, disable, and role changes
 - No patient, clinical, appointment, or insurance data
 - Org-branded sign-in + Coordity apex workspace finder (`/sign-in` on coordity.com)
-- Embeddable org sign-in at `/embed/sign-in` (same auth; for practice-site iframes later)
+- Org membership scoping across directory, people admin, and messaging
 
 ## Local development
 

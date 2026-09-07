@@ -1,7 +1,7 @@
 ---
 import CoordityLayout from '../layouts/CoordityLayout.astro';
+import CoordityMark from '../components/CoordityMark.astro';
 import PortalLayout from '../layouts/PortalLayout.astro';
-import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 
 export const prerender = false;
 
@@ -15,8 +15,8 @@ const orgLogo = organization?.logoUrl;
 {
   isApex ? (
     <CoordityLayout title="Find your workspace">
-      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-coordity-soft">{COORDITY_PRODUCT_NAME}</p>
-      <h1 class="mt-3 font-display text-4xl text-white sm:text-5xl">Find your workspace</h1>
+      <CoordityMark variant="light" class="h-9 w-auto" />
+      <h1 class="mt-6 font-display text-4xl text-white sm:text-5xl">Find your workspace</h1>
       <p class="mt-4 text-sm leading-relaxed text-white/75">
         Enter your company name to open your organization&rsquo;s sign-in page.
       </p>
@@ -56,6 +56,12 @@ const orgLogo = organization?.logoUrl;
       <p class="mt-8 text-center text-xs text-white/55">
         Already know your workspace URL? Go to{' '}
         <span class="font-medium text-coordity-soft">yourcompany.coordity.com</span>
+      </p>
+      <p class="mt-3 text-center text-sm text-white/70">
+        New organization?{' '}
+        <a href="/sign-up" class="font-semibold text-coordity-soft underline-offset-2 hover:underline">
+          Create a workspace
+        </a>
       </p>
     </CoordityLayout>
   ) : (
@@ -100,8 +106,8 @@ const orgLogo = organization?.logoUrl;
           <button class="btn-primary w-full" type="submit">Sign in</button>
         </form>
 
-        <p class="mt-8 text-center text-xs text-sage-dark/55">
-          Powered by <span class="coordity-mark">{COORDITY_PRODUCT_NAME}</span>
+        <p class="mt-8 flex items-center justify-center gap-2 text-xs text-sage-dark/55">
+          Powered by <CoordityMark class="h-4 w-auto" />
         </p>
       </div>
     </PortalLayout>

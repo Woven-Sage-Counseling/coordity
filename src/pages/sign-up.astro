@@ -1,0 +1,120 @@
+---
+import CoordityLayout from '../layouts/CoordityLayout.astro';
+import CoordityMark from '../components/CoordityMark.astro';
+import { COORDITY_PRODUCT_NAME, normalizeOrgSlug } from '../lib/organization';
+
+export const prerender = false;
+
+if (!Astro.locals.isCoordityApex) {
+  return Astro.redirect('/sign-in');
+}
+
+const error = Astro.url.searchParams.get('error');
+const presetName = String(Astro.url.searchParams.get('company') ?? '').trim();
+const presetSlug = normalizeOrgSlug(presetName);
+---
+
+<CoordityLayout title="Create a workspace">
+  <a href="/sign-in" class="inline-block">
+    <CoordityMark variant="light" class="h-9 w-auto" />
+  </a>
+  <h1 class="mt-6 font-display text-4xl text-white sm:text-5xl">Create a workspace</h1>
+  <p class="mt-4 text-sm leading-relaxed text-white/75">
+    Spin up your organization on {COORDITY_PRODUCT_NAME}. You&rsquo;ll set a password on your
+    workspace URL next.
+  </p>
+
+  {
+    error && (
+      <p class="mt-6 rounded-xl border border-red-200/40 bg-red-950/40 px-4 py-3 text-sm text-red-100">
+        {error}
+      </p>
+    )
+  }
+
+  <form method="post" action="/api/orgs/create" class="mt-8 space-y-4" autocomplete="on">
+    <label class="block text-sm font-medium text-white/90">
+      Company name
+      <input
+        class="field-coordity"
+        type="text"
+        name="companyName"
+        id="company-name"
+        required
+        minlength="2"
+        maxlength="80"
+        value={presetName}
+        autofocus
+      />
+    </label>
+    <label class="block text-sm font-medium text-white/90">
+      Workspace URL
+      <span class="mt-1 flex items-center gap-0 overflow-hidden rounded-xl border border-coordity-bright/35 bg-white/95">
+        <input
+          class="min-w-0 flex-1 border-0 bg-transparent px-3.5 py-2.5 text-sm text-coordity-blue outline-none focus:ring-0"
+          type="text"
+          name="slug"
+          id="workspace-slug"
+          required
+          minlength="3"
+          maxlength="32"
+          pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+          value={presetSlug}
+        />
+        <span class="shrink-0 bg-coordity-blue/5 px-3 py-2.5 text-xs text-coordity-blue/70">.coordity.com</span>
+      </span>
+    </label>
+    <label class="block text-sm font-medium text-white/90">
+      Practice website <span class="font-normal text-white/50">(optional)</span>
+      <input
+        class="field-coordity"
+        type="url"
+        name="websiteUrl"
+        placeholder="https://yourpractice.com"
+      />
+    </label>
+    <label class="block text-sm font-medium text-white/90">
+      Your name
+      <input class="field-coordity" type="text" name="adminName" required maxlength="80" autocomplete="name" />
+    </label>
+    <label class="block text-sm font-medium text-white/90">
+      Work email
+      <input
+        class="field-coordity"
+        type="email"
+        name="adminEmail"
+        required
+        autocomplete="email"
+      />
+    </label>
+    <button class="btn-coordity" type="submit">Create workspace</button>
+  </form>
+
+  <p class="mt-8 text-center text-xs text-white/55">
+    Already have a workspace?{' '}
+    <a href="/sign-in" class="font-medium text-coordity-soft underline-offset-2 hover:underline">
+      Find it
+    </a>
+  </p>
+</CoordityLayout>
+
+<script is:inline>
+  (function () {
+    var nameInput = document.getElementById('company-name');
+    var slugInput = document.getElementById('workspace-slug');
+    if (!nameInput || !slugInput) return;
+    var touched = Boolean(slugInput.value);
+    slugInput.addEventListener('input', function () {
+      touched = true;
+    });
+    nameInput.addEventListener('input', function () {
+      if (touched) return;
+      var raw = String(nameInput.value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 32);
+      slugInput.value = raw;
+    });
+  })();
+</script>

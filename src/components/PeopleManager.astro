@@ -2,6 +2,7 @@
 import { assignableRoles, DIRECTORY_TEAMS, listEmployees, listRoles } from '../lib/employees';
 import { listPendingInvites } from '../lib/invites';
 import { hasPermission, isOwnerEmail } from '../lib/permissions';
+import { orgIdFromLocals } from '../lib/organization';
 
 interface Props {
   error?: string | null;
@@ -19,8 +20,9 @@ const {
   embedded = false,
 } = Astro.props;
 const employee = Astro.locals.employee!;
+const orgId = orgIdFromLocals(Astro.locals.organization);
 const canManage = hasPermission(employee, 'employees:manage');
-const people = await listEmployees();
+const people = await listEmployees(orgId);
 const roles = await listRoles();
 const inviteRoles = assignableRoles(roles);
 const invites = canManage ? await listPendingInvites() : [];

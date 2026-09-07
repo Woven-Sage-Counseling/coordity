@@ -2,6 +2,7 @@ import { getEnv } from './env';
 import { nowMs } from './crypto';
 import { writeAuditLog } from './audit';
 import type { Auth } from './auth';
+import { DEFAULT_ORG_ID, addOrganizationMember } from './organization';
 
 export const DIRECTORY_TEAMS = [
   { id: 'team_owners', key: 'owners', name: 'Owners' },
@@ -80,7 +81,7 @@ async function teamIdsByUser(userIds: string[]): Promise<Map<string, string[]>> 
   return map;
 }
 
-export async function listEmployees() {
+export async function listEmployees(orgId = DEFAULT_ORG_ID) {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -92,20 +93,24 @@ export async function listEmployees() {
         p.phone,
         GROUP_CONCAT(r.key) AS roles
      FROM user u
+     INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
      LEFT JOIN employee_profile p ON p.user_id = u.id
      LEFT JOIN user_role ur ON ur.user_id = u.id
      LEFT JOIN role r ON r.id = ur.role_id
+     WHERE u.id != 'user_coordity_system'
      GROUP BY u.id
      ORDER BY u.name COLLATE NOCASE, u.email`,
-  ).all<{
-    id: string;
-    email: string;
-    name: string;
-    status: string;
-    jobTitle: string | null;
-    phone: string | null;
-    roles: string | null;
-  }>();
+  )
+    .bind(orgId)
+    .all<{
+      id: string;
+      email: string;
+      name: string;
+      status: string;
+      jobTitle: string | null;
+      phone: string | null;
+      roles: string | null;
+    }>();
 
   const people = rows.results ?? [];
   const teamIds = await teamIdsByUser(people.map((row) => row.id));
@@ -117,7 +122,7 @@ export async function listEmployees() {
   }));
 }
 
-export async function listDirectory(): Promise<DirectoryPerson[]> {
+export async function listDirectory(orgId = DEFAULT_ORG_ID): Promise<DirectoryPerson[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -128,17 +133,20 @@ export async function listDirectory(): Promise<DirectoryPerson[]> {
         p.phone,
         CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
      FROM user u
+     INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
      JOIN employee_profile p ON p.user_id = u.id
-     WHERE p.status = 'active'
+     WHERE p.status = 'active' AND u.id != 'user_coordity_system'
      ORDER BY u.name COLLATE NOCASE, u.email`,
-  ).all<{
-    id: string;
-    name: string;
-    email: string;
-    jobTitle: string | null;
-    phone: string | null;
-    hasAvatar: number;
-  }>();
+  )
+    .bind(orgId)
+    .all<{
+      id: string;
+      name: string;
+      email: string;
+      jobTitle: string | null;
+      phone: string | null;
+      hasAvatar: number;
+    }>();
 
   const people = rows.results ?? [];
   const teams = await teamsByUser(people.map((row) => row.id));
@@ -155,7 +163,7 @@ export async function listDirectory(): Promise<DirectoryPerson[]> {
 }
 
 /** Active directory people who are clinicians by role or Clinical team membership. */
-export async function listDirectoryClinicians(): Promise<DirectoryPerson[]> {
+export async function listDirectoryClinicians(orgId = DEFAULT_ORG_ID): Promise<DirectoryPerson[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -166,8 +174,10 @@ export async function listDirectoryClinicians(): Promise<DirectoryPerson[]> {
         p.phone,
         CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
      FROM user u
+     INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
      JOIN employee_profile p ON p.user_id = u.id
      WHERE p.status = 'active'
+       AND u.id != 'user_coordity_system'
        AND (
          EXISTS (
            SELECT 1
@@ -182,14 +192,16 @@ export async function listDirectoryClinicians(): Promise<DirectoryPerson[]> {
          )
        )
      ORDER BY u.name COLLATE NOCASE, u.email`,
-  ).all<{
-    id: string;
-    name: string;
-    email: string;
-    jobTitle: string | null;
-    phone: string | null;
-    hasAvatar: number;
-  }>();
+  )
+    .bind(orgId)
+    .all<{
+      id: string;
+      name: string;
+      email: string;
+      jobTitle: string | null;
+      phone: string | null;
+      hasAvatar: number;
+    }>();
 
   const people = rows.results ?? [];
   const teams = await teamsByUser(people.map((row) => row.id));
@@ -552,7 +564,7 @@ export function assignableRoles<T extends { id: string; key: string }>(
 
 export async function createInvitedAccount(
   auth: Auth,
-  input: { email: string; name: string; password: string; roleId: string },
+  input: { email: string; name: string; password: string; roleId: string; orgId?: string },
 ) {
   const ctx = await auth.$context;
   const user = await ctx.internalAdapter.createUser(
@@ -586,6 +598,8 @@ export async function createInvitedAccount(
       `INSERT INTO user_role (user_id, role_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?)`,
     ).bind(user.id, input.roleId, user.id, ts),
   ]);
+
+  await addOrganizationMember(input.orgId ?? DEFAULT_ORG_ID, user.id);
 
   return user;
 }

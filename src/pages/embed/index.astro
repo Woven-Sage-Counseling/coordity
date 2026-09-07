@@ -1,0 +1,99 @@
+---
+import PortalLayout from '../../layouts/PortalLayout.astro';
+import CoordityMark from '../../components/CoordityMark.astro';
+import { COORDITY_PRODUCT_NAME } from '../../lib/organization';
+
+export const prerender = false;
+
+const organization = Astro.locals.organization;
+const orgName = organization?.displayName ?? organization?.name ?? 'your organization';
+const slug = organization?.slug ?? 'yourcompany';
+const embedOrigin = Astro.url.origin;
+const embedUrl = `${embedOrigin}/embed/sign-in`;
+const snippet = `<iframe
+  src="${embedUrl}"
+  title="${orgName} sign in"
+  style="width:100%;max-width:420px;height:520px;border:0;border-radius:16px;"
+  loading="lazy"
+  referrerpolicy="no-referrer-when-downgrade"
+  allow="publickey-credentials-get *"
+></iframe>`;
+---
+
+<PortalLayout title="Embed sign-in">
+  <p class="text-sm text-sage-dark/65">
+    <a href="/settings" class="hover:text-sage-dark">Settings</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Embed sign-in
+  </p>
+
+  <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="font-display text-4xl text-charcoal">Embed sign-in</h1>
+      <p class="mt-3 max-w-2xl text-sage-dark/75">
+        Add {orgName}&rsquo;s Coordity login to your practice website. Visitors sign in here and stay
+        on your brand; accounts are still invite-only.
+      </p>
+    </div>
+    <CoordityMark class="h-8 w-auto" />
+  </div>
+
+  <section class="card mt-8 space-y-3">
+    <h2 class="font-display text-2xl text-charcoal">Iframe snippet</h2>
+    <p class="text-sm text-sage-dark/70">
+      Paste this into your practice site HTML (or CMS HTML block). Host: <code class="text-xs">{embedUrl}</code>
+    </p>
+    <pre class="overflow-x-auto rounded-xl bg-muted p-4 text-xs leading-relaxed text-charcoal">{snippet}</pre>
+    <button
+      class="btn-secondary"
+      type="button"
+      data-copy-snippet
+      data-snippet={snippet}
+    >
+      Copy snippet
+    </button>
+    <p class="hidden text-sm text-sage-dark" data-copy-status>Copied.</p>
+  </section>
+
+  <section class="card mt-6 space-y-3">
+    <h2 class="font-display text-2xl text-charcoal">Direct link</h2>
+    <p class="text-sm text-sage-dark/70">
+      Prefer a button instead of an iframe? Link to the full workspace sign-in:
+    </p>
+    <p class="break-all text-sm font-medium text-coordity-blue">
+      <a href={`${embedOrigin}/sign-in`}>{embedOrigin}/sign-in</a>
+    </p>
+  </section>
+
+  <section class="card mt-6 space-y-3">
+    <h2 class="font-display text-2xl text-charcoal">Notes</h2>
+    <ul class="list-disc space-y-2 pl-5 text-sm text-sage-dark/75">
+      <li>Powered by {COORDITY_PRODUCT_NAME}; the embed shows {orgName} branding.</li>
+      <li>There is no public registration — invite people from Admin → People.</li>
+      <li>
+        Workspace subdomain for this org: <span class="font-medium">{slug}.coordity.com</span>
+      </li>
+      <li>After sign-in, users continue inside the Coordity workspace (not inside the iframe).</li>
+    </ul>
+  </section>
+</PortalLayout>
+
+<script is:inline>
+  (function () {
+    var btn = document.querySelector('[data-copy-snippet]');
+    var status = document.querySelector('[data-copy-status]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var text = btn.getAttribute('data-snippet') || '';
+      if (!navigator.clipboard || !text) return;
+      navigator.clipboard.writeText(text).then(function () {
+        if (status) {
+          status.classList.remove('hidden');
+          window.setTimeout(function () {
+            status.classList.add('hidden');
+          }, 1600);
+        }
+      });
+    });
+  })();
+</script>

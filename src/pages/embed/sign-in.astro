@@ -1,5 +1,6 @@
 ---
 import '../../styles/global.css';
+import CoordityMark from '../../components/CoordityMark.astro';
 import { COORDITY_PRODUCT_NAME } from '../../lib/organization';
 
 export const prerender = false;
@@ -59,8 +60,8 @@ const next = String(Astro.url.searchParams.get('next') ?? '/').trim() || '/';
         <button class="btn-primary w-full" type="submit">Sign in</button>
       </form>
 
-      <p class="mt-6 text-center text-xs text-sage-dark/50">
-        Powered by <span class="coordity-mark">{COORDITY_PRODUCT_NAME}</span>
+      <p class="mt-6 flex items-center justify-center gap-2 text-xs text-sage-dark/50">
+        Powered by <CoordityMark class="h-4 w-auto" aria-label={COORDITY_PRODUCT_NAME} />
       </p>
     </div>
   </body>

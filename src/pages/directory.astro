@@ -4,15 +4,17 @@ import DirectoryPeopleTable from '../components/DirectoryPeopleTable.astro';
 import { groupDirectoryByTeam, listDirectory, listDirectoryClinicians } from '../lib/employees';
 import { listUsersOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import { listActiveShiftUserIds, listOnBreakUserIds } from '../lib/timesheet-entries';
+import { orgIdFromLocals } from '../lib/organization';
 
 export const prerender = false;
 
-const people = await listDirectory();
+const orgId = orgIdFromLocals(Astro.locals.organization);
+const people = await listDirectory(orgId);
 const [activeShiftUserIds, onBreakUserIds, timeOffUserIds, clinicians] = await Promise.all([
   listActiveShiftUserIds(),
   listOnBreakUserIds(),
   listUsersOnApprovedTimeOffNow(),
-  listDirectoryClinicians(),
+  listDirectoryClinicians(orgId),
 ]);
 const onShiftUserIds = [...activeShiftUserIds];
 const onBreakIds = [...onBreakUserIds];

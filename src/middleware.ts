@@ -4,12 +4,14 @@ import {
   DEFAULT_ORG_ID,
   getOrganizationById,
   isCoordityApexHost,
+  isOrganizationMember,
   resolveOrganizationFromHost,
 } from './lib/organization';
 import { canAccessManagement, loadEmployee } from './lib/permissions';
 
 const PUBLIC_PATHS = new Set([
   '/sign-in',
+  '/sign-up',
   '/embed/sign-in',
   '/accept-invite',
   '/bootstrap',
@@ -28,12 +30,22 @@ function isPublicPath(pathname: string): boolean {
   if (pathname === '/api/bootstrap') return true;
   if (pathname === '/api/invites/accept') return true;
   if (pathname === '/api/orgs/resolve') return true;
+  if (pathname === '/api/orgs/create') return true;
   return false;
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const hostname = context.url.hostname;
+
+  // Permanent cutover from legacy Woven Sage portal host.
+  if (hostname === 'portal.wovensage.com') {
+    const dest = new URL(context.url);
+    dest.protocol = 'https:';
+    dest.host = 'wovensage.coordity.com';
+    return Response.redirect(dest.toString(), 301);
+  }
+
   const isApex = isCoordityApexHost(hostname);
   context.locals.isCoordityApex = isApex;
 
@@ -57,21 +69,28 @@ export const onRequest = defineMiddleware(async (context, next) => {
   try {
     const auth = createAuth(context.request);
     const session = await auth.api.getSession({ headers: context.request.headers });
-    context.locals.employee = session?.user ? await loadEmployee(session.user.id) : null;
+    let employee = session?.user ? await loadEmployee(session.user.id) : null;
+    if (employee && context.locals.organization) {
+      const member = await isOrganizationMember(context.locals.organization.id, employee.id);
+      if (!member) employee = null;
+    }
+    context.locals.employee = employee;
   } catch (error) {
     console.error('session lookup failed', error);
     context.locals.employee = null;
   }
   const employee = context.locals.employee;
 
-  // Coordity apex: product shell (workspace finder). App routes require a tenant host.
+  // Coordity apex: product shell (workspace finder + signup).
   if (isApex) {
     if (pathname === '/') {
       return context.redirect('/sign-in');
     }
     if (
       pathname === '/sign-in' ||
+      pathname === '/sign-up' ||
       pathname === '/api/orgs/resolve' ||
+      pathname === '/api/orgs/create' ||
       pathname === '/api/session/sign-out' ||
       pathname.startsWith('/api/auth')
     ) {
@@ -94,7 +113,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ) {
       return context.redirect('/');
     }
-    return next();
+    const response = await next();
+    if (pathname.startsWith('/embed/')) {
+      response.headers.delete('X-Frame-Options');
+      response.headers.set('Content-Security-Policy', 'frame-ancestors *');
+    }
+    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
   }
 
   if (!employee || employee.status !== 'active' || !employee.permissions.includes('portal:access')) {

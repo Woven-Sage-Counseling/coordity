@@ -1,6 +1,7 @@
 ---
 import ReportIssueDialog from './ReportIssueDialog.astro';
 import SuggestFeatureDialog from './SuggestFeatureDialog.astro';
+import CoordityMark from './CoordityMark.astro';
 
 interface Props {
   employeeName: string;
@@ -22,8 +23,8 @@ const { employeeName, reportIssueEnabled } = Astro.props;
     <ReportIssueDialog employeeName={employeeName} enabled={reportIssueEnabled} />
     <span class="text-sage-dark/25" aria-hidden="true">·</span>
     <SuggestFeatureDialog employeeName={employeeName} enabled={reportIssueEnabled} />
-    <span class="ml-auto text-xs text-sage-dark/45">
-      Powered by <span class="coordity-mark">Coordity</span>
+    <span class="ml-auto inline-flex items-center gap-1.5 text-xs text-sage-dark/45">
+      Powered by <CoordityMark class="h-3.5 w-auto" />
     </span>
   </div>
 </footer>

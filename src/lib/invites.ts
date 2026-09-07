@@ -10,6 +10,7 @@ export async function createInvitation(input: {
   roleId: string;
   actorUserId: string;
   origin: string;
+  orgId?: string;
 }) {
   const { DB } = getEnv();
   const email = input.email.toLowerCase().trim();
@@ -17,13 +18,14 @@ export async function createInvitation(input: {
   const tokenHash = await sha256Hex(token);
   const id = randomToken(16);
   const ts = nowMs();
+  const orgId = input.orgId ?? null;
 
   await DB.prepare(
     `INSERT INTO invitation (
-      id, email, name, role_id, token_hash, invited_by, expires_at, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      id, email, name, role_id, token_hash, invited_by, expires_at, status, created_at, org_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
   )
-    .bind(id, email, input.name.trim(), input.roleId, tokenHash, input.actorUserId, ts + INVITE_TTL_MS, ts)
+    .bind(id, email, input.name.trim(), input.roleId, tokenHash, input.actorUserId, ts + INVITE_TTL_MS, ts, orgId)
     .run();
 
   await writeAuditLog({
@@ -31,7 +33,7 @@ export async function createInvitation(input: {
     action: 'employee.invited',
     targetType: 'invitation',
     targetId: id,
-    metadata: { email, roleId: input.roleId },
+    metadata: { email, roleId: input.roleId, orgId },
   });
 
   return {
@@ -61,6 +63,7 @@ export async function getInvitationByToken(token: string) {
       expires_at: number;
       accepted_at: number | null;
       status: string;
+      org_id: string | null;
     }>();
 
   if (!invite) return null;

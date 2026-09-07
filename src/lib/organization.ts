@@ -1,4 +1,5 @@
 import { getEnv } from './env';
+import { nowMs, randomToken } from './crypto';
 
 /** Default org until host resolution supplies a tenant (local / legacy). */
 export const DEFAULT_ORG_ID = 'org_wovensage';
@@ -15,6 +16,56 @@ export const COORDITY_APEX_HOSTS = new Set([
   'coordity.com',
   'www.coordity.com',
 ]);
+
+export const COORDITY_SYSTEM_USER_ID = 'user_coordity_system';
+
+const RESERVED_SLUGS = new Set([
+  'www',
+  'api',
+  'app',
+  'admin',
+  'auth',
+  'cdn',
+  'coordity',
+  'create',
+  'docs',
+  'embed',
+  'ftp',
+  'help',
+  'login',
+  'mail',
+  'portal',
+  'preview',
+  'signup',
+  'staging',
+  'static',
+  'status',
+  'support',
+  'wovensage',
+]);
+
+export function normalizeOrgSlug(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+}
+
+export function assertValidOrgSlug(slug: string): string {
+  const normalized = normalizeOrgSlug(slug);
+  if (normalized.length < 3) {
+    throw new Error('Workspace URL must be at least 3 characters.');
+  }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
+    throw new Error('Use lowercase letters, numbers, and hyphens only.');
+  }
+  if (RESERVED_SLUGS.has(normalized)) {
+    throw new Error('That workspace URL is reserved. Try another.');
+  }
+  return normalized;
+}
 
 export interface PortalOrganization {
   id: string;
@@ -150,6 +201,77 @@ export async function resolveOrganizationFromHost(
 /** Prefer request tenant; fall back to Woven Sage for local/legacy hosts. */
 export function orgIdFromLocals(organization: PortalOrganization | null | undefined): string {
   return organization?.id ?? DEFAULT_ORG_ID;
+}
+
+export async function isOrganizationMember(orgId: string, userId: string): Promise<boolean> {
+  const { DB } = getEnv();
+  try {
+    const row = await DB.prepare(
+      `SELECT 1 AS ok FROM organization_member WHERE org_id = ? AND user_id = ?`,
+    )
+      .bind(orgId, userId)
+      .first<{ ok: number }>();
+    return Boolean(row);
+  } catch {
+    // Pre-migration: treat everyone as a member of the default org only.
+    return orgId === DEFAULT_ORG_ID;
+  }
+}
+
+export async function addOrganizationMember(orgId: string, userId: string): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(
+    `INSERT OR IGNORE INTO organization_member (org_id, user_id, created_at) VALUES (?, ?, ?)`,
+  )
+    .bind(orgId, userId, nowMs())
+    .run();
+}
+
+export async function createOrganization(input: {
+  name: string;
+  slug: string;
+  displayName?: string;
+  websiteUrl?: string | null;
+}): Promise<PortalOrganization> {
+  const slug = assertValidOrgSlug(input.slug);
+  const existing = await getOrganizationBySlug(slug);
+  if (existing) {
+    throw new Error('That workspace URL is already taken.');
+  }
+
+  const name = input.name.trim();
+  if (name.length < 2) throw new Error('Company name is required.');
+  if (name.length > 80) throw new Error('Company name must be 80 characters or fewer.');
+
+  const displayName = (input.displayName ?? name).trim() || name;
+  let websiteUrl = input.websiteUrl?.trim() || null;
+  if (websiteUrl) {
+    try {
+      const parsed = new URL(websiteUrl.includes('://') ? websiteUrl : `https://${websiteUrl}`);
+      websiteUrl = parsed.toString();
+    } catch {
+      throw new Error('Website URL is invalid.');
+    }
+  }
+
+  const { DB } = getEnv();
+  const id = `org_${slug}`.slice(0, 64);
+  const ts = nowMs();
+
+  // Avoid collisions if slug was reused with a different id pattern.
+  const idClash = await getOrganizationById(id);
+  const orgId = idClash ? `org_${randomToken(8)}` : id;
+
+  await DB.prepare(
+    `INSERT INTO organization (id, name, created_at, slug, display_name, logo_url, website_url, updated_at)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+  )
+    .bind(orgId, name, ts, slug, displayName, websiteUrl, ts)
+    .run();
+
+  const org = await getOrganizationById(orgId);
+  if (!org) throw new Error('Could not create workspace.');
+  return org;
 }
 
 export async function findOrganizationsByQuery(query: string, limit = 8): Promise<PortalOrganization[]> {

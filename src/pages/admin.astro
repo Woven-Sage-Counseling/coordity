@@ -26,6 +26,7 @@ import { listTimesheetShiftEditsForAdmin } from '../lib/timesheet-shift-edits';
 import { listAssignedTasksForAdmin } from '../lib/tasks';
 import { listWorkCategoriesForAdmin } from '../lib/timesheet-work-categories';
 import { listBulletinBoardRequests } from '../lib/bulletin-board';
+import { orgIdFromLocals } from '../lib/organization';
 
 export const prerender = false;
 
@@ -34,6 +35,7 @@ if (!canAccessManagement(employee)) {
   return new Response('Forbidden', { status: 403 });
 }
 
+const orgId = orgIdFromLocals(Astro.locals.organization);
 const announcements = await listActiveAnnouncements(50);
 const timeOffRequests = await listTimeOffRequestsForAdmin();
 const timesheetBacklogRequests = await listTimesheetBacklogForAdmin();
@@ -44,7 +46,7 @@ const credentialingProviders = await listProvidersForLookup();
 const insuranceCatalog = await listInsuranceCatalog();
 const coverageMap = await listCoverageMatrix();
 const groupCoverageMap = await listGroupCoverageMatrix();
-const employees = await listEmployees();
+const employees = await listEmployees(orgId);
 let assignedTasks: Awaited<ReturnType<typeof listAssignedTasksForAdmin>> = [];
 let tasksLoadError: string | null = Astro.url.searchParams.get('tasksError');
 try {
