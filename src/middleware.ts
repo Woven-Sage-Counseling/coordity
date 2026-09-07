@@ -19,6 +19,9 @@ const PUBLIC_PATHS = new Set([
   '/robots.txt',
   '/favicon.png',
   '/favicon-16.png',
+  '/favicon-coordity.svg',
+  '/favicon-coordity.png',
+  '/favicon-coordity-16.png',
   '/apple-touch-icon.png',
 ]);
 
