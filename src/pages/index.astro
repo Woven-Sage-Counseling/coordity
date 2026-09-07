@@ -48,6 +48,8 @@ const railWidgets = layout.showRailWidgets;
 const railImageUrl = layout.railImageUrl;
 const belowBoard = layout.showBelowBoard;
 const belowWidgets = layout.showBelowWidgets;
+/** Always render widgets full-width below — never in the narrow 24rem rail. */
+const showWidgets = belowWidgets || railWidgets;
 const suggestOnRail = railBoard;
 const suggestOnBelow = belowBoard;
 
@@ -110,11 +112,6 @@ const widgetProps = {
           {railBoard ? (
             <HomeBulletinBoard shape="portrait" surface={layout.surface} showSuggest={suggestOnRail} />
           ) : null}
-          {railWidgets ? (
-            <div class="min-w-0">
-              <HomeWidgetCarousel {...widgetProps} />
-            </div>
-          ) : null}
           {layout.showRailImage && railImageUrl ? (
             <div class="overflow-hidden rounded-[1.05rem] bg-white/80 p-6 shadow-sm ring-1 ring-black/10">
               <img
@@ -136,7 +133,7 @@ const widgetProps = {
   </div>
 
   {
-    belowWidgets ? (
+    showWidgets ? (
       <div class="mt-8">
         <HomeWidgetCarousel {...widgetProps} />
       </div>

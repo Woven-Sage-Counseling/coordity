@@ -22,7 +22,7 @@ const initialError = error != null && error !== '' ? error : null;
 >
   <WidgetHeaderBar widgetId="tasks" title="Tasks" headingId="home-tasks-heading" openHref="/tasks" />
 
-  <div class="flex min-h-0 flex-1 flex-col bg-[#f4f5f8] font-sans text-[#393a3d]">
+  <div class="flex flex-1 flex-col bg-[#f4f5f8] font-sans text-[#393a3d]" data-widget-body>
     <TasksPanel userId={userId} mode="widget" returnTo="/" initialError={initialError} />
   </div>
 </aside>

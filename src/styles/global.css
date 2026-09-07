@@ -350,66 +350,37 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   color: rgb(var(--portal-sage-dark) / 0.58) !important;
 }
 
-/* Home widgets — responsive grid (no transform carousel). */
-[data-widget-carousel] {
-  --widget-max-height: 28rem;
-  --widget-gap: 0.65rem;
-  --widget-per-page: 4;
-}
-
-.widget-carousel-viewport {
-  width: 100%;
-  padding-bottom: 0.75rem;
-}
-
-.widget-carousel-track {
-  display: grid;
-  grid-template-columns: repeat(var(--widget-per-page), minmax(0, 1fr));
-  gap: var(--widget-gap);
-  align-items: stretch;
-}
-
-.widget-carousel-slide {
-  box-sizing: border-box;
+/* Home widgets — fixed-height cards so bodies never collapse. */
+.home-widget-slot {
   min-width: 0;
-  height: var(--widget-max-height);
+  height: 28rem;
 }
 
-.widget-carousel-slide[hidden] {
-  display: none !important;
-}
-
-.widget-carousel-slide > [data-widget-card] {
-  display: flex;
-  height: var(--widget-max-height);
-  max-height: var(--widget-max-height);
-  min-height: var(--widget-max-height);
-  flex-direction: column;
+.home-widget-slot > [data-widget-card] {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 28rem !important;
+  max-height: 28rem !important;
+  min-height: 28rem !important;
   overflow: hidden;
+  background-color: #fff;
+}
+
+.home-widget-slot > [data-widget-card] > [data-widget-header] {
+  flex: 0 0 auto !important;
+}
+
+.home-widget-slot > [data-widget-card] > [data-widget-body] {
+  flex: 1 1 auto !important;
+  min-height: 12rem !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  color: #393a3d;
+  background-color: #f4f5f8;
+}
+
+html.dark .home-widget-slot > [data-widget-card] {
   background-color: rgb(var(--portal-surface) / 1);
-}
-
-.widget-carousel-slide > [data-widget-card] > [data-widget-header] {
-  flex-shrink: 0;
-}
-
-.widget-carousel-slide > [data-widget-card] > :not([data-widget-header]) {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-@media (max-width: 1023px) {
-  [data-widget-carousel] {
-    --widget-per-page: 2;
-  }
-}
-
-@media (max-width: 639px) {
-  [data-widget-carousel] {
-    --widget-per-page: 1;
-  }
 }
 
 .announcement-bar {

@@ -7,7 +7,7 @@ import CredentialingCard from './CredentialingCard.astro';
 import TasksCard from './TasksCard.astro';
 import TimesheetCard from './TimesheetCard.astro';
 import CaseloadCard from './CaseloadCard.astro';
-import { availableWidgets } from '../lib/home-widgets';
+import { availableWidgets, type HomeWidgetId } from '../lib/home-widgets';
 
 interface Props {
   userId: string;
@@ -18,8 +18,14 @@ interface Props {
   canSeeTimesheet: boolean;
 }
 
-const { userId, employee, canSeeFinancials, canSeeCredentialing, canSeeClinical, canSeeTimesheet } =
-  Astro.props;
+const {
+  userId,
+  employee,
+  canSeeFinancials,
+  canSeeCredentialing,
+  canSeeClinical,
+  canSeeTimesheet,
+} = Astro.props;
 
 const available = availableWidgets({
   canSeeFinancials,
@@ -29,8 +35,18 @@ const available = availableWidgets({
 });
 const availableIds = available.map((w) => w.id);
 
-const arrowClass =
-  'inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-sage-dark/80 shadow-md ring-1 ring-black/10 transition hover:bg-white hover:text-charcoal disabled:pointer-events-none disabled:opacity-30';
+/** Server-side default order — first paint shows real widgets without waiting on JS. */
+const preferredOrder: HomeWidgetId[] = [
+  'schedule',
+  'caseload',
+  'time_off',
+  'timesheet',
+  'my_progress',
+  'tasks',
+  'credentialing',
+  'quickbooks',
+];
+const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
 ---
 
 {
@@ -46,97 +62,29 @@ const arrowClass =
       data-can-clinical={canSeeClinical ? '1' : '0'}
       data-can-timesheet={canSeeTimesheet ? '1' : '0'}
     >
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class:list={[arrowClass, 'invisible shrink-0']}
-          aria-label="Previous widgets"
-          data-carousel-prev
-          disabled
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M10 3L5 8l5 5"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
-
-        <div class="widget-carousel-viewport min-w-0 flex-1 pt-1" data-carousel-viewport>
-          <div class="widget-carousel-track" data-carousel-track>
-            {availableIds.includes('schedule') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="schedule">
-                <ScheduleCard userId={userId} />
-              </div>
-            )}
-            {availableIds.includes('caseload') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="caseload">
-                <CaseloadCard userId={userId} />
-              </div>
-            )}
-            {availableIds.includes('time_off') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="time_off">
-                <TimeOffCard userId={userId} />
-              </div>
-            )}
-            {availableIds.includes('timesheet') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="timesheet">
-                <TimesheetCard userId={userId} />
-              </div>
-            )}
-            {availableIds.includes('my_progress') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="my_progress">
-                <MyProgressCard userId={userId} />
-              </div>
-            )}
-            {availableIds.includes('tasks') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="tasks">
-                <TasksCard userId={userId} />
-              </div>
-            )}
-            {availableIds.includes('credentialing') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="credentialing">
-                <CredentialingCard employee={employee} />
-              </div>
-            )}
-            {availableIds.includes('quickbooks') && (
-              <div class="widget-carousel-slide" data-carousel-slide data-widget-id="quickbooks">
-                <FinancialSnapshotCard />
-              </div>
-            )}
+      <div
+        class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        data-carousel-track
+      >
+        {defaultOrder.map((id) => (
+          <div
+            class="home-widget-slot min-w-0"
+            data-carousel-slide
+            data-widget-id={id}
+          >
+            {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
+            {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
+            {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
+            {id === 'timesheet' ? <TimesheetCard userId={userId} /> : null}
+            {id === 'my_progress' ? <MyProgressCard userId={userId} /> : null}
+            {id === 'tasks' ? <TasksCard userId={userId} /> : null}
+            {id === 'credentialing' ? <CredentialingCard employee={employee} /> : null}
+            {id === 'quickbooks' ? <FinancialSnapshotCard /> : null}
           </div>
-        </div>
-
-        <button
-          type="button"
-          class:list={[arrowClass, 'invisible shrink-0']}
-          aria-label="Next widgets"
-          data-carousel-next
-          disabled
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M6 3l5 5-5 5"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
+        ))}
       </div>
 
-      <div
-        class="mt-3 flex items-center justify-center gap-1.5"
-        data-carousel-dots
-        role="tablist"
-        aria-label="Widget pages"
-      ></div>
-
-      <div class="mt-2 flex justify-center">
+      <div class="mt-3 flex justify-center">
         <a
           href="/settings"
           class="rounded-full border border-sage-dark/20 bg-transparent px-2.5 py-1 text-[11px] font-semibold text-sage-dark/75 transition hover:border-sage-dark/35 hover:bg-sage/10 hover:text-sage-dark"
@@ -230,12 +178,32 @@ const arrowClass =
     try {
       const raw = localStorage.getItem('portal:home-widgets:' + userId);
       if (!raw) return fallback;
-      const parsed = JSON.parse(raw) as Prefs;
+      const parsed = JSON.parse(raw) as Prefs & { v?: number };
       const allowed = new Set(available);
-      const enabled = (parsed.enabled || [])
+      let enabled = (parsed.enabled || [])
         .map(migrateWidgetId)
         .filter((id) => allowed.has(id))
         .slice(0, 10);
+
+      // v2+: wipe sparse/legacy prefs that left only QuickBooks (or one widget).
+      if (parsed.v !== 2 || enabled.length <= 1) {
+        enabled = fallback.enabled.filter((id) => allowed.has(id));
+        try {
+          localStorage.setItem(
+            'portal:home-widgets:' + userId,
+            JSON.stringify({
+              v: 2,
+              enabled,
+              ...(parsed.headerColors ? { headerColors: sanitizeHeaderColors(parsed.headerColors) } : {}),
+              ...(parsed.headerIcons ? { headerIcons: sanitizeHeaderIcons(parsed.headerIcons) } : {}),
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
+        return { enabled };
+      }
+
       let mutated = false;
       if (allowed.has('time_off') && !enabled.includes('time_off') && enabled.length < 10) {
         const scheduleIdx = enabled.indexOf('schedule');
@@ -275,9 +243,12 @@ const arrowClass =
         ...(Object.keys(headerColors).length ? { headerColors } : {}),
         ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
       };
-      if (mutated || (parsed.enabled || []).includes('coming_soon')) {
+      if (mutated || (parsed.enabled || []).includes('coming_soon') || parsed.v !== 2) {
         try {
-          localStorage.setItem('portal:home-widgets:' + userId, JSON.stringify(next));
+          localStorage.setItem(
+            'portal:home-widgets:' + userId,
+            JSON.stringify({ v: 2, ...next }),
+          );
         } catch {
           /* ignore */
         }
@@ -288,7 +259,7 @@ const arrowClass =
     }
   }
 
-  function setupCarousel(root: Element) {
+  function setupWidgets(root: Element) {
     if (!(root instanceof HTMLElement)) return;
     if (root.dataset.carouselReady === '1') return;
     root.dataset.carouselReady = '1';
@@ -307,10 +278,6 @@ const arrowClass =
 
     const prefs = readPrefs(userId, canFinancials, canCredentialing, canClinical, canTimesheet, available);
     applyWidgetHeaderPrefs(root, prefs);
-    window.addEventListener('portal:widget-prefs-changed', () => {
-      const fresh = readPrefs(userId, canFinancials, canCredentialing, canClinical, canTimesheet, available);
-      applyWidgetHeaderPrefs(root, fresh);
-    });
 
     const track = root.querySelector('[data-carousel-track]');
     if (!(track instanceof HTMLElement)) return;
@@ -326,101 +293,30 @@ const arrowClass =
     allSlides.forEach((slide) => {
       if (!enabledSlides.includes(slide)) slide.remove();
     });
-    enabledSlides.forEach((slide) => track.appendChild(slide));
+    enabledSlides.forEach((slide) => {
+      slide.hidden = false;
+      slide.style.removeProperty('display');
+      track.appendChild(slide);
+    });
 
     if (enabledSlides.length === 0) {
       root.hidden = true;
-      return;
     }
-
-    const prevBtn = root.querySelector('[data-carousel-prev]');
-    const nextBtn = root.querySelector('[data-carousel-next]');
-    const dots = root.querySelector('[data-carousel-dots]');
-    let page = 0;
-
-    const perPage = () => {
-      const width = root.clientWidth || window.innerWidth;
-      if (width < 640) return 1;
-      if (width < 1024) return 2;
-      return 4;
-    };
-
-    const pageCount = () => Math.max(1, Math.ceil(enabledSlides.length / perPage()));
-
-    const renderDots = () => {
-      if (!(dots instanceof HTMLElement)) return;
-      dots.innerHTML = '';
-      const pages = pageCount();
-      if (pages <= 1) {
-        dots.classList.add('invisible');
-        return;
-      }
-      dots.classList.remove('invisible');
-      for (let i = 0; i < pages; i += 1) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-label', `Show widget page ${i + 1}`);
-        btn.setAttribute('aria-selected', i === page ? 'true' : 'false');
-        btn.className =
-          i === page
-            ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
-            : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
-        btn.addEventListener('click', () => show(i));
-        dots.appendChild(btn);
-      }
-    };
-
-    const layout = () => {
-      const count = perPage();
-      const start = page * count;
-      const end = start + count;
-      root.style.setProperty('--widget-per-page', String(count));
-      enabledSlides.forEach((slide, i) => {
-        const onPage = i >= start && i < end;
-        slide.hidden = !onPage;
-        slide.dataset.active = onPage ? 'true' : 'false';
-        slide.setAttribute('aria-hidden', onPage ? 'false' : 'true');
-        slide.style.width = '';
-        slide.style.transform = '';
-        slide.style.opacity = '';
-      });
-    };
-
-    const show = (next: number) => {
-      page = Math.min(pageCount() - 1, Math.max(0, next));
-      layout();
-      renderDots();
-      const multi = pageCount() > 1;
-      if (prevBtn instanceof HTMLButtonElement) {
-        prevBtn.disabled = !multi || page === 0;
-        prevBtn.classList.toggle('invisible', !multi);
-      }
-      if (nextBtn instanceof HTMLButtonElement) {
-        nextBtn.disabled = !multi || page >= pageCount() - 1;
-        nextBtn.classList.toggle('invisible', !multi);
-      }
-    };
-
-    prevBtn?.addEventListener('click', () => show(page - 1));
-    nextBtn?.addEventListener('click', () => show(page + 1));
-    show(0);
-    window.addEventListener('resize', () => show(page));
   }
 
-  function initCarousels() {
+  function init() {
     document.querySelectorAll('[data-widget-carousel]').forEach((root) => {
       try {
-        setupCarousel(root);
+        setupWidgets(root);
       } catch (error) {
-        console.error('home widget carousel failed', error);
+        console.error('home widgets failed', error);
       }
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCarousels);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    initCarousels();
+    init();
   }
 </script>
