@@ -45,9 +45,7 @@ const preferredOrder: HomeWidgetId[] = [
   'credentialing',
   'quickbooks',
 ];
-/** Always SSR every allowed widget — no client filtering. */
 const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
-const widgetCount = defaultOrder.length;
 ---
 
 {
@@ -56,22 +54,23 @@ const widgetCount = defaultOrder.length;
       class="min-w-0"
       aria-label="Home widgets"
       data-home-widgets
-      data-widgets-build="2026-09-07c"
+      data-widgets-build="2026-09-07d"
       data-user-id={userId}
-      data-can-financials={canSeeFinancials ? '1' : '0'}
-      data-can-credentialing={canSeeCredentialing ? '1' : '0'}
-      data-can-clinical={canSeeClinical ? '1' : '0'}
-      data-can-timesheet={canSeeTimesheet ? '1' : '0'}
     >
-      <p
-        class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/55"
-        data-widgets-count
+      {/*
+        Inline grid styles on purpose: Tailwind utilities were not reliably
+        constraining width, which left a single full-bleed card.
+      */}
+      <div
+        data-home-widgets-grid
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)); gap: 0.75rem; align-items: stretch; width: 100%;"
       >
-        Home widgets · {widgetCount}
-      </p>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {defaultOrder.map((id) => (
-          <div class="home-widget-slot min-w-0" data-widget-id={id}>
+          <div
+            class="home-widget-slot"
+            data-widget-id={id}
+            style="min-width: 0; max-width: 100%; height: 26rem;"
+          >
             {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
             {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
             {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
@@ -97,33 +96,42 @@ const widgetCount = defaultOrder.length;
 }
 
 <style is:global>
-  /* Inline with the component so card bodies cannot miss the stylesheet. */
-  .home-widget-slot,
-  .widget-carousel-slide {
-    min-width: 0;
-    height: 28rem;
+  [data-home-widgets-grid] {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)) !important;
+    gap: 0.75rem !important;
+    align-items: stretch !important;
+    width: 100% !important;
   }
 
-  .home-widget-slot > [data-widget-card],
-  .widget-carousel-slide > [data-widget-card] {
+  .home-widget-slot {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 26rem !important;
+  }
+
+  .home-widget-slot > [data-widget-card] {
     display: flex !important;
     flex-direction: column !important;
-    height: 28rem !important;
-    max-height: 28rem !important;
-    min-height: 28rem !important;
-    overflow: hidden;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 26rem !important;
+    max-height: 26rem !important;
+    overflow: hidden !important;
     background-color: #fff;
+    box-sizing: border-box !important;
   }
 
-  .home-widget-slot > [data-widget-card] > [data-widget-header],
-  .widget-carousel-slide > [data-widget-card] > [data-widget-header] {
+  .home-widget-slot > [data-widget-card] > [data-widget-header] {
     flex: 0 0 auto !important;
   }
 
-  .home-widget-slot > [data-widget-card] > [data-widget-body],
-  .widget-carousel-slide > [data-widget-card] > [data-widget-body] {
+  .home-widget-slot > [data-widget-card] > [data-widget-body] {
+    display: block !important;
     flex: 1 1 auto !important;
-    min-height: 12rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
     color: #393a3d !important;
@@ -131,18 +139,20 @@ const widgetCount = defaultOrder.length;
     opacity: 1 !important;
     visibility: visible !important;
   }
+
+  .home-widget-slot > [data-widget-card] > [data-widget-body] * {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  html.dark .home-widget-slot > [data-widget-card] {
+    background-color: rgb(var(--portal-surface) / 1);
+  }
 </style>
 
 <script>
   import { applyWidgetHeaderPrefs } from '../lib/home-widget-header';
   import type { WidgetIconId } from '../lib/home-widget-icons';
-
-  type Prefs = {
-    v?: number;
-    enabled: string[];
-    headerColors?: Record<string, string>;
-    headerIcons?: Record<string, WidgetIconId>;
-  };
 
   function sanitizeHeaderColors(raw: unknown): Record<string, string> {
     if (!raw || typeof raw !== 'object') return {};
@@ -183,7 +193,6 @@ const widgetCount = defaultOrder.length;
     return icons;
   }
 
-  /** Header colors/icons only — never hide or remove widget cards. */
   function setupWidgets(root: Element) {
     if (!(root instanceof HTMLElement)) return;
     if (root.dataset.widgetsReady === '1') return;
@@ -191,7 +200,6 @@ const widgetCount = defaultOrder.length;
 
     const userId = root.dataset.userId ?? '';
     try {
-      // Drop broken legacy prefs that collapsed the home grid to one empty card.
       localStorage.removeItem('portal:home-widgets:' + userId);
     } catch {
       /* ignore */
@@ -202,7 +210,10 @@ const widgetCount = defaultOrder.length;
     try {
       const raw = localStorage.getItem('portal:home-widgets-headers:' + userId);
       if (raw) {
-        const parsed = JSON.parse(raw) as Prefs;
+        const parsed = JSON.parse(raw) as {
+          headerColors?: unknown;
+          headerIcons?: unknown;
+        };
         headerColors = sanitizeHeaderColors(parsed.headerColors);
         headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
       }
