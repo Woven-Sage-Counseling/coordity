@@ -15,6 +15,17 @@ export default defineConfig({
   integrations: [tailwind({ applyBaseStyles: false })],
   security: {
     checkOrigin: true,
+    // Trust X-Forwarded-Host from the Coordity tenant Worker proxy so CSRF
+    // origin checks compare against *.coordity.com instead of pages.dev.
+    allowedDomains: [
+      { hostname: 'coordity.com', protocol: 'https' },
+      { hostname: 'www.coordity.com', protocol: 'https' },
+      { hostname: '**.coordity.com', protocol: 'https' },
+      { hostname: 'portal.wovensage.com', protocol: 'https' },
+      { hostname: 'wovensage-portal-preview.pages.dev', protocol: 'https' },
+      { hostname: 'localhost' },
+      { hostname: '127.0.0.1' },
+    ],
   },
   vite: {
     resolve: {
