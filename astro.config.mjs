@@ -14,9 +14,11 @@ export default defineConfig({
   }),
   integrations: [tailwind({ applyBaseStyles: false })],
   security: {
-    checkOrigin: true,
-    // Trust X-Forwarded-Host from the Coordity tenant Worker proxy so CSRF
-    // origin checks compare against *.coordity.com instead of pages.dev.
+    // Cloudflare adapter does not rewrite request.url from X-Forwarded-Host
+    // (unlike Node). Tenant traffic is proxied to pages.dev by coordity-tenant-router,
+    // so Astro's Origin === url.origin check would reject real *.coordity.com form POSTs.
+    // SameSite=Lax cookies still protect session cookie theft on cross-site POSTs.
+    checkOrigin: false,
     allowedDomains: [
       { hostname: 'coordity.com', protocol: 'https' },
       { hostname: 'www.coordity.com', protocol: 'https' },
