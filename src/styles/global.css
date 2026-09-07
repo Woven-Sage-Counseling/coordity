@@ -350,48 +350,54 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   color: rgb(var(--portal-sage-dark) / 0.58) !important;
 }
 
-/* Home widget carousel — kept in global.css so tenant home always gets these
-   rules even if a page-level head-propagation glitch drops component CSS.
-   Defaults are a readable 4-up grid so widgets stay usable before/without JS. */
-.widget-carousel-viewport {
-  width: 100%;
-  padding-bottom: 2.75rem;
-}
-
+/* Home widgets — responsive grid (no transform carousel). */
 [data-widget-carousel] {
   --widget-max-height: 28rem;
   --widget-gap: 0.65rem;
   --widget-per-page: 4;
 }
 
+.widget-carousel-viewport {
+  width: 100%;
+  padding-bottom: 0.75rem;
+}
+
 .widget-carousel-track {
+  display: grid;
+  grid-template-columns: repeat(var(--widget-per-page), minmax(0, 1fr));
   gap: var(--widget-gap);
-  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
+  align-items: stretch;
 }
 
 .widget-carousel-slide {
   box-sizing: border-box;
-  flex: 0 0 auto;
+  min-width: 0;
   height: var(--widget-max-height);
-  min-height: var(--widget-max-height);
-  max-height: var(--widget-max-height);
-  width: calc((100% - (var(--widget-per-page) - 1) * var(--widget-gap)) / var(--widget-per-page));
-  transform: none;
-  opacity: 1;
-  transition:
-    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
-  transform-origin: top center;
 }
 
-.widget-carousel-slide > :where([data-widget-card]) {
+.widget-carousel-slide[hidden] {
+  display: none !important;
+}
+
+.widget-carousel-slide > [data-widget-card] {
   display: flex;
-  height: 100%;
-  max-height: 100%;
-  min-height: 100%;
+  height: var(--widget-max-height);
+  max-height: var(--widget-max-height);
+  min-height: var(--widget-max-height);
   flex-direction: column;
+  overflow: hidden;
   background-color: rgb(var(--portal-surface) / 1);
+}
+
+.widget-carousel-slide > [data-widget-card] > [data-widget-header] {
+  flex-shrink: 0;
+}
+
+.widget-carousel-slide > [data-widget-card] > :not([data-widget-header]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 @media (max-width: 1023px) {
@@ -404,59 +410,6 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   [data-widget-carousel] {
     --widget-per-page: 1;
   }
-
-  .widget-carousel-viewport {
-    -webkit-mask-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      #000 4%,
-      #000 96%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
-  }
-
-  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport,
-  [data-widget-carousel][data-scrollable='false'] .widget-carousel-viewport {
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-
-  /* Mobile peek carousel — only after JS marks the active slide */
-  [data-widget-carousel][data-per-page='1'][data-scrollable='true'] .widget-carousel-slide {
-    width: 70%;
-    transform: scale(0.92);
-    opacity: 0.72;
-  }
-
-  [data-widget-carousel][data-per-page='1'][data-scrollable='true']
-    .widget-carousel-slide[data-active='true'] {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-[data-widget-carousel][data-per-page]:not([data-per-page='1'])
-  .widget-carousel-slide:not([data-active='true']) {
-  transform: scale(0.96);
-  opacity: 0.7;
-}
-
-.widget-carousel-slide[data-solo='true'] {
-  width: 100%;
-  transform: none;
-  opacity: 1;
-}
-
-.widget-carousel-slide:not([data-active='true']):not([data-solo='true']) {
-  cursor: pointer;
-}
-
-.widget-carousel-slide:not([data-active='true']):not([data-solo='true']) a,
-.widget-carousel-slide:not([data-active='true']):not([data-solo='true']) button,
-.widget-carousel-slide:not([data-active='true']):not([data-solo='true']) input,
-.widget-carousel-slide:not([data-active='true']):not([data-solo='true']) select {
-  pointer-events: none;
 }
 
 .announcement-bar {
