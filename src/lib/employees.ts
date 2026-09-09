@@ -81,7 +81,17 @@ async function teamIdsByUser(userIds: string[]): Promise<Map<string, string[]>> 
   return map;
 }
 
-export async function listEmployees(orgId = DEFAULT_ORG_ID) {
+type EmployeeListRow = {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+  jobTitle: string | null;
+  phone: string | null;
+  roles: string | null;
+};
+
+async function listEmployeesLegacy(): Promise<EmployeeListRow[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -93,26 +103,47 @@ export async function listEmployees(orgId = DEFAULT_ORG_ID) {
         p.phone,
         GROUP_CONCAT(r.key) AS roles
      FROM user u
-     INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
      LEFT JOIN employee_profile p ON p.user_id = u.id
      LEFT JOIN user_role ur ON ur.user_id = u.id
      LEFT JOIN role r ON r.id = ur.role_id
      WHERE u.id != 'user_coordity_system'
      GROUP BY u.id
      ORDER BY u.name COLLATE NOCASE, u.email`,
-  )
-    .bind(orgId)
-    .all<{
-      id: string;
-      email: string;
-      name: string;
-      status: string;
-      jobTitle: string | null;
-      phone: string | null;
-      roles: string | null;
-    }>();
+  ).all<EmployeeListRow>();
+  return rows.results ?? [];
+}
 
-  const people = rows.results ?? [];
+export async function listEmployees(orgId = DEFAULT_ORG_ID) {
+  const { DB } = getEnv();
+  let people: EmployeeListRow[];
+  try {
+    const rows = await DB.prepare(
+      `SELECT
+          u.id,
+          u.email,
+          u.name,
+          COALESCE(p.status, 'pending') AS status,
+          p.job_title AS jobTitle,
+          p.phone,
+          GROUP_CONCAT(r.key) AS roles
+       FROM user u
+       INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
+       LEFT JOIN employee_profile p ON p.user_id = u.id
+       LEFT JOIN user_role ur ON ur.user_id = u.id
+       LEFT JOIN role r ON r.id = ur.role_id
+       WHERE u.id != 'user_coordity_system'
+       GROUP BY u.id
+       ORDER BY u.name COLLATE NOCASE, u.email`,
+    )
+      .bind(orgId)
+      .all<EmployeeListRow>();
+    people = rows.results ?? [];
+  } catch {
+    // Pre-migration: organization_member may be missing. Default org only.
+    if (orgId !== DEFAULT_ORG_ID) return [];
+    people = await listEmployeesLegacy();
+  }
+
   const teamIds = await teamIdsByUser(people.map((row) => row.id));
 
   return people.map((row) => ({
@@ -122,7 +153,16 @@ export async function listEmployees(orgId = DEFAULT_ORG_ID) {
   }));
 }
 
-export async function listDirectory(orgId = DEFAULT_ORG_ID): Promise<DirectoryPerson[]> {
+type DirectoryRow = {
+  id: string;
+  name: string;
+  email: string;
+  jobTitle: string | null;
+  phone: string | null;
+  hasAvatar: number;
+};
+
+async function listDirectoryLegacy(): Promise<DirectoryRow[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT
@@ -133,22 +173,39 @@ export async function listDirectory(orgId = DEFAULT_ORG_ID): Promise<DirectoryPe
         p.phone,
         CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
      FROM user u
-     INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
      JOIN employee_profile p ON p.user_id = u.id
      WHERE p.status = 'active' AND u.id != 'user_coordity_system'
      ORDER BY u.name COLLATE NOCASE, u.email`,
-  )
-    .bind(orgId)
-    .all<{
-      id: string;
-      name: string;
-      email: string;
-      jobTitle: string | null;
-      phone: string | null;
-      hasAvatar: number;
-    }>();
+  ).all<DirectoryRow>();
+  return rows.results ?? [];
+}
 
-  const people = rows.results ?? [];
+export async function listDirectory(orgId = DEFAULT_ORG_ID): Promise<DirectoryPerson[]> {
+  const { DB } = getEnv();
+  let people: DirectoryRow[];
+  try {
+    const rows = await DB.prepare(
+      `SELECT
+          u.id,
+          u.name,
+          u.email,
+          p.job_title AS jobTitle,
+          p.phone,
+          CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
+       FROM user u
+       INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
+       JOIN employee_profile p ON p.user_id = u.id
+       WHERE p.status = 'active' AND u.id != 'user_coordity_system'
+       ORDER BY u.name COLLATE NOCASE, u.email`,
+    )
+      .bind(orgId)
+      .all<DirectoryRow>();
+    people = rows.results ?? [];
+  } catch {
+    if (orgId !== DEFAULT_ORG_ID) return [];
+    people = await listDirectoryLegacy();
+  }
+
   const teams = await teamsByUser(people.map((row) => row.id));
 
   return people.map((row) => ({
@@ -162,48 +219,65 @@ export async function listDirectory(orgId = DEFAULT_ORG_ID): Promise<DirectoryPe
   }));
 }
 
+const CLINICIAN_FILTER = `
+  AND (
+    EXISTS (
+      SELECT 1
+      FROM user_role ur
+      JOIN role r ON r.id = ur.role_id
+      WHERE ur.user_id = u.id AND r.key = 'clinician'
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM user_team ut
+      WHERE ut.user_id = u.id AND ut.team_id = 'team_clinical'
+    )
+  )`;
+
 /** Active directory people who are clinicians by role or Clinical team membership. */
 export async function listDirectoryClinicians(orgId = DEFAULT_ORG_ID): Promise<DirectoryPerson[]> {
   const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT
-        u.id,
-        u.name,
-        u.email,
-        p.job_title AS jobTitle,
-        p.phone,
-        CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
-     FROM user u
-     INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
-     JOIN employee_profile p ON p.user_id = u.id
-     WHERE p.status = 'active'
-       AND u.id != 'user_coordity_system'
-       AND (
-         EXISTS (
-           SELECT 1
-           FROM user_role ur
-           JOIN role r ON r.id = ur.role_id
-           WHERE ur.user_id = u.id AND r.key = 'clinician'
-         )
-         OR EXISTS (
-           SELECT 1
-           FROM user_team ut
-           WHERE ut.user_id = u.id AND ut.team_id = 'team_clinical'
-         )
-       )
-     ORDER BY u.name COLLATE NOCASE, u.email`,
-  )
-    .bind(orgId)
-    .all<{
-      id: string;
-      name: string;
-      email: string;
-      jobTitle: string | null;
-      phone: string | null;
-      hasAvatar: number;
-    }>();
+  let people: DirectoryRow[];
+  try {
+    const rows = await DB.prepare(
+      `SELECT
+          u.id,
+          u.name,
+          u.email,
+          p.job_title AS jobTitle,
+          p.phone,
+          CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
+       FROM user u
+       INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
+       JOIN employee_profile p ON p.user_id = u.id
+       WHERE p.status = 'active'
+         AND u.id != 'user_coordity_system'
+         ${CLINICIAN_FILTER}
+       ORDER BY u.name COLLATE NOCASE, u.email`,
+    )
+      .bind(orgId)
+      .all<DirectoryRow>();
+    people = rows.results ?? [];
+  } catch {
+    if (orgId !== DEFAULT_ORG_ID) return [];
+    const rows = await DB.prepare(
+      `SELECT
+          u.id,
+          u.name,
+          u.email,
+          p.job_title AS jobTitle,
+          p.phone,
+          CASE WHEN p.avatar_data IS NOT NULL AND p.avatar_data != '' THEN 1 ELSE 0 END AS hasAvatar
+       FROM user u
+       JOIN employee_profile p ON p.user_id = u.id
+       WHERE p.status = 'active'
+         AND u.id != 'user_coordity_system'
+         ${CLINICIAN_FILTER}
+       ORDER BY u.name COLLATE NOCASE, u.email`,
+    ).all<DirectoryRow>();
+    people = rows.results ?? [];
+  }
 
-  const people = rows.results ?? [];
   const teams = await teamsByUser(people.map((row) => row.id));
 
   return people.map((row) => ({

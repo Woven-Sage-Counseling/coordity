@@ -36,17 +36,35 @@ if (!canAccessManagement(employee)) {
 }
 
 const orgId = orgIdFromLocals(Astro.locals.organization);
-const announcements = await listActiveAnnouncements(50);
-const timeOffRequests = await listTimeOffRequestsForAdmin();
-const timesheetBacklogRequests = await listTimesheetBacklogForAdmin();
-const timesheetShiftEditRequests = await listTimesheetShiftEditsForAdmin();
-const pendingBoardRequests = await listBulletinBoardRequests({ status: 'pending' });
-const roles = await listRolesWithPermissions();
-const credentialingProviders = await listProvidersForLookup();
-const insuranceCatalog = await listInsuranceCatalog();
-const coverageMap = await listCoverageMatrix();
-const groupCoverageMap = await listGroupCoverageMatrix();
-const employees = await listEmployees(orgId);
+
+async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    console.error(`admin ${label} load failed`, error);
+    return fallback;
+  }
+}
+
+const announcements = await safeLoad('announcements', () => listActiveAnnouncements(50), []);
+const timeOffRequests = await safeLoad('time-off', () => listTimeOffRequestsForAdmin(), []);
+const timesheetBacklogRequests = await safeLoad('timesheet-backlog', () => listTimesheetBacklogForAdmin(), []);
+const timesheetShiftEditRequests = await safeLoad(
+  'timesheet-shift-edits',
+  () => listTimesheetShiftEditsForAdmin(),
+  [],
+);
+const pendingBoardRequests = await safeLoad(
+  'bulletin-requests',
+  () => listBulletinBoardRequests({ status: 'pending' }),
+  [],
+);
+const roles = await safeLoad('roles', () => listRolesWithPermissions(), []);
+const credentialingProviders = await safeLoad('credentialing-providers', () => listProvidersForLookup(), []);
+const insuranceCatalog = await safeLoad('insurance-catalog', () => listInsuranceCatalog(), []);
+const coverageMap = await safeLoad('coverage-matrix', () => listCoverageMatrix(), {});
+const groupCoverageMap = await safeLoad('group-coverage-matrix', () => listGroupCoverageMatrix(), {});
+const employees = await safeLoad('employees', () => listEmployees(orgId), []);
 let assignedTasks: Awaited<ReturnType<typeof listAssignedTasksForAdmin>> = [];
 let tasksLoadError: string | null = Astro.url.searchParams.get('tasksError');
 try {

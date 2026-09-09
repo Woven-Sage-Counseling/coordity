@@ -14,11 +14,15 @@ interface Props {
 const { error = null } = Astro.props;
 const year = new Date().getFullYear();
 
-/** Huge C watermark — center sits off the right edge; only the left curve shows. */
+/**
+ * Vertical curved rainbow from the right edge.
+ * Arc centers sit at/ past the right of the viewBox so only the left bulge shows —
+ * tall near-vertical bands, not a collapsed C tip.
+ */
 const heroArcs = [
-  { d: 'M520 40 A230 230 0 0 0 520 500', width: 52, color: '#005284', opacity: 0.13 },
-  { d: 'M490 95 A175 175 0 0 0 490 445', width: 48, color: '#FECB00', opacity: 0.26 },
-  { d: 'M460 150 A120 120 0 0 0 460 390', width: 44, color: '#005284', opacity: 0.15 },
+  { d: 'M520 40 A460 460 0 0 0 520 960', width: 78, color: '#005284', opacity: 0.14 },
+  { d: 'M520 110 A390 390 0 0 0 520 890', width: 74, color: '#FECB00', opacity: 0.28 },
+  { d: 'M520 180 A320 320 0 0 0 520 820', width: 70, color: '#005284', opacity: 0.16 },
 ] as const;
 ---
 
@@ -90,7 +94,7 @@ const heroArcs = [
     <main>
       <section class="relative overflow-hidden">
         <div class="coordity-hero-arcs" aria-hidden="true">
-          <svg viewBox="0 0 640 540" class="coordity-hero-arcs__svg" preserveAspectRatio="xMaxYMid meet" focusable="false">
+          <svg viewBox="0 0 520 1000" class="coordity-hero-arcs__svg" preserveAspectRatio="xMaxYMid slice" focusable="false">
             {
               heroArcs.map((arc) => (
                 <path
@@ -336,12 +340,11 @@ const heroArcs = [
   .coordity-hero-arcs {
     pointer-events: none;
     position: absolute;
-    top: 50%;
+    top: -20%;
     right: 0;
+    bottom: -20%;
     z-index: 0;
-    width: min(120vw, 58rem);
-    height: min(120vw, 58rem);
-    transform: translate(52%, -48%);
+    width: min(62vw, 22rem);
   }
 
   .coordity-hero-arcs__svg {
@@ -350,11 +353,19 @@ const heroArcs = [
     height: 100%;
   }
 
+  @media (min-width: 768px) {
+    .coordity-hero-arcs {
+      width: min(52vw, 30rem);
+      top: -28%;
+      bottom: -28%;
+    }
+  }
+
   @media (min-width: 1024px) {
     .coordity-hero-arcs {
-      width: 70rem;
-      height: 70rem;
-      transform: translate(48%, -46%);
+      width: min(46vw, 34rem);
+      top: -32%;
+      bottom: -32%;
     }
   }
 

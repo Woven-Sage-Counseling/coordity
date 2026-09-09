@@ -22,10 +22,15 @@ const {
 const employee = Astro.locals.employee!;
 const orgId = orgIdFromLocals(Astro.locals.organization);
 const canManage = hasPermission(employee, 'employees:manage');
-const people = await listEmployees(orgId);
-const roles = await listRoles();
+let people: Awaited<ReturnType<typeof listEmployees>> = [];
+try {
+  people = await listEmployees(orgId);
+} catch (error) {
+  console.error('people manager load failed', error);
+}
+const roles = await listRoles().catch(() => []);
 const inviteRoles = assignableRoles(roles);
-const invites = canManage ? await listPendingInvites() : [];
+const invites = canManage ? await listPendingInvites().catch(() => []) : [];
 
 function roleLabel(keys: string[]): string {
   const names = keys.map((key) => roles.find((role) => role.key === key)?.name ?? key);
