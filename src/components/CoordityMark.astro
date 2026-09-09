@@ -19,17 +19,26 @@ const blue = '#005284';
 const yellow = '#FECB00';
 
 /**
- * Three concentric sideways-U strokes: semicircle on the left + long arms to the right.
- * Even stroke width / radius step; outer arms longest. viewBox 0 0 48 48; center 24,24.
+ * Smooth sideways-U: horizontal arms + two quarter-circles (no line/arc kink).
+ * Even stroke / radius step; outer arms longest. viewBox 0 0 48 48; center 24,24.
  */
 const stroke = 3.2;
 const arcs = [
-  // outer
-  { d: 'M38.6 8.4 H24 A15.6 15.6 0 0 0 24 39.6 H38.6', width: stroke },
-  // middle
-  { d: 'M35.2 12.4 H24 A11.6 11.6 0 0 0 24 35.6 H35.2', width: stroke },
-  // inner
-  { d: 'M31.8 16.4 H24 A7.6 7.6 0 0 0 24 31.6 H31.8', width: stroke },
+  // outer r=15.6 arm→38.6
+  {
+    d: 'M38.6 8.4 L24 8.4 A15.6 15.6 0 0 0 8.4 24 A15.6 15.6 0 0 0 24 39.6 L38.6 39.6',
+    width: stroke,
+  },
+  // middle r=11.6 arm→35.2
+  {
+    d: 'M35.2 12.4 L24 12.4 A11.6 11.6 0 0 0 12.4 24 A11.6 11.6 0 0 0 24 35.6 L35.2 35.6',
+    width: stroke,
+  },
+  // inner r=7.6 arm→31.8
+  {
+    d: 'M31.8 16.4 L24 16.4 A7.6 7.6 0 0 0 16.4 24 A7.6 7.6 0 0 0 24 31.6 L31.8 31.6',
+    width: stroke,
+  },
 ] as const;
 ---
 
