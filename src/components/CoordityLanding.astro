@@ -100,19 +100,28 @@ const heroArcs = [
           </nav>
         </div>
 
-        <button
-          type="button"
-          class="coordity-fade-in inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#005284] transition hover:bg-[#005284]/8 md:hidden"
-          style="animation-delay: 60ms"
-          data-coordity-menu-open
-          aria-expanded="false"
-          aria-controls="coordity-menu"
-          aria-label="Open menu"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
-          </svg>
-        </button>
+        <div class="flex shrink-0 items-center gap-2">
+          <a
+            href="#workspace"
+            class="coordity-cta coordity-header-cta coordity-fade-in inline-flex"
+            style="animation-delay: 60ms"
+          >
+            Log into your workspace
+          </a>
+          <button
+            type="button"
+            class="coordity-fade-in inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#005284] transition hover:bg-[#005284]/8 md:hidden"
+            style="animation-delay: 60ms"
+            data-coordity-menu-open
+            aria-expanded="false"
+            aria-controls="coordity-menu"
+            aria-label="Open menu"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -544,6 +553,18 @@ const heroArcs = [
 
   .coordity-cta:hover {
     background: #ffe066;
+  }
+
+  .coordity-header-cta {
+    padding: 0.55rem 0.95rem;
+    font-size: 0.8rem;
+  }
+
+  @media (min-width: 640px) {
+    .coordity-header-cta {
+      padding: 0.7rem 1.2rem;
+      font-size: 0.9rem;
+    }
   }
 
   .coordity-menu[hidden] {
