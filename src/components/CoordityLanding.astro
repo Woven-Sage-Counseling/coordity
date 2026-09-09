@@ -9,14 +9,14 @@ import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 const year = new Date().getFullYear();
 
 /**
- * Concentric C-arcs with even stroke width and even centerline spacing
- * (logo mark keeps its staggered terminals; hero wants uniform gaps).
+ * Concentric sideways-U arcs with even stroke width and centerline spacing
+ * (matches CoordityMark geometry).
  */
 const heroStroke = 3.4;
 const heroArcs = [
-  { d: 'M33.45 12.55 A16.2 16.2 0 1 0 33.45 35.45', width: heroStroke, color: '#005284', opacity: 0.12 },
-  { d: 'M30.48 15.52 A12.0 12.0 0 1 0 30.48 32.48', width: heroStroke, color: '#FECB00', opacity: 0.22 },
-  { d: 'M27.51 18.49 A7.8 7.8 0 1 0 27.51 29.51', width: heroStroke, color: '#005284', opacity: 0.14 },
+  { d: 'M23.13 7.84 A16.2 16.2 0 1 0 23.13 40.16', width: heroStroke, color: '#005284', opacity: 0.12 },
+  { d: 'M22.84 12.03 A12.0 12.0 0 1 0 22.84 35.97', width: heroStroke, color: '#FECB00', opacity: 0.22 },
+  { d: 'M22.54 16.22 A7.8 7.8 0 1 0 22.54 31.78', width: heroStroke, color: '#005284', opacity: 0.14 },
 ] as const;
 ---
 

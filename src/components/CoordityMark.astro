@@ -19,17 +19,18 @@ const blue = '#005284';
 const yellow = '#FECB00';
 
 /**
- * Three concentric C-arcs (open right) with even stroke width and radius steps.
+ * Three concentric sideways-U arcs (open right) with even stroke + radius steps.
+ * Terminals sit near the top/bottom so the shape reads as ⊃, not a closed C.
  * viewBox 0 0 48 48; center 22,24.
  */
 const stroke = 3.4;
 const arcs = [
   // outer
-  { d: 'M33.45 12.55 A16.2 16.2 0 1 0 33.45 35.45', width: stroke },
+  { d: 'M23.13 7.84 A16.2 16.2 0 1 0 23.13 40.16', width: stroke },
   // middle
-  { d: 'M30.48 15.52 A12.0 12.0 0 1 0 30.48 32.48', width: stroke },
+  { d: 'M22.84 12.03 A12.0 12.0 0 1 0 22.84 35.97', width: stroke },
   // inner
-  { d: 'M27.51 18.49 A7.8 7.8 0 1 0 27.51 29.51', width: stroke },
+  { d: 'M22.54 16.22 A7.8 7.8 0 1 0 22.54 31.78', width: stroke },
 ] as const;
 ---
 
