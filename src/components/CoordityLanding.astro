@@ -48,13 +48,61 @@ const heroArcs = [
   </head>
   <body class="coordity-landing antialiased">
     <header class="relative z-30">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
-        <a href="/" class="coordity-fade-in">
-          <CoordityMark variant="dark" class="text-[1.65rem]" />
-        </a>
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
+        <div class="flex min-w-0 items-center gap-6 lg:gap-8">
+          <a href="/" class="coordity-fade-in shrink-0">
+            <CoordityMark variant="dark" class="text-[1.65rem]" />
+          </a>
+
+          <nav class="coordity-topnav coordity-fade-in" aria-label="Primary" style="animation-delay: 40ms">
+            <div class="coordity-topnav__item" data-coordity-dd>
+              <button
+                type="button"
+                class="coordity-topnav__trigger"
+                data-coordity-dd-trigger
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                Who we&rsquo;re for
+                <svg class="coordity-topnav__caret" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div class="coordity-topnav__panel" data-coordity-dd-panel hidden>
+                <a href="#who-group-practices">Group practices</a>
+                <a href="#who-solo">Solo clinicians</a>
+                <a href="#who-multi">Multi-location orgs</a>
+              </div>
+            </div>
+
+            <a class="coordity-topnav__link" href="#pricing">Pricing</a>
+            <a class="coordity-topnav__link" href="#features">Features</a>
+
+            <div class="coordity-topnav__item" data-coordity-dd>
+              <button
+                type="button"
+                class="coordity-topnav__trigger"
+                data-coordity-dd-trigger
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                More
+                <svg class="coordity-topnav__caret" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div class="coordity-topnav__panel" data-coordity-dd-panel hidden>
+                <a href="/sign-up">Create a workspace</a>
+                <a href="#workspace">Log in to your workspace</a>
+                <a href="#about">About Coordity</a>
+              </div>
+            </div>
+          </nav>
+        </div>
+
         <button
           type="button"
-          class="coordity-fade-in inline-flex h-10 w-10 items-center justify-center rounded-full text-[#005284] transition hover:bg-[#005284]/8"
+          class="coordity-fade-in inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#005284] transition hover:bg-[#005284]/8 md:hidden"
           style="animation-delay: 60ms"
           data-coordity-menu-open
           aria-expanded="false"
@@ -70,7 +118,7 @@ const heroArcs = [
 
     <div id="coordity-menu" class="coordity-menu" hidden data-coordity-menu>
       <div class="coordity-menu__backdrop" data-coordity-menu-close aria-hidden="true"></div>
-      <nav class="coordity-menu__panel" aria-label="Primary">
+      <nav class="coordity-menu__panel" aria-label="Mobile">
         <div class="flex items-center justify-between px-5 py-5">
           <CoordityMark variant="dark" class="text-[1.35rem]" />
           <button
@@ -85,8 +133,16 @@ const heroArcs = [
           </button>
         </div>
         <div class="flex flex-col gap-1 px-3 pb-8">
-          <a href="#workspace" class="coordity-menu__link" data-coordity-menu-close>Log in to your workspace</a>
+          <p class="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-[#005284]/45">Who we&rsquo;re for</p>
+          <a href="#who-group-practices" class="coordity-menu__link" data-coordity-menu-close>Group practices</a>
+          <a href="#who-solo" class="coordity-menu__link" data-coordity-menu-close>Solo clinicians</a>
+          <a href="#who-multi" class="coordity-menu__link" data-coordity-menu-close>Multi-location orgs</a>
+          <a href="#pricing" class="coordity-menu__link" data-coordity-menu-close>Pricing</a>
+          <a href="#features" class="coordity-menu__link" data-coordity-menu-close>Features</a>
+          <p class="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-[#005284]/45">More</p>
           <a href="/sign-up" class="coordity-menu__link">Create a workspace</a>
+          <a href="#workspace" class="coordity-menu__link" data-coordity-menu-close>Log in to your workspace</a>
+          <a href="#about" class="coordity-menu__link" data-coordity-menu-close>About Coordity</a>
         </div>
       </nav>
     </div>
@@ -183,8 +239,42 @@ const heroArcs = [
             setMenu(false);
           });
         });
+
+        function closeDropdowns(except) {
+          document.querySelectorAll('[data-coordity-dd]').forEach(function (item) {
+            if (except && item === except) return;
+            var trigger = item.querySelector('[data-coordity-dd-trigger]');
+            var panel = item.querySelector('[data-coordity-dd-panel]');
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            if (panel) panel.hidden = true;
+            item.classList.remove('is-open');
+          });
+        }
+
+        document.querySelectorAll('[data-coordity-dd]').forEach(function (item) {
+          var trigger = item.querySelector('[data-coordity-dd-trigger]');
+          var panel = item.querySelector('[data-coordity-dd-panel]');
+          if (!trigger || !panel) return;
+          trigger.addEventListener('click', function (event) {
+            event.stopPropagation();
+            var open = trigger.getAttribute('aria-expanded') === 'true';
+            closeDropdowns();
+            if (!open) {
+              trigger.setAttribute('aria-expanded', 'true');
+              panel.hidden = false;
+              item.classList.add('is-open');
+            }
+          });
+        });
+
+        document.addEventListener('click', function () {
+          closeDropdowns();
+        });
         document.addEventListener('keydown', function (event) {
-          if (event.key === 'Escape') setMenu(false);
+          if (event.key === 'Escape') {
+            setMenu(false);
+            closeDropdowns();
+          }
         });
 
         var form = document.getElementById('workspace-finder');
@@ -362,6 +452,80 @@ const heroArcs = [
       width: 150vw;
       transform: translate(58%, -50%);
     }
+  }
+
+  .coordity-topnav {
+    display: none;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  @media (min-width: 768px) {
+    .coordity-topnav {
+      display: flex;
+    }
+  }
+
+  .coordity-topnav__link,
+  .coordity-topnav__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    border-radius: 9999px;
+    background: transparent;
+    padding: 0.45rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 550;
+    color: #005284;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+
+  .coordity-topnav__link:hover,
+  .coordity-topnav__trigger:hover,
+  .coordity-topnav__item.is-open .coordity-topnav__trigger {
+    background: rgb(0 82 132 / 0.06);
+  }
+
+  .coordity-topnav__caret {
+    transition: transform 160ms ease;
+  }
+
+  .coordity-topnav__item.is-open .coordity-topnav__caret {
+    transform: rotate(180deg);
+  }
+
+  .coordity-topnav__item {
+    position: relative;
+  }
+
+  .coordity-topnav__panel {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 40;
+    min-width: 13.5rem;
+    border: 1px solid rgb(0 82 132 / 0.1);
+    border-radius: 0.85rem;
+    background: #fff;
+    padding: 0.35rem;
+    box-shadow: 0 14px 36px rgb(0 82 132 / 0.1);
+  }
+
+  .coordity-topnav__panel a {
+    display: block;
+    border-radius: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #005284;
+    white-space: nowrap;
+  }
+
+  .coordity-topnav__panel a:hover {
+    background: rgb(0 82 132 / 0.06);
   }
 
   .coordity-cta {
