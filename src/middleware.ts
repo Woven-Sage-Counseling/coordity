@@ -17,6 +17,7 @@ const PUBLIC_PATHS = new Set([
   '/accept-invite',
   '/bootstrap',
   '/robots.txt',
+  '/favicon.ico',
   '/favicon.png',
   '/favicon-16.png',
   '/favicon-coordity.svg',
@@ -99,7 +100,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
       pathname === '/api/orgs/resolve' ||
       pathname === '/api/orgs/create' ||
       pathname === '/api/session/sign-out' ||
-      pathname.startsWith('/api/auth')
+      pathname.startsWith('/api/auth') ||
+      pathname === '/favicon.ico' ||
+      pathname.startsWith('/favicon') ||
+      pathname === '/apple-touch-icon.png' ||
+      pathname === '/robots.txt'
     ) {
       return next();
     }
