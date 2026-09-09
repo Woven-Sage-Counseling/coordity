@@ -9,14 +9,13 @@ import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 const year = new Date().getFullYear();
 
 /**
- * Concentric sideways-U arcs with even stroke width and centerline spacing
- * (matches CoordityMark geometry).
+ * Giant sideways-U watermark — matches CoordityMark (long arms, open right).
  */
-const heroStroke = 3.4;
+const heroStroke = 3.2;
 const heroArcs = [
-  { d: 'M23.13 7.84 A16.2 16.2 0 1 0 23.13 40.16', width: heroStroke, color: '#005284', opacity: 0.12 },
-  { d: 'M22.84 12.03 A12.0 12.0 0 1 0 22.84 35.97', width: heroStroke, color: '#FECB00', opacity: 0.22 },
-  { d: 'M22.54 16.22 A7.8 7.8 0 1 0 22.54 31.78', width: heroStroke, color: '#005284', opacity: 0.14 },
+  { d: 'M38.6 8.4 H24 A15.6 15.6 0 0 0 24 39.6 H38.6', width: heroStroke, color: '#005284', opacity: 0.12 },
+  { d: 'M35.2 12.4 H24 A11.6 11.6 0 0 0 24 35.6 H35.2', width: heroStroke, color: '#FECB00', opacity: 0.22 },
+  { d: 'M31.8 16.4 H24 A7.6 7.6 0 0 0 24 31.6 H31.8', width: heroStroke, color: '#005284', opacity: 0.14 },
 ] as const;
 ---
 

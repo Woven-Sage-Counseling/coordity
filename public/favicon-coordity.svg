@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" rx="7" fill="#005284"/>
-  <!-- Sideways-U arcs (open right), even stroke + radius; center ~14.67,16 -->
-  <path d="M15.42 5.23 A10.8 10.8 0 1 0 15.42 26.77" fill="none" stroke="#fff" stroke-width="2.27" stroke-linecap="round"/>
-  <path d="M15.23 8.02 A8.0 8.0 0 1 0 15.23 23.98" fill="none" stroke="#FECB00" stroke-width="2.27" stroke-linecap="round"/>
-  <path d="M15.03 10.81 A5.2 5.2 0 1 0 15.03 21.19" fill="none" stroke="#fff" stroke-width="2.27" stroke-linecap="round"/>
+  <!-- Sideways U with long arms; scale of 48→32 mark geometry -->
+  <path d="M25.73 5.6 H16 A10.4 10.4 0 0 0 16 26.4 H25.73" fill="none" stroke="#fff" stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M23.47 8.27 H16 A7.73 7.73 0 0 0 16 23.73 H23.47" fill="none" stroke="#FECB00" stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21.2 10.93 H16 A5.07 5.07 0 0 0 16 21.07 H21.2" fill="none" stroke="#fff" stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

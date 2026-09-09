@@ -1,6 +1,6 @@
 ---
 /**
- * Coordity arc mark — stylized C from the app icon.
+ * Coordity arc mark — sideways U from the app icon (long arms, open right).
  * Website colors: outer + inner = primary blue, middle = primary yellow.
  */
 interface Props {
@@ -19,18 +19,17 @@ const blue = '#005284';
 const yellow = '#FECB00';
 
 /**
- * Three concentric sideways-U arcs (open right) with even stroke + radius steps.
- * Terminals sit near the top/bottom so the shape reads as ⊃, not a closed C.
- * viewBox 0 0 48 48; center 22,24.
+ * Three concentric sideways-U strokes: semicircle on the left + long arms to the right.
+ * Even stroke width / radius step; outer arms longest. viewBox 0 0 48 48; center 24,24.
  */
-const stroke = 3.4;
+const stroke = 3.2;
 const arcs = [
   // outer
-  { d: 'M23.13 7.84 A16.2 16.2 0 1 0 23.13 40.16', width: stroke },
+  { d: 'M38.6 8.4 H24 A15.6 15.6 0 0 0 24 39.6 H38.6', width: stroke },
   // middle
-  { d: 'M22.84 12.03 A12.0 12.0 0 1 0 22.84 35.97', width: stroke },
+  { d: 'M35.2 12.4 H24 A11.6 11.6 0 0 0 24 35.6 H35.2', width: stroke },
   // inner
-  { d: 'M22.54 16.22 A7.8 7.8 0 1 0 22.54 31.78', width: stroke },
+  { d: 'M31.8 16.4 H24 A7.6 7.6 0 0 0 24 31.6 H31.8', width: stroke },
 ] as const;
 ---
 
@@ -54,6 +53,7 @@ const arcs = [
             stroke="#FFFFFF"
             stroke-width={arc.width}
             stroke-linecap="round"
+            stroke-linejoin="round"
           />
         ))}
       </svg>
@@ -65,13 +65,15 @@ const arcs = [
           stroke={isLight ? 'rgba(255,255,255,0.92)' : blue}
           stroke-width={arcs[0].width}
           stroke-linecap="round"
+          stroke-linejoin="round"
         />
         <path
           d={arcs[1].d}
           fill="none"
-          stroke={isLight ? yellow : yellow}
+          stroke={yellow}
           stroke-width={arcs[1].width}
           stroke-linecap="round"
+          stroke-linejoin="round"
         />
         <path
           d={arcs[2].d}
@@ -79,6 +81,7 @@ const arcs = [
           stroke={isLight ? 'rgba(255,255,255,0.92)' : blue}
           stroke-width={arcs[2].width}
           stroke-linecap="round"
+          stroke-linejoin="round"
         />
       </svg>
     )
