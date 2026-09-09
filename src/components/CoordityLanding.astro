@@ -14,11 +14,11 @@ interface Props {
 const { error = null } = Astro.props;
 const year = new Date().getFullYear();
 
-/** Same C-geometry as CoordityMark, scaled for the hero watermark. */
+/** Huge C watermark — center sits off the right edge; only the left curve shows. */
 const heroArcs = [
-  { d: 'M420 95 A195 195 0 1 0 420 445', width: 42, color: '#005284', opacity: 0.14 },
-  { d: 'M390 135 A147 147 0 1 0 390 405', width: 40, color: '#FECB00', opacity: 0.28 },
-  { d: 'M360 175 A99 99 0 1 0 360 365', width: 38, color: '#005284', opacity: 0.16 },
+  { d: 'M520 40 A230 230 0 0 0 520 500', width: 52, color: '#005284', opacity: 0.13 },
+  { d: 'M490 95 A175 175 0 0 0 490 445', width: 48, color: '#FECB00', opacity: 0.26 },
+  { d: 'M460 150 A120 120 0 0 0 460 390', width: 44, color: '#005284', opacity: 0.15 },
 ] as const;
 ---
 
@@ -90,7 +90,7 @@ const heroArcs = [
     <main>
       <section class="relative overflow-hidden">
         <div class="coordity-hero-arcs" aria-hidden="true">
-          <svg viewBox="0 0 640 540" class="coordity-hero-arcs__svg" focusable="false">
+          <svg viewBox="0 0 640 540" class="coordity-hero-arcs__svg" preserveAspectRatio="xMaxYMid meet" focusable="false">
             {
               heroArcs.map((arc) => (
                 <path
@@ -336,24 +336,25 @@ const heroArcs = [
   .coordity-hero-arcs {
     pointer-events: none;
     position: absolute;
-    top: -4%;
-    right: -22%;
-    width: min(100vw, 36rem);
-    height: min(90vw, 32rem);
+    top: 50%;
+    right: 0;
     z-index: 0;
+    width: min(120vw, 58rem);
+    height: min(120vw, 58rem);
+    transform: translate(52%, -48%);
   }
 
   .coordity-hero-arcs__svg {
+    display: block;
     width: 100%;
     height: 100%;
   }
 
   @media (min-width: 1024px) {
     .coordity-hero-arcs {
-      top: -6%;
-      right: -6%;
-      width: 44rem;
-      height: 38rem;
+      width: 70rem;
+      height: 70rem;
+      transform: translate(48%, -46%);
     }
   }
 
