@@ -12,8 +12,6 @@ export const prerender = false;
 if (!Astro.locals.isCoordityApex) {
   return Astro.redirect('/');
 }
-
-const error = Astro.url.searchParams.get('error');
 ---
 
-<CoordityLanding error={error} />
+<CoordityLanding />

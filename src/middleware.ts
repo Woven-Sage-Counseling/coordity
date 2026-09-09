@@ -95,6 +95,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (
       pathname === '/apex-landing' ||
       pathname === '/sign-up' ||
+      pathname === '/continue' ||
       pathname === '/api/orgs/resolve' ||
       pathname === '/api/orgs/create' ||
       pathname === '/api/session/sign-out' ||
@@ -103,7 +104,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return next();
     }
     if (pathname === '/sign-in') {
-      return context.redirect('/#workspace');
+      return context.redirect('/continue');
     }
     if (pathname.startsWith('/api/')) {
       return new Response(JSON.stringify({ error: 'Open your organization workspace to continue.' }), {

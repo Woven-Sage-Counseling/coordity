@@ -2,16 +2,10 @@
 import '../styles/global.css';
 /**
  * Apex product landing for coordity.com — light marketing shell.
- * Workspace finder sits under the hero (replacing the old icon row).
  */
 import CoordityMark from './CoordityMark.astro';
 import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 
-interface Props {
-  error?: string | null;
-}
-
-const { error = null } = Astro.props;
 const year = new Date().getFullYear();
 
 /**
@@ -93,7 +87,7 @@ const heroArcs = [
               </button>
               <div class="coordity-topnav__panel" data-coordity-dd-panel hidden>
                 <a href="/sign-up">Create a workspace</a>
-                <a href="#workspace">Log in to your workspace</a>
+                <a href="/continue">Log in to your workspace</a>
                 <a href="#about">About Coordity</a>
               </div>
             </div>
@@ -102,11 +96,11 @@ const heroArcs = [
 
         <div class="flex shrink-0 items-center gap-2">
           <a
-            href="#workspace"
+            href="/continue"
             class="coordity-cta coordity-header-cta coordity-fade-in inline-flex"
             style="animation-delay: 60ms"
           >
-            Log into your workspace
+            Continue to your workspace
           </a>
           <button
             type="button"
@@ -150,7 +144,7 @@ const heroArcs = [
           <a href="#features" class="coordity-menu__link" data-coordity-menu-close>Features</a>
           <p class="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-[#005284]/45">More</p>
           <a href="/sign-up" class="coordity-menu__link">Create a workspace</a>
-          <a href="#workspace" class="coordity-menu__link" data-coordity-menu-close>Log in to your workspace</a>
+          <a href="/continue" class="coordity-menu__link" data-coordity-menu-close>Log in to your workspace</a>
           <a href="#about" class="coordity-menu__link" data-coordity-menu-close>About Coordity</a>
         </div>
       </nav>
@@ -176,47 +170,13 @@ const heroArcs = [
         </div>
 
         <div class="relative z-10 mx-auto max-w-6xl px-5 pb-16 pt-10 sm:px-8 sm:pb-20 sm:pt-14 lg:pt-16">
-          <div id="workspace" class="coordity-rise max-w-xl scroll-mt-24">
+          <div class="coordity-rise max-w-xl">
             <h1 class="font-[Fraunces] text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[#005284] sm:text-5xl lg:text-[3.55rem]">
               Connected systems.<br />Brighter care.
             </h1>
             <p class="mt-5 max-w-md text-base leading-relaxed text-[#005284]/80 sm:text-lg">
               Coordity builds the infrastructure that helps behavioral health practices thrive.
             </p>
-
-            {
-              error && (
-                <p class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                  {error}
-                </p>
-              )
-            }
-
-            <form id="workspace-finder" class="mt-8 max-w-md space-y-3" autocomplete="off">
-              <label class="block text-sm font-medium text-[#005284]">
-                Company name
-                <input
-                  class="field-coordity mt-1.5"
-                  type="search"
-                  name="q"
-                  id="workspace-query"
-                  placeholder="e.g. Woven Sage"
-                  required
-                  minlength="2"
-                />
-              </label>
-              <button class="coordity-cta inline-flex" type="submit">
-                Continue to your workspace
-                <span aria-hidden="true">→</span>
-              </button>
-              <p id="workspace-error" class="hidden text-sm text-[#005284]/70" role="alert"></p>
-            </form>
-
-            <ul
-              id="workspace-results"
-              class="mt-3 max-w-md divide-y divide-[#005284]/10 overflow-hidden rounded-xl border border-[#005284]/12 bg-white"
-              hidden
-            ></ul>
           </div>
         </div>
       </section>
@@ -284,122 +244,6 @@ const heroArcs = [
             setMenu(false);
             closeDropdowns();
           }
-        });
-
-        var form = document.getElementById('workspace-finder');
-        var input = document.getElementById('workspace-query');
-        var results = document.getElementById('workspace-results');
-        var errorEl = document.getElementById('workspace-error');
-        if (!form || !input || !results || !errorEl) return;
-
-        var debounceTimer = 0;
-
-        function showError(message) {
-          errorEl.textContent = message || '';
-          errorEl.classList.toggle('hidden', !message);
-        }
-
-        function renderOrgs(organizations) {
-          results.innerHTML = '';
-          if (!organizations.length) {
-            results.hidden = true;
-            return;
-          }
-          results.hidden = false;
-          organizations.forEach(function (org) {
-            var li = document.createElement('li');
-            var a = document.createElement('a');
-            a.href = org.origin + '/sign-in';
-            a.className =
-              'flex items-center gap-3 px-4 py-3 text-sm text-[#005284] transition hover:bg-[#005284]/6';
-            if (org.logoUrl) {
-              var img = document.createElement('img');
-              img.src = org.logoUrl;
-              img.alt = '';
-              img.className = 'h-7 w-auto rounded bg-white px-1 py-0.5 ring-1 ring-[#005284]/10';
-              a.appendChild(img);
-            }
-            var text = document.createElement('span');
-            text.className = 'font-medium';
-            text.textContent = org.name;
-            a.appendChild(text);
-            var slug = document.createElement('span');
-            slug.className = 'ml-auto text-xs text-[#005284]/45';
-            slug.textContent = org.slug + '.coordity.com';
-            a.appendChild(slug);
-            li.appendChild(a);
-            results.appendChild(li);
-          });
-        }
-
-        function search(q) {
-          showError('');
-          if (q.length < 2) {
-            renderOrgs([]);
-            return;
-          }
-          fetch('/api/orgs/resolve?q=' + encodeURIComponent(q), {
-            headers: { Accept: 'application/json' },
-          })
-            .then(function (res) {
-              return res.json().then(function (json) {
-                return { ok: res.ok, json: json };
-              });
-            })
-            .then(function (result) {
-              if (!result.ok) {
-                showError(result.json.error || 'Could not find workspaces.');
-                renderOrgs([]);
-                return;
-              }
-              renderOrgs(result.json.organizations || []);
-              if (!(result.json.organizations || []).length) {
-                showError('No matching workspace. Try another company name.');
-              }
-            })
-            .catch(function () {
-              showError('Could not search workspaces.');
-            });
-        }
-
-        input.addEventListener('input', function () {
-          window.clearTimeout(debounceTimer);
-          debounceTimer = window.setTimeout(function () {
-            search(String(input.value || '').trim());
-          }, 280);
-        });
-
-        form.addEventListener('submit', function (event) {
-          event.preventDefault();
-          var q = String(input.value || '').trim();
-          if (q.length < 2) {
-            showError('Enter at least 2 characters.');
-            return;
-          }
-          fetch('/api/orgs/resolve?q=' + encodeURIComponent(q), {
-            headers: { Accept: 'application/json' },
-          })
-            .then(function (res) {
-              return res.json().then(function (json) {
-                return { ok: res.ok, json: json };
-              });
-            })
-            .then(function (result) {
-              var orgs = (result.json && result.json.organizations) || [];
-              if (result.ok && orgs.length === 1) {
-                window.location.href = orgs[0].origin + '/sign-in';
-                return;
-              }
-              renderOrgs(orgs);
-              if (!orgs.length) {
-                showError('No matching workspace. Try another company name.');
-              } else {
-                showError('Pick your workspace from the list.');
-              }
-            })
-            .catch(function () {
-              showError('Could not search workspaces.');
-            });
         });
       })();
     </script>
