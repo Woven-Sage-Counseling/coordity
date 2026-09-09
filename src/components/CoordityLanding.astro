@@ -14,11 +14,15 @@ interface Props {
 const { error = null } = Astro.props;
 const year = new Date().getFullYear();
 
-/** Same C-arcs as CoordityMark — giant watermark, open side off to the right. */
+/**
+ * Concentric C-arcs with even stroke width and even centerline spacing
+ * (logo mark keeps its staggered terminals; hero wants uniform gaps).
+ */
+const heroStroke = 3.4;
 const heroArcs = [
-  { d: 'M34.8 11.2 A16.2 16.2 0 1 0 34.8 36.8', width: 3.6, color: '#005284', opacity: 0.12 },
-  { d: 'M32.2 14.6 A12.2 12.2 0 1 0 32.2 33.4', width: 3.4, color: '#FECB00', opacity: 0.22 },
-  { d: 'M29.6 18 A8.2 8.2 0 1 0 29.6 30', width: 3.2, color: '#005284', opacity: 0.14 },
+  { d: 'M33.45 12.55 A16.2 16.2 0 1 0 33.45 35.45', width: heroStroke, color: '#005284', opacity: 0.12 },
+  { d: 'M30.48 15.52 A12.0 12.0 0 1 0 30.48 32.48', width: heroStroke, color: '#FECB00', opacity: 0.22 },
+  { d: 'M27.51 18.49 A7.8 7.8 0 1 0 27.51 29.51', width: heroStroke, color: '#005284', opacity: 0.14 },
 ] as const;
 ---
 
