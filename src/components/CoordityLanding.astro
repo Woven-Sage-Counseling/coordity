@@ -2,7 +2,7 @@
 import '../styles/global.css';
 /**
  * Apex product landing for coordity.com — light marketing shell.
- * Workspace finder lives under “Build What's Next” / the menu.
+ * Workspace finder sits under the hero (replacing the old icon row).
  */
 import CoordityMark from './CoordityMark.astro';
 import { COORDITY_PRODUCT_NAME } from '../lib/organization';
@@ -13,6 +13,13 @@ interface Props {
 
 const { error = null } = Astro.props;
 const year = new Date().getFullYear();
+
+/** Same C-geometry as CoordityMark, scaled for the hero watermark. */
+const heroArcs = [
+  { d: 'M420 95 A195 195 0 1 0 420 445', width: 42, color: '#005284', opacity: 0.14 },
+  { d: 'M390 135 A147 147 0 1 0 390 405', width: 40, color: '#FECB00', opacity: 0.28 },
+  { d: 'M360 175 A99 99 0 1 0 360 365', width: 38, color: '#005284', opacity: 0.16 },
+] as const;
 ---
 
 <!doctype html>
@@ -43,7 +50,7 @@ const year = new Date().getFullYear();
         </a>
         <button
           type="button"
-          class="coordity-fade-in inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0B3A5B] transition hover:bg-[#0B3A5B]/6"
+          class="coordity-fade-in inline-flex h-10 w-10 items-center justify-center rounded-full text-[#005284] transition hover:bg-[#005284]/8"
           style="animation-delay: 60ms"
           data-coordity-menu-open
           aria-expanded="false"
@@ -57,19 +64,14 @@ const year = new Date().getFullYear();
       </div>
     </header>
 
-    <div
-      id="coordity-menu"
-      class="coordity-menu"
-      hidden
-      data-coordity-menu
-    >
+    <div id="coordity-menu" class="coordity-menu" hidden data-coordity-menu>
       <div class="coordity-menu__backdrop" data-coordity-menu-close aria-hidden="true"></div>
       <nav class="coordity-menu__panel" aria-label="Primary">
         <div class="flex items-center justify-between px-5 py-5">
           <CoordityMark variant="dark" class="text-[1.35rem]" />
           <button
             type="button"
-            class="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0B3A5B] hover:bg-[#0B3A5B]/6"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#005284] hover:bg-[#005284]/8"
             data-coordity-menu-close
             aria-label="Close menu"
           >
@@ -79,7 +81,7 @@ const year = new Date().getFullYear();
           </button>
         </div>
         <div class="flex flex-col gap-1 px-3 pb-8">
-          <a href="#workspace" class="coordity-menu__link" data-coordity-menu-close>Find your workspace</a>
+          <a href="#workspace" class="coordity-menu__link" data-coordity-menu-close>Log in to your workspace</a>
           <a href="/sign-up" class="coordity-menu__link">Create a workspace</a>
         </div>
       </nav>
@@ -88,40 +90,28 @@ const year = new Date().getFullYear();
     <main>
       <section class="relative overflow-hidden">
         <div class="coordity-hero-arcs" aria-hidden="true">
-          <svg viewBox="0 0 640 640" class="coordity-hero-arcs__svg" focusable="false">
-            <path
-              d="M120 80c180 0 320 140 320 320"
-              fill="none"
-              stroke="#8EC5F2"
-              stroke-width="72"
-              stroke-linecap="round"
-              opacity="0.45"
-            />
-            <path
-              d="M180 120c145 0 260 115 260 260"
-              fill="none"
-              stroke="#F7D978"
-              stroke-width="64"
-              stroke-linecap="round"
-              opacity="0.55"
-            />
-            <path
-              d="M235 165c110 0 195 85 195 195"
-              fill="none"
-              stroke="#8EC5F2"
-              stroke-width="56"
-              stroke-linecap="round"
-              opacity="0.5"
-            />
+          <svg viewBox="0 0 640 540" class="coordity-hero-arcs__svg" focusable="false">
+            {
+              heroArcs.map((arc) => (
+                <path
+                  d={arc.d}
+                  fill="none"
+                  stroke={arc.color}
+                  stroke-width={arc.width}
+                  stroke-linecap="round"
+                  opacity={arc.opacity}
+                />
+              ))
+            }
           </svg>
         </div>
 
-        <div class="relative z-10 mx-auto max-w-6xl px-5 pb-16 pt-10 sm:px-8 sm:pb-20 sm:pt-14 lg:pt-16">
+        <div class="relative z-10 mx-auto max-w-6xl px-5 pb-10 pt-10 sm:px-8 sm:pb-12 sm:pt-14 lg:pt-16">
           <div class="coordity-rise max-w-xl">
-            <h1 class="font-[Fraunces] text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[#0B3A5B] sm:text-5xl lg:text-[3.55rem]">
+            <h1 class="font-[Fraunces] text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[#005284] sm:text-5xl lg:text-[3.55rem]">
               Connected systems.<br />Brighter care.
             </h1>
-            <p class="mt-5 max-w-md text-base leading-relaxed text-[#0B3A5B]/80 sm:text-lg">
+            <p class="mt-5 max-w-md text-base leading-relaxed text-[#005284]/80 sm:text-lg">
               Coordity builds the infrastructure that helps behavioral health practices thrive.
             </p>
             <a href="#workspace" class="coordity-cta mt-8 inline-flex">
@@ -132,67 +122,26 @@ const year = new Date().getFullYear();
         </div>
       </section>
 
-      <section class="relative z-10 mx-auto max-w-6xl px-5 pb-20 pt-4 sm:px-8 sm:pb-24" aria-label="What Coordity does">
-        <ul class="coordity-rise grid grid-cols-1 gap-12 sm:grid-cols-3 sm:gap-8" style="animation-delay: 140ms">
-          <li class="flex flex-col items-center text-center">
-            <svg class="h-14 w-14 text-[#0B3A5B]" viewBox="0 0 56 56" fill="none" aria-hidden="true">
-              <circle cx="28" cy="14" r="5.5" stroke="currentColor" stroke-width="2" />
-              <circle cx="14" cy="40" r="5.5" stroke="currentColor" stroke-width="2" />
-              <circle cx="42" cy="40" r="5.5" stroke="currentColor" stroke-width="2" />
-              <path d="M28 20v8M28 28L16 35M28 28l12 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-            <p class="mt-4 text-base font-semibold text-[#0B3A5B]">Integrate</p>
-          </li>
-          <li class="flex flex-col items-center text-center">
-            <svg class="h-14 w-14 text-[#0B3A5B]" viewBox="0 0 56 56" fill="none" aria-hidden="true">
-              <path d="M28 10l16 8-16 8-16-8 16-8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-              <path d="M12 28l16 8 16-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M12 36l16 8 16-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <p class="mt-4 text-base font-semibold text-[#0B3A5B]">Coordinate</p>
-          </li>
-          <li class="flex flex-col items-center text-center">
-            <svg class="h-14 w-14 text-[#0B3A5B]" viewBox="0 0 56 56" fill="none" aria-hidden="true">
-              <path d="M12 40V30" stroke="#F5C518" stroke-width="3.5" stroke-linecap="round" />
-              <path d="M22 40V24" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
-              <path d="M32 40V20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
-              <path d="M42 40V16" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
-              <path d="M14 18c8-2 16 2 24-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <path d="M34 12l5 1-1 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <p class="mt-4 text-base font-semibold text-[#0B3A5B]">Scale</p>
-          </li>
-        </ul>
-      </section>
-
-      <section id="workspace" class="scroll-mt-24 border-t border-[#0B3A5B]/10 bg-[#F7FAFC]">
-        <div class="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start lg:gap-16 lg:py-20">
-          <div>
-            <h2 class="font-[Fraunces] text-3xl font-semibold text-[#0B3A5B] sm:text-4xl">
-              Open your workspace
+      <section id="workspace" class="relative z-10 scroll-mt-24">
+        <div class="mx-auto max-w-6xl px-5 pb-20 pt-2 sm:px-8 sm:pb-24">
+          <div class="coordity-rise coordity-workspace-card max-w-lg" style="animation-delay: 120ms">
+            <h2 class="font-[Fraunces] text-2xl font-semibold text-[#005284]">
+              Log in to your workspace
             </h2>
-            <p class="mt-3 max-w-md text-base leading-relaxed text-[#0B3A5B]/75">
-              Enter your company name to go to your organization&rsquo;s sign-in page — or create a new workspace.
+            <p class="mt-2 text-sm leading-relaxed text-[#005284]/70">
+              Enter your company name to open your organization&rsquo;s sign-in page.
             </p>
-            <a
-              href="/sign-up"
-              class="mt-6 inline-flex text-sm font-semibold text-[#0B3A5B] underline-offset-4 hover:underline"
-            >
-              Create a workspace
-            </a>
-          </div>
 
-          <div class="coordity-workspace-card">
             {
               error && (
-                <p class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                   {error}
                 </p>
               )
             }
 
-            <form id="workspace-finder" class="space-y-4" autocomplete="off">
-              <label class="block text-sm font-medium text-[#0B3A5B]">
+            <form id="workspace-finder" class="mt-5 space-y-4" autocomplete="off">
+              <label class="block text-sm font-medium text-[#005284]">
                 Company name
                 <input
                   class="field-coordity mt-1.5"
@@ -205,27 +154,30 @@ const year = new Date().getFullYear();
                 />
               </label>
               <button class="btn-coordity" type="submit">Continue</button>
-              <p id="workspace-error" class="hidden text-sm text-[#0B3A5B]/70" role="alert"></p>
+              <p id="workspace-error" class="hidden text-sm text-[#005284]/70" role="alert"></p>
             </form>
 
             <ul
               id="workspace-results"
-              class="mt-4 divide-y divide-[#0B3A5B]/10 overflow-hidden rounded-xl border border-[#0B3A5B]/12 bg-white"
+              class="mt-4 divide-y divide-[#005284]/10 overflow-hidden rounded-xl border border-[#005284]/12 bg-white"
               hidden
             ></ul>
 
-            <p class="mt-5 text-center text-xs text-[#0B3A5B]/50">
-              Or go to <span class="font-medium text-[#0B3A5B]/75">yourcompany.coordity.com</span>
+            <p class="mt-5 text-center text-xs text-[#005284]/50">
+              New here?
+              <a href="/sign-up" class="font-semibold text-[#005284] underline-offset-2 hover:underline">
+                Create a workspace
+              </a>
             </p>
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="border-t border-[#0B3A5B]/10">
+    <footer class="border-t border-[#005284]/10">
       <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8 sm:px-8">
         <CoordityMark variant="dark" class="text-base" />
-        <p class="text-xs text-[#0B3A5B]/45">© {year} {COORDITY_PRODUCT_NAME}</p>
+        <p class="text-xs text-[#005284]/45">© {year} {COORDITY_PRODUCT_NAME}</p>
       </div>
     </footer>
 
@@ -277,12 +229,12 @@ const year = new Date().getFullYear();
             var a = document.createElement('a');
             a.href = org.origin + '/sign-in';
             a.className =
-              'flex items-center gap-3 px-4 py-3 text-sm text-[#0B3A5B] transition hover:bg-[#0B3A5B]/5';
+              'flex items-center gap-3 px-4 py-3 text-sm text-[#005284] transition hover:bg-[#005284]/6';
             if (org.logoUrl) {
               var img = document.createElement('img');
               img.src = org.logoUrl;
               img.alt = '';
-              img.className = 'h-7 w-auto rounded bg-white px-1 py-0.5 ring-1 ring-[#0B3A5B]/10';
+              img.className = 'h-7 w-auto rounded bg-white px-1 py-0.5 ring-1 ring-[#005284]/10';
               a.appendChild(img);
             }
             var text = document.createElement('span');
@@ -290,7 +242,7 @@ const year = new Date().getFullYear();
             text.textContent = org.name;
             a.appendChild(text);
             var slug = document.createElement('span');
-            slug.className = 'ml-auto text-xs text-[#0B3A5B]/45';
+            slug.className = 'ml-auto text-xs text-[#005284]/45';
             slug.textContent = org.slug + '.coordity.com';
             a.appendChild(slug);
             li.appendChild(a);
@@ -377,32 +329,31 @@ const year = new Date().getFullYear();
     margin: 0;
     min-height: 100%;
     background: #ffffff;
-    color: #0b3a5b;
+    color: #005284;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   .coordity-hero-arcs {
     pointer-events: none;
     position: absolute;
-    top: -8%;
-    right: -18%;
-    width: min(92vw, 42rem);
-    height: min(92vw, 42rem);
+    top: -4%;
+    right: -22%;
+    width: min(100vw, 36rem);
+    height: min(90vw, 32rem);
     z-index: 0;
   }
 
   .coordity-hero-arcs__svg {
     width: 100%;
     height: 100%;
-    transform: rotate(-8deg);
   }
 
   @media (min-width: 1024px) {
     .coordity-hero-arcs {
-      top: -12%;
-      right: -8%;
-      width: 48rem;
-      height: 48rem;
+      top: -6%;
+      right: -6%;
+      width: 44rem;
+      height: 38rem;
     }
   }
 
@@ -410,26 +361,24 @@ const year = new Date().getFullYear();
     align-items: center;
     gap: 0.55rem;
     border-radius: 9999px;
-    background: #f5c518;
+    background: #fecb00;
     padding: 0.8rem 1.35rem;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #0b3a5b;
-    transition:
-      background-color 150ms ease,
-      transform 150ms ease;
+    color: #005284;
+    transition: background-color 150ms ease;
   }
 
   .coordity-cta:hover {
-    background: #ffd84d;
+    background: #ffe066;
   }
 
   .coordity-workspace-card {
-    border: 1px solid rgb(11 58 91 / 0.12);
+    border: 1px solid rgb(0 82 132 / 0.12);
     border-radius: 1.25rem;
     background: #fff;
     padding: 1.5rem;
-    box-shadow: 0 18px 40px rgb(11 58 91 / 0.06);
+    box-shadow: 0 18px 40px rgb(0 82 132 / 0.06);
   }
 
   @media (min-width: 640px) {
@@ -452,7 +401,7 @@ const year = new Date().getFullYear();
   .coordity-menu__backdrop {
     position: absolute;
     inset: 0;
-    background: rgb(11 58 91 / 0.28);
+    background: rgb(0 82 132 / 0.28);
   }
 
   .coordity-menu__panel {
@@ -462,7 +411,7 @@ const year = new Date().getFullYear();
     height: 100%;
     width: min(20rem, 88vw);
     background: #fff;
-    box-shadow: -12px 0 40px rgb(11 58 91 / 0.12);
+    box-shadow: -12px 0 40px rgb(0 82 132 / 0.12);
     animation: coordity-menu-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -472,12 +421,12 @@ const year = new Date().getFullYear();
     padding: 0.85rem 1rem;
     font-size: 1rem;
     font-weight: 600;
-    color: #0b3a5b;
+    color: #005284;
     transition: background-color 150ms ease;
   }
 
   .coordity-menu__link:hover {
-    background: rgb(11 58 91 / 0.06);
+    background: rgb(0 82 132 / 0.06);
   }
 
   .coordity-fade-in {
