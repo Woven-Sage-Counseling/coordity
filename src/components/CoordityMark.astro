@@ -1,51 +1,94 @@
 ---
 interface Props {
   class?: string;
+  /** dark = navy on light; light = white on dark; mark = icon only */
   variant?: 'light' | 'dark' | 'mark';
+  /** Show wordmark next to the arc mark (default true except variant=mark). */
+  wordmark?: boolean;
 }
 
-const { class: className = '', variant = 'dark' } = Astro.props;
+const { class: className = '', variant = 'dark', wordmark } = Astro.props;
+const showWord = wordmark ?? variant !== 'mark';
 const isLight = variant === 'light';
+const navy = '#0B3A5B';
+const blue = '#3B82F6';
+const yellow = '#F5C518';
 ---
 
-{
-  variant === 'mark' ? (
-    <svg
-      class={className}
-      viewBox="0 0 40 40"
-      width="40"
-      height="40"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect width="40" height="40" rx="10" fill="#005284" />
-      <text
-        x="9"
-        y="27"
-        fill="#F5F8FB"
-        font-family='"DM Sans", system-ui, sans-serif'
-        font-size="20"
-        font-weight="700"
-      >
-        C
-      </text>
-      <circle cx="30.5" cy="29" r="3.2" fill="#FECB00" />
-    </svg>
-  ) : (
-    <span
-      class:list={[
-        'inline-flex items-baseline gap-1.5 font-sans text-[1.35rem] font-bold tracking-tight',
-        isLight ? 'text-white' : 'text-coordity-blue',
-        className,
-      ]}
-      role="img"
-      aria-label="Coordity"
-    >
-      Coordity
-      <span
-        class:list={['inline-block h-2 w-2 translate-y-[-0.05em] rounded-full', isLight ? 'bg-coordity-yellow' : 'bg-coordity-yellow']}
-        aria-hidden="true"
-      />
-    </span>
-  )
-}
+<span
+  class:list={[
+    'inline-flex items-center gap-2.5',
+    isLight ? 'text-white' : 'text-[#0B3A5B]',
+    className,
+  ]}
+  role="img"
+  aria-label="Coordity"
+>
+  <svg
+    class="h-[1.2em] w-[1.2em] shrink-0"
+    viewBox="0 0 48 48"
+    aria-hidden="true"
+    focusable="false"
+  >
+    {
+      variant === 'mark' ? (
+        <>
+          <rect width="48" height="48" rx="12" fill={navy} />
+          {/* C-arcs: open to the right */}
+          <path
+            d="M34 11.5A14.5 14.5 0 1 0 34 36.5"
+            fill="none"
+            stroke={yellow}
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <path
+            d="M31 15A10.5 10.5 0 1 0 31 33"
+            fill="none"
+            stroke={blue}
+            stroke-width="3.5"
+            stroke-linecap="round"
+          />
+          <path
+            d="M28.5 18.5A7 7 0 1 0 28.5 29.5"
+            fill="none"
+            stroke={yellow}
+            stroke-width="3"
+            stroke-linecap="round"
+          />
+        </>
+      ) : (
+        <>
+          <path
+            d="M36 9A17 17 0 1 0 36 39"
+            fill="none"
+            stroke={yellow}
+            stroke-width="4.25"
+            stroke-linecap="round"
+          />
+          <path
+            d="M32.5 13.5A12 12 0 1 0 32.5 34.5"
+            fill="none"
+            stroke={isLight ? 'rgba(255,255,255,0.9)' : blue}
+            stroke-width="3.75"
+            stroke-linecap="round"
+          />
+          <path
+            d="M29.5 18A7.5 7.5 0 1 0 29.5 30"
+            fill="none"
+            stroke={yellow}
+            stroke-width="3.25"
+            stroke-linecap="round"
+          />
+        </>
+      )
+    }
+  </svg>
+  {
+    showWord ? (
+      <span class="font-sans text-[1.05em] font-semibold tracking-[-0.02em] leading-none">
+        Coordity
+      </span>
+    ) : null
+  }
+</span>
