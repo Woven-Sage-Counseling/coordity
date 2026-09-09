@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" rx="7" fill="#005284"/>
-  <path d="M23.2 7.5A10.8 10.8 0 1 0 23.2 24.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M21.4 9.8A8.1 8.1 0 1 0 21.4 22.2" fill="none" stroke="#FECB00" stroke-width="2.3" stroke-linecap="round"/>
-  <path d="M19.6 12.1A5.5 5.5 0 1 0 19.6 19.9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Concentric C-arcs, even stroke + radius steps; center ~14.67,16 -->
+  <path d="M22.3 8.37 A10.8 10.8 0 1 0 22.3 23.63" fill="none" stroke="#fff" stroke-width="2.27" stroke-linecap="round"/>
+  <path d="M20.32 10.35 A8.0 8.0 0 1 0 20.32 21.65" fill="none" stroke="#FECB00" stroke-width="2.27" stroke-linecap="round"/>
+  <path d="M18.34 12.33 A5.2 5.2 0 1 0 18.34 19.67" fill="none" stroke="#fff" stroke-width="2.27" stroke-linecap="round"/>
 </svg>
