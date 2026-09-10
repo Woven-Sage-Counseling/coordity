@@ -46,33 +46,96 @@ const preferredOrder: HomeWidgetId[] = [
   'quickbooks',
 ];
 const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
+
+const arrowClass =
+  'absolute top-1/2 z-20 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-sage-dark/80 shadow-md ring-1 ring-black/10 transition hover:bg-white hover:text-charcoal disabled:pointer-events-none disabled:opacity-30';
 ---
 
 {
   available.length === 0 ? null : (
     <section
       class="min-w-0"
+      aria-roledescription="carousel"
       aria-label="Home widgets"
-      data-home-widgets
-      data-widgets-build="2026-09-07e"
+      data-widget-carousel
+      data-widgets-build="2026-09-09a"
+      data-per-page="4"
+      data-scrollable="false"
       data-user-id={userId}
+      data-available={JSON.stringify(availableIds)}
+      data-can-financials={canSeeFinancials ? '1' : '0'}
+      data-can-credentialing={canSeeCredentialing ? '1' : '0'}
+      data-can-clinical={canSeeClinical ? '1' : '0'}
+      data-can-timesheet={canSeeTimesheet ? '1' : '0'}
     >
-      <div data-home-widgets-grid>
-        {defaultOrder.map((id) => (
-          <div class="home-widget-slot" data-widget-id={id}>
-            {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
-            {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
-            {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
-            {id === 'timesheet' ? <TimesheetCard userId={userId} /> : null}
-            {id === 'my_progress' ? <MyProgressCard userId={userId} /> : null}
-            {id === 'tasks' ? <TasksCard userId={userId} /> : null}
-            {id === 'credentialing' ? <CredentialingCard employee={employee} /> : null}
-            {id === 'quickbooks' ? <FinancialSnapshotCard /> : null}
+      <div class="relative" data-carousel-shell>
+        <button
+          type="button"
+          class:list={[arrowClass, 'left-0 -translate-x-1/3', 'invisible']}
+          aria-label="Previous widgets"
+          data-carousel-prev
+          disabled
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M10 3L5 8l5 5"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <div class="widget-carousel-viewport overflow-hidden px-0 pt-2" data-carousel-viewport>
+          <div class="widget-carousel-track flex items-start" data-carousel-track>
+            {defaultOrder.map((id) => (
+              <div
+                class="widget-carousel-slide"
+                data-carousel-slide
+                data-widget-id={id}
+                data-active="true"
+              >
+                {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
+                {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
+                {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
+                {id === 'timesheet' ? <TimesheetCard userId={userId} /> : null}
+                {id === 'my_progress' ? <MyProgressCard userId={userId} /> : null}
+                {id === 'tasks' ? <TasksCard userId={userId} /> : null}
+                {id === 'credentialing' ? <CredentialingCard employee={employee} /> : null}
+                {id === 'quickbooks' ? <FinancialSnapshotCard /> : null}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        <button
+          type="button"
+          class:list={[arrowClass, 'right-0 translate-x-1/3', 'invisible']}
+          aria-label="Next widgets"
+          data-carousel-next
+          disabled
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M6 3l5 5-5 5"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
       </div>
 
-      <div class="mt-3 flex justify-center">
+      <div
+        class="mt-3 flex items-center justify-center gap-1.5"
+        data-carousel-dots
+        role="tablist"
+        aria-label="Widget pages"
+      ></div>
+
+      <div class="mt-2 flex justify-center">
         <a
           href="/settings"
           class="rounded-full border border-sage-dark/20 bg-transparent px-2.5 py-1 text-[11px] font-semibold text-sage-dark/75 transition hover:border-sage-dark/35 hover:bg-sage/10 hover:text-sage-dark"
@@ -85,56 +148,79 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
 }
 
 <style is:global>
-  /*
-    Explicit columns + minmax(0,…) so wide inner grids (Calendar week view)
-    cannot force a single full-bleed column the way auto-fit does.
-  */
-  [data-home-widgets-grid] {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 0.75rem !important;
-    align-items: stretch !important;
-    width: 100% !important;
+  /* Keep in sync with global.css home-widget carousel rules. */
+  [data-widget-carousel] {
+    --widget-max-height: 26rem;
+    --widget-gap: 0.65rem;
+    --widget-per-page: 4;
   }
 
-  @media (min-width: 640px) {
-    [data-home-widgets-grid] {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
+  .widget-carousel-viewport {
+    width: 100%;
+    padding-bottom: 2.75rem;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      #000 4%,
+      #000 96%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      #000 4%,
+      #000 96%,
+      transparent 100%
+    );
   }
 
-  @media (min-width: 1024px) {
-    [data-home-widgets-grid] {
-      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    }
+  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport,
+  [data-widget-carousel][data-scrollable='false'] .widget-carousel-viewport {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
-  .home-widget-slot {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: 26rem !important;
-    overflow: hidden !important;
+  .widget-carousel-track {
+    gap: var(--widget-gap);
+    transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
   }
 
-  .home-widget-slot > [data-widget-card] {
+  .widget-carousel-slide {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-width: 0;
+    height: var(--widget-max-height);
+    min-height: var(--widget-max-height);
+    max-height: var(--widget-max-height);
+    overflow: hidden;
+    width: calc((100% - (var(--widget-per-page) - 1) * var(--widget-gap)) / var(--widget-per-page));
+    transform: none;
+    opacity: 1;
+    transition:
+      transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: top center;
+  }
+
+  .widget-carousel-slide > [data-widget-card] {
     display: flex !important;
     flex-direction: column !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    height: 26rem !important;
-    max-height: 26rem !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow: hidden !important;
     background-color: #fff;
     box-sizing: border-box !important;
   }
 
-  .home-widget-slot > [data-widget-card] > [data-widget-header] {
+  .widget-carousel-slide > [data-widget-card] > [data-widget-header] {
     flex: 0 0 auto !important;
   }
 
-  /* Must stay flex column — block breaks inner flex-1 bodies (empty Calendar). */
-  .home-widget-slot > [data-widget-card] > [data-widget-body] {
+  .widget-carousel-slide > [data-widget-card] > [data-widget-body] {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
@@ -148,14 +234,88 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
     visibility: visible !important;
   }
 
-  html.dark .home-widget-slot > [data-widget-card] {
+  html.dark .widget-carousel-slide > [data-widget-card] {
     background-color: rgb(var(--portal-surface) / 1);
+  }
+
+  @media (max-width: 1023px) {
+    [data-widget-carousel] {
+      --widget-per-page: 2;
+    }
+  }
+
+  @media (max-width: 639px) {
+    [data-widget-carousel] {
+      --widget-per-page: 1;
+    }
+
+    [data-widget-carousel][data-per-page='1'][data-scrollable='true'] .widget-carousel-slide {
+      width: 70%;
+      transform: scale(0.92);
+      opacity: 0.72;
+    }
+
+    [data-widget-carousel][data-per-page='1'][data-scrollable='true']
+      .widget-carousel-slide[data-active='true'] {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  [data-widget-carousel][data-per-page]:not([data-per-page='1'])
+    .widget-carousel-slide:not([data-active='true']) {
+    transform: scale(0.96);
+    opacity: 0.7;
+  }
+
+  .widget-carousel-slide[data-solo='true'] {
+    width: 100%;
+    transform: none;
+    opacity: 1;
+  }
+
+  .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) {
+    cursor: pointer;
+  }
+
+  .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) a,
+  .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) button,
+  .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) input,
+  .widget-carousel-slide:not([data-active='true']):not([data-solo='true']) select {
+    pointer-events: none;
   }
 </style>
 
 <script>
   import { applyWidgetHeaderPrefs } from '../lib/home-widget-header';
   import type { WidgetIconId } from '../lib/home-widget-icons';
+
+  type Prefs = {
+    enabled: string[];
+    headerColors?: Record<string, string>;
+    headerIcons?: Record<string, WidgetIconId>;
+  };
+
+  function defaultPrefs(
+    canFinancials: boolean,
+    canCredentialing: boolean,
+    canClinical: boolean,
+    canTimesheet: boolean,
+  ): Prefs {
+    const enabled = ['schedule', 'time_off', 'my_progress', 'tasks'];
+    if (canClinical) enabled.splice(1, 0, 'caseload');
+    if (canTimesheet) {
+      const timeOffIdx = enabled.indexOf('time_off');
+      enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'timesheet');
+    }
+    if (canCredentialing) enabled.push('credentialing');
+    if (canFinancials) enabled.push('quickbooks');
+    return { enabled };
+  }
+
+  function migrateWidgetId(id: string): string {
+    return id === 'coming_soon' ? 'my_progress' : id;
+  }
 
   function sanitizeHeaderColors(raw: unknown): Record<string, string> {
     if (!raw || typeof raw !== 'object') return {};
@@ -196,50 +356,303 @@ const defaultOrder = preferredOrder.filter((id) => availableIds.includes(id));
     return icons;
   }
 
-  function setupWidgets(root: Element) {
-    if (!(root instanceof HTMLElement)) return;
-    if (root.dataset.widgetsReady === '1') return;
-    root.dataset.widgetsReady = '1';
-
-    const userId = root.dataset.userId ?? '';
+  function readPrefs(
+    userId: string,
+    canFinancials: boolean,
+    canCredentialing: boolean,
+    canClinical: boolean,
+    canTimesheet: boolean,
+    available: string[],
+  ): Prefs {
+    const fallback = defaultPrefs(canFinancials, canCredentialing, canClinical, canTimesheet);
     try {
-      localStorage.removeItem('portal:home-widgets:' + userId);
-    } catch {
-      /* ignore */
-    }
-
-    let headerColors: Record<string, string> = {};
-    let headerIcons: Record<string, WidgetIconId> = {};
-    try {
-      const raw = localStorage.getItem('portal:home-widgets-headers:' + userId);
-      if (raw) {
-        const parsed = JSON.parse(raw) as {
-          headerColors?: unknown;
-          headerIcons?: unknown;
-        };
-        headerColors = sanitizeHeaderColors(parsed.headerColors);
-        headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
+      const raw = localStorage.getItem('portal:home-widgets:' + userId);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw) as Prefs;
+      const allowed = new Set(available);
+      const enabled = (parsed.enabled || [])
+        .map(migrateWidgetId)
+        .filter((id) => allowed.has(id))
+        .slice(0, 10);
+      let mutated = false;
+      if (allowed.has('time_off') && !enabled.includes('time_off') && enabled.length < 10) {
+        const scheduleIdx = enabled.indexOf('schedule');
+        enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'time_off');
+        mutated = true;
       }
+      if (allowed.has('caseload') && !enabled.includes('caseload') && enabled.length < 10) {
+        const scheduleIdx = enabled.indexOf('schedule');
+        enabled.splice(scheduleIdx >= 0 ? scheduleIdx + 1 : enabled.length, 0, 'caseload');
+        mutated = true;
+      }
+      if (allowed.has('my_progress') && !enabled.includes('my_progress') && enabled.length < 10) {
+        const timeOffIdx = enabled.indexOf('time_off');
+        enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'my_progress');
+        mutated = true;
+      }
+      if (allowed.has('timesheet') && !enabled.includes('timesheet') && enabled.length < 10) {
+        const timeOffIdx = enabled.indexOf('time_off');
+        enabled.splice(timeOffIdx >= 0 ? timeOffIdx + 1 : enabled.length, 0, 'timesheet');
+        mutated = true;
+      }
+      if (allowed.has('tasks') && !enabled.includes('tasks') && enabled.length < 10) {
+        const progressIdx = enabled.indexOf('my_progress');
+        enabled.splice(progressIdx >= 0 ? progressIdx + 1 : enabled.length, 0, 'tasks');
+        mutated = true;
+      }
+      if (allowed.has('credentialing') && !enabled.includes('credentialing') && enabled.length < 10) {
+        const tasksIdx = enabled.indexOf('tasks');
+        enabled.splice(tasksIdx >= 0 ? tasksIdx + 1 : enabled.length, 0, 'credentialing');
+        mutated = true;
+      }
+      const finalEnabled = enabled.length
+        ? enabled
+        : fallback.enabled.filter((id) => allowed.has(id));
+      const headerColors = sanitizeHeaderColors(parsed.headerColors);
+      const headerIcons = sanitizeHeaderIcons(parsed.headerIcons);
+      const next: Prefs = {
+        enabled: finalEnabled,
+        ...(Object.keys(headerColors).length ? { headerColors } : {}),
+        ...(Object.keys(headerIcons).length ? { headerIcons } : {}),
+      };
+      if (mutated || (parsed.enabled || []).includes('coming_soon')) {
+        try {
+          localStorage.setItem('portal:home-widgets:' + userId, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
     } catch {
-      /* ignore */
+      return fallback;
     }
-
-    applyWidgetHeaderPrefs(root, { headerColors, headerIcons });
   }
 
-  function init() {
-    document.querySelectorAll('[data-home-widgets]').forEach((root) => {
+  function setupCarousel(root: Element) {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.carouselReady === '1') return;
+    root.dataset.carouselReady = '1';
+
+    const userId = root.dataset.userId ?? '';
+    const canFinancials = root.dataset.canFinancials === '1';
+    const canCredentialing = root.dataset.canCredentialing === '1';
+    const canClinical = root.dataset.canClinical === '1';
+    const canTimesheet = root.dataset.canTimesheet === '1';
+    let available: string[] = [];
+    try {
+      available = JSON.parse(root.dataset.available || '[]') as string[];
+    } catch {
+      available = [];
+    }
+
+    const prefs = readPrefs(
+      userId,
+      canFinancials,
+      canCredentialing,
+      canClinical,
+      canTimesheet,
+      available,
+    );
+    applyWidgetHeaderPrefs(root, prefs);
+    window.addEventListener('portal:widget-prefs-changed', () => {
+      const fresh = readPrefs(
+        userId,
+        canFinancials,
+        canCredentialing,
+        canClinical,
+        canTimesheet,
+        available,
+      );
+      applyWidgetHeaderPrefs(root, fresh);
+    });
+
+    const viewport = root.querySelector('[data-carousel-viewport]');
+    const track = root.querySelector('[data-carousel-track]');
+    if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement)) return;
+
+    const allSlides = Array.from(root.querySelectorAll('[data-carousel-slide]')).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement,
+    );
+
+    const enabledSlides = prefs.enabled
+      .map((id) => allSlides.find((el) => el.dataset.widgetId === id))
+      .filter((el): el is HTMLElement => Boolean(el));
+
+    allSlides.forEach((slide) => {
+      if (!enabledSlides.includes(slide)) slide.remove();
+    });
+    enabledSlides.forEach((slide) => track.appendChild(slide));
+
+    if (enabledSlides.length === 0) {
+      root.hidden = true;
+      return;
+    }
+
+    const prevBtn = root.querySelector('[data-carousel-prev]');
+    const nextBtn = root.querySelector('[data-carousel-next]');
+    const dots = root.querySelector('[data-carousel-dots]');
+    const solo = enabledSlides.length === 1;
+    root.dataset.solo = solo ? 'true' : 'false';
+    let index = 0;
+
+    const gapSize = () => {
+      const styles = getComputedStyle(track);
+      return Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+    };
+
+    const perPage = () => {
+      const width = viewport.clientWidth;
+      if (width <= 0) return Number.parseInt(root.dataset.perPage || '4', 10) || 4;
+      if (width < 640) return 1;
+      if (width < 1024) return 2;
+      return 4;
+    };
+
+    const pageCount = () => Math.min(perPage(), enabledSlides.length);
+    const maxIndex = () => Math.max(0, enabledSlides.length - pageCount());
+
+    enabledSlides.forEach((slide) => {
+      slide.dataset.solo = solo ? 'true' : 'false';
+      slide.addEventListener(
+        'click',
+        (event) => {
+          if (enabledSlides.length <= pageCount()) return;
+          const slideIndex = enabledSlides.indexOf(slide);
+          const count = pageCount();
+          if (slideIndex >= index && slideIndex < index + count) return;
+          event.preventDefault();
+          event.stopPropagation();
+          show(slideIndex);
+        },
+        true,
+      );
+    });
+
+    const renderDots = () => {
+      if (!(dots instanceof HTMLElement)) return;
+      dots.innerHTML = '';
+      const count = pageCount();
+      enabledSlides.forEach((slide, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-label', `Show ${slide.dataset.widgetId} widget`);
+        const selected = i >= index && i < index + count;
+        btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+        btn.className = selected
+          ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
+          : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
+        btn.addEventListener('click', () => show(i));
+        dots.appendChild(btn);
+      });
+    };
+
+    const layout = () => {
+      const n = enabledSlides.length;
+      const count = pageCount();
+      const canScroll = n > count;
+      root.dataset.perPage = String(count);
+      root.dataset.scrollable = canScroll ? 'true' : 'false';
+      const viewportWidth = viewport.clientWidth;
+      const gap = gapSize();
+
+      if (viewportWidth <= 0) return;
+
+      if (count === 1) {
+        enabledSlides.forEach((el) => {
+          el.style.width = '';
+        });
+        if (!canScroll) {
+          track.style.transform = 'translate3d(0,0,0)';
+          enabledSlides[0]!.dataset.active = 'true';
+          return;
+        }
+
+        const slideWidth = enabledSlides[index]?.offsetWidth || viewportWidth * 0.7;
+        const peek = Math.max(0, (viewportWidth - slideWidth) / 2);
+        const offset = peek - index * (slideWidth + gap);
+        track.style.transform = `translate3d(${offset}px, 0, 0)`;
+
+        enabledSlides.forEach((el, i) => {
+          el.dataset.active = i === index ? 'true' : 'false';
+          el.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+        });
+        return;
+      }
+
+      const peek = canScroll ? 48 : 0;
+      const slideWidth = (viewportWidth - 2 * peek - Math.max(0, count - 1) * gap) / count;
+      enabledSlides.forEach((el) => {
+        el.style.width = `${Math.max(0, slideWidth)}px`;
+      });
+      const stride = slideWidth + gap;
+      track.style.transform = `translate3d(${peek - index * stride}px, 0, 0)`;
+
+      enabledSlides.forEach((el, i) => {
+        const onScreen = i >= index && i < index + count;
+        el.dataset.active = onScreen ? 'true' : 'false';
+        el.setAttribute('aria-hidden', onScreen ? 'false' : 'true');
+      });
+    };
+
+    const show = (next: number) => {
+      index = Math.min(maxIndex(), Math.max(0, next));
+      layout();
+      renderDots();
+      const multi = enabledSlides.length > pageCount();
+      if (prevBtn instanceof HTMLButtonElement) {
+        prevBtn.disabled = !multi || index === 0;
+        prevBtn.classList.toggle('invisible', !multi);
+      }
+      if (nextBtn instanceof HTMLButtonElement) {
+        nextBtn.disabled = !multi || index === maxIndex();
+        nextBtn.classList.toggle('invisible', !multi);
+      }
+      if (dots instanceof HTMLElement) {
+        dots.classList.toggle('invisible', !multi);
+      }
+    };
+
+    prevBtn?.addEventListener('click', () => show(index - 1));
+    nextBtn?.addEventListener('click', () => show(index + 1));
+
+    const start = () => {
+      track.style.transition = 'none';
+      show(index);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          track.style.transition = '';
+        });
+      });
+    };
+
+    let tries = 0;
+    const startWhenReady = () => {
+      if (viewport.clientWidth > 0 || tries > 30) {
+        start();
+        return;
+      }
+      tries += 1;
+      requestAnimationFrame(startWhenReady);
+    };
+    startWhenReady();
+
+    window.addEventListener('resize', () => show(index));
+  }
+
+  function initCarousels() {
+    document.querySelectorAll('[data-widget-carousel]').forEach((root) => {
       try {
-        setupWidgets(root);
+        setupCarousel(root);
       } catch (error) {
-        console.error('home widgets failed', error);
+        console.error('home widget carousel failed', error);
       }
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', initCarousels);
   } else {
-    init();
+    initCarousels();
   }
 </script>
