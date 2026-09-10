@@ -8,6 +8,7 @@ import {
   resolveOrganizationFromHost,
 } from './lib/organization';
 import { canAccessManagement, loadEmployee } from './lib/permissions';
+import { loadPlatformStaff } from './lib/platform-access';
 import { requestHostname } from './lib/request-host';
 
 const PUBLIC_PATHS = new Set([
@@ -41,11 +42,20 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
+function isPlatformPublicPath(pathname: string): boolean {
+  return (
+    pathname === '/platform/sign-in' ||
+    pathname === '/platform/bootstrap' ||
+    pathname === '/api/platform/bootstrap' ||
+    pathname === '/api/platform/session/sign-in' ||
+    pathname === '/api/session/sign-out'
+  );
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const hostname = requestHostname(context.request, context.url.hostname);
 
-  // Permanent cutover from legacy Woven Sage portal host.
   if (hostname === 'portal.wovensage.com') {
     const dest = new URL(context.url);
     dest.protocol = 'https:';
@@ -55,6 +65,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isApex = isCoordityApexHost(hostname);
   context.locals.isCoordityApex = isApex;
+  context.locals.platformStaff = null;
 
   try {
     context.locals.organization = await resolveOrganizationFromHost(hostname);
@@ -63,38 +74,40 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.organization = null;
   }
 
-  // Unknown tenant subdomain on Coordity
   if (!isApex && !context.locals.organization && hostname.endsWith('.coordity.com')) {
     return new Response('Workspace not found', { status: 404, headers: { 'cache-control': 'no-store' } });
   }
 
-  // Local/legacy hosts always have an org; ensure fallback
   if (!isApex && !context.locals.organization) {
     context.locals.organization = await getOrganizationById(DEFAULT_ORG_ID);
   }
 
+  let sessionUserId: string | null = null;
   try {
     const auth = createAuth(context.request);
     const session = await auth.api.getSession({ headers: context.request.headers });
-    let employee = session?.user ? await loadEmployee(session.user.id) : null;
+    sessionUserId = session?.user?.id ?? null;
+    let employee = sessionUserId ? await loadEmployee(sessionUserId) : null;
     if (employee && context.locals.organization) {
       const member = await isOrganizationMember(context.locals.organization.id, employee.id);
       if (!member) employee = null;
     }
     context.locals.employee = employee;
+    if (isApex && sessionUserId) {
+      context.locals.platformStaff = await loadPlatformStaff(sessionUserId);
+    }
   } catch (error) {
     console.error('session lookup failed', error);
     context.locals.employee = null;
+    context.locals.platformStaff = null;
   }
   const employee = context.locals.employee;
 
-  // Coordity apex: product landing + signup. App routes require a tenant host.
   if (isApex) {
-    // Keep `/` in the address bar but render a dedicated page so tenant home
-    // never shares a full-document component (breaks Astro CSS propagation).
     if (pathname === '/') {
       return context.rewrite('/apex-landing');
     }
+
     if (
       pathname === '/apex-landing' ||
       pathname === '/sign-up' ||
@@ -106,13 +119,33 @@ export const onRequest = defineMiddleware(async (context, next) => {
       pathname === '/favicon.ico' ||
       pathname.startsWith('/favicon') ||
       pathname === '/apple-touch-icon.png' ||
-      pathname === '/robots.txt'
+      pathname === '/robots.txt' ||
+      isPlatformPublicPath(pathname)
     ) {
       return next();
     }
+
     if (pathname === '/sign-in') {
       return context.redirect('/continue');
     }
+
+    if (pathname.startsWith('/platform') || pathname.startsWith('/api/platform')) {
+      const staff = context.locals.platformStaff;
+      if (!staff || !staff.permissions.includes('platform:access')) {
+        if (pathname.startsWith('/api/')) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+          });
+        }
+        return context.redirect('/platform/sign-in');
+      }
+      const response = await next();
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      return response;
+    }
+
     if (pathname.startsWith('/api/')) {
       return new Response(JSON.stringify({ error: 'Open your organization workspace to continue.' }), {
         status: 400,

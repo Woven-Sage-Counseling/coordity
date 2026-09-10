@@ -628,12 +628,37 @@ export async function setEmployeeStatus(input: {
   });
 }
 
-export function assignableRoles<T extends { id: string; key: string }>(
-  roles: T[],
-  options?: { includePrimaryOwner?: boolean },
-): T[] {
-  if (options?.includePrimaryOwner) return roles;
-  return roles.filter((role) => role.key !== 'owner');
+export function assignableRoles<T extends { id: string; key: string }>(roles: T[]): T[] {
+  return roles;
+}
+
+export async function countActiveOwners(orgId: string): Promise<number> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT COUNT(*) AS n
+     FROM organization_member om
+     JOIN user_role ur ON ur.user_id = om.user_id
+     JOIN role r ON r.id = ur.role_id AND r.key = 'owner'
+     JOIN employee_profile p ON p.user_id = om.user_id AND p.status = 'active'
+     WHERE om.org_id = ?`,
+  )
+    .bind(orgId)
+    .first<{ n: number }>();
+  return Number(row?.n ?? 0);
+}
+
+export async function userHasOwnerRole(userId: string): Promise<boolean> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT 1 AS ok
+     FROM user_role ur
+     JOIN role r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND r.key = 'owner'
+     LIMIT 1`,
+  )
+    .bind(userId)
+    .first();
+  return Boolean(row);
 }
 
 export async function createInvitedAccount(

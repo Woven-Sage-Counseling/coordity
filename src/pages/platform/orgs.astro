@@ -1,0 +1,183 @@
+---
+import PlatformLayout from '../../layouts/PlatformLayout.astro';
+import { hasPlatformPermission } from '../../lib/platform-access';
+import { listPlatformOrganizations } from '../../lib/platform-orgs';
+import { tenantOrigin } from '../../lib/organization';
+
+export const prerender = false;
+
+const staff = Astro.locals.platformStaff!;
+const canCreate = hasPlatformPermission(staff, 'platform:orgs:create');
+const canDelete = hasPlatformPermission(staff, 'platform:orgs:delete');
+const includeArchived = Astro.url.searchParams.get('archived') === '1';
+const orgs = await listPlatformOrganizations({ includeArchived });
+const error = Astro.url.searchParams.get('error');
+const inviteUrl = Astro.url.searchParams.get('inviteUrl');
+const saved = Astro.url.searchParams.get('saved');
+---
+
+<PlatformLayout title="Organizations" staffName={staff.name}>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="font-display text-4xl text-[#0b1f33]">Organizations</h1>
+      <p class="mt-2 text-sm text-[#5b6b7c]">Customer workspaces and primary subscribers.</p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a
+        href="/platform/orgs"
+        class:list={[
+          'rounded-full px-3 py-1.5 font-semibold',
+          !includeArchived ? 'bg-[#0b1f33] text-white' : 'bg-white text-[#5b6b7c]',
+        ]}
+      >
+        Active
+      </a>
+      <a
+        href="/platform/orgs?archived=1"
+        class:list={[
+          'rounded-full px-3 py-1.5 font-semibold',
+          includeArchived ? 'bg-[#0b1f33] text-white' : 'bg-white text-[#5b6b7c]',
+        ]}
+      >
+        Archived
+      </a>
+    </div>
+  </div>
+
+  {
+    error && (
+      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+    )
+  }
+  {
+    saved && (
+      <p class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        {saved === 'created' ? 'Organization created.' : saved === 'archived' ? 'Organization archived.' : 'Saved.'}
+      </p>
+    )
+  }
+  {
+    inviteUrl && (
+      <p class="mt-4 break-all rounded-xl border border-black/10 bg-white px-4 py-3 text-sm">
+        Owner invite link:
+        <br />
+        <a class="underline" href={inviteUrl}>
+          {inviteUrl}
+        </a>
+      </p>
+    )
+  }
+
+  {
+    canCreate && !includeArchived ? (
+      <form method="post" action="/api/platform/orgs/create" class="mt-8 grid gap-4 rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm sm:grid-cols-2">
+        <h2 class="font-display text-2xl text-[#0b1f33] sm:col-span-2">Create organization</h2>
+        <label class="text-sm font-medium">
+          Company name
+          <input class="field" type="text" name="companyName" required />
+        </label>
+        <label class="text-sm font-medium">
+          Slug
+          <input class="field" type="text" name="slug" placeholder="acme" />
+        </label>
+        <label class="text-sm font-medium">
+          Website
+          <input class="field" type="url" name="websiteUrl" placeholder="https://" />
+        </label>
+        <label class="text-sm font-medium">
+          Owner name
+          <input class="field" type="text" name="adminName" required />
+        </label>
+        <label class="text-sm font-medium sm:col-span-2">
+          Owner email
+          <input class="field" type="email" name="adminEmail" required />
+        </label>
+        <button class="btn-primary w-fit sm:col-span-2" type="submit">
+          Create workspace
+        </button>
+      </form>
+    ) : null
+  }
+
+  <div class="mt-8 overflow-x-auto rounded-2xl border border-black/10 bg-white/90 shadow-sm">
+    <table class="min-w-full text-left text-sm">
+      <thead class="border-b border-black/10 text-xs uppercase tracking-[0.12em] text-[#5b6b7c]">
+        <tr>
+          <th class="px-4 py-3 font-semibold">Organization</th>
+          <th class="px-4 py-3 font-semibold">Primary subscriber</th>
+          <th class="px-4 py-3 font-semibold">Status</th>
+          <th class="px-4 py-3 font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          orgs.length === 0 ? (
+            <tr>
+              <td class="px-4 py-6 text-[#5b6b7c]" colspan="4">
+                No organizations found.
+              </td>
+            </tr>
+          ) : (
+            orgs.map((org) => {
+              const openUrl = tenantOrigin(org.slug, Astro.url.href);
+              const subscriber =
+                org.primarySubscriberEmail
+                  ? `${org.primarySubscriberName ?? 'Owner'} · ${org.primarySubscriberEmail}`
+                  : org.pendingOwnerEmail
+                    ? `Invite pending · ${org.pendingOwnerEmail}`
+                    : '—';
+              return (
+                <tr class="border-t border-black/5">
+                  <td class="px-4 py-3">
+                    <p class="font-semibold text-[#0b1f33]">{org.displayName}</p>
+                    <p class="text-xs text-[#5b6b7c]">{org.slug}.coordity.com</p>
+                  </td>
+                  <td class="px-4 py-3 text-[#0b1f33]/90">{subscriber}</td>
+                  <td class="px-4 py-3 capitalize text-[#5b6b7c]">
+                    {org.archivedAt ? 'archived' : 'active'}
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex flex-wrap gap-2">
+                      {!org.archivedAt ? (
+                        <a
+                          class="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold hover:bg-[#f3f6f9]"
+                          href={openUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open
+                        </a>
+                      ) : null}
+                      {canDelete && !org.archivedAt && org.slug !== 'wovensage' ? (
+                        <form method="post" action="/api/platform/orgs/archive">
+                          <input type="hidden" name="orgId" value={org.id} />
+                          <button
+                            class="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                            type="submit"
+                          >
+                            Archive
+                          </button>
+                        </form>
+                      ) : null}
+                      {canDelete && org.archivedAt ? (
+                        <form method="post" action="/api/platform/orgs/restore">
+                          <input type="hidden" name="orgId" value={org.id} />
+                          <button
+                            class="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold hover:bg-[#f3f6f9]"
+                            type="submit"
+                          >
+                            Restore
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )
+        }
+      </tbody>
+    </table>
+  </div>
+</PlatformLayout>

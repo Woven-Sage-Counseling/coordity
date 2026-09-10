@@ -1,7 +1,7 @@
 ---
 import { assignableRoles, DIRECTORY_TEAMS, listEmployees, listRoles } from '../lib/employees';
 import { listPendingInvites } from '../lib/invites';
-import { hasPermission, isOwnerEmail } from '../lib/permissions';
+import { hasPermission } from '../lib/permissions';
 import { orgIdFromLocals } from '../lib/organization';
 
 interface Props {
@@ -46,8 +46,8 @@ function roleLabel(keys: string[]): string {
         <p class="mt-2 text-sm text-sage-dark/65">
           {
             canManage
-              ? 'Invite people, set job titles and teams, and assign roles. Primary owner stays with admin@wovensage.com.'
-              : 'Set job titles and teams for the Directory. Only the primary owner can invite people or change roles.'
+              ? 'Invite people, set job titles and teams, and assign roles. Keep at least one active owner.'
+              : 'Set job titles and teams for the Directory. Only owners can invite people or change roles.'
           }
         </p>
       </>
@@ -104,134 +104,124 @@ function roleLabel(keys: string[]): string {
 
   <div class="mt-8 space-y-4">
     {
-      people.map((person) => {
-        const primary = isOwnerEmail(person.email);
-        const personRoles = primary
-          ? assignableRoles(roles, { includePrimaryOwner: true })
-          : inviteRoles;
-        return (
-          <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p class="text-lg font-semibold text-charcoal">{person.name}</p>
-                <p class="mt-1 text-sm text-sage-dark/65">
-                  {person.email} · {roleLabel(person.roles)} ·{' '}
-                  <span class="capitalize">{person.status}</span>
-                </p>
+      people.map((person) => (
+        <article class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="text-lg font-semibold text-charcoal">{person.name}</p>
+              <p class="mt-1 text-sm text-sage-dark/65">
+                {person.email} · {roleLabel(person.roles)} ·{' '}
+                <span class="capitalize">{person.status}</span>
+              </p>
+            </div>
+            {canManage ? (
+              <div class="flex flex-wrap gap-2">
+                <form method="post" action="/api/employees/update" class="flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="userId" value={person.id} />
+                  <input type="hidden" name="action" value="role" />
+                  <select class="field !mt-0 !py-1.5" name="roleId">
+                    {inviteRoles.map((role) => (
+                      <option value={role.id} selected={person.roles.includes(role.key)}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                    Update role
+                  </button>
+                </form>
+                {person.status !== 'disabled' && person.id !== employee.id && (
+                  <form method="post" action="/api/employees/update">
+                    <input type="hidden" name="userId" value={person.id} />
+                    <input type="hidden" name="action" value="disable" />
+                    <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                      Disable
+                    </button>
+                  </form>
+                )}
+                {person.status === 'disabled' && (
+                  <form method="post" action="/api/employees/update">
+                    <input type="hidden" name="userId" value={person.id} />
+                    <input type="hidden" name="action" value="enable" />
+                    <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                      Reactivate
+                    </button>
+                  </form>
+                )}
               </div>
-              {canManage ? (
-                <div class="flex flex-wrap gap-2">
-                  {primary ? (
-                    <p class="text-sm text-sage-dark/60">Primary owner</p>
-                  ) : (
-                    <form method="post" action="/api/employees/update" class="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="userId" value={person.id} />
-                      <input type="hidden" name="action" value="role" />
-                      <select class="field !mt-0 !py-1.5" name="roleId">
-                        {personRoles.map((role) => (
-                          <option value={role.id} selected={person.roles.includes(role.key)}>
-                            {role.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                        Update role
-                      </button>
-                    </form>
-                  )}
-                  {!primary && person.status !== 'disabled' && person.id !== employee.id && (
-                    <form method="post" action="/api/employees/update">
-                      <input type="hidden" name="userId" value={person.id} />
-                      <input type="hidden" name="action" value="disable" />
-                      <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                        Disable
-                      </button>
-                    </form>
-                  )}
-                  {!primary && person.status === 'disabled' && (
-                    <form method="post" action="/api/employees/update">
-                      <input type="hidden" name="userId" value={person.id} />
-                      <input type="hidden" name="action" value="enable" />
-                      <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                        Reactivate
-                      </button>
-                    </form>
-                  )}
-                </div>
-              ) : null}
-            </div>
+            ) : null}
+          </div>
 
-            <div class="mt-4 grid gap-4 border-t border-sage-dark/10 pt-4 lg:grid-cols-2">
-              <form method="post" action="/api/employees/update" class="space-y-2">
-                <input type="hidden" name="userId" value={person.id} />
-                <input type="hidden" name="action" value="jobTitle" />
-                <label class="block text-sm font-medium text-sage-dark/80">
-                  Job title
-                  <input
-                    class="field"
-                    type="text"
-                    name="jobTitle"
-                    value={person.jobTitle ?? ''}
-                    maxlength="80"
-                    placeholder="Job title"
-                  />
-                </label>
-                <div class="flex flex-wrap items-center gap-2">
-                  <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                    Save title
-                  </button>
-                  {
-                    savedUserId === person.id && savedAction === 'jobTitle' ? (
-                      <span
-                        class="text-sm font-medium text-sage-dark/45 transition-opacity duration-300"
-                        data-save-flash
-                        aria-live="polite"
-                      >
-                        Saved.
-                      </span>
-                    ) : null
-                  }
-                </div>
-              </form>
+          <div class="mt-4 grid gap-4 border-t border-sage-dark/10 pt-4 lg:grid-cols-2">
+            <form method="post" action="/api/employees/update" class="space-y-2">
+              <input type="hidden" name="userId" value={person.id} />
+              <input type="hidden" name="action" value="jobTitle" />
+              <label class="block text-sm font-medium text-sage-dark/80">
+                Job title
+                <input
+                  class="field"
+                  type="text"
+                  name="jobTitle"
+                  value={person.jobTitle ?? ''}
+                  maxlength="80"
+                  placeholder="Job title"
+                />
+              </label>
+              <div class="flex flex-wrap items-center gap-2">
+                <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                  Save title
+                </button>
+                {
+                  savedUserId === person.id && savedAction === 'jobTitle' ? (
+                    <span
+                      class="text-sm font-medium text-sage-dark/45 transition-opacity duration-300"
+                      data-save-flash
+                      aria-live="polite"
+                    >
+                      Saved.
+                    </span>
+                  ) : null
+                }
+              </div>
+            </form>
 
-              <form method="post" action="/api/employees/update" class="space-y-2">
-                <input type="hidden" name="userId" value={person.id} />
-                <input type="hidden" name="action" value="teams" />
-                <p class="text-sm font-medium text-sage-dark/80">Teams</p>
-                <div class="flex flex-wrap gap-x-4 gap-y-2">
-                  {DIRECTORY_TEAMS.map((team) => (
-                    <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                      <input
-                        type="checkbox"
-                        name="teamIds"
-                        value={team.id}
-                        checked={person.teamIds.includes(team.id)}
-                      />
-                      {team.name}
-                    </label>
-                  ))}
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <button class="btn-secondary !px-3 !py-1.5" type="submit">
-                    Save teams
-                  </button>
-                  {
-                    savedUserId === person.id && savedAction === 'teams' ? (
-                      <span
-                        class="text-sm font-medium text-sage-dark/45 transition-opacity duration-300"
-                        data-save-flash
-                        aria-live="polite"
-                      >
-                        Saved.
-                      </span>
-                    ) : null
-                  }
-                </div>
-              </form>
-            </div>
-          </article>
-        );
-      })
+            <form method="post" action="/api/employees/update" class="space-y-2">
+              <input type="hidden" name="userId" value={person.id} />
+              <input type="hidden" name="action" value="teams" />
+              <p class="text-sm font-medium text-sage-dark/80">Teams</p>
+              <div class="flex flex-wrap gap-x-4 gap-y-2">
+                {DIRECTORY_TEAMS.map((team) => (
+                  <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                    <input
+                      type="checkbox"
+                      name="teamIds"
+                      value={team.id}
+                      checked={person.teamIds.includes(team.id)}
+                    />
+                    {team.name}
+                  </label>
+                ))}
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button class="btn-secondary !px-3 !py-1.5" type="submit">
+                  Save teams
+                </button>
+                {
+                  savedUserId === person.id && savedAction === 'teams' ? (
+                    <span
+                      class="text-sm font-medium text-sage-dark/45 transition-opacity duration-300"
+                      data-save-flash
+                      aria-live="polite"
+                    >
+                      Saved.
+                    </span>
+                  ) : null
+                }
+              </div>
+            </form>
+          </div>
+        </article>
+      ))
     }
   </div>
 

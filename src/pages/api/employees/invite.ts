@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { hasPermission, isOwnerEmail } from '../../../lib/permissions';
+import { hasPermission } from '../../../lib/permissions';
 import { createInvitation } from '../../../lib/invites';
 import { formErrorRedirect } from '../../../lib/http';
 import { orgIdFromLocals } from '../../../lib/organization';
@@ -21,23 +21,25 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     return formErrorRedirect('/admin', 'Name, email, and role are required.', 'peopleError');
   }
 
-  if (roleId === 'role_owner' || isOwnerEmail(email)) {
-    return formErrorRedirect(
-      '/admin',
-      'Primary owner is reserved for admin@wovensage.com. Invite your mom as Owner if she should see everything without making changes.',
-      'peopleError',
-    );
+  try {
+    const invite = await createInvitation({
+      email,
+      name,
+      roleId,
+      actorUserId: actor!.id,
+      origin: url.origin,
+      orgId: orgIdFromLocals(locals.organization),
+    });
+
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: `/admin?inviteUrl=${encodeURIComponent(invite.inviteUrl)}#people`,
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not create invite.';
+    return formErrorRedirect('/admin', message, 'peopleError');
   }
-
-  const invite = await createInvitation({
-    email,
-    name,
-    roleId,
-    actorUserId: actor!.id,
-    origin: url.origin,
-    orgId: orgIdFromLocals(locals.organization),
-  });
-
-  const location = `/admin?inviteUrl=${encodeURIComponent(invite.inviteUrl)}#people`;
-  return new Response(null, { status: 303, headers: { Location: location } });
 };

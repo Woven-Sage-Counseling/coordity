@@ -1,0 +1,15 @@
+---
+import PlatformLayout from '../../layouts/PlatformLayout.astro';
+
+export const prerender = false;
+const staff = Astro.locals.platformStaff!;
+---
+
+<PlatformLayout title="Promotions" staffName={staff.name}>
+  <h1 class="font-display text-4xl text-[#0b1f33]">Promotions</h1>
+  <p class="mt-2 text-sm text-[#5b6b7c]">Offers, trials, and promotional campaigns.</p>
+  <div class="mt-8 rounded-2xl border border-dashed border-black/15 bg-white/70 px-5 py-10 text-center">
+    <p class="text-lg font-semibold text-[#0b1f33]">Coming soon</p>
+    <p class="mt-2 text-sm text-[#5b6b7c]">Promotion management will land here.</p>
+  </div>
+</PlatformLayout>

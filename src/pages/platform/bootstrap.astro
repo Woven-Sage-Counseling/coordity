@@ -1,0 +1,44 @@
+---
+import CoordityMark from '../../components/CoordityMark.astro';
+import CoordityLayout from '../../layouts/CoordityLayout.astro';
+
+export const prerender = false;
+
+if (!Astro.locals.isCoordityApex) {
+  return Astro.redirect('/');
+}
+---
+
+<CoordityLayout title="Platform bootstrap">
+  <div class="rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm sm:p-8">
+    <CoordityMark class="text-xl" />
+    <h1 class="mt-4 font-display text-3xl text-[#0b1f33]">Bootstrap platform owner</h1>
+    <p class="mt-2 text-sm text-[#5b6b7c]">
+      Creates <code class="text-xs">admin@coordity.com</code> as platform owner. One-time setup.
+    </p>
+
+    {
+      Astro.url.searchParams.get('error') && (
+        <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {Astro.url.searchParams.get('error')}
+        </p>
+      )
+    }
+
+    <form method="post" action="/api/platform/bootstrap" class="mt-6 space-y-4">
+      <label class="block text-sm font-medium text-[#0b1f33]">
+        Bootstrap token
+        <input class="field" type="password" name="token" required autocomplete="off" />
+      </label>
+      <label class="block text-sm font-medium text-[#0b1f33]">
+        Name
+        <input class="field" type="text" name="name" value="Coordity Admin" required />
+      </label>
+      <label class="block text-sm font-medium text-[#0b1f33]">
+        Password
+        <input class="field" type="password" name="password" required minlength="12" autocomplete="new-password" />
+      </label>
+      <button class="btn-primary w-full" type="submit">Create platform owner</button>
+    </form>
+  </div>
+</CoordityLayout>

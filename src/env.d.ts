@@ -46,6 +46,17 @@ interface PortalOrganization {
   primaryColorDark: string | null;
   accentColorDark: string | null;
   invertLogoDark: boolean;
+  archivedAt: number | null;
+}
+
+interface PlatformStaffLocals {
+  userId: string;
+  email: string;
+  name: string;
+  roleKey: string;
+  roleName: string;
+  status: 'active' | 'disabled';
+  permissions: string[];
 }
 
 type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
@@ -55,6 +66,7 @@ declare namespace App {
     employee: PortalEmployee | null;
     organization: PortalOrganization | null;
     isCoordityApex: boolean;
+    platformStaff: PlatformStaffLocals | null;
   }
 }
 
@@ -70,6 +82,8 @@ interface Env {
   BETTER_AUTH_URL: string;
   PORTAL_BOOTSTRAP_TOKEN: string;
   PORTAL_OWNER_EMAIL: string;
+  COORDITY_PLATFORM_OWNER_EMAIL?: string;
+  COORDITY_PLATFORM_BOOTSTRAP_TOKEN?: string;
   PORTAL_FROM_EMAIL?: string;
   PORTAL_ENVIRONMENT: string;
   QB_CLIENT_ID?: string;

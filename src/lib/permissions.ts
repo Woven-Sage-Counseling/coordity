@@ -78,20 +78,6 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
           .all<{ key: Permission }>()
       : { results: [] as { key: Permission }[] };
 
-  const isOwner = isOwnerEmail(profile.email);
-
-  let roleKeys = (roles.results ?? []).map((row) => row.key);
-  let permissionKeys = (permissions.results ?? []).map((row) => row.key);
-
-  if (isOwner) {
-    const allRoles = await DB.prepare(`SELECT key FROM role ORDER BY key`).all<{ key: string }>();
-    const allPermissions = await DB.prepare(`SELECT key FROM permission ORDER BY key`).all<{
-      key: Permission;
-    }>();
-    roleKeys = allRoles.results?.map((row) => row.key) ?? ['owner'];
-    permissionKeys = allPermissions.results?.map((row) => row.key) ?? [...PERMISSIONS];
-  }
-
   return {
     id: profile.id,
     email: profile.email,
@@ -100,31 +86,20 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     phone: profile.phone,
     teams: (teams.results ?? []).map((row) => row.name),
     hasAvatar: profile.has_avatar === 1,
-    status: isOwner ? 'active' : profile.status,
-    roles: roleKeys,
-    permissions: permissionKeys,
+    status: profile.status,
+    roles: (roles.results ?? []).map((row) => row.key),
+    permissions: (permissions.results ?? []).map((row) => row.key),
   };
-}
-
-export function isOwnerEmail(email: string): boolean {
-  const owner = (getEnv().PORTAL_OWNER_EMAIL ?? '').trim().toLowerCase();
-  return Boolean(owner) && email.trim().toLowerCase() === owner;
-}
-
-export function isPortalOwner(employee: PortalEmployee | null): boolean {
-  return Boolean(employee && isOwnerEmail(employee.email));
 }
 
 /** Primary owner and Owner (view) roles — admin tab and announcements. */
 export function canAccessManagement(employee: PortalEmployee | null): boolean {
   if (!employee || employee.status !== 'active') return false;
-  if (isPortalOwner(employee)) return true;
   return employee.roles.includes('owner') || employee.roles.includes('owner_view');
 }
 
 export function hasPermission(employee: PortalEmployee | null, permission: Permission): boolean {
   if (!employee || employee.status !== 'active') return false;
-  if (isPortalOwner(employee)) return true;
   return employee.permissions.includes(permission);
 }
 

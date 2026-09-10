@@ -1,9 +1,7 @@
 import { isClinicianEmployee } from './employees';
-import { isPortalOwner } from './permissions';
 
 export function canUseTimesheet(employee: PortalEmployee | null): boolean {
   if (!employee || employee.status !== 'active') return false;
-  if (isPortalOwner(employee)) return true;
   return !isClinicianEmployee(employee);
 }
 

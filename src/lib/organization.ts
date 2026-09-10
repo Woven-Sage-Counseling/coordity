@@ -88,6 +88,8 @@ export interface PortalOrganization {
   primaryColorDark: string | null;
   accentColorDark: string | null;
   invertLogoDark: boolean;
+  /** Soft-delete timestamp; archived orgs are hidden from tenants. */
+  archivedAt: number | null;
 }
 
 export const DEFAULT_ORG_COLORS = {
@@ -128,6 +130,7 @@ type OrgRow = {
   accent_color_light?: string | null;
   accent_color_dark?: string | null;
   invert_logo_dark?: number | null;
+  archived_at?: number | null;
 };
 
 function mapOrg(row: OrgRow): PortalOrganization {
@@ -154,6 +157,7 @@ function mapOrg(row: OrgRow): PortalOrganization {
     primaryColorDark: normalizeHexColor(row.primary_color_dark) ?? null,
     accentColorDark: normalizeHexColor(row.accent_color_dark) ?? null,
     invertLogoDark: Boolean(row.invert_logo_dark),
+    archivedAt: row.archived_at ?? null,
   };
 }
 
@@ -176,6 +180,7 @@ function wovenSageFallback(): PortalOrganization {
     primaryColorDark: null,
     accentColorDark: null,
     invertLogoDark: true,
+    archivedAt: null,
   };
 }
 
@@ -188,7 +193,7 @@ const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
   bg_color_light, bg_color_dark,
   primary_color_light, primary_color_dark,
   accent_color_light, accent_color_dark,
-  invert_logo_dark`;
+  invert_logo_dark, archived_at`;
 
 const ORG_SELECT_BRANDING = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
@@ -334,7 +339,10 @@ export async function getOrganizationBySlug(slug: string): Promise<PortalOrganiz
       sql: `SELECT ${select} FROM organization WHERE lower(slug) = ?`,
       binds: [normalized],
     }));
-    return row ? mapOrg(row) : null;
+    if (!row) return null;
+    const org = mapOrg(row);
+    if (org.archivedAt) return null;
+    return org;
   } catch {
     return normalized === DEFAULT_ORG_SLUG ? wovenSageFallback() : null;
   }
@@ -437,6 +445,7 @@ export async function findOrganizationsByQuery(query: string, limit = 8): Promis
       `SELECT ${ORG_SELECT}
        FROM organization
        WHERE slug IS NOT NULL
+         AND archived_at IS NULL
          AND (
            lower(slug) LIKE ?
            OR lower(name) LIKE ?

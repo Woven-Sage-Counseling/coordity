@@ -1,7 +1,7 @@
 import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
 import { listDirectoryClinicians } from './employees';
-import { hasPermission, isOwnerEmail } from './permissions';
+import { hasPermission } from './permissions';
 import {
   COVERAGE_STATUS_VALUES,
   coverageCellKey,
@@ -72,7 +72,6 @@ export function canManageCredentialing(employee: PortalEmployee | null): boolean
 /** Owners, finance, and managers can look up any provider; clinicians see themselves. */
 export function canLookupAnyProvider(employee: PortalEmployee | null): boolean {
   if (!employee || employee.status !== 'active') return false;
-  if (isOwnerEmail(employee.email)) return true;
   return (
     employee.roles.includes('owner') ||
     employee.roles.includes('owner_view') ||

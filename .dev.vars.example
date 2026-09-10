@@ -5,6 +5,9 @@ BETTER_AUTH_SECRET=replace-with-a-long-random-string
 BETTER_AUTH_URL=http://localhost:4321
 PORTAL_BOOTSTRAP_TOKEN=replace-with-a-long-random-string
 PORTAL_OWNER_EMAIL=admin@wovensage.com
+COORDITY_PLATFORM_OWNER_EMAIL=admin@coordity.com
+# Optional; falls back to PORTAL_BOOTSTRAP_TOKEN if unset
+# COORDITY_PLATFORM_BOOTSTRAP_TOKEN=replace-with-a-long-random-string
 PORTAL_FROM_EMAIL=portal@wovensage.com
 PORTAL_ENVIRONMENT=preview
 

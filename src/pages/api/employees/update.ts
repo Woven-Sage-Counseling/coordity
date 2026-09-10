@@ -1,13 +1,15 @@
 import type { APIRoute } from 'astro';
-import { canAccessManagement, hasPermission, isOwnerEmail } from '../../../lib/permissions';
+import { canAccessManagement, hasPermission } from '../../../lib/permissions';
 import {
   assignRole,
+  countActiveOwners,
   setEmployeeStatus,
   updateEmployeeJobTitle,
   updateEmployeeTeams,
+  userHasOwnerRole,
 } from '../../../lib/employees';
-import { getEnv } from '../../../lib/env';
 import { formErrorRedirect } from '../../../lib/http';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -16,6 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const form = await request.formData();
   const userId = String(form.get('userId') ?? '');
   const action = String(form.get('action') ?? '');
+  const orgId = orgIdFromLocals(locals.organization);
 
   if (!userId) {
     return formErrorRedirect('/admin', 'Missing employee.', 'peopleError');
@@ -75,35 +78,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'role') {
     const roleId = String(form.get('roleId') ?? '');
-    const target = await getEnv()
-      .DB.prepare(`SELECT email FROM user WHERE id = ?`)
-      .bind(userId)
-      .first<{ email: string }>();
-    if (target && isOwnerEmail(target.email) && roleId !== 'role_owner') {
-      return formErrorRedirect(
-        '/admin',
-        'The primary owner account cannot change roles.',
-        'peopleError',
-      );
+    if (!roleId) {
+      return formErrorRedirect('/admin', 'Role is required.', 'peopleError');
     }
-    if ((!target || !isOwnerEmail(target.email)) && roleId === 'role_owner') {
-      return formErrorRedirect(
-        '/admin',
-        'Primary owner is reserved for admin@wovensage.com. Use Owner for view-only access.',
-        'peopleError',
-      );
+    const wasOwner = await userHasOwnerRole(userId);
+    const becomingOwner = roleId === 'role_owner';
+    if (wasOwner && !becomingOwner) {
+      const owners = await countActiveOwners(orgId);
+      if (owners <= 1) {
+        return formErrorRedirect(
+          '/admin',
+          'Keep at least one active owner for this workspace.',
+          'peopleError',
+        );
+      }
     }
     await assignRole({ userId, roleId, actorUserId: actor!.id });
   } else if (action === 'disable') {
     if (userId === actor!.id) {
       return formErrorRedirect('/admin', 'You cannot disable your own account.', 'peopleError');
     }
-    const target = await getEnv()
-      .DB.prepare(`SELECT email FROM user WHERE id = ?`)
-      .bind(userId)
-      .first<{ email: string }>();
-    if (target && isOwnerEmail(target.email)) {
-      return formErrorRedirect('/admin', 'The owner account cannot be disabled.', 'peopleError');
+    if (await userHasOwnerRole(userId)) {
+      const owners = await countActiveOwners(orgId);
+      if (owners <= 1) {
+        return formErrorRedirect(
+          '/admin',
+          'Keep at least one active owner for this workspace.',
+          'peopleError',
+        );
+      }
     }
     await setEmployeeStatus({ userId, status: 'disabled', actorUserId: actor!.id });
   } else if (action === 'enable') {

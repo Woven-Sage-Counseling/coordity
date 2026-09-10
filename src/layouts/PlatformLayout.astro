@@ -1,0 +1,100 @@
+---
+import CoordityMark from '../components/CoordityMark.astro';
+import { COORDITY_PRODUCT_NAME } from '../lib/organization';
+
+interface Props {
+  title: string;
+  staffName?: string;
+}
+
+const { title, staffName } = Astro.props;
+const nav = [
+  { href: '/platform', label: 'Dashboard' },
+  { href: '/platform/orgs', label: 'Organizations' },
+  { href: '/platform/marketing', label: 'Marketing' },
+  { href: '/platform/promotions', label: 'Promotions' },
+  { href: '/platform/staff', label: 'Staff' },
+];
+const path = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon-coordity.svg?v=4" type="image/svg+xml" />
+    <title>{title} | {COORDITY_PRODUCT_NAME} Platform</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --plat-ink: #0b1f33;
+        --plat-muted: #5b6b7c;
+        --plat-line: rgba(11, 31, 51, 0.12);
+        --plat-blue: #005284;
+        --plat-yellow: #fecb00;
+        --plat-bg: #f3f6f9;
+      }
+      body {
+        margin: 0;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        color: var(--plat-ink);
+        background:
+          radial-gradient(circle at 12% -10%, rgba(254, 203, 0, 0.18), transparent 42%),
+          radial-gradient(circle at 88% 0%, rgba(0, 82, 132, 0.12), transparent 40%),
+          var(--plat-bg);
+        min-height: 100vh;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-6 sm:px-8">
+      <header class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--plat-line)] pb-4">
+        <div class="flex items-center gap-3">
+          <CoordityMark class="text-lg" />
+          <span class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--plat-muted)]">
+            Platform
+          </span>
+        </div>
+        <div class="flex items-center gap-3 text-sm text-[var(--plat-muted)]">
+          {staffName ? <span>{staffName}</span> : null}
+          <form method="post" action="/api/session/sign-out">
+            <button
+              type="submit"
+              class="rounded-full border border-[var(--plat-line)] px-3 py-1.5 text-xs font-semibold text-[var(--plat-ink)] transition hover:bg-white"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </header>
+
+      <nav class="mt-4 flex flex-wrap gap-2" aria-label="Platform">
+        {
+          nav.map((item) => (
+            <a
+              href={item.href}
+              class:list={[
+                'rounded-full px-3 py-1.5 text-sm font-semibold transition',
+                path === item.href || (item.href !== '/platform' && path.startsWith(item.href))
+                  ? 'bg-[var(--plat-ink)] text-white'
+                  : 'bg-white/70 text-[var(--plat-muted)] hover:bg-white',
+              ]}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+
+      <main class="mt-8 flex-1 pb-12">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
