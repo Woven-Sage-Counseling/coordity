@@ -157,8 +157,20 @@ const arrowClass =
 
   .widget-carousel-viewport {
     width: 100%;
-    /* Room for card drop-shadows so corners are not hard-clipped */
-    padding: 0.35rem 0.15rem 2rem;
+    /* Extra bottom room + soft fade so drop-shadows don't hard-clip */
+    padding: 0.5rem 0.15rem 3.25rem;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 calc(100% - 1.75rem),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 calc(100% - 1.75rem),
+      transparent 100%
+    );
   }
 
   .widget-carousel-track {
