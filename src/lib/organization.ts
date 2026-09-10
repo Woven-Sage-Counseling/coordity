@@ -74,6 +74,8 @@ export interface PortalOrganization {
   displayName: string;
   logoUrl: string | null;
   websiteUrl: string | null;
+  hasFavicon: boolean;
+  faviconUpdatedAt: number | null;
 }
 
 type OrgRow = {
@@ -83,6 +85,8 @@ type OrgRow = {
   display_name: string | null;
   logo_url: string | null;
   website_url: string | null;
+  has_favicon?: number | null;
+  favicon_updated_at?: number | null;
 };
 
 function mapOrg(row: OrgRow): PortalOrganization {
@@ -95,6 +99,8 @@ function mapOrg(row: OrgRow): PortalOrganization {
     displayName,
     logoUrl: row.logo_url,
     websiteUrl: row.website_url,
+    hasFavicon: Boolean(row.has_favicon),
+    faviconUpdatedAt: row.favicon_updated_at ?? null,
   };
 }
 
@@ -106,7 +112,35 @@ function wovenSageFallback(): PortalOrganization {
     displayName: 'Woven Sage Counseling',
     logoUrl: 'https://wovensage.com/images/logo-text-header-transparent.png',
     websiteUrl: 'https://wovensage.com',
+    hasFavicon: false,
+    faviconUpdatedAt: null,
   };
+}
+
+const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
+  CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
+  favicon_updated_at`;
+
+const ORG_SELECT_LEGACY = `id, name, slug, display_name, logo_url, website_url`;
+
+export const ORG_FAVICON_MAX_BYTES = 250_000;
+export const ORG_FAVICON_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/x-icon',
+  'image/vnd.microsoft.icon',
+  'image/svg+xml',
+]);
+
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
 }
 
 export function isCoordityApexHost(hostname: string): boolean {
@@ -157,15 +191,19 @@ export function tenantOrigin(slug: string, requestUrl?: string): string {
 export async function getOrganizationById(id: string): Promise<PortalOrganization | null> {
   const { DB } = getEnv();
   try {
-    const row = await DB.prepare(
-      `SELECT id, name, slug, display_name, logo_url, website_url
-       FROM organization WHERE id = ?`,
-    )
+    const row = await DB.prepare(`SELECT ${ORG_SELECT} FROM organization WHERE id = ?`)
       .bind(id)
       .first<OrgRow>();
     return row ? mapOrg(row) : null;
   } catch {
-    return id === DEFAULT_ORG_ID ? wovenSageFallback() : null;
+    try {
+      const row = await DB.prepare(`SELECT ${ORG_SELECT_LEGACY} FROM organization WHERE id = ?`)
+        .bind(id)
+        .first<OrgRow>();
+      return row ? mapOrg(row) : null;
+    } catch {
+      return id === DEFAULT_ORG_ID ? wovenSageFallback() : null;
+    }
   }
 }
 
@@ -174,15 +212,21 @@ export async function getOrganizationBySlug(slug: string): Promise<PortalOrganiz
   if (!normalized) return null;
   const { DB } = getEnv();
   try {
-    const row = await DB.prepare(
-      `SELECT id, name, slug, display_name, logo_url, website_url
-       FROM organization WHERE lower(slug) = ?`,
-    )
+    const row = await DB.prepare(`SELECT ${ORG_SELECT} FROM organization WHERE lower(slug) = ?`)
       .bind(normalized)
       .first<OrgRow>();
     return row ? mapOrg(row) : null;
   } catch {
-    return normalized === DEFAULT_ORG_SLUG ? wovenSageFallback() : null;
+    try {
+      const row = await DB.prepare(
+        `SELECT ${ORG_SELECT_LEGACY} FROM organization WHERE lower(slug) = ?`,
+      )
+        .bind(normalized)
+        .first<OrgRow>();
+      return row ? mapOrg(row) : null;
+    } catch {
+      return normalized === DEFAULT_ORG_SLUG ? wovenSageFallback() : null;
+    }
   }
 }
 
@@ -280,7 +324,7 @@ export async function findOrganizationsByQuery(query: string, limit = 8): Promis
   const { DB } = getEnv();
   try {
     const rows = await DB.prepare(
-      `SELECT id, name, slug, display_name, logo_url, website_url
+      `SELECT ${ORG_SELECT}
        FROM organization
        WHERE slug IS NOT NULL
          AND (
@@ -295,8 +339,89 @@ export async function findOrganizationsByQuery(query: string, limit = 8): Promis
       .all<OrgRow>();
     return (rows.results ?? []).map(mapOrg);
   } catch {
-    const fallback = wovenSageFallback();
-    const hay = `${fallback.slug} ${fallback.name} ${fallback.displayName}`.toLowerCase();
-    return hay.includes(q) ? [fallback] : [];
+    try {
+      const rows = await DB.prepare(
+        `SELECT ${ORG_SELECT_LEGACY}
+         FROM organization
+         WHERE slug IS NOT NULL
+           AND (
+             lower(slug) LIKE ?
+             OR lower(name) LIKE ?
+             OR lower(COALESCE(display_name, '')) LIKE ?
+           )
+         ORDER BY display_name COLLATE NOCASE, name COLLATE NOCASE
+         LIMIT ?`,
+      )
+        .bind(`%${q}%`, `%${q}%`, `%${q}%`, limit)
+        .all<OrgRow>();
+      return (rows.results ?? []).map(mapOrg);
+    } catch {
+      const fallback = wovenSageFallback();
+      const hay = `${fallback.slug} ${fallback.name} ${fallback.displayName}`.toLowerCase();
+      return hay.includes(q) ? [fallback] : [];
+    }
   }
+}
+
+export async function getOrganizationFavicon(
+  orgId: string,
+): Promise<{ mime: string; dataBase64: string; updatedAt: number | null } | null> {
+  const { DB } = getEnv();
+  try {
+    const row = await DB.prepare(
+      `SELECT favicon_mime AS mime, favicon_data AS dataBase64, favicon_updated_at AS updatedAt
+       FROM organization
+       WHERE id = ?
+         AND favicon_data IS NOT NULL
+         AND favicon_data != ''
+         AND favicon_mime IS NOT NULL
+         AND favicon_mime != ''`,
+    )
+      .bind(orgId)
+      .first<{ mime: string; dataBase64: string; updatedAt: number | null }>();
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateOrganizationFavicon(input: {
+  orgId: string;
+  file?: File | null;
+  clear?: boolean;
+}): Promise<PortalOrganization> {
+  const { DB } = getEnv();
+  const ts = nowMs();
+
+  if (input.clear) {
+    await DB.prepare(
+      `UPDATE organization
+       SET favicon_mime = NULL, favicon_data = NULL, favicon_updated_at = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(ts, ts, input.orgId)
+      .run();
+  } else if (input.file && input.file.size > 0) {
+    const mime = input.file.type || 'image/png';
+    if (!ORG_FAVICON_TYPES.has(mime)) {
+      throw new Error('Use a PNG, JPEG, WebP, ICO, or SVG favicon.');
+    }
+    if (input.file.size > ORG_FAVICON_MAX_BYTES) {
+      throw new Error('Favicon is too large (max about 250KB).');
+    }
+    const data = await fileToBase64(input.file);
+    await DB.prepare(
+      `UPDATE organization
+       SET favicon_mime = ?, favicon_data = ?, favicon_updated_at = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(mime, data, ts, ts, input.orgId)
+      .run();
+  } else {
+    throw new Error('Choose a favicon image to upload.');
+  }
+
+  const org = await getOrganizationById(input.orgId);
+  if (!org) throw new Error('Organization not found.');
+  return org;
 }

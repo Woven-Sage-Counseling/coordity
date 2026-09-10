@@ -16,6 +16,9 @@ const employee = Astro.locals.employee;
 const organization = Astro.locals.organization;
 const orgName = organization?.displayName ?? organization?.name ?? 'Employee portal';
 const orgLogo = organization?.logoUrl ?? 'https://wovensage.com/images/logo-text-header-transparent.png';
+const orgFaviconHref = organization?.hasFavicon
+  ? `/api/org/favicon?v=${organization.faviconUpdatedAt ?? 0}`
+  : '/favicon.png';
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active';
@@ -34,7 +37,8 @@ const messagesUnread =
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="description" content={`Private employee workspace for ${orgName}, powered by Coordity.`} />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" href={orgFaviconHref} />
+    <link rel="apple-touch-icon" href={orgFaviconHref} />
     <title>{title} | {orgName}</title>
     <script is:inline define:vars={{ themeUserId: employee?.id ?? null }}>
       (function () {

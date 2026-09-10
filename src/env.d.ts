@@ -35,6 +35,8 @@ interface PortalOrganization {
   displayName: string;
   logoUrl: string | null;
   websiteUrl: string | null;
+  hasFavicon: boolean;
+  faviconUpdatedAt: number | null;
 }
 
 type Runtime = import('@astrojs/cloudflare').Runtime<Env>;

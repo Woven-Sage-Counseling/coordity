@@ -36,6 +36,11 @@ if (!canAccessManagement(employee)) {
 }
 
 const orgId = orgIdFromLocals(Astro.locals.organization);
+const organization = Astro.locals.organization;
+const hasOrgFavicon = Boolean(organization?.hasFavicon);
+const orgFaviconPreview = hasOrgFavicon
+  ? `/api/org/favicon?v=${organization?.faviconUpdatedAt ?? 0}`
+  : null;
 
 async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -254,6 +259,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="branding"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Workspace branding</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
           data-admin-open="roles"
         >
           <span class="text-[15px] font-medium text-charcoal">Roles and permissions</span>
@@ -436,6 +450,75 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
     </section>
 
+    <section class="hidden" data-admin-panel="branding">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Back
+      </button>
+      <PanelHeading
+        title="Workspace branding"
+        description="Upload a favicon for browser tabs on your workspace. Use a square PNG or ICO (about 32×32 or 64×64). Max 250KB."
+      />
+      <form
+        id="org-favicon-form"
+        class="mt-6 space-y-4 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm"
+        enctype="multipart/form-data"
+      >
+        <div class="flex items-center gap-4">
+          <div
+            class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-sage-dark/15 bg-[#f4f5f8]"
+            data-favicon-preview-wrap
+          >
+            {
+              orgFaviconPreview ? (
+                <img
+                  src={orgFaviconPreview}
+                  alt=""
+                  class="h-10 w-10 object-contain"
+                  data-favicon-preview
+                />
+              ) : (
+                <span class="text-[11px] text-sage-dark/45" data-favicon-empty>None</span>
+              )
+            }
+          </div>
+          <div class="min-w-0 flex-1">
+            <label class="block text-sm font-medium text-charcoal">
+              Favicon file
+              <input
+                class="mt-1.5 block w-full text-sm"
+                type="file"
+                name="favicon"
+                accept="image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,.ico"
+              />
+            </label>
+          </div>
+        </div>
+        {
+          hasOrgFavicon ? (
+            <label class="flex items-center gap-2 text-sm text-sage-dark/80">
+              <input type="checkbox" name="clear" value="1" />
+              Remove custom favicon (use default)
+            </label>
+          ) : null
+        }
+        <button
+          type="submit"
+          class="inline-flex rounded-full bg-charcoal px-4 py-2 text-sm font-semibold text-white transition hover:bg-charcoal/90"
+        >
+          Save favicon
+        </button>
+        <p class="hidden text-sm text-sage-dark/70" data-favicon-status></p>
+        <p class="hidden text-sm text-red-700" data-favicon-error></p>
+      </form>
+    </section>
+
     <section class="hidden" data-admin-panel="roles" id="roles">
       <button
         type="button"
@@ -542,6 +625,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       tasks: '#tasks',
       'work-items': '#work-items',
       credentialing: '#credentialing',
+      branding: '#branding',
       roles: '#roles',
     };
 
@@ -556,6 +640,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       if (hash === 'tasks') return 'tasks';
       if (hash === 'work-items' || hash === 'work-items-admin') return 'work-items';
       if (hash === 'credentialing' || hash === 'credentialing-admin') return 'credentialing';
+      if (hash === 'branding' || hash === 'favicon') return 'branding';
       if (hash === 'roles' || hash === 'roles-heading') return 'roles';
       return null;
     };
@@ -633,4 +718,59 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   }
 
   document.querySelectorAll('[data-admin-shell]').forEach((root) => setupAdminNav(root));
+
+  const faviconForm = document.getElementById('org-favicon-form');
+  if (faviconForm instanceof HTMLFormElement) {
+    const statusEl = faviconForm.querySelector('[data-favicon-status]');
+    const errorEl = faviconForm.querySelector('[data-favicon-error]');
+    const preview = faviconForm.querySelector('[data-favicon-preview]');
+    const empty = faviconForm.querySelector('[data-favicon-empty]');
+    faviconForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (statusEl instanceof HTMLElement) {
+        statusEl.classList.add('hidden');
+        statusEl.textContent = '';
+      }
+      if (errorEl instanceof HTMLElement) {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+      }
+      try {
+        const res = await fetch('/api/org/favicon', {
+          method: 'POST',
+          body: new FormData(faviconForm),
+          headers: { Accept: 'application/json' },
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          hasFavicon?: boolean;
+          faviconUrl?: string | null;
+        };
+        if (!res.ok) throw new Error(json.error || 'Could not save favicon.');
+        if (statusEl instanceof HTMLElement) {
+          statusEl.textContent = json.hasFavicon
+            ? 'Favicon saved. Hard-refresh if the tab icon does not update.'
+            : 'Custom favicon removed.';
+          statusEl.classList.remove('hidden');
+        }
+        if (json.hasFavicon && json.faviconUrl) {
+          if (preview instanceof HTMLImageElement) {
+            preview.src = json.faviconUrl;
+            preview.classList.remove('hidden');
+          } else {
+            window.location.reload();
+            return;
+          }
+          if (empty instanceof HTMLElement) empty.classList.add('hidden');
+        } else {
+          window.location.reload();
+        }
+      } catch (error) {
+        if (errorEl instanceof HTMLElement) {
+          errorEl.textContent = error instanceof Error ? error.message : 'Could not save favicon.';
+          errorEl.classList.remove('hidden');
+        }
+      }
+    });
+  }
 </script>
