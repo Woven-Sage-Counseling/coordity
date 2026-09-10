@@ -7,6 +7,7 @@ export const EARLY_ACCESS_SOURCE = 'early_access_request';
 export const EARLY_ACCESS_EMAIL_TO = 'admin@coordity.com';
 
 export type EarlyAccessStatus = 'new' | 'reviewed';
+export type EarlyAccessResolution = 'invited' | 'denied';
 
 export interface EarlyAccessRequest {
   id: string;
@@ -17,6 +18,7 @@ export interface EarlyAccessRequest {
   title: string | null;
   message: string | null;
   status: EarlyAccessStatus;
+  resolution: EarlyAccessResolution | null;
   createdAt: number;
   reviewedAt: number | null;
   reviewedBy: string | null;
@@ -31,12 +33,15 @@ type RequestRow = {
   title: string | null;
   message: string | null;
   status: string;
+  resolution: string | null;
   created_at: number;
   reviewed_at: number | null;
   reviewed_by: string | null;
 };
 
 function mapRow(row: RequestRow): EarlyAccessRequest {
+  const resolution =
+    row.resolution === 'invited' || row.resolution === 'denied' ? row.resolution : null;
   return {
     id: row.id,
     name: row.name,
@@ -46,6 +51,7 @@ function mapRow(row: RequestRow): EarlyAccessRequest {
     title: row.title,
     message: row.message,
     status: row.status === 'reviewed' ? 'reviewed' : 'new',
+    resolution,
     createdAt: row.created_at,
     reviewedAt: row.reviewed_at,
     reviewedBy: row.reviewed_by,
@@ -59,6 +65,54 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+const REQUEST_SELECT = `id, name, email, practice_name, phone, title, message, status,
+  resolution, created_at, reviewed_at, reviewed_by`;
+
+export function buildEarlyAccessSignupUrl(input: {
+  origin: string;
+  name: string;
+  email: string;
+  practiceName: string;
+}): string {
+  const url = new URL('/sign-up', input.origin);
+  url.searchParams.set('company', input.practiceName);
+  url.searchParams.set('name', input.name);
+  url.searchParams.set('email', input.email);
+  return url.toString();
+}
+
+export function buildEarlyAccessInviteEmail(input: {
+  name: string;
+  practiceName: string;
+  signupUrl: string;
+}): { subject: string; text: string; html: string } {
+  const first = input.name.trim().split(/\s+/)[0] || input.name;
+  const subject = 'Your Coordity early access invite';
+  const text = [
+    `Hi ${first},`,
+    '',
+    `You're invited to create a Coordity workspace for ${input.practiceName}.`,
+    '',
+    'Create your workspace here:',
+    input.signupUrl,
+    '',
+    'If you did not request early access, you can ignore this email.',
+    '',
+    '— The Coordity team',
+  ].join('\n');
+
+  const html = `
+    <p>Hi ${escapeHtml(first)},</p>
+    <p>You&rsquo;re invited to create a Coordity workspace for <strong>${escapeHtml(input.practiceName)}</strong>.</p>
+    <p><a href="${escapeHtml(input.signupUrl)}" style="display:inline-block;background:#fecb00;color:#0b1f33;font-weight:700;text-decoration:none;padding:12px 20px;border-radius:999px;">Create your workspace</a></p>
+    <p style="font-size:13px;color:#5b6b7c;">Or open this link:<br/><a href="${escapeHtml(input.signupUrl)}">${escapeHtml(input.signupUrl)}</a></p>
+    <p style="font-size:13px;color:#5b6b7c;">If you did not request early access, you can ignore this email.</p>
+    <p>— The Coordity team</p>
+  `.trim();
+
+  return { subject, text, html };
 }
 
 export function buildEarlyAccessEmail(input: {
@@ -126,8 +180,8 @@ export async function createEarlyAccessRequest(input: {
   const createdAt = nowMs();
   await DB.prepare(
     `INSERT INTO early_access_request
-       (id, name, email, practice_name, phone, title, message, status, created_at, reviewed_at, reviewed_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'new', ?, NULL, NULL)`,
+       (id, name, email, practice_name, phone, title, message, status, resolution, created_at, reviewed_at, reviewed_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'new', NULL, ?, NULL, NULL)`,
   )
     .bind(
       id,
@@ -150,10 +204,33 @@ export async function createEarlyAccessRequest(input: {
     title: input.title?.trim() || null,
     message: input.message?.trim() || null,
     status: 'new',
+    resolution: null,
     createdAt,
     reviewedAt: null,
     reviewedBy: null,
   };
+}
+
+export async function getEarlyAccessRequest(id: string): Promise<EarlyAccessRequest | null> {
+  const { DB } = getEnv();
+  try {
+    const row = await DB.prepare(
+      `SELECT ${REQUEST_SELECT} FROM early_access_request WHERE id = ?`,
+    )
+      .bind(id)
+      .first<RequestRow>();
+    return row ? mapRow(row) : null;
+  } catch {
+    // Pre-resolution migration fallback.
+    const row = await DB.prepare(
+      `SELECT id, name, email, practice_name, phone, title, message, status, created_at, reviewed_at, reviewed_by
+       FROM early_access_request WHERE id = ?`,
+    )
+      .bind(id)
+      .first<Omit<RequestRow, 'resolution'> & { resolution?: string | null }>();
+    if (!row) return null;
+    return mapRow({ ...row, resolution: row.resolution ?? null });
+  }
 }
 
 export async function listEarlyAccessRequests(options?: {
@@ -161,25 +238,47 @@ export async function listEarlyAccessRequests(options?: {
 }): Promise<EarlyAccessRequest[]> {
   const { DB } = getEnv();
   const status = options?.status ?? 'all';
-  const rows =
-    status === 'all'
-      ? await DB.prepare(
-          `SELECT id, name, email, practice_name, phone, title, message, status, created_at, reviewed_at, reviewed_by
-           FROM early_access_request
-           ORDER BY created_at DESC
-           LIMIT 200`,
-        ).all<RequestRow>()
-      : await DB.prepare(
-          `SELECT id, name, email, practice_name, phone, title, message, status, created_at, reviewed_at, reviewed_by
-           FROM early_access_request
-           WHERE status = ?
-           ORDER BY created_at DESC
-           LIMIT 200`,
-        )
-          .bind(status)
-          .all<RequestRow>();
+  try {
+    const rows =
+      status === 'all'
+        ? await DB.prepare(
+            `SELECT ${REQUEST_SELECT}
+             FROM early_access_request
+             ORDER BY created_at DESC
+             LIMIT 200`,
+          ).all<RequestRow>()
+        : await DB.prepare(
+            `SELECT ${REQUEST_SELECT}
+             FROM early_access_request
+             WHERE status = ?
+             ORDER BY created_at DESC
+             LIMIT 200`,
+          )
+            .bind(status)
+            .all<RequestRow>();
 
-  return (rows.results ?? []).map(mapRow);
+    return (rows.results ?? []).map(mapRow);
+  } catch {
+    const rows =
+      status === 'all'
+        ? await DB.prepare(
+            `SELECT id, name, email, practice_name, phone, title, message, status, created_at, reviewed_at, reviewed_by
+             FROM early_access_request
+             ORDER BY created_at DESC
+             LIMIT 200`,
+          ).all<Omit<RequestRow, 'resolution'>>()
+        : await DB.prepare(
+            `SELECT id, name, email, practice_name, phone, title, message, status, created_at, reviewed_at, reviewed_by
+             FROM early_access_request
+             WHERE status = ?
+             ORDER BY created_at DESC
+             LIMIT 200`,
+          )
+            .bind(status)
+            .all<Omit<RequestRow, 'resolution'>>();
+
+    return (rows.results ?? []).map((row) => mapRow({ ...row, resolution: null }));
+  }
 }
 
 export async function countNewEarlyAccessRequests(): Promise<number> {
@@ -197,15 +296,107 @@ export async function countNewEarlyAccessRequests(): Promise<number> {
 export async function markEarlyAccessReviewed(input: {
   id: string;
   reviewedBy: string;
+  resolution: EarlyAccessResolution;
 }): Promise<void> {
   const { DB } = getEnv();
-  await DB.prepare(
-    `UPDATE early_access_request
-     SET status = 'reviewed', reviewed_at = ?, reviewed_by = ?
-     WHERE id = ?`,
-  )
-    .bind(nowMs(), input.reviewedBy, input.id)
-    .run();
+  try {
+    await DB.prepare(
+      `UPDATE early_access_request
+       SET status = 'reviewed', resolution = ?, reviewed_at = ?, reviewed_by = ?
+       WHERE id = ?`,
+    )
+      .bind(input.resolution, nowMs(), input.reviewedBy, input.id)
+      .run();
+  } catch {
+    await DB.prepare(
+      `UPDATE early_access_request
+       SET status = 'reviewed', reviewed_at = ?, reviewed_by = ?
+       WHERE id = ?`,
+    )
+      .bind(nowMs(), input.reviewedBy, input.id)
+      .run();
+  }
+}
+
+export async function restoreEarlyAccessRequest(id: string): Promise<void> {
+  const { DB } = getEnv();
+  try {
+    await DB.prepare(
+      `UPDATE early_access_request
+       SET status = 'new', resolution = NULL, reviewed_at = NULL, reviewed_by = NULL
+       WHERE id = ?`,
+    )
+      .bind(id)
+      .run();
+  } catch {
+    await DB.prepare(
+      `UPDATE early_access_request
+       SET status = 'new', reviewed_at = NULL, reviewed_by = NULL
+       WHERE id = ?`,
+    )
+      .bind(id)
+      .run();
+  }
+}
+
+export async function inviteEarlyAccessRequest(input: {
+  id: string;
+  reviewedBy: string;
+  origin: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const request = await getEarlyAccessRequest(input.id);
+  if (!request) return { ok: false, error: 'Request not found.' };
+  if (request.status !== 'new') {
+    return { ok: false, error: 'That request is already reviewed.' };
+  }
+
+  const signupUrl = buildEarlyAccessSignupUrl({
+    origin: input.origin,
+    name: request.name,
+    email: request.email,
+    practiceName: request.practiceName,
+  });
+
+  const sent = await notifyAdminEmail({
+    ...buildEarlyAccessInviteEmail({
+      name: request.name,
+      practiceName: request.practiceName,
+      signupUrl,
+    }),
+    to: request.email,
+    replyTo: EARLY_ACCESS_EMAIL_TO,
+  });
+
+  if (!sent) {
+    return { ok: false, error: 'Could not send the signup email. Try again in a moment.' };
+  }
+
+  await markEarlyAccessReviewed({
+    id: request.id,
+    reviewedBy: input.reviewedBy,
+    resolution: 'invited',
+  });
+
+  return { ok: true };
+}
+
+export async function denyEarlyAccessRequest(input: {
+  id: string;
+  reviewedBy: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const request = await getEarlyAccessRequest(input.id);
+  if (!request) return { ok: false, error: 'Request not found.' };
+  if (request.status !== 'new') {
+    return { ok: false, error: 'That request is already reviewed.' };
+  }
+
+  await markEarlyAccessReviewed({
+    id: request.id,
+    reviewedBy: input.reviewedBy,
+    resolution: 'denied',
+  });
+
+  return { ok: true };
 }
 
 async function listActivePlatformStaffUserIds(): Promise<string[]> {

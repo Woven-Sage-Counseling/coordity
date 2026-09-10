@@ -12,6 +12,8 @@ if (!Astro.locals.isCoordityApex) {
 const error = Astro.url.searchParams.get('error');
 const presetName = String(Astro.url.searchParams.get('company') ?? '').trim();
 const presetSlug = normalizeOrgSlug(presetName);
+const presetAdminName = String(Astro.url.searchParams.get('name') ?? '').trim();
+const presetAdminEmail = String(Astro.url.searchParams.get('email') ?? '').trim();
 ---
 
 <CoordityLayout title="Create a workspace">
@@ -75,7 +77,15 @@ const presetSlug = normalizeOrgSlug(presetName);
     </label>
     <label class="block text-sm font-medium text-white/90">
       Your name
-      <input class="field-coordity" type="text" name="adminName" required maxlength="80" autocomplete="name" />
+      <input
+        class="field-coordity"
+        type="text"
+        name="adminName"
+        required
+        maxlength="80"
+        autocomplete="name"
+        value={presetAdminName}
+      />
     </label>
     <label class="block text-sm font-medium text-white/90">
       Work email
@@ -85,6 +95,7 @@ const presetSlug = normalizeOrgSlug(presetName);
         name="adminEmail"
         required
         autocomplete="email"
+        value={presetAdminEmail}
       />
     </label>
     <button class="btn-coordity" type="submit">Create workspace</button>

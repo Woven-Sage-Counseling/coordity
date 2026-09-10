@@ -5,7 +5,12 @@ import { listEarlyAccessRequests } from '../../lib/early-access';
 export const prerender = false;
 
 const staff = Astro.locals.platformStaff!;
-const filter = Astro.url.searchParams.get('status') === 'reviewed' ? 'reviewed' : Astro.url.searchParams.get('status') === 'all' ? 'all' : 'new';
+const filter =
+  Astro.url.searchParams.get('status') === 'reviewed'
+    ? 'reviewed'
+    : Astro.url.searchParams.get('status') === 'all'
+      ? 'all'
+      : 'new';
 const requests = await listEarlyAccessRequests({
   status: filter === 'all' ? 'all' : filter,
 }).catch(() => []);
@@ -25,13 +30,22 @@ function formatWhen(ts: number): string {
     return new Date(ts).toLocaleString();
   }
 }
+
+function statusLabel(item: { status: string; resolution: string | null }): string {
+  if (item.status === 'new') return 'New';
+  if (item.resolution === 'invited') return 'Invited';
+  if (item.resolution === 'denied') return 'Denied';
+  return 'Reviewed';
+}
 ---
 
 <PlatformLayout title="Requests" staffName={staff.name} eyebrow="Inbox">
   <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;">
     <div>
       <h1 class="platform-title" style="font-size:clamp(1.85rem, 3vw, 2.35rem);">Early access</h1>
-      <p class="platform-lede">Inbound interest from coordity.com. New requests also email admin@coordity.com.</p>
+      <p class="platform-lede">
+        Invite sends a signup link to their email. Deny closes the request with no email.
+      </p>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
       <a href="/platform/requests" class:list={['platform-chip', filter === 'new' && 'is-active']}>New</a>
@@ -43,7 +57,21 @@ function formatWhen(ts: number): string {
   </div>
 
   {error ? <p class="platform-alert platform-alert-error">{error}</p> : null}
-  {saved === 'reviewed' ? <p class="platform-alert platform-alert-ok">Marked as reviewed.</p> : null}
+  {
+    saved === 'invited' ? (
+      <p class="platform-alert platform-alert-ok">Signup invite emailed — moved to reviewed.</p>
+    ) : null
+  }
+  {
+    saved === 'denied' ? (
+      <p class="platform-alert platform-alert-ok">Request denied — moved to reviewed.</p>
+    ) : null
+  }
+  {
+    saved === 'restored' ? (
+      <p class="platform-alert platform-alert-ok">Moved back to the new requests list.</p>
+    ) : null
+  }
 
   {
     requests.length === 0 ? (
@@ -88,20 +116,38 @@ function formatWhen(ts: number): string {
                   </td>
                   <td>{item.practiceName}</td>
                   <td style="color:var(--c-muted);white-space:nowrap;">{formatWhen(item.createdAt)}</td>
-                  <td style="text-transform:capitalize;color:var(--c-muted);">{item.status}</td>
+                  <td style="color:var(--c-muted);">{statusLabel(item)}</td>
                   <td>
                     <div class="platform-actions">
                       {item.status === 'new' ? (
+                        <>
+                          <form method="post" action="/api/platform/requests/review">
+                            <input type="hidden" name="id" value={item.id} />
+                            <input type="hidden" name="action" value="invite" />
+                            <button class="platform-chip is-active" type="submit">
+                              Email signup link
+                            </button>
+                          </form>
+                          <form method="post" action="/api/platform/requests/review">
+                            <input type="hidden" name="id" value={item.id} />
+                            <input type="hidden" name="action" value="deny" />
+                            <button
+                              class="platform-chip"
+                              type="submit"
+                              style="color:#9f1d1d;border-color:rgba(159,29,29,0.25);"
+                            >
+                              Deny
+                            </button>
+                          </form>
+                        </>
+                      ) : (
                         <form method="post" action="/api/platform/requests/review">
                           <input type="hidden" name="id" value={item.id} />
+                          <input type="hidden" name="action" value="restore" />
                           <button class="platform-chip" type="submit">
-                            Mark reviewed
+                            Move to new
                           </button>
                         </form>
-                      ) : (
-                        <a class="platform-chip" href={`mailto:${item.email}?subject=${encodeURIComponent(`Re: Coordity early access — ${item.practiceName}`)}`}>
-                          Reply
-                        </a>
                       )}
                     </div>
                   </td>
