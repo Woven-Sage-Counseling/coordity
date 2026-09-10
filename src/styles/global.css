@@ -45,6 +45,11 @@ html.dark {
     @apply bg-cream font-sans text-sage-dark antialiased;
   }
 
+  html.dark header img.org-logo-invert-dark {
+    filter: brightness(0) invert(1);
+    opacity: 0.92;
+  }
+
   html.dark header img[alt='Woven Sage Counseling'] {
     filter: brightness(0) invert(1);
     opacity: 0.92;

@@ -4,6 +4,11 @@ import PreviewBanner from '../components/PreviewBanner.astro';
 import PortalFooter from '../components/PortalFooter.astro';
 import { getEnv } from '../lib/env';
 import { countUnreadMessages } from '../lib/messages';
+import {
+  DEFAULT_ORG_ACCENT_COLOR,
+  DEFAULT_ORG_PRIMARY_COLOR,
+  hexToRgbChannels,
+} from '../lib/organization';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
 
 interface Props {
@@ -19,6 +24,17 @@ const orgLogo = organization?.logoUrl ?? 'https://wovensage.com/images/logo-text
 const orgFaviconHref = organization?.hasFavicon
   ? `/api/org/favicon?v=${organization.faviconUpdatedAt ?? 0}`
   : '/favicon.png';
+const invertLogoDark = organization?.invertLogoDark ?? false;
+const primaryHex = organization?.primaryColor ?? DEFAULT_ORG_PRIMARY_COLOR;
+const accentHex = organization?.accentColor ?? DEFAULT_ORG_ACCENT_COLOR;
+const primaryRgb = hexToRgbChannels(primaryHex) ?? '83 95 81';
+const accentRgb = hexToRgbChannels(accentHex) ?? '120 143 117';
+const brandStyle = [
+  `--portal-sage-dark: ${primaryRgb}`,
+  `--portal-charcoal: ${primaryRgb}`,
+  `--portal-sage: ${accentRgb}`,
+  `--portal-sage-light: ${accentRgb}`,
+].join('; ');
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active';
@@ -40,6 +56,7 @@ const messagesUnread =
     <link rel="icon" href={orgFaviconHref} />
     <link rel="apple-touch-icon" href={orgFaviconHref} />
     <title>{title} | {orgName}</title>
+    <style is:inline set:html={`:root { ${brandStyle} }`} />
     <script is:inline define:vars={{ themeUserId: employee?.id ?? null }}>
       (function () {
         try {
@@ -61,7 +78,7 @@ const messagesUnread =
               <img
                 src={orgLogo}
                 alt={orgName}
-                class="h-7 w-auto"
+                class:list={['h-7 w-auto', invertLogoDark ? 'org-logo-invert-dark' : null]}
                 width="220"
                 height="38"
               />

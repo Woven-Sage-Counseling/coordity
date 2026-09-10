@@ -37,6 +37,7 @@ function isPublicPath(pathname: string): boolean {
   if (pathname === '/api/orgs/resolve') return true;
   if (pathname === '/api/orgs/create') return true;
   if (pathname === '/api/org/favicon') return true;
+  if (pathname === '/api/org/logo') return true;
   return false;
 }
 
@@ -134,7 +135,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       response.headers.delete('X-Frame-Options');
       response.headers.set('Content-Security-Policy', 'frame-ancestors *');
     }
-    if (pathname !== '/api/org/favicon') {
+    if (pathname !== '/api/org/favicon' && pathname !== '/api/org/logo') {
       response.headers.set('Cache-Control', 'no-store');
     }
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
@@ -187,7 +188,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  if (pathname.startsWith('/api/home-layout/update')) {
+  if (pathname.startsWith('/api/home-layout/update') || pathname === '/api/org/branding') {
     if (!canAccessManagement(employee)) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }

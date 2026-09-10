@@ -35,8 +35,13 @@ interface PortalOrganization {
   displayName: string;
   logoUrl: string | null;
   websiteUrl: string | null;
+  hasLogo: boolean;
+  logoUpdatedAt: number | null;
   hasFavicon: boolean;
   faviconUpdatedAt: number | null;
+  primaryColor: string | null;
+  accentColor: string | null;
+  invertLogoDark: boolean;
 }
 
 type Runtime = import('@astrojs/cloudflare').Runtime<Env>;

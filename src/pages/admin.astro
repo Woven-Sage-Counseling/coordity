@@ -41,6 +41,15 @@ const hasOrgFavicon = Boolean(organization?.hasFavicon);
 const orgFaviconPreview = hasOrgFavicon
   ? `/api/org/favicon?v=${organization?.faviconUpdatedAt ?? 0}`
   : null;
+const hasOrgLogo = Boolean(organization?.hasLogo);
+const orgLogoPreview =
+  organization?.logoUrl ??
+  (hasOrgLogo ? `/api/org/logo?v=${organization?.logoUpdatedAt ?? 0}` : null);
+const brandDisplayName = organization?.displayName ?? organization?.name ?? '';
+const brandWebsiteUrl = organization?.websiteUrl ?? '';
+const brandPrimary = organization?.primaryColor ?? '#535F51';
+const brandAccent = organization?.accentColor ?? '#788F75';
+const brandInvertLogoDark = Boolean(organization?.invertLogoDark);
 
 async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -463,33 +472,86 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </button>
       <PanelHeading
         title="Workspace branding"
-        description="Upload a favicon for browser tabs on your workspace. A square PNG or ICO works best. Max about 1.2MB."
+        description="Customize how your portal looks — name, logos, tab icon, and colors used across buttons and accents."
       />
       <form
-        id="org-favicon-form"
-        class="mt-6 space-y-4 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm"
+        id="org-branding-form"
+        class="mt-6 space-y-8 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm"
         enctype="multipart/form-data"
       >
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-sage-dark/15 bg-[#f4f5f8]"
-            data-favicon-preview-wrap
-          >
-            {
-              orgFaviconPreview ? (
-                <img
-                  src={orgFaviconPreview}
-                  alt=""
-                  class="h-10 w-10 object-contain"
-                  data-favicon-preview
-                />
-              ) : (
-                <span class="text-[11px] text-sage-dark/45" data-favicon-empty>None</span>
-              )
-            }
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-charcoal">Workspace identity</h3>
+          <label class="block text-sm font-medium text-charcoal">
+            Display name
+            <input class="field" type="text" name="displayName" required maxlength="80" value={brandDisplayName} />
+          </label>
+          <label class="block text-sm font-medium text-charcoal">
+            Website
+            <input
+              class="field"
+              type="url"
+              name="websiteUrl"
+              placeholder="https://example.com"
+              value={brandWebsiteUrl}
+            />
+          </label>
+        </div>
+
+        <div class="space-y-4 border-t border-sage-dark/10 pt-6">
+          <h3 class="text-sm font-semibold text-charcoal">Header &amp; sign-in logo</h3>
+          <p class="text-sm text-sage-dark/65">
+            Used in the portal header, sign-in page, and workspace finder. Transparent PNG works best. Max about 1.2MB.
+          </p>
+          <div class="flex items-center gap-4">
+            <div class="flex h-16 min-w-[7rem] items-center justify-center overflow-hidden rounded-xl border border-sage-dark/15 bg-[#f4f5f8] px-3">
+              {
+                orgLogoPreview ? (
+                  <img src={orgLogoPreview} alt="" class="max-h-12 w-auto max-w-[9rem] object-contain" data-brand-logo-preview />
+                ) : (
+                  <span class="text-[11px] text-sage-dark/45" data-brand-logo-empty>None</span>
+                )
+              }
+            </div>
+            <label class="min-w-0 flex-1 text-sm font-medium text-charcoal">
+              Logo file
+              <input
+                class="mt-1.5 block w-full text-sm"
+                type="file"
+                name="logo"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+              />
+            </label>
           </div>
-          <div class="min-w-0 flex-1">
-            <label class="block text-sm font-medium text-charcoal">
+          {
+            hasOrgLogo || organization?.logoUrl ? (
+              <label class="flex items-center gap-2 text-sm text-sage-dark/80">
+                <input type="checkbox" name="clearLogo" value="1" />
+                Remove logo
+              </label>
+            ) : null
+          }
+          <label class="flex items-center gap-2 text-sm text-sage-dark/80">
+            <input type="checkbox" name="invertLogoDark" value="1" checked={brandInvertLogoDark} />
+            Invert logo in dark mode
+          </label>
+        </div>
+
+        <div class="space-y-4 border-t border-sage-dark/10 pt-6">
+          <h3 class="text-sm font-semibold text-charcoal">Favicon</h3>
+          <p class="text-sm text-sage-dark/65">
+            Browser tab icon. Square PNG or ICO works best. Max about 1.2MB.
+          </p>
+          <div class="flex items-center gap-4">
+            <div class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-sage-dark/15 bg-[#f4f5f8]">
+              {
+                orgFaviconPreview ? (
+                  <img src={orgFaviconPreview} alt="" class="h-10 w-10 object-contain" data-brand-favicon-preview />
+                ) : (
+                  <span class="text-[11px] text-sage-dark/45" data-brand-favicon-empty>None</span>
+                )
+              }
+            </div>
+            <label class="min-w-0 flex-1 text-sm font-medium text-charcoal">
               Favicon file
               <input
                 class="mt-1.5 block w-full text-sm"
@@ -499,23 +561,91 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               />
             </label>
           </div>
+          {
+            hasOrgFavicon ? (
+              <label class="flex items-center gap-2 text-sm text-sage-dark/80">
+                <input type="checkbox" name="clearFavicon" value="1" />
+                Remove custom favicon
+              </label>
+            ) : null
+          }
         </div>
-        {
-          hasOrgFavicon ? (
-            <label class="flex items-center gap-2 text-sm text-sage-dark/80">
-              <input type="checkbox" name="clear" value="1" />
-              Remove custom favicon (use default)
+
+        <div class="space-y-4 border-t border-sage-dark/10 pt-6">
+          <h3 class="text-sm font-semibold text-charcoal">Colors</h3>
+          <p class="text-sm text-sage-dark/65">
+            Primary drives buttons and strong text. Accent is used for secondary highlights.
+          </p>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-sm font-medium text-charcoal">
+              Primary
+              <span class="mt-1.5 flex items-center gap-2">
+                <input
+                  class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                  type="color"
+                  name="primaryColor"
+                  value={brandPrimary}
+                  data-brand-primary-color
+                />
+                <input
+                  class="field mt-0"
+                  type="text"
+                  value={brandPrimary}
+                  maxlength="7"
+                  data-brand-primary-hex
+                  aria-label="Primary color hex"
+                />
+              </span>
             </label>
-          ) : null
-        }
-        <button
-          type="submit"
-          class="inline-flex rounded-full bg-charcoal px-4 py-2 text-sm font-semibold text-white transition hover:bg-charcoal/90"
-        >
-          Save favicon
-        </button>
-        <p class="hidden text-sm text-sage-dark/70" data-favicon-status></p>
-        <p class="hidden text-sm text-red-700" data-favicon-error></p>
+            <label class="block text-sm font-medium text-charcoal">
+              Accent
+              <span class="mt-1.5 flex items-center gap-2">
+                <input
+                  class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                  type="color"
+                  name="accentColor"
+                  value={brandAccent}
+                  data-brand-accent-color
+                />
+                <input
+                  class="field mt-0"
+                  type="text"
+                  value={brandAccent}
+                  maxlength="7"
+                  data-brand-accent-hex
+                  aria-label="Accent color hex"
+                />
+              </span>
+            </label>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <span
+              class="inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white"
+              data-brand-preview-primary
+              style={`background:${brandPrimary}`}
+            >
+              Primary button
+            </span>
+            <span
+              class="inline-flex rounded-full border px-4 py-2 text-sm font-medium"
+              data-brand-preview-accent
+              style={`border-color:${brandAccent};color:${brandAccent}`}
+            >
+              Accent text
+            </span>
+          </div>
+        </div>
+
+        <div class="border-t border-sage-dark/10 pt-6">
+          <button
+            type="submit"
+            class="inline-flex rounded-full bg-charcoal px-4 py-2 text-sm font-semibold text-white transition hover:bg-charcoal/90"
+          >
+            Save branding
+          </button>
+          <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
+          <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
+        </div>
       </form>
     </section>
 
@@ -719,13 +849,48 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
   document.querySelectorAll('[data-admin-shell]').forEach((root) => setupAdminNav(root));
 
-  const faviconForm = document.getElementById('org-favicon-form');
-  if (faviconForm instanceof HTMLFormElement) {
-    const statusEl = faviconForm.querySelector('[data-favicon-status]');
-    const errorEl = faviconForm.querySelector('[data-favicon-error]');
-    const preview = faviconForm.querySelector('[data-favicon-preview]');
-    const empty = faviconForm.querySelector('[data-favicon-empty]');
-    faviconForm.addEventListener('submit', async (event) => {
+  const brandingForm = document.getElementById('org-branding-form');
+  if (brandingForm instanceof HTMLFormElement) {
+    const statusEl = brandingForm.querySelector('[data-brand-status]');
+    const errorEl = brandingForm.querySelector('[data-brand-error]');
+    const primaryColor = brandingForm.querySelector('[data-brand-primary-color]');
+    const primaryHex = brandingForm.querySelector('[data-brand-primary-hex]');
+    const accentColor = brandingForm.querySelector('[data-brand-accent-color]');
+    const accentHex = brandingForm.querySelector('[data-brand-accent-hex]');
+    const previewPrimary = brandingForm.querySelector('[data-brand-preview-primary]');
+    const previewAccent = brandingForm.querySelector('[data-brand-preview-accent]');
+
+    const syncPair = (
+      colorInput: Element | null,
+      hexInput: Element | null,
+      fromColor: boolean,
+    ) => {
+      if (!(colorInput instanceof HTMLInputElement) || !(hexInput instanceof HTMLInputElement)) return;
+      if (fromColor) {
+        hexInput.value = colorInput.value.toUpperCase();
+      } else {
+        const raw = hexInput.value.trim();
+        const next = raw.startsWith('#') ? raw : `#${raw}`;
+        if (/^#[0-9A-Fa-f]{6}$/.test(next)) {
+          colorInput.value = next;
+          hexInput.value = next.toUpperCase();
+        }
+      }
+      if (previewPrimary instanceof HTMLElement && colorInput === primaryColor) {
+        previewPrimary.style.background = colorInput.value;
+      }
+      if (previewAccent instanceof HTMLElement && colorInput === accentColor) {
+        previewAccent.style.borderColor = colorInput.value;
+        previewAccent.style.color = colorInput.value;
+      }
+    };
+
+    primaryColor?.addEventListener('input', () => syncPair(primaryColor, primaryHex, true));
+    primaryHex?.addEventListener('change', () => syncPair(primaryColor, primaryHex, false));
+    accentColor?.addEventListener('input', () => syncPair(accentColor, accentHex, true));
+    accentHex?.addEventListener('change', () => syncPair(accentColor, accentHex, false));
+
+    brandingForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (statusEl instanceof HTMLElement) {
         statusEl.classList.add('hidden');
@@ -735,39 +900,35 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         errorEl.classList.add('hidden');
         errorEl.textContent = '';
       }
+      syncPair(primaryColor, primaryHex, false);
+      syncPair(accentColor, accentHex, false);
       try {
-        const res = await fetch('/api/org/favicon', {
+        const res = await fetch('/api/org/branding', {
           method: 'POST',
-          body: new FormData(faviconForm),
+          body: new FormData(brandingForm),
           headers: { Accept: 'application/json' },
         });
         const json = (await res.json().catch(() => ({}))) as {
           error?: string;
-          hasFavicon?: boolean;
-          faviconUrl?: string | null;
+          branding?: { hasLogo?: boolean; logoUrl?: string | null; hasFavicon?: boolean; faviconUrl?: string | null };
         };
-        if (!res.ok) throw new Error(json.error || 'Could not save favicon.');
+        if (!res.ok) throw new Error(json.error || 'Could not save branding.');
         if (statusEl instanceof HTMLElement) {
-          statusEl.textContent = json.hasFavicon
-            ? 'Favicon saved. Hard-refresh if the tab icon does not update.'
-            : 'Custom favicon removed.';
+          statusEl.textContent = 'Branding saved. Refresh if colors or logos do not update everywhere.';
           statusEl.classList.remove('hidden');
         }
-        if (json.hasFavicon && json.faviconUrl) {
-          if (preview instanceof HTMLImageElement) {
-            preview.src = json.faviconUrl;
-            preview.classList.remove('hidden');
-          } else {
-            window.location.reload();
-            return;
-          }
-          if (empty instanceof HTMLElement) empty.classList.add('hidden');
-        } else {
-          window.location.reload();
+        const branding = json.branding;
+        if (branding?.logoUrl) {
+          const logoPreview = brandingForm.querySelector('[data-brand-logo-preview]');
+          if (logoPreview instanceof HTMLImageElement) logoPreview.src = branding.logoUrl;
+        }
+        if (branding?.faviconUrl) {
+          const faviconPreview = brandingForm.querySelector('[data-brand-favicon-preview]');
+          if (faviconPreview instanceof HTMLImageElement) faviconPreview.src = branding.faviconUrl;
         }
       } catch (error) {
         if (errorEl instanceof HTMLElement) {
-          errorEl.textContent = error instanceof Error ? error.message : 'Could not save favicon.';
+          errorEl.textContent = error instanceof Error ? error.message : 'Could not save branding.';
           errorEl.classList.remove('hidden');
         }
       }
