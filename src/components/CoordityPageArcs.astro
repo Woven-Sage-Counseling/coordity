@@ -44,12 +44,12 @@ const arcs = [
   .coordity-page-arcs {
     pointer-events: none;
     position: fixed;
-    top: 18%;
+    top: 0;
     right: 0;
     z-index: 0;
-    width: min(150vw, 58rem);
+    width: min(140vw, 52rem);
     aspect-ratio: 1;
-    transform: translate(52%, 0);
+    transform: translate(48%, -38%);
     color: rgb(var(--portal-charcoal) / 1);
   }
 
@@ -62,17 +62,15 @@ const arcs = [
 
   @media (min-width: 768px) {
     .coordity-page-arcs {
-      top: 12%;
-      width: min(140vw, 64rem);
-      transform: translate(54%, 0);
+      width: min(120vw, 58rem);
+      transform: translate(50%, -40%);
     }
   }
 
   @media (min-width: 1024px) {
     .coordity-page-arcs {
-      top: 8%;
-      width: min(110vw, 72rem);
-      transform: translate(58%, 0);
+      width: min(100vw, 64rem);
+      transform: translate(52%, -42%);
     }
   }
 </style>
