@@ -87,7 +87,7 @@ const arrowClass =
           </svg>
         </button>
 
-        <div class="widget-carousel-viewport overflow-hidden px-0 pt-2" data-carousel-viewport>
+        <div class="widget-carousel-viewport overflow-hidden px-0" data-carousel-viewport>
           <div class="widget-carousel-track flex items-start" data-carousel-track>
             {defaultOrder.map((id) => (
               <div
@@ -157,27 +157,8 @@ const arrowClass =
 
   .widget-carousel-viewport {
     width: 100%;
-    padding-bottom: 2.75rem;
-    -webkit-mask-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      #000 4%,
-      #000 96%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      #000 4%,
-      #000 96%,
-      transparent 100%
-    );
-  }
-
-  [data-widget-carousel][data-solo='true'] .widget-carousel-viewport,
-  [data-widget-carousel][data-scrollable='false'] .widget-carousel-viewport {
-    -webkit-mask-image: none;
-    mask-image: none;
+    /* Room for card drop-shadows so corners are not hard-clipped */
+    padding: 0.35rem 0.15rem 2rem;
   }
 
   .widget-carousel-track {
@@ -193,14 +174,11 @@ const arrowClass =
     height: var(--widget-max-height);
     min-height: var(--widget-max-height);
     max-height: var(--widget-max-height);
-    overflow: hidden;
+    overflow: visible;
     width: calc((100% - (var(--widget-per-page) - 1) * var(--widget-gap)) / var(--widget-per-page));
     transform: none;
     opacity: 1;
-    transition:
-      transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
-    transform-origin: top center;
+    transition: opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .widget-carousel-slide > [data-widget-card] {
@@ -245,28 +223,35 @@ const arrowClass =
       --widget-per-page: 1;
     }
 
+    [data-widget-carousel][data-per-page='1'][data-scrollable='true'] .widget-carousel-viewport {
+      -webkit-mask-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        #000 6%,
+        #000 94%,
+        transparent 100%
+      );
+      mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+    }
+
     [data-widget-carousel][data-per-page='1'][data-scrollable='true'] .widget-carousel-slide {
       width: 70%;
-      transform: scale(0.92);
       opacity: 0.72;
     }
 
     [data-widget-carousel][data-per-page='1'][data-scrollable='true']
       .widget-carousel-slide[data-active='true'] {
-      transform: scale(1);
       opacity: 1;
     }
   }
 
   [data-widget-carousel][data-per-page]:not([data-per-page='1'])
     .widget-carousel-slide:not([data-active='true']) {
-    transform: scale(0.96);
-    opacity: 0.7;
+    opacity: 0.72;
   }
 
   .widget-carousel-slide[data-solo='true'] {
     width: 100%;
-    transform: none;
     opacity: 1;
   }
 
