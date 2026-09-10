@@ -48,6 +48,8 @@ const railBoard = layout.showRailBoard;
 const railImageUrl = layout.railImageUrl;
 const belowBoard = layout.showBelowBoard;
 const showCoordityArcs = layout.showCoordityArcs;
+/** Match board layout width for announcements even when the right slot is Coordity arcs. */
+const useRailGrid = showRail || showCoordityArcs;
 /** Always render widgets full-width below — ignore rail placement and never hide them. */
 const showWidgets = true;
 const suggestOnRail = railBoard;
@@ -71,7 +73,7 @@ const widgetProps = {
       <div
         class:list={[
           'flex flex-col lg:items-start lg:gap-8',
-          showRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_24rem]' : '',
+          useRailGrid ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_24rem]' : '',
         ]}
       >
         <div class="order-1 min-w-0 lg:order-1">
