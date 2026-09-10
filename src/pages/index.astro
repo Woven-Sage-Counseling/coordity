@@ -2,6 +2,7 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AppCard from '../components/AppCard.astro';
 import AnnouncementsPanel from '../components/AnnouncementsPanel.astro';
+import CoordityPageArcs from '../components/CoordityPageArcs.astro';
 import HomeBulletinBoard from '../components/HomeBulletinBoard.astro';
 import HomeShortcuts from '../components/HomeShortcuts.astro';
 import HomeWidgetCarousel from '../components/HomeWidgetCarousel.astro';
@@ -16,7 +17,7 @@ import { canUseTimesheet } from '../lib/timesheet-access';
 import { getActiveShift } from '../lib/timesheet-entries';
 import { isOnBreak } from '../lib/timesheet-breaks';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
-import { COMPANY_WORDMARK_SRC, PORTAL_MARK_SRC } from '../lib/home-layout';
+import { COMPANY_WORDMARK_SRC } from '../lib/home-layout';
 import { resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
 import { orgIdFromLocals } from '../lib/organization';
 
@@ -46,6 +47,7 @@ const showRail = layout.showRail;
 const railBoard = layout.showRailBoard;
 const railImageUrl = layout.railImageUrl;
 const belowBoard = layout.showBelowBoard;
+const showCoordityArcs = layout.showCoordityArcs;
 /** Always render widgets full-width below — ignore rail placement and never hide them. */
 const showWidgets = true;
 const suggestOnRail = railBoard;
@@ -62,98 +64,102 @@ const widgetProps = {
 ---
 
 <PortalLayout title="Home" wide>
-  <div
-    class:list={[
-      'flex flex-col lg:items-start lg:gap-8',
-      showRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_24rem]' : '',
-    ]}
-  >
-    <div class="order-1 min-w-0 lg:order-1">
-      <div class="flex flex-wrap items-center gap-3">
-        <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
-        <ShiftStatusIndicator
-          onShift={onShift}
-          onBreak={onBreak}
-          onTimeOff={onTimeOff}
-          showLabel
-          self
-          showShiftStatus={canSeeTimesheet}
-        />
+  <div class="relative overflow-visible">
+    {showCoordityArcs ? <CoordityPageArcs /> : null}
+
+    <div class="relative z-10">
+      <div
+        class:list={[
+          'flex flex-col lg:items-start lg:gap-8',
+          showRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_24rem]' : '',
+        ]}
+      >
+        <div class="order-1 min-w-0 lg:order-1">
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Welcome back, {firstName}.</h1>
+            <ShiftStatusIndicator
+              onShift={onShift}
+              onBreak={onBreak}
+              onTimeOff={onTimeOff}
+              showLabel
+              self
+              showShiftStatus={canSeeTimesheet}
+            />
+          </div>
+
+          <AnnouncementsPanel
+            announcements={announcements}
+            announcementUnreadCount={announcementUnreadCount}
+            notifications={notifications}
+            notificationUnreadCount={notificationUnreadCount}
+            canSeeAdmin={canSeeAdmin}
+          />
+
+          <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
+
+          {
+            belowBoard ? (
+              <div class="mt-8">
+                <HomeBulletinBoard
+                  shape="landscape"
+                  surface={layout.surface}
+                  showSuggest={suggestOnBelow}
+                />
+              </div>
+            ) : null
+          }
+        </div>
+
+        {
+          showRail ? (
+            <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
+              {railBoard ? (
+                <HomeBulletinBoard shape="portrait" surface={layout.surface} showSuggest={suggestOnRail} />
+              ) : null}
+              {layout.showRailImage && railImageUrl ? (
+                <div class="overflow-hidden rounded-[1.05rem] bg-white/80 p-6 shadow-sm ring-1 ring-black/10">
+                  <img
+                    src={
+                      layout.railSlot === 'company' && !layout.hasRailImage
+                        ? COMPANY_WORDMARK_SRC
+                        : railImageUrl
+                    }
+                    alt=""
+                    class="mx-auto max-h-64 w-full object-contain"
+                  />
+                </div>
+              ) : null}
+            </aside>
+          ) : null
+        }
       </div>
 
-      <AnnouncementsPanel
-        announcements={announcements}
-        announcementUnreadCount={announcementUnreadCount}
-        notifications={notifications}
-        notificationUnreadCount={notificationUnreadCount}
-        canSeeAdmin={canSeeAdmin}
-      />
-
-      <HomeShortcuts userId={employee.id} canSeeFinancials={canSeeFinancials} />
-
       {
-        belowBoard ? (
+        showWidgets ? (
           <div class="mt-8">
-            <HomeBulletinBoard
-              shape="landscape"
-              surface={layout.surface}
-              showSuggest={suggestOnBelow}
-            />
+            <HomeWidgetCarousel {...widgetProps} />
           </div>
         ) : null
       }
+
+      {
+        appCategories.map((category) => {
+          const apps = visibleApps.filter((app) => app.category === category.id);
+          if (apps.length === 0) return null;
+          return (
+            <section class="mt-12" aria-labelledby={`${category.id}-heading`}>
+              <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
+                {category.title}
+              </h2>
+              <div class="mt-5 flex flex-wrap gap-x-4 gap-y-6">
+                {apps.map((app) => (
+                  <AppCard app={app} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      }
     </div>
-
-    {
-      showRail ? (
-        <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
-          {railBoard ? (
-            <HomeBulletinBoard shape="portrait" surface={layout.surface} showSuggest={suggestOnRail} />
-          ) : null}
-          {layout.showRailImage && railImageUrl ? (
-            <div class="overflow-hidden rounded-[1.05rem] bg-white/80 p-6 shadow-sm ring-1 ring-black/10">
-              <img
-                src={
-                  layout.railSlot === 'portal'
-                    ? PORTAL_MARK_SRC
-                    : layout.railSlot === 'company' && !layout.hasRailImage
-                      ? COMPANY_WORDMARK_SRC
-                      : railImageUrl
-                }
-                alt=""
-                class="mx-auto max-h-64 w-full object-contain"
-              />
-            </div>
-          ) : null}
-        </aside>
-      ) : null
-    }
   </div>
-
-  {
-    showWidgets ? (
-      <div class="mt-8">
-        <HomeWidgetCarousel {...widgetProps} />
-      </div>
-    ) : null
-  }
-
-  {
-    appCategories.map((category) => {
-      const apps = visibleApps.filter((app) => app.category === category.id);
-      if (apps.length === 0) return null;
-      return (
-        <section class="mt-12" aria-labelledby={`${category.id}-heading`}>
-          <h2 id={`${category.id}-heading`} class="font-display text-3xl text-charcoal">
-            {category.title}
-          </h2>
-          <div class="mt-5 flex flex-wrap gap-x-4 gap-y-6">
-            {apps.map((app) => (
-              <AppCard app={app} />
-            ))}
-          </div>
-        </section>
-      );
-    })
-  }
 </PortalLayout>

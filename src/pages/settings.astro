@@ -62,7 +62,7 @@ const railDefaultLabels: Record<string, string> = {
   board: 'Bulletin board',
   widgets: 'Widgets',
   company: 'Company logo',
-  portal: 'Portal mark',
+  portal: 'Coordity logo',
   custom: 'Custom picture',
   none: 'Nothing',
 };
@@ -349,7 +349,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                 { value: 'board', label: 'Bulletin board' },
                 { value: 'widgets', label: 'Widgets' },
                 { value: 'company', label: 'Company logo' },
-                { value: 'portal', label: 'Portal mark' },
+                { value: 'portal', label: 'Coordity logo' },
                 { value: 'custom', label: 'Custom picture' },
                 { value: 'none', label: 'Nothing' },
               ] as const
@@ -1321,7 +1321,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     } catch {
       payload = {};
     }
-    const orgRail = payload.org?.railSlot || 'board';
+    const orgRail = payload.org?.railSlot || 'portal';
     const orgBelow = payload.org?.belowSlot || 'widgets';
 
     const checkedChoice = (selector: string) => {

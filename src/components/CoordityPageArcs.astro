@@ -1,0 +1,78 @@
+---
+/**
+ * Giant sideways-U arcs for the Home “Coordity logo” rail option.
+ * Same geometry as the Coordity marketing hero; monochrome so it sits on any org theme.
+ */
+const stroke = 3.2;
+const arcs = [
+  {
+    d: 'M38.6 8.4 L24 8.4 A15.6 15.6 0 0 0 8.4 24 A15.6 15.6 0 0 0 24 39.6 L38.6 39.6',
+    width: stroke,
+    opacity: 0.11,
+  },
+  {
+    d: 'M35.2 12.4 L24 12.4 A11.6 11.6 0 0 0 12.4 24 A11.6 11.6 0 0 0 24 35.6 L35.2 35.6',
+    width: stroke,
+    opacity: 0.18,
+  },
+  {
+    d: 'M31.8 16.4 L24 16.4 A7.6 7.6 0 0 0 16.4 24 A7.6 7.6 0 0 0 24 31.6 L31.8 31.6',
+    width: stroke,
+    opacity: 0.13,
+  },
+] as const;
+---
+
+<div class="coordity-page-arcs" aria-hidden="true">
+  <svg viewBox="0 0 48 48" class="coordity-page-arcs__svg" focusable="false">
+    {
+      arcs.map((arc) => (
+        <path
+          d={arc.d}
+          fill="none"
+          stroke="currentColor"
+          stroke-width={arc.width}
+          stroke-linecap="round"
+          opacity={arc.opacity}
+        />
+      ))
+    }
+  </svg>
+</div>
+
+<style>
+  .coordity-page-arcs {
+    pointer-events: none;
+    position: fixed;
+    top: 18%;
+    right: 0;
+    z-index: 0;
+    width: min(150vw, 58rem);
+    aspect-ratio: 1;
+    transform: translate(52%, 0);
+    color: rgb(var(--portal-charcoal) / 1);
+  }
+
+  .coordity-page-arcs__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  @media (min-width: 768px) {
+    .coordity-page-arcs {
+      top: 12%;
+      width: min(140vw, 64rem);
+      transform: translate(54%, 0);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .coordity-page-arcs {
+      top: 8%;
+      width: min(110vw, 72rem);
+      transform: translate(58%, 0);
+    }
+  }
+</style>

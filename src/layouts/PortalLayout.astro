@@ -92,7 +92,7 @@ const messagesUnread =
     <PreviewBanner />
     {
       employee?.status === 'active' && (
-        <header class="border-b border-sage-dark/10 bg-cream/90">
+        <header class="relative z-20 border-b border-sage-dark/10 bg-cream/90">
           <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
             <a href="/" class="flex items-center gap-3">
               <img
@@ -172,7 +172,7 @@ const messagesUnread =
         </header>
       )
     }
-    <main class="flex-1">
+    <main class="relative z-10 flex-1">
       <div class:list={['mx-auto px-5 py-10 sm:px-8', wide ? 'max-w-6xl' : 'max-w-3xl']}>
         <slot />
       </div>

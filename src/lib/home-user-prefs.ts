@@ -8,7 +8,6 @@ import {
   isBelowSlot,
   isRailSlot,
   normalizeHomeLayoutInput,
-  PORTAL_MARK_SRC,
   serializeHomeLayout,
   slotsConflict,
   type HomeBelowSlot,
@@ -39,6 +38,7 @@ export interface EffectiveHomeComposition {
   showRailBoard: boolean;
   showRailWidgets: boolean;
   showRailImage: boolean;
+  showCoordityArcs: boolean;
   showBelowBoard: boolean;
   showBelowWidgets: boolean;
   portalMarkSrc: string;
@@ -172,7 +172,6 @@ export async function updateHomeUserPrefs(input: {
 }
 
 function resolveRailImageUrl(layout: HomeLayoutSettings, railSlot: HomeRailSlot): string | null {
-  if (railSlot === 'portal') return PORTAL_MARK_SRC;
   if (railSlot === 'company') {
     return layout.hasRailImage ? '/api/home-layout/rail-image' : COMPANY_WORDMARK_SRC;
   }
@@ -218,10 +217,11 @@ export async function resolveEffectiveHomeComposition(input: {
     orgBelowSlot: layout.belowSlot,
     hasRailImage: layout.hasRailImage,
     railImageUrl: resolveRailImageUrl(layout, railSlot),
-    showRail: railSlot !== 'none',
+    showRail: railSlot !== 'none' && railSlot !== 'portal',
     showRailBoard: railSlot === 'board',
     showRailWidgets: railSlot === 'widgets',
-    showRailImage: railSlot === 'company' || railSlot === 'portal' || railSlot === 'custom',
+    showRailImage: railSlot === 'company' || railSlot === 'custom',
+    showCoordityArcs: railSlot === 'portal',
     showBelowBoard: belowSlot === 'board',
     showBelowWidgets: belowSlot === 'widgets',
     portalMarkSrc: serialized.portalMarkSrc,

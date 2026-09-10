@@ -174,14 +174,14 @@ export function serializeHomeLayout(settings: HomeLayoutSettings) {
         ? settings.hasRailImage
           ? '/api/home-layout/rail-image'
           : null
-        : imageKind === 'portal'
-          ? PORTAL_MARK_SRC
-          : null,
+        : null,
     portalMarkSrc: PORTAL_MARK_SRC,
     companyWordmarkSrc: COMPANY_WORDMARK_SRC,
     belowSlot: settings.belowSlot,
     boardShape: settings.boardShape,
-    showRail: settings.railSlot !== 'none',
+    /** Coordity logo uses page arcs, not a right-column panel. */
+    showRail: settings.railSlot !== 'none' && settings.railSlot !== 'portal',
+    showCoordityArcs: settings.railSlot === 'portal',
   };
 }
 
@@ -191,7 +191,7 @@ async function ensureHomeLayoutRow(orgId: string): Promise<void> {
   await DB.prepare(
     `INSERT INTO home_layout (
        org_id, rail_board, rail_widgets, rail_image_kind, below_slot, board_shape, rail_slot, updated_at
-     ) VALUES (?, 1, 0, 'none', 'widgets', 'portrait', 'board', ?)
+     ) VALUES (?, 0, 0, 'portal', 'widgets', 'portrait', 'portal', ?)
      ON CONFLICT(org_id) DO NOTHING`,
   )
     .bind(orgId, now)
@@ -212,10 +212,10 @@ export async function getHomeLayoutSettings(orgId = DEFAULT_ORG_ID): Promise<Hom
   if (!row) {
     return {
       orgId,
-      railSlot: 'board',
-      railBoard: true,
+      railSlot: 'portal',
+      railBoard: false,
       railWidgets: false,
-      railImageKind: 'none',
+      railImageKind: 'portal',
       hasRailImage: false,
       railImageMime: null,
       belowSlot: 'widgets',
