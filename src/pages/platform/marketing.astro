@@ -5,11 +5,11 @@ export const prerender = false;
 const staff = Astro.locals.platformStaff!;
 ---
 
-<PlatformLayout title="Marketing" staffName={staff.name}>
-  <h1 class="font-display text-4xl text-[#0b1f33]">Marketing</h1>
-  <p class="mt-2 text-sm text-[#5b6b7c]">Email campaigns and lifecycle messaging.</p>
-  <div class="mt-8 rounded-2xl border border-dashed border-black/15 bg-white/70 px-5 py-10 text-center">
-    <p class="text-lg font-semibold text-[#0b1f33]">Coming soon</p>
-    <p class="mt-2 text-sm text-[#5b6b7c]">Marketing tools will live here for sales and growth staff.</p>
+<PlatformLayout title="Marketing" staffName={staff.name} eyebrow="Growth">
+  <h1 class="platform-title" style="font-size:clamp(1.85rem, 3vw, 2.35rem);">Marketing</h1>
+  <p class="platform-lede">Email campaigns and lifecycle messaging for Coordity.</p>
+  <div class="platform-empty">
+    <strong>Coming soon</strong>
+    <span>Marketing tools will live here for sales and growth staff.</span>
   </div>
 </PlatformLayout>

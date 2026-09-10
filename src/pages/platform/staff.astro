@@ -7,27 +7,39 @@ const staff = Astro.locals.platformStaff!;
 const people = await listPlatformStaff().catch(() => [staff]);
 ---
 
-<PlatformLayout title="Staff" staffName={staff.name}>
-  <h1 class="font-display text-4xl text-[#0b1f33]">Platform staff</h1>
-  <p class="mt-2 text-sm text-[#5b6b7c]">
-    Coordity internal accounts. Inviting more staff roles comes next.
-  </p>
+<PlatformLayout title="Staff" staffName={staff.name} eyebrow="Access">
+  <h1 class="platform-title" style="font-size:clamp(1.85rem, 3vw, 2.35rem);">Platform staff</h1>
+  <p class="platform-lede">Coordity internal accounts. Inviting more staff roles comes next.</p>
 
-  <ul class="mt-8 space-y-3">
-    {
-      people.map((person) => (
-        <li class="rounded-2xl border border-black/10 bg-white/90 px-4 py-3 shadow-sm">
-          <p class="font-semibold text-[#0b1f33]">{person.name}</p>
-          <p class="text-sm text-[#5b6b7c]">
-            {person.email} · {person.roleName} · {person.status}
-          </p>
-        </li>
-      ))
-    }
-  </ul>
+  <div class="platform-table-wrap">
+    <table class="platform-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          people.map((person) => (
+            <tr>
+              <td>
+                <div class="org-name">{person.name}</div>
+              </td>
+              <td>{person.email}</td>
+              <td>{person.roleName}</td>
+              <td style="text-transform:capitalize;color:var(--c-muted);">{person.status}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
 
-  <div class="mt-8 rounded-2xl border border-dashed border-black/15 bg-white/70 px-5 py-8 text-center">
-    <p class="text-sm font-semibold text-[#0b1f33]">Staff invites coming soon</p>
-    <p class="mt-1 text-sm text-[#5b6b7c]">Sales, IT, and security roles are already seeded in the database.</p>
+  <div class="platform-empty" style="margin-top:1.25rem;">
+    <strong>Staff invites coming soon</strong>
+    <span>Sales, IT, and security roles are already seeded in the database.</span>
   </div>
 </PlatformLayout>

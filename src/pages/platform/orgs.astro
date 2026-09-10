@@ -16,28 +16,22 @@ const inviteUrl = Astro.url.searchParams.get('inviteUrl');
 const saved = Astro.url.searchParams.get('saved');
 ---
 
-<PlatformLayout title="Organizations" staffName={staff.name}>
-  <div class="flex flex-wrap items-end justify-between gap-4">
+<PlatformLayout title="Organizations" staffName={staff.name} eyebrow="Workspaces">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;">
     <div>
-      <h1 class="font-display text-4xl text-[#0b1f33]">Organizations</h1>
-      <p class="mt-2 text-sm text-[#5b6b7c]">Customer workspaces and primary subscribers.</p>
+      <h1 class="platform-title" style="font-size:clamp(1.85rem, 3vw, 2.35rem);">Organizations</h1>
+      <p class="platform-lede">Customer workspaces and primary subscribers.</p>
     </div>
-    <div class="flex flex-wrap gap-2 text-sm">
+    <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
       <a
         href="/platform/orgs"
-        class:list={[
-          'rounded-full px-3 py-1.5 font-semibold',
-          !includeArchived ? 'bg-[#0b1f33] text-white' : 'bg-white text-[#5b6b7c]',
-        ]}
+        class:list={['platform-chip', !includeArchived && 'is-active']}
       >
         Active
       </a>
       <a
         href="/platform/orgs?archived=1"
-        class:list={[
-          'rounded-full px-3 py-1.5 font-semibold',
-          includeArchived ? 'bg-[#0b1f33] text-white' : 'bg-white text-[#5b6b7c]',
-        ]}
+        class:list={['platform-chip', includeArchived && 'is-active']}
       >
         Archived
       </a>
@@ -46,22 +40,22 @@ const saved = Astro.url.searchParams.get('saved');
 
   {
     error && (
-      <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+      <p class="platform-alert platform-alert-error">{error}</p>
     )
   }
   {
     saved && (
-      <p class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+      <p class="platform-alert platform-alert-ok">
         {saved === 'created' ? 'Organization created.' : saved === 'archived' ? 'Organization archived.' : 'Saved.'}
       </p>
     )
   }
   {
     inviteUrl && (
-      <p class="mt-4 break-all rounded-xl border border-black/10 bg-white px-4 py-3 text-sm">
+      <p class="platform-alert platform-alert-ok" style="word-break:break-all;">
         Owner invite link:
         <br />
-        <a class="underline" href={inviteUrl}>
+        <a href={inviteUrl} style="text-decoration:underline;text-underline-offset:3px;">
           {inviteUrl}
         </a>
       </p>
@@ -70,114 +64,115 @@ const saved = Astro.url.searchParams.get('saved');
 
   {
     canCreate && !includeArchived ? (
-      <form method="post" action="/api/platform/orgs/create" class="mt-8 grid gap-4 rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm sm:grid-cols-2">
-        <h2 class="font-display text-2xl text-[#0b1f33] sm:col-span-2">Create organization</h2>
-        <label class="text-sm font-medium">
+      <form method="post" action="/api/platform/orgs/create" class="platform-panel" style="display:grid;gap:0.15rem 1rem;grid-template-columns:1fr;">
+        <div style="grid-column:1/-1;">
+          <h2>Create organization</h2>
+          <p class="hint">Provisions a subdomain and invites the primary owner.</p>
+        </div>
+        <label class="platform-field">
           Company name
-          <input class="field" type="text" name="companyName" required />
+          <input class="platform-input" type="text" name="companyName" required />
         </label>
-        <label class="text-sm font-medium">
+        <label class="platform-field">
           Slug
-          <input class="field" type="text" name="slug" placeholder="acme" />
+          <input class="platform-input" type="text" name="slug" placeholder="acme" />
         </label>
-        <label class="text-sm font-medium">
+        <label class="platform-field">
           Website
-          <input class="field" type="url" name="websiteUrl" placeholder="https://" />
+          <input class="platform-input" type="url" name="websiteUrl" placeholder="https://" />
         </label>
-        <label class="text-sm font-medium">
+        <label class="platform-field">
           Owner name
-          <input class="field" type="text" name="adminName" required />
+          <input class="platform-input" type="text" name="adminName" required />
         </label>
-        <label class="text-sm font-medium sm:col-span-2">
+        <label class="platform-field" style="grid-column:1/-1;">
           Owner email
-          <input class="field" type="email" name="adminEmail" required />
+          <input class="platform-input" type="email" name="adminEmail" required />
         </label>
-        <button class="btn-primary w-fit sm:col-span-2" type="submit">
-          Create workspace
-        </button>
+        <div style="grid-column:1/-1;">
+          <button class="platform-btn" type="submit">Create workspace</button>
+        </div>
       </form>
     ) : null
   }
 
-  <div class="mt-8 overflow-x-auto rounded-2xl border border-black/10 bg-white/90 shadow-sm">
-    <table class="min-w-full text-left text-sm">
-      <thead class="border-b border-black/10 text-xs uppercase tracking-[0.12em] text-[#5b6b7c]">
-        <tr>
-          <th class="px-4 py-3 font-semibold">Organization</th>
-          <th class="px-4 py-3 font-semibold">Primary subscriber</th>
-          <th class="px-4 py-3 font-semibold">Status</th>
-          <th class="px-4 py-3 font-semibold">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {
-          orgs.length === 0 ? (
+  {
+    orgs.length === 0 ? (
+      <div class="platform-empty">
+        <strong>No organizations yet</strong>
+        <span>{includeArchived ? 'Nothing in the archive.' : 'Create a workspace to get started.'}</span>
+      </div>
+    ) : (
+      <div class="platform-table-wrap">
+        <table class="platform-table">
+          <thead>
             <tr>
-              <td class="px-4 py-6 text-[#5b6b7c]" colspan="4">
-                No organizations found.
-              </td>
+              <th>Organization</th>
+              <th>Primary subscriber</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
-          ) : (
-            orgs.map((org) => {
-              const openUrl = tenantOrigin(org.slug, Astro.url.href);
-              const subscriber =
-                org.primarySubscriberEmail
-                  ? `${org.primarySubscriberName ?? 'Owner'} · ${org.primarySubscriberEmail}`
-                  : org.pendingOwnerEmail
-                    ? `Invite pending · ${org.pendingOwnerEmail}`
-                    : '—';
-              return (
-                <tr class="border-t border-black/5">
-                  <td class="px-4 py-3">
-                    <p class="font-semibold text-[#0b1f33]">{org.displayName}</p>
-                    <p class="text-xs text-[#5b6b7c]">{org.slug}.coordity.com</p>
-                  </td>
-                  <td class="px-4 py-3 text-[#0b1f33]/90">{subscriber}</td>
-                  <td class="px-4 py-3 capitalize text-[#5b6b7c]">
-                    {org.archivedAt ? 'archived' : 'active'}
-                  </td>
-                  <td class="px-4 py-3">
-                    <div class="flex flex-wrap gap-2">
-                      {!org.archivedAt ? (
-                        <a
-                          class="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold hover:bg-[#f3f6f9]"
-                          href={openUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Open
-                        </a>
-                      ) : null}
-                      {canDelete && !org.archivedAt && org.slug !== 'wovensage' ? (
-                        <form method="post" action="/api/platform/orgs/archive">
-                          <input type="hidden" name="orgId" value={org.id} />
-                          <button
-                            class="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
-                            type="submit"
-                          >
-                            Archive
-                          </button>
-                        </form>
-                      ) : null}
-                      {canDelete && org.archivedAt ? (
-                        <form method="post" action="/api/platform/orgs/restore">
-                          <input type="hidden" name="orgId" value={org.id} />
-                          <button
-                            class="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold hover:bg-[#f3f6f9]"
-                            type="submit"
-                          >
-                            Restore
-                          </button>
-                        </form>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })
-          )
-        }
-      </tbody>
-    </table>
-  </div>
+          </thead>
+          <tbody>
+            {
+              orgs.map((org) => {
+                const openUrl = tenantOrigin(org.slug, Astro.url.href);
+                const subscriber =
+                  org.primarySubscriberEmail
+                    ? `${org.primarySubscriberName ?? 'Owner'} · ${org.primarySubscriberEmail}`
+                    : org.pendingOwnerEmail
+                      ? `Invite pending · ${org.pendingOwnerEmail}`
+                      : '—';
+                return (
+                  <tr>
+                    <td>
+                      <div class="org-name">{org.displayName}</div>
+                      <div class="org-slug">{org.slug}.coordity.com</div>
+                    </td>
+                    <td>{subscriber}</td>
+                    <td style="text-transform:capitalize;color:var(--c-muted);">
+                      {org.archivedAt ? 'archived' : 'active'}
+                    </td>
+                    <td>
+                      <div class="platform-actions">
+                        {!org.archivedAt ? (
+                          <a class="platform-chip" href={openUrl} target="_blank" rel="noreferrer">
+                            Open
+                          </a>
+                        ) : null}
+                        {canDelete && !org.archivedAt && org.slug !== 'wovensage' ? (
+                          <form method="post" action="/api/platform/orgs/archive">
+                            <input type="hidden" name="orgId" value={org.id} />
+                            <button class="platform-chip" type="submit" style="color:#9f1d1d;border-color:rgba(159,29,29,0.25);">
+                              Archive
+                            </button>
+                          </form>
+                        ) : null}
+                        {canDelete && org.archivedAt ? (
+                          <form method="post" action="/api/platform/orgs/restore">
+                            <input type="hidden" name="orgId" value={org.id} />
+                            <button class="platform-chip" type="submit">
+                              Restore
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            }
+          </tbody>
+        </table>
+      </div>
+    )
+  }
 </PlatformLayout>
+
+<style>
+  @media (min-width: 640px) {
+    form.platform-panel {
+      grid-template-columns: 1fr 1fr !important;
+    }
+  }
+</style>

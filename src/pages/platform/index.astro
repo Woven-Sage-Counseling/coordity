@@ -8,27 +8,30 @@ export const prerender = false;
 const staff = Astro.locals.platformStaff!;
 const counts = await countPlatformOrganizations().catch(() => ({ active: 0, archived: 0 }));
 const staffCount = await listPlatformStaff().then((rows) => rows.length).catch(() => 1);
+const firstName = staff.name.trim().split(/\s+/)[0] || staff.name;
 ---
 
-<PlatformLayout title="Dashboard" staffName={staff.name}>
-  <h1 class="font-display text-4xl text-[#0b1f33]">Dashboard</h1>
-  <p class="mt-2 text-sm text-[#5b6b7c]">Coordity platform overview.</p>
+<PlatformLayout title="Home" staffName={staff.name}>
+  <h1 class="platform-title">Coordity</h1>
+  <p class="platform-lede">
+    Welcome back, {firstName}. Run customer workspaces from here — organizations, owners, and the
+    tools that keep the platform moving.
+  </p>
 
-  <div class="mt-8 grid gap-4 sm:grid-cols-3">
-    <a href="/platform/orgs" class="rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm transition hover:border-[#005284]/40">
-      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#5b6b7c]">Organizations</p>
-      <p class="mt-2 text-3xl font-semibold text-[#0b1f33]">{counts.active}</p>
-      <p class="mt-1 text-sm text-[#5b6b7c]">{counts.archived} archived</p>
-    </a>
-    <div class="rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#5b6b7c]">Platform staff</p>
-      <p class="mt-2 text-3xl font-semibold text-[#0b1f33]">{staffCount}</p>
-      <p class="mt-1 text-sm text-[#5b6b7c]">Signed in as {staff.roleName}</p>
-    </div>
-    <div class="rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#5b6b7c]">Marketing</p>
-      <p class="mt-2 text-lg font-semibold text-[#0b1f33]">Coming soon</p>
-      <p class="mt-1 text-sm text-[#5b6b7c]">Campaigns and promotions</p>
-    </div>
+  <a class="platform-cta" href="/platform/orgs">
+    Organizations
+    <span aria-hidden="true">→</span>
+  </a>
+
+  <p class="platform-stat">
+    <strong>{counts.active}</strong> active workspace{counts.active === 1 ? '' : 's'}
+    {counts.archived > 0 ? <> · {counts.archived} archived</> : null}
+    <> · {staffCount} staff</>
+  </p>
+
+  <div class="platform-secondary">
+    <a href="/platform/marketing">Marketing</a>
+    <a href="/platform/promotions">Promotions</a>
+    <a href="/platform/staff">Staff</a>
   </div>
 </PlatformLayout>

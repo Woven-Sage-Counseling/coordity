@@ -5,17 +5,21 @@ import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 interface Props {
   title: string;
   staffName?: string;
+  /** Short page purpose under the brand header when not the home screen. */
+  eyebrow?: string;
 }
 
-const { title, staffName } = Astro.props;
-const nav = [
-  { href: '/platform', label: 'Dashboard' },
-  { href: '/platform/orgs', label: 'Organizations' },
-  { href: '/platform/marketing', label: 'Marketing' },
-  { href: '/platform/promotions', label: 'Promotions' },
-  { href: '/platform/staff', label: 'Staff' },
-];
+const { title, staffName, eyebrow } = Astro.props;
 const path = Astro.url.pathname;
+const isHome = path === '/platform' || path === '/platform/';
+
+const nav = [
+  { href: '/platform', label: 'Home', match: (p: string) => p === '/platform' || p === '/platform/' },
+  { href: '/platform/orgs', label: 'Organizations', match: (p: string) => p.startsWith('/platform/orgs') },
+  { href: '/platform/marketing', label: 'Marketing', match: (p: string) => p.startsWith('/platform/marketing') },
+  { href: '/platform/promotions', label: 'Promotions', match: (p: string) => p.startsWith('/platform/promotions') },
+  { href: '/platform/staff', label: 'Staff', match: (p: string) => p.startsWith('/platform/staff') },
+];
 ---
 
 <!doctype html>
@@ -25,76 +29,588 @@ const path = Astro.url.pathname;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" href="/favicon-coordity.svg?v=4" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
     <title>{title} | {COORDITY_PRODUCT_NAME} Platform</title>
-    <style>
+    <style is:global>
       :root {
         color-scheme: light;
-        --plat-ink: #0b1f33;
-        --plat-muted: #5b6b7c;
-        --plat-line: rgba(11, 31, 51, 0.12);
-        --plat-blue: #005284;
-        --plat-yellow: #fecb00;
-        --plat-bg: #f3f6f9;
+        --c-ink: #0b1f33;
+        --c-muted: #5b6b7c;
+        --c-line: rgba(11, 31, 51, 0.12);
+        --c-blue: #005284;
+        --c-yellow: #fecb00;
+        --c-paper: #f7f9fc;
+        --c-white: #ffffff;
+        --font-sans: 'DM Sans', system-ui, sans-serif;
+        --font-display: 'Fraunces', Georgia, serif;
       }
-      body {
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body.platform-body {
         margin: 0;
-        font-family: 'DM Sans', system-ui, sans-serif;
-        color: var(--plat-ink);
-        background:
-          radial-gradient(circle at 12% -10%, rgba(254, 203, 0, 0.18), transparent 42%),
-          radial-gradient(circle at 88% 0%, rgba(0, 82, 132, 0.12), transparent 40%),
-          var(--plat-bg);
         min-height: 100vh;
+        font-family: var(--font-sans);
+        color: var(--c-ink);
+        background-color: var(--c-paper);
+        background-image:
+          radial-gradient(ellipse 80% 50% at 100% -10%, rgba(254, 203, 0, 0.22), transparent 55%),
+          radial-gradient(ellipse 70% 45% at -5% 0%, rgba(0, 82, 132, 0.14), transparent 50%),
+          linear-gradient(180deg, #eef3f8 0%, var(--c-paper) 38%, var(--c-paper) 100%);
+        -webkit-font-smoothing: antialiased;
       }
+
       a {
         color: inherit;
         text-decoration: none;
       }
+
+      .platform-shell {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 1fr;
+        min-height: 100vh;
+      }
+
+      @media (min-width: 900px) {
+        .platform-shell {
+          grid-template-columns: 15.5rem minmax(0, 1fr);
+        }
+      }
+
+      .platform-aside {
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+        padding: 1.25rem 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--c-line);
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(12px);
+      }
+
+      @media (min-width: 900px) {
+        .platform-aside {
+          border-bottom: none;
+          border-right: 1px solid var(--c-line);
+          padding: 1.75rem 1.35rem;
+          min-height: 100vh;
+          position: sticky;
+          top: 0;
+          align-self: start;
+        }
+      }
+
+      .platform-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        min-width: 0;
+        font-size: 2.35rem;
+        line-height: 1;
+      }
+
+      .platform-brand svg {
+        width: 1.25em;
+        height: 1.25em;
+        flex-shrink: 0;
+      }
+
+      .platform-brand__label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        min-width: 0;
+      }
+
+      .platform-brand__name {
+        font-family: var(--font-display);
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        color: var(--c-ink);
+      }
+
+      .platform-brand__sub {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--c-blue);
+      }
+
+      .platform-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem 0.35rem;
+      }
+
+      @media (min-width: 900px) {
+        .platform-nav {
+          flex-direction: column;
+          flex-wrap: nowrap;
+          gap: 0.2rem;
+        }
+      }
+
+      .platform-nav a {
+        display: block;
+        padding: 0.45rem 0.7rem;
+        border-radius: 0.55rem;
+        font-size: 0.92rem;
+        font-weight: 500;
+        color: var(--c-muted);
+        transition:
+          color 160ms ease,
+          background 160ms ease;
+      }
+
+      .platform-nav a:hover {
+        color: var(--c-ink);
+        background: rgba(0, 82, 132, 0.06);
+      }
+
+      .platform-nav a[aria-current='page'] {
+        color: var(--c-ink);
+        background: rgba(0, 82, 132, 0.1);
+        font-weight: 600;
+      }
+
+      .platform-aside__foot {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        padding-top: 0.5rem;
+      }
+
+      .platform-user {
+        font-size: 0.82rem;
+        color: var(--c-muted);
+        line-height: 1.35;
+      }
+
+      .platform-signout {
+        align-self: start;
+        border: 1px solid var(--c-line);
+        background: transparent;
+        color: var(--c-ink);
+        border-radius: 999px;
+        padding: 0.4rem 0.85rem;
+        font: inherit;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background 160ms ease,
+          border-color 160ms ease;
+      }
+
+      .platform-signout:hover {
+        background: var(--c-white);
+        border-color: rgba(0, 82, 132, 0.28);
+      }
+
+      .platform-main {
+        padding: 1.5rem 1.25rem 3rem;
+      }
+
+      @media (min-width: 900px) {
+        .platform-main {
+          padding: 2.25rem 2.5rem 3.5rem;
+        }
+      }
+
+      .platform-main__inner {
+        max-width: 52rem;
+      }
+
+      .platform-eyebrow {
+        margin: 0 0 0.5rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--c-blue);
+      }
+
+      .platform-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 3.5vw, 2.75rem);
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1.12;
+        color: var(--c-ink);
+      }
+
+      .platform-lede {
+        margin: 0.65rem 0 0;
+        max-width: 36rem;
+        font-size: 1.02rem;
+        line-height: 1.55;
+        color: var(--c-muted);
+      }
+
+      .platform-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-top: 1.5rem;
+        padding: 0.8rem 1.25rem;
+        border-radius: 999px;
+        background: var(--c-yellow);
+        color: var(--c-ink);
+        font-size: 0.92rem;
+        font-weight: 700;
+        box-shadow: 0 10px 28px rgba(254, 203, 0, 0.28);
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .platform-cta:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 32px rgba(254, 203, 0, 0.35);
+      }
+
+      .platform-secondary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.25rem;
+        margin-top: 1.75rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--c-line);
+      }
+
+      .platform-secondary a {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--c-blue);
+      }
+
+      .platform-secondary a:hover {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .platform-stat {
+        margin-top: 2rem;
+        font-size: 0.92rem;
+        color: var(--c-muted);
+      }
+
+      .platform-stat strong {
+        color: var(--c-ink);
+        font-weight: 650;
+      }
+
+      .platform-panel {
+        margin-top: 1.75rem;
+        padding: 1.35rem 1.35rem 1.5rem;
+        border: 1px solid var(--c-line);
+        border-radius: 1.15rem;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .platform-panel h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.45rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .platform-panel p.hint {
+        margin: 0.4rem 0 0;
+        font-size: 0.9rem;
+        color: var(--c-muted);
+      }
+
+      .platform-field {
+        display: block;
+        margin-top: 0.85rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--c-ink);
+      }
+
+      .platform-field input,
+      .platform-field select,
+      .platform-input {
+        display: block;
+        width: 100%;
+        margin-top: 0.35rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid var(--c-line);
+        border-radius: 0.65rem;
+        background: var(--c-white);
+        font: inherit;
+        font-size: 0.92rem;
+        font-weight: 400;
+        color: var(--c-ink);
+      }
+
+      .platform-field input:focus,
+      .platform-field select:focus,
+      .platform-input:focus {
+        outline: 2px solid rgba(0, 82, 132, 0.35);
+        outline-offset: 1px;
+      }
+
+      .platform-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1rem;
+        padding: 0.65rem 1.1rem;
+        border: none;
+        border-radius: 999px;
+        background: var(--c-ink);
+        color: #fff;
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 650;
+        cursor: pointer;
+      }
+
+      .platform-btn:hover {
+        background: var(--c-blue);
+      }
+
+      .platform-btn-ghost {
+        background: transparent;
+        color: var(--c-ink);
+        border: 1px solid var(--c-line);
+      }
+
+      .platform-btn-ghost:hover {
+        background: rgba(0, 82, 132, 0.06);
+      }
+
+      .platform-btn-danger {
+        background: transparent;
+        color: #9f1d1d;
+        border: 1px solid rgba(159, 29, 29, 0.25);
+      }
+
+      .platform-table-wrap {
+        margin-top: 1.5rem;
+        overflow-x: auto;
+        border: 1px solid var(--c-line);
+        border-radius: 1.15rem;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .platform-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.9rem;
+      }
+
+      .platform-table th {
+        padding: 0.85rem 1rem;
+        font-size: 0.68rem;
+        font-weight: 650;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--c-muted);
+        border-bottom: 1px solid var(--c-line);
+      }
+
+      .platform-table td {
+        padding: 0.95rem 1rem;
+        border-top: 1px solid rgba(11, 31, 51, 0.06);
+        vertical-align: top;
+      }
+
+      .platform-table .org-name {
+        font-weight: 650;
+        color: var(--c-ink);
+      }
+
+      .platform-table .org-slug {
+        margin-top: 0.15rem;
+        font-size: 0.78rem;
+        color: var(--c-muted);
+      }
+
+      .platform-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .platform-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid var(--c-line);
+        background: transparent;
+        font-size: 0.75rem;
+        font-weight: 650;
+        color: var(--c-ink);
+        cursor: pointer;
+      }
+
+      .platform-chip:hover {
+        background: rgba(0, 82, 132, 0.06);
+      }
+
+      .platform-chip.is-active {
+        background: var(--c-ink);
+        border-color: var(--c-ink);
+        color: #fff;
+      }
+
+      .platform-alert {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 0.85rem;
+        font-size: 0.9rem;
+      }
+
+      .platform-alert-error {
+        border: 1px solid rgba(159, 29, 29, 0.25);
+        background: #fff5f5;
+        color: #9f1d1d;
+      }
+
+      .platform-alert-ok {
+        border: 1px solid rgba(0, 82, 132, 0.2);
+        background: rgba(0, 82, 132, 0.06);
+        color: var(--c-blue);
+      }
+
+      .platform-empty {
+        margin-top: 1.5rem;
+        padding: 2.5rem 1.5rem;
+        border: 1px dashed rgba(11, 31, 51, 0.18);
+        border-radius: 1.15rem;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      .platform-empty strong {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      .platform-empty span {
+        display: block;
+        margin-top: 0.4rem;
+        font-size: 0.92rem;
+        color: var(--c-muted);
+      }
+
+      .platform-watermark {
+        position: fixed;
+        right: -8%;
+        top: 18%;
+        width: min(52vw, 28rem);
+        opacity: 0.07;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @media (max-width: 899px) {
+        .platform-watermark {
+          display: none;
+        }
+      }
     </style>
   </head>
-  <body>
-    <div class="mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-6 sm:px-8">
-      <header class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--plat-line)] pb-4">
-        <div class="flex items-center gap-3">
-          <CoordityMark class="text-lg" />
-          <span class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--plat-muted)]">
-            Platform
+  <body class="platform-body">
+    <svg class="platform-watermark" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        d="M38.6 8.4 L24 8.4 A15.6 15.6 0 0 0 8.4 24 A15.6 15.6 0 0 0 24 39.6 L38.6 39.6"
+        fill="none"
+        stroke="#005284"
+        stroke-width="3.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M35.2 12.4 L24 12.4 A11.6 11.6 0 0 0 12.4 24 A11.6 11.6 0 0 0 24 35.6 L35.2 35.6"
+        fill="none"
+        stroke="#FECB00"
+        stroke-width="3.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M31.8 16.4 L24 16.4 A7.6 7.6 0 0 0 16.4 24 A7.6 7.6 0 0 0 24 31.6 L31.8 31.6"
+        fill="none"
+        stroke="#005284"
+        stroke-width="3.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </svg>
+
+    <div class="platform-shell">
+      <aside class="platform-aside">
+        <a href="/platform" class="platform-brand" aria-label="Coordity Platform home">
+          <CoordityMark variant="dark" wordmark={false} />
+          <span class="platform-brand__label">
+            <span class="platform-brand__name">Coordity</span>
+            <span class="platform-brand__sub">Platform</span>
           </span>
-        </div>
-        <div class="flex items-center gap-3 text-sm text-[var(--plat-muted)]">
-          {staffName ? <span>{staffName}</span> : null}
+        </a>
+
+        <nav class="platform-nav" aria-label="Platform">
+          {
+            nav.map((item) => (
+              <a href={item.href} aria-current={item.match(path) ? 'page' : undefined}>
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+
+        <div class="platform-aside__foot">
+          {
+            staffName ? (
+              <p class="platform-user">
+                Signed in as
+                <br />
+                <strong style="color: var(--c-ink); font-weight: 650">{staffName}</strong>
+              </p>
+            ) : null
+          }
           <form method="post" action="/api/session/sign-out">
-            <button
-              type="submit"
-              class="rounded-full border border-[var(--plat-line)] px-3 py-1.5 text-xs font-semibold text-[var(--plat-ink)] transition hover:bg-white"
-            >
-              Sign out
-            </button>
+            <button class="platform-signout" type="submit">Sign out</button>
           </form>
         </div>
-      </header>
+      </aside>
 
-      <nav class="mt-4 flex flex-wrap gap-2" aria-label="Platform">
-        {
-          nav.map((item) => (
-            <a
-              href={item.href}
-              class:list={[
-                'rounded-full px-3 py-1.5 text-sm font-semibold transition',
-                path === item.href || (item.href !== '/platform' && path.startsWith(item.href))
-                  ? 'bg-[var(--plat-ink)] text-white'
-                  : 'bg-white/70 text-[var(--plat-muted)] hover:bg-white',
-              ]}
-            >
-              {item.label}
-            </a>
-          ))
-        }
-      </nav>
-
-      <main class="mt-8 flex-1 pb-12">
-        <slot />
-      </main>
+      <div class="platform-main">
+        <div class="platform-main__inner">
+          {
+            !isHome && eyebrow ? (
+              <p class="platform-eyebrow">{eyebrow}</p>
+            ) : !isHome ? (
+              <p class="platform-eyebrow">{title}</p>
+            ) : null
+          }
+          <slot />
+        </div>
+      </div>
     </div>
   </body>
 </html>
