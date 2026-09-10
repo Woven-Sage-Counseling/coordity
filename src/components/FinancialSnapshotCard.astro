@@ -34,11 +34,11 @@ const periodLabel = snapshot
 ---
 
 <aside
-  class="flex h-full flex-col overflow-hidden rounded-[1.05rem] shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
+  class="flex h-full flex-col overflow-hidden rounded-[1.05rem] bg-white shadow-[0_12px_32px_rgba(26,28,30,0.12)] ring-1 ring-black/10"
   aria-labelledby="home-financials-heading"
   data-widget-card
   data-widget-id="quickbooks"
-  style={`${widgetAccentVarsStyle('quickbooks')}; min-height: 28rem; background: #fff;`}
+  style={`${widgetAccentVarsStyle('quickbooks')}; min-height: 28rem;`}
 >
   <WidgetHeaderBar
     widgetId="quickbooks"
@@ -50,46 +50,46 @@ const periodLabel = snapshot
   <div
     class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#f4f5f8] px-4 pb-4 pt-3 font-sans text-[#393a3d]"
     data-widget-body
-    style="min-height: 0; color: #393a3d; background: #f4f5f8;"
+    style="min-height: 0;"
   >
-    <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6c72;">
+    <p class="m-0 text-[11px] font-bold uppercase tracking-[0.14em] text-[#6b6c72]">
       Reports
     </p>
-    <p style="margin: 0.25rem 0 0; font-size: 16px; font-weight: 600; color: #393a3d;">
+    <p class="mt-1 text-base font-semibold text-[#393a3d]">
       Profit and Loss
     </p>
-    <p style="margin: 0.25rem 0 0; font-size: 11px; color: #6b6c72;">{periodLabel}</p>
-    <div style="margin-top: 0.5rem;">
+    <p class="mt-1 text-[11px] text-[#6b6c72]">{periodLabel}</p>
+    <div class="mt-2">
       <PeriodPicker period={period} action="/" compact />
     </div>
 
-    <div style="margin-top: 1rem; padding: 0.75rem; border-radius: 0.5rem; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);">
-      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem;">
-        <span style="font-weight: 500; color: #393a3d;">Income</span>
-        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.revenueCents ?? null)}</span>
+    <div class="mt-4 rounded-lg bg-white p-3 shadow-sm">
+      <div class="mb-3 flex justify-between text-xs">
+        <span class="font-medium text-[#393a3d]">Income</span>
+        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.revenueCents ?? null)}</span>
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem;">
-        <span style="font-weight: 500; color: #393a3d;">Therapist comp.</span>
-        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
+      <div class="mb-3 flex justify-between text-xs">
+        <span class="font-medium text-[#393a3d]">Therapist comp.</span>
+        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 0.75rem;">
-        <span style="font-weight: 500; color: #393a3d;">Manager comp.</span>
-        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
+      <div class="mb-3 flex justify-between text-xs">
+        <span class="font-medium text-[#393a3d]">Manager comp.</span>
+        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 12px;">
-        <span style="font-weight: 500; color: #393a3d;">Software &amp; tech</span>
-        <span style="font-weight: 600; color: #393a3d;">{formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}</span>
+      <div class="flex justify-between text-xs">
+        <span class="font-medium text-[#393a3d]">Software &amp; tech</span>
+        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}</span>
       </div>
     </div>
 
-    <div style="margin-top: 0.75rem; padding: 0.75rem; border-radius: 0.5rem; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); display: flex; justify-content: space-between; gap: 0.75rem; align-items: center;">
+    <div class="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-sm">
       <div>
-        <p style="margin: 0; font-size: 12px; font-weight: 500; color: #393a3d;">Reserve</p>
-        <p style="margin: 0.25rem 0 0; font-size: 11px; color: #6b6c72;">
+        <p class="m-0 text-xs font-medium text-[#393a3d]">Reserve</p>
+        <p class="mt-1 text-[11px] text-[#6b6c72]">
           {formatUsd(summary?.cash.boaReserveCents ?? null)} of {formatUsd(summary?.reserveTargetCents ?? null)}
         </p>
       </div>
-      <p style="margin: 0; font-size: 14px; font-weight: 700; color: #393a3d;">
+      <p class="m-0 text-sm font-bold text-[#393a3d]">
         {percent == null ? '—' : `${percent}%`}
       </p>
     </div>

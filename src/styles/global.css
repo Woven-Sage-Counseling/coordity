@@ -413,7 +413,7 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   height: 100% !important;
   max-height: 100% !important;
   overflow: hidden !important;
-  background-color: #fff;
+  background-color: rgb(var(--portal-surface) / 1);
   box-sizing: border-box !important;
 }
 
@@ -429,14 +429,10 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   min-height: 0 !important;
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
-  color: #393a3d !important;
-  background-color: #f4f5f8 !important;
+  color: rgb(var(--portal-charcoal) / 1) !important;
+  background-color: rgb(var(--portal-muted) / 1) !important;
   opacity: 1 !important;
   visibility: visible !important;
-}
-
-html.dark .widget-carousel-slide > [data-widget-card] {
-  background-color: rgb(var(--portal-surface) / 1);
 }
 
 @media (max-width: 1023px) {
