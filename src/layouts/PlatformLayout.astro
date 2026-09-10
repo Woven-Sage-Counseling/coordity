@@ -1,5 +1,6 @@
 ---
 import CoordityMark from '../components/CoordityMark.astro';
+import { countNewEarlyAccessRequests } from '../lib/early-access';
 import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 
 interface Props {
@@ -12,13 +13,25 @@ interface Props {
 const { title, staffName, eyebrow } = Astro.props;
 const path = Astro.url.pathname;
 const isHome = path === '/platform' || path === '/platform/';
+const newRequestCount = await countNewEarlyAccessRequests().catch(() => 0);
 
-const nav = [
-  { href: '/platform', label: 'Home', match: (p: string) => p === '/platform' || p === '/platform/' },
-  { href: '/platform/orgs', label: 'Organizations', match: (p: string) => p.startsWith('/platform/orgs') },
-  { href: '/platform/marketing', label: 'Marketing', match: (p: string) => p.startsWith('/platform/marketing') },
-  { href: '/platform/promotions', label: 'Promotions', match: (p: string) => p.startsWith('/platform/promotions') },
-  { href: '/platform/staff', label: 'Staff', match: (p: string) => p.startsWith('/platform/staff') },
+const nav: Array<{
+  href: string;
+  label: string;
+  match: (p: string) => boolean;
+  badge?: number;
+}> = [
+  { href: '/platform', label: 'Home', match: (p) => p === '/platform' || p === '/platform/' },
+  { href: '/platform/orgs', label: 'Organizations', match: (p) => p.startsWith('/platform/orgs') },
+  {
+    href: '/platform/requests',
+    label: 'Requests',
+    match: (p) => p.startsWith('/platform/requests'),
+    badge: newRequestCount,
+  },
+  { href: '/platform/marketing', label: 'Marketing', match: (p) => p.startsWith('/platform/marketing') },
+  { href: '/platform/promotions', label: 'Promotions', match: (p) => p.startsWith('/platform/promotions') },
+  { href: '/platform/staff', label: 'Staff', match: (p) => p.startsWith('/platform/staff') },
 ];
 ---
 
@@ -168,7 +181,10 @@ const nav = [
       }
 
       .platform-nav a {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
         padding: 0.45rem 0.7rem;
         border-radius: 0.55rem;
         font-size: 0.92rem;
@@ -188,6 +204,21 @@ const nav = [
         color: var(--c-ink);
         background: rgba(0, 82, 132, 0.1);
         font-weight: 600;
+      }
+
+      .platform-nav__badge {
+        display: inline-flex;
+        min-width: 1.35rem;
+        height: 1.35rem;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0.4rem;
+        border-radius: 999px;
+        background: #dc2626;
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 1;
       }
 
       .platform-aside__foot {
@@ -577,7 +608,12 @@ const nav = [
           {
             nav.map((item) => (
               <a href={item.href} aria-current={item.match(path) ? 'page' : undefined}>
-                {item.label}
+                <span>{item.label}</span>
+                {'badge' in item && typeof item.badge === 'number' && item.badge > 0 ? (
+                  <span class="platform-nav__badge" aria-label={`${item.badge} new`}>
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                ) : null}
               </a>
             ))
           }

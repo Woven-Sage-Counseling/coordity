@@ -112,6 +112,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
       pathname === '/apex-landing' ||
       pathname === '/sign-up' ||
       pathname === '/continue' ||
+      pathname === '/early-access' ||
+      pathname === '/api/early-access/request' ||
       pathname === '/api/orgs/resolve' ||
       pathname === '/api/orgs/create' ||
       pathname === '/api/session/sign-out' ||

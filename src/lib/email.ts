@@ -7,6 +7,8 @@ export type AdminEmailPayload = {
   text: string;
   html: string;
   replyTo?: string;
+  /** Overrides the default Woven Sage admin recipient when set. */
+  to?: string | string[];
 };
 
 async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
@@ -17,6 +19,11 @@ async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
   }
 
   const fromEmail = (env.PORTAL_FROM_EMAIL ?? 'portal@wovensage.com').trim();
+  const to = payload.to
+    ? Array.isArray(payload.to)
+      ? payload.to
+      : [payload.to]
+    : [TIME_OFF_RECIPIENT];
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -25,7 +32,7 @@ async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
     },
     body: JSON.stringify({
       from: `Coordity <${fromEmail}>`,
-      to: [TIME_OFF_RECIPIENT],
+      to,
       reply_to: payload.replyTo,
       subject: payload.subject,
       text: payload.text,

@@ -1,0 +1,411 @@
+---
+/**
+ * Public early-access interest page for coordity.com.
+ */
+import CoordityMark from '../components/CoordityMark.astro';
+import { COORDITY_PRODUCT_NAME } from '../lib/organization';
+
+export const prerender = false;
+
+if (!Astro.locals.isCoordityApex) {
+  return Astro.redirect('/');
+}
+
+const error = Astro.url.searchParams.get('error');
+const sent = Astro.url.searchParams.get('sent') === '1';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Request early access to Coordity — the employee portal built for behavioral health practices."
+    />
+    <link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+    <link rel="icon" href="/favicon-coordity.svg?v=4" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-coordity.png?v=4" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+    <title>Request early access | {COORDITY_PRODUCT_NAME}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="ea-body">
+    <header class="ea-header">
+      <div class="ea-header__inner">
+        <a href="/" class="ea-brand" aria-label="Coordity home">
+          <CoordityMark variant="dark" wordmark={false} class="text-[2.5rem]" />
+          <span class="ea-brand__name">Coordity</span>
+        </a>
+        <a href="/continue" class="ea-link">Continue to your workspace →</a>
+      </div>
+    </header>
+
+    <main class="ea-main">
+      <div class="ea-grid">
+        <section class="ea-copy">
+          <p class="ea-eyebrow">Early access</p>
+          <h1 class="ea-title">Bring your practice into one coordinated workspace.</h1>
+          <p class="ea-lede">
+            Coordity is a customizable employee portal for behavioral health teams — tasks, time
+            tracking, training, announcements, and communication in one place, branded as your own.
+          </p>
+          <ul class="ea-points">
+            <li>Home dashboard with widgets your team actually uses</li>
+            <li>Timesheets, time off, and schedule in one flow</li>
+            <li>Credentialing, directory, and internal messaging</li>
+            <li>Your logo, colors, and subdomain — not a generic SaaS shell</li>
+          </ul>
+          <p class="ea-note">
+            We&rsquo;re onboarding practices in waves. Tell us about your team and we&rsquo;ll follow
+            up when a spot opens.
+          </p>
+        </section>
+
+        <section class="ea-form-card" aria-labelledby="ea-form-heading">
+          {
+            sent ? (
+              <div class="ea-success">
+                <h2 id="ea-form-heading">Thanks — we got it.</h2>
+                <p>
+                  Someone from Coordity will reach out at the email you provided. In the meantime,
+                  you can{' '}
+                  <a href="/continue">find an existing workspace</a> if you already have one.
+                </p>
+                <a class="ea-back" href="/">
+                  Back to Coordity
+                </a>
+              </div>
+            ) : (
+              <>
+                <h2 id="ea-form-heading">Request early access</h2>
+                <p class="ea-form-lede">A few details so we can follow up with the right fit.</p>
+                {error ? <p class="ea-error">{error}</p> : null}
+                <form method="post" action="/api/early-access/request" class="ea-form">
+                  <label>
+                    Your name
+                    <input type="text" name="name" required maxlength="80" autocomplete="name" />
+                  </label>
+                  <label>
+                    Work email
+                    <input type="email" name="email" required maxlength="120" autocomplete="email" />
+                  </label>
+                  <label>
+                    Practice / organization
+                    <input type="text" name="practiceName" required maxlength="120" autocomplete="organization" />
+                  </label>
+                  <label>
+                    Title <span class="ea-optional">optional</span>
+                    <input type="text" name="title" maxlength="80" autocomplete="organization-title" />
+                  </label>
+                  <label>
+                    Phone <span class="ea-optional">optional</span>
+                    <input type="tel" name="phone" maxlength="40" autocomplete="tel" />
+                  </label>
+                  <label>
+                    Anything else we should know? <span class="ea-optional">optional</span>
+                    <textarea name="message" rows="4" maxlength="4000"></textarea>
+                  </label>
+                  <button type="submit" class="ea-submit">
+                    Submit request
+                    <span aria-hidden="true">→</span>
+                  </button>
+                </form>
+              </>
+            )
+          }
+        </section>
+      </div>
+    </main>
+
+    <footer class="ea-footer">
+      <CoordityMark variant="dark" class="text-base" />
+      <p>© {new Date().getFullYear()} {COORDITY_PRODUCT_NAME}</p>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  .ea-body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    color: #005284;
+    background:
+      radial-gradient(ellipse 70% 45% at 100% -5%, rgba(254, 203, 0, 0.18), transparent 55%),
+      radial-gradient(ellipse 60% 40% at -10% 10%, rgba(0, 82, 132, 0.08), transparent 50%),
+      #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .ea-header {
+    border-bottom: 1px solid rgba(0, 82, 132, 0.1);
+  }
+
+  .ea-header__inner {
+    margin: 0 auto;
+    display: flex;
+    max-width: 64rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.15rem 1.25rem;
+  }
+
+  .ea-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .ea-brand__name {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.45rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .ea-link {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #005284;
+    text-decoration: none;
+  }
+
+  .ea-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .ea-main {
+    margin: 0 auto;
+    max-width: 64rem;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .ea-grid {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 900px) {
+    .ea-grid {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 3rem;
+      align-items: start;
+    }
+  }
+
+  .ea-eyebrow {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #005284;
+  }
+
+  .ea-title {
+    margin: 0.55rem 0 0;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: #0b1f33;
+  }
+
+  .ea-lede {
+    margin: 1rem 0 0;
+    max-width: 34rem;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: rgb(0 82 132 / 0.82);
+  }
+
+  .ea-points {
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .ea-points li {
+    position: relative;
+    padding-left: 1.15rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #0b1f33;
+  }
+
+  .ea-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: #fecb00;
+  }
+
+  .ea-note {
+    margin: 1.5rem 0 0;
+    max-width: 32rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: rgb(0 82 132 / 0.65);
+  }
+
+  .ea-form-card {
+    border: 1px solid rgba(0, 82, 132, 0.12);
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 1.5rem 1.35rem 1.65rem;
+    box-shadow: 0 18px 40px rgba(11, 31, 51, 0.06);
+  }
+
+  .ea-form-card h2 {
+    margin: 0;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #0b1f33;
+  }
+
+  .ea-form-lede {
+    margin: 0.4rem 0 0;
+    font-size: 0.92rem;
+    color: rgb(0 82 132 / 0.7);
+  }
+
+  .ea-error {
+    margin: 1rem 0 0;
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(159, 29, 29, 0.25);
+    background: #fff5f5;
+    color: #9f1d1d;
+    font-size: 0.9rem;
+  }
+
+  .ea-form {
+    margin-top: 1.15rem;
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .ea-form label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0b1f33;
+  }
+
+  .ea-optional {
+    font-weight: 500;
+    color: rgb(0 82 132 / 0.45);
+  }
+
+  .ea-form input,
+  .ea-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 82, 132, 0.18);
+    border-radius: 0.7rem;
+    background: #fff;
+    padding: 0.7rem 0.8rem;
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 400;
+    color: #0b1f33;
+  }
+
+  .ea-form input:focus,
+  .ea-form textarea:focus {
+    outline: 2px solid rgba(0, 82, 132, 0.28);
+    outline-offset: 1px;
+  }
+
+  .ea-form textarea {
+    resize: vertical;
+    min-height: 6rem;
+  }
+
+  .ea-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 0.35rem;
+    border: none;
+    border-radius: 999px;
+    background: #fecb00;
+    padding: 0.85rem 1.25rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0b1f33;
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(254, 203, 0, 0.28);
+  }
+
+  .ea-submit:hover {
+    background: #ffe066;
+  }
+
+  .ea-success h2 {
+    margin: 0;
+  }
+
+  .ea-success p {
+    margin: 0.65rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: rgb(0 82 132 / 0.8);
+  }
+
+  .ea-success a {
+    color: #005284;
+    font-weight: 650;
+  }
+
+  .ea-back {
+    display: inline-flex;
+    margin-top: 1.35rem;
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: #005284;
+    text-decoration: none;
+  }
+
+  .ea-back:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .ea-footer {
+    margin: 0 auto;
+    display: flex;
+    max-width: 64rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-top: 1px solid rgba(0, 82, 132, 0.1);
+    padding: 1.5rem 1.25rem 2rem;
+    font-size: 0.75rem;
+    color: rgb(0 82 132 / 0.45);
+  }
+</style>

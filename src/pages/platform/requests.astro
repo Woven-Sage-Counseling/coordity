@@ -1,0 +1,116 @@
+---
+import PlatformLayout from '../../layouts/PlatformLayout.astro';
+import { listEarlyAccessRequests } from '../../lib/early-access';
+
+export const prerender = false;
+
+const staff = Astro.locals.platformStaff!;
+const filter = Astro.url.searchParams.get('status') === 'reviewed' ? 'reviewed' : Astro.url.searchParams.get('status') === 'all' ? 'all' : 'new';
+const requests = await listEarlyAccessRequests({
+  status: filter === 'all' ? 'all' : filter,
+}).catch(() => []);
+const saved = Astro.url.searchParams.get('saved');
+const error = Astro.url.searchParams.get('error');
+
+function formatWhen(ts: number): string {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(ts));
+  } catch {
+    return new Date(ts).toLocaleString();
+  }
+}
+---
+
+<PlatformLayout title="Requests" staffName={staff.name} eyebrow="Inbox">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;">
+    <div>
+      <h1 class="platform-title" style="font-size:clamp(1.85rem, 3vw, 2.35rem);">Early access</h1>
+      <p class="platform-lede">Inbound interest from coordity.com. New requests also email admin@coordity.com.</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+      <a href="/platform/requests" class:list={['platform-chip', filter === 'new' && 'is-active']}>New</a>
+      <a href="/platform/requests?status=reviewed" class:list={['platform-chip', filter === 'reviewed' && 'is-active']}>
+        Reviewed
+      </a>
+      <a href="/platform/requests?status=all" class:list={['platform-chip', filter === 'all' && 'is-active']}>All</a>
+    </div>
+  </div>
+
+  {error ? <p class="platform-alert platform-alert-error">{error}</p> : null}
+  {saved === 'reviewed' ? <p class="platform-alert platform-alert-ok">Marked as reviewed.</p> : null}
+
+  {
+    requests.length === 0 ? (
+      <div class="platform-empty">
+        <strong>{filter === 'new' ? 'No new requests' : 'Nothing here yet'}</strong>
+        <span>
+          {filter === 'new'
+            ? 'New early access submissions will show up here.'
+            : 'Early access submissions from the marketing site land in this inbox.'}
+        </span>
+      </div>
+    ) : (
+      <div class="platform-table-wrap">
+        <table class="platform-table">
+          <thead>
+            <tr>
+              <th>Contact</th>
+              <th>Practice</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              requests.map((item) => (
+                <tr>
+                  <td>
+                    <div class="org-name">{item.name}</div>
+                    <div class="org-slug">
+                      <a href={`mailto:${item.email}`} style="color:var(--c-blue);">
+                        {item.email}
+                      </a>
+                      {item.title ? ` · ${item.title}` : ''}
+                      {item.phone ? ` · ${item.phone}` : ''}
+                    </div>
+                    {item.message ? (
+                      <p style="margin:0.55rem 0 0;font-size:0.88rem;line-height:1.45;color:var(--c-ink);white-space:pre-wrap;">
+                        {item.message}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td>{item.practiceName}</td>
+                  <td style="color:var(--c-muted);white-space:nowrap;">{formatWhen(item.createdAt)}</td>
+                  <td style="text-transform:capitalize;color:var(--c-muted);">{item.status}</td>
+                  <td>
+                    <div class="platform-actions">
+                      {item.status === 'new' ? (
+                        <form method="post" action="/api/platform/requests/review">
+                          <input type="hidden" name="id" value={item.id} />
+                          <button class="platform-chip" type="submit">
+                            Mark reviewed
+                          </button>
+                        </form>
+                      ) : (
+                        <a class="platform-chip" href={`mailto:${item.email}?subject=${encodeURIComponent(`Re: Coordity early access — ${item.practiceName}`)}`}>
+                          Reply
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</PlatformLayout>
