@@ -123,7 +123,7 @@ const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
 
 const ORG_SELECT_LEGACY = `id, name, slug, display_name, logo_url, website_url`;
 
-export const ORG_FAVICON_MAX_BYTES = 250_000;
+export const ORG_FAVICON_MAX_BYTES = 1_200_000;
 export const ORG_FAVICON_TYPES = new Set([
   'image/png',
   'image/jpeg',
@@ -407,7 +407,7 @@ export async function updateOrganizationFavicon(input: {
       throw new Error('Use a PNG, JPEG, WebP, ICO, or SVG favicon.');
     }
     if (input.file.size > ORG_FAVICON_MAX_BYTES) {
-      throw new Error('Favicon is too large (max about 250KB).');
+      throw new Error('Favicon is too large (max about 1.2MB).');
     }
     const data = await fileToBase64(input.file);
     await DB.prepare(
