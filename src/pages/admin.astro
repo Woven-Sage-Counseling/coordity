@@ -47,8 +47,12 @@ const orgLogoPreview =
   (hasOrgLogo ? `/api/org/logo?v=${organization?.logoUpdatedAt ?? 0}` : null);
 const brandDisplayName = organization?.displayName ?? organization?.name ?? '';
 const brandWebsiteUrl = organization?.websiteUrl ?? '';
-const brandPrimary = organization?.primaryColor ?? '#535F51';
-const brandAccent = organization?.accentColor ?? '#788F75';
+const brandBgLight = organization?.bgColorLight ?? '#F7F4EE';
+const brandPrimaryLight = organization?.primaryColorLight ?? '#535F51';
+const brandAccentLight = organization?.accentColorLight ?? '#788F75';
+const brandBgDark = organization?.bgColorDark ?? '#111311';
+const brandPrimaryDark = organization?.primaryColorDark ?? '#BAC6B6';
+const brandAccentDark = organization?.accentColorDark ?? '#8A9E86';
 const brandInvertLogoDark = Boolean(organization?.invertLogoDark);
 
 async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
@@ -574,65 +578,180 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         <div class="space-y-4 border-t border-sage-dark/10 pt-6">
           <h3 class="text-sm font-semibold text-charcoal">Colors</h3>
           <p class="text-sm text-sage-dark/65">
-            Primary drives buttons and strong text. Accent is used for secondary highlights.
+            Set background, primary, and accent for light and dark mode. Primary drives buttons and
+            strong text; accent is used for secondary highlights.
           </p>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block text-sm font-medium text-charcoal">
-              Primary
-              <span class="mt-1.5 flex items-center gap-2">
-                <input
-                  class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
-                  type="color"
-                  name="primaryColor"
-                  value={brandPrimary}
-                  data-brand-primary-color
-                />
-                <input
-                  class="field mt-0"
-                  type="text"
-                  value={brandPrimary}
-                  maxlength="7"
-                  data-brand-primary-hex
-                  aria-label="Primary color hex"
-                />
+
+          <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
+            <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Light mode</h4>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <label class="block text-sm font-medium text-charcoal">
+                Background
+                <span class="mt-1.5 flex items-center gap-2">
+                  <input
+                    class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                    type="color"
+                    name="bgColorLight"
+                    value={brandBgLight}
+                    data-brand-color="bgColorLight"
+                  />
+                  <input
+                    class="field mt-0"
+                    type="text"
+                    value={brandBgLight}
+                    maxlength="7"
+                    data-brand-hex="bgColorLight"
+                    aria-label="Light background hex"
+                  />
+                </span>
+              </label>
+              <label class="block text-sm font-medium text-charcoal">
+                Primary
+                <span class="mt-1.5 flex items-center gap-2">
+                  <input
+                    class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                    type="color"
+                    name="primaryColorLight"
+                    value={brandPrimaryLight}
+                    data-brand-color="primaryColorLight"
+                  />
+                  <input
+                    class="field mt-0"
+                    type="text"
+                    value={brandPrimaryLight}
+                    maxlength="7"
+                    data-brand-hex="primaryColorLight"
+                    aria-label="Light primary hex"
+                  />
+                </span>
+              </label>
+              <label class="block text-sm font-medium text-charcoal">
+                Accent
+                <span class="mt-1.5 flex items-center gap-2">
+                  <input
+                    class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                    type="color"
+                    name="accentColorLight"
+                    value={brandAccentLight}
+                    data-brand-color="accentColorLight"
+                  />
+                  <input
+                    class="field mt-0"
+                    type="text"
+                    value={brandAccentLight}
+                    maxlength="7"
+                    data-brand-hex="accentColorLight"
+                    aria-label="Light accent hex"
+                  />
+                </span>
+              </label>
+            </div>
+            <div
+              class="flex flex-wrap items-center gap-3 rounded-xl border border-sage-dark/10 px-4 py-3"
+              data-brand-preview="light"
+              style={`background:${brandBgLight}`}
+            >
+              <span
+                class="inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white"
+                data-brand-preview-primary="light"
+                style={`background:${brandPrimaryLight}`}
+              >
+                Primary
               </span>
-            </label>
-            <label class="block text-sm font-medium text-charcoal">
-              Accent
-              <span class="mt-1.5 flex items-center gap-2">
-                <input
-                  class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
-                  type="color"
-                  name="accentColor"
-                  value={brandAccent}
-                  data-brand-accent-color
-                />
-                <input
-                  class="field mt-0"
-                  type="text"
-                  value={brandAccent}
-                  maxlength="7"
-                  data-brand-accent-hex
-                  aria-label="Accent color hex"
-                />
+              <span
+                class="inline-flex rounded-full border px-4 py-2 text-sm font-medium"
+                data-brand-preview-accent="light"
+                style={`border-color:${brandAccentLight};color:${brandAccentLight}`}
+              >
+                Accent
               </span>
-            </label>
+            </div>
           </div>
-          <div class="flex flex-wrap items-center gap-3 pt-1">
-            <span
-              class="inline-flex rounded-full px-4 py-2 text-sm font-semibold text-white"
-              data-brand-preview-primary
-              style={`background:${brandPrimary}`}
+
+          <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
+            <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Dark mode</h4>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <label class="block text-sm font-medium text-charcoal">
+                Background
+                <span class="mt-1.5 flex items-center gap-2">
+                  <input
+                    class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                    type="color"
+                    name="bgColorDark"
+                    value={brandBgDark}
+                    data-brand-color="bgColorDark"
+                  />
+                  <input
+                    class="field mt-0"
+                    type="text"
+                    value={brandBgDark}
+                    maxlength="7"
+                    data-brand-hex="bgColorDark"
+                    aria-label="Dark background hex"
+                  />
+                </span>
+              </label>
+              <label class="block text-sm font-medium text-charcoal">
+                Primary
+                <span class="mt-1.5 flex items-center gap-2">
+                  <input
+                    class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                    type="color"
+                    name="primaryColorDark"
+                    value={brandPrimaryDark}
+                    data-brand-color="primaryColorDark"
+                  />
+                  <input
+                    class="field mt-0"
+                    type="text"
+                    value={brandPrimaryDark}
+                    maxlength="7"
+                    data-brand-hex="primaryColorDark"
+                    aria-label="Dark primary hex"
+                  />
+                </span>
+              </label>
+              <label class="block text-sm font-medium text-charcoal">
+                Accent
+                <span class="mt-1.5 flex items-center gap-2">
+                  <input
+                    class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                    type="color"
+                    name="accentColorDark"
+                    value={brandAccentDark}
+                    data-brand-color="accentColorDark"
+                  />
+                  <input
+                    class="field mt-0"
+                    type="text"
+                    value={brandAccentDark}
+                    maxlength="7"
+                    data-brand-hex="accentColorDark"
+                    aria-label="Dark accent hex"
+                  />
+                </span>
+              </label>
+            </div>
+            <div
+              class="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 px-4 py-3"
+              data-brand-preview="dark"
+              style={`background:${brandBgDark}`}
             >
-              Primary button
-            </span>
-            <span
-              class="inline-flex rounded-full border px-4 py-2 text-sm font-medium"
-              data-brand-preview-accent
-              style={`border-color:${brandAccent};color:${brandAccent}`}
-            >
-              Accent text
-            </span>
+              <span
+                class="inline-flex rounded-full px-4 py-2 text-sm font-semibold"
+                data-brand-preview-primary="dark"
+                style={`background:${brandPrimaryDark};color:${brandBgDark}`}
+              >
+                Primary
+              </span>
+              <span
+                class="inline-flex rounded-full border px-4 py-2 text-sm font-medium"
+                data-brand-preview-accent="dark"
+                style={`border-color:${brandAccentDark};color:${brandAccentDark}`}
+              >
+                Accent
+              </span>
+            </div>
           </div>
         </div>
 
@@ -853,18 +972,18 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
   if (brandingForm instanceof HTMLFormElement) {
     const statusEl = brandingForm.querySelector('[data-brand-status]');
     const errorEl = brandingForm.querySelector('[data-brand-error]');
-    const primaryColor = brandingForm.querySelector('[data-brand-primary-color]');
-    const primaryHex = brandingForm.querySelector('[data-brand-primary-hex]');
-    const accentColor = brandingForm.querySelector('[data-brand-accent-color]');
-    const accentHex = brandingForm.querySelector('[data-brand-accent-hex]');
-    const previewPrimary = brandingForm.querySelector('[data-brand-preview-primary]');
-    const previewAccent = brandingForm.querySelector('[data-brand-preview-accent]');
+    const colorKeys = [
+      'bgColorLight',
+      'primaryColorLight',
+      'accentColorLight',
+      'bgColorDark',
+      'primaryColorDark',
+      'accentColorDark',
+    ];
 
-    const syncPair = (
-      colorInput: Element | null,
-      hexInput: Element | null,
-      fromColor: boolean,
-    ) => {
+    const syncPair = (key: string, fromColor: boolean) => {
+      const colorInput = brandingForm.querySelector(`[data-brand-color="${key}"]`);
+      const hexInput = brandingForm.querySelector(`[data-brand-hex="${key}"]`);
       if (!(colorInput instanceof HTMLInputElement) || !(hexInput instanceof HTMLInputElement)) return;
       if (fromColor) {
         hexInput.value = colorInput.value.toUpperCase();
@@ -876,19 +995,33 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           hexInput.value = next.toUpperCase();
         }
       }
-      if (previewPrimary instanceof HTMLElement && colorInput === primaryColor) {
-        previewPrimary.style.background = colorInput.value;
+      const value = colorInput.value;
+      const mode = key.endsWith('Dark') ? 'dark' : 'light';
+      const role = key.startsWith('bg') ? 'bg' : key.startsWith('primary') ? 'primary' : 'accent';
+      const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
+      const previewPrimary = brandingForm.querySelector(`[data-brand-preview-primary="${mode}"]`);
+      const previewAccent = brandingForm.querySelector(`[data-brand-preview-accent="${mode}"]`);
+      if (role === 'bg' && preview instanceof HTMLElement) {
+        preview.style.background = value;
+        if (mode === 'dark' && previewPrimary instanceof HTMLElement) {
+          previewPrimary.style.color = value;
+        }
       }
-      if (previewAccent instanceof HTMLElement && colorInput === accentColor) {
-        previewAccent.style.borderColor = colorInput.value;
-        previewAccent.style.color = colorInput.value;
+      if (role === 'primary' && previewPrimary instanceof HTMLElement) {
+        previewPrimary.style.background = value;
+      }
+      if (role === 'accent' && previewAccent instanceof HTMLElement) {
+        previewAccent.style.borderColor = value;
+        previewAccent.style.color = value;
       }
     };
 
-    primaryColor?.addEventListener('input', () => syncPair(primaryColor, primaryHex, true));
-    primaryHex?.addEventListener('change', () => syncPair(primaryColor, primaryHex, false));
-    accentColor?.addEventListener('input', () => syncPair(accentColor, accentHex, true));
-    accentHex?.addEventListener('change', () => syncPair(accentColor, accentHex, false));
+    colorKeys.forEach((key) => {
+      const colorInput = brandingForm.querySelector(`[data-brand-color="${key}"]`);
+      const hexInput = brandingForm.querySelector(`[data-brand-hex="${key}"]`);
+      colorInput?.addEventListener('input', () => syncPair(key, true));
+      hexInput?.addEventListener('change', () => syncPair(key, false));
+    });
 
     brandingForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -900,8 +1033,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         errorEl.classList.add('hidden');
         errorEl.textContent = '';
       }
-      syncPair(primaryColor, primaryHex, false);
-      syncPair(accentColor, accentHex, false);
+      colorKeys.forEach((key) => syncPair(key, false));
       try {
         const res = await fetch('/api/org/branding', {
           method: 'POST',

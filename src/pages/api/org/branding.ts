@@ -8,6 +8,10 @@ import {
 
 export const prerender = false;
 
+function formColor(form: FormData, key: string): string | null {
+  return String(form.get(key) ?? '').trim() || null;
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
@@ -36,8 +40,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       orgId: orgIdFromLocals(locals.organization),
       displayName: String(form.get('displayName') ?? ''),
       websiteUrl: String(form.get('websiteUrl') ?? ''),
-      primaryColor: String(form.get('primaryColor') ?? '').trim() || null,
-      accentColor: String(form.get('accentColor') ?? '').trim() || null,
+      bgColorLight: formColor(form, 'bgColorLight'),
+      primaryColorLight: formColor(form, 'primaryColorLight'),
+      accentColorLight: formColor(form, 'accentColorLight'),
+      bgColorDark: formColor(form, 'bgColorDark'),
+      primaryColorDark: formColor(form, 'primaryColorDark'),
+      accentColorDark: formColor(form, 'accentColorDark'),
       invertLogoDark,
       logoFile: logoFile instanceof File ? logoFile : null,
       clearLogo,

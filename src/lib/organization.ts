@@ -79,15 +79,34 @@ export interface PortalOrganization {
   logoUpdatedAt: number | null;
   hasFavicon: boolean;
   faviconUpdatedAt: number | null;
-  /** Hex primary brand color (#RRGGBB), or null for portal default. */
-  primaryColor: string | null;
-  /** Hex accent brand color (#RRGGBB), or null for portal default. */
-  accentColor: string | null;
+  /** Light-mode colors (#RRGGBB), or null for portal defaults. */
+  bgColorLight: string | null;
+  primaryColorLight: string | null;
+  accentColorLight: string | null;
+  /** Dark-mode colors (#RRGGBB), or null for portal defaults. */
+  bgColorDark: string | null;
+  primaryColorDark: string | null;
+  accentColorDark: string | null;
   invertLogoDark: boolean;
 }
 
-export const DEFAULT_ORG_PRIMARY_COLOR = '#535F51';
-export const DEFAULT_ORG_ACCENT_COLOR = '#788F75';
+export const DEFAULT_ORG_COLORS = {
+  light: {
+    background: '#F7F4EE',
+    primary: '#535F51',
+    accent: '#788F75',
+  },
+  dark: {
+    background: '#111311',
+    primary: '#BAC6B6',
+    accent: '#8A9E86',
+  },
+} as const;
+
+/** @deprecated Prefer DEFAULT_ORG_COLORS.light.primary */
+export const DEFAULT_ORG_PRIMARY_COLOR = DEFAULT_ORG_COLORS.light.primary;
+/** @deprecated Prefer DEFAULT_ORG_COLORS.light.accent */
+export const DEFAULT_ORG_ACCENT_COLOR = DEFAULT_ORG_COLORS.light.accent;
 
 type OrgRow = {
   id: string;
@@ -102,6 +121,12 @@ type OrgRow = {
   favicon_updated_at?: number | null;
   primary_color?: string | null;
   accent_color?: string | null;
+  bg_color_light?: string | null;
+  bg_color_dark?: string | null;
+  primary_color_light?: string | null;
+  primary_color_dark?: string | null;
+  accent_color_light?: string | null;
+  accent_color_dark?: string | null;
   invert_logo_dark?: number | null;
 };
 
@@ -109,6 +134,8 @@ function mapOrg(row: OrgRow): PortalOrganization {
   const slug = (row.slug || DEFAULT_ORG_SLUG).toLowerCase();
   const displayName = row.display_name || row.name;
   const hasLogo = Boolean(row.has_logo);
+  const legacyPrimary = normalizeHexColor(row.primary_color);
+  const legacyAccent = normalizeHexColor(row.accent_color);
   return {
     id: row.id,
     slug,
@@ -120,8 +147,12 @@ function mapOrg(row: OrgRow): PortalOrganization {
     logoUpdatedAt: row.logo_updated_at ?? null,
     hasFavicon: Boolean(row.has_favicon),
     faviconUpdatedAt: row.favicon_updated_at ?? null,
-    primaryColor: normalizeHexColor(row.primary_color) ?? null,
-    accentColor: normalizeHexColor(row.accent_color) ?? null,
+    bgColorLight: normalizeHexColor(row.bg_color_light) ?? null,
+    primaryColorLight: normalizeHexColor(row.primary_color_light) ?? legacyPrimary,
+    accentColorLight: normalizeHexColor(row.accent_color_light) ?? legacyAccent,
+    bgColorDark: normalizeHexColor(row.bg_color_dark) ?? null,
+    primaryColorDark: normalizeHexColor(row.primary_color_dark) ?? null,
+    accentColorDark: normalizeHexColor(row.accent_color_dark) ?? null,
     invertLogoDark: Boolean(row.invert_logo_dark),
   };
 }
@@ -138,13 +169,28 @@ function wovenSageFallback(): PortalOrganization {
     logoUpdatedAt: null,
     hasFavicon: false,
     faviconUpdatedAt: null,
-    primaryColor: null,
-    accentColor: null,
+    bgColorLight: null,
+    primaryColorLight: null,
+    accentColorLight: null,
+    bgColorDark: null,
+    primaryColorDark: null,
+    accentColorDark: null,
     invertLogoDark: true,
   };
 }
 
 const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
+  CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
+  logo_updated_at,
+  CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
+  favicon_updated_at,
+  primary_color, accent_color,
+  bg_color_light, bg_color_dark,
+  primary_color_light, primary_color_dark,
+  accent_color_light, accent_color_dark,
+  invert_logo_dark`;
+
+const ORG_SELECT_BRANDING = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
   logo_updated_at,
   CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
@@ -161,7 +207,7 @@ async function queryOrganization(
   sqlWithSelect: (select: string) => { sql: string; binds: unknown[] },
 ): Promise<OrgRow | null> {
   const { DB } = getEnv();
-  for (const select of [ORG_SELECT, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
+  for (const select of [ORG_SELECT, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
     try {
       const { sql, binds } = sqlWithSelect(select);
       const row = await DB.prepare(sql).bind(...binds).first<OrgRow>();
@@ -471,6 +517,17 @@ export async function getOrganizationLogo(
   }
 }
 
+function resolveOptionalHex(
+  value: string | null | undefined,
+  label: string,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (!value) return null;
+  const normalized = normalizeHexColor(value);
+  if (!normalized) throw new Error(`${label} must be a hex value like #535F51.`);
+  return normalized;
+}
+
 export function serializeOrganizationBranding(org: PortalOrganization) {
   return {
     displayName: org.displayName,
@@ -481,8 +538,12 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     hasFavicon: org.hasFavicon,
     faviconUrl: org.hasFavicon ? `/api/org/favicon?v=${org.faviconUpdatedAt ?? 0}` : null,
     faviconUpdatedAt: org.faviconUpdatedAt,
-    primaryColor: org.primaryColor,
-    accentColor: org.accentColor,
+    bgColorLight: org.bgColorLight,
+    primaryColorLight: org.primaryColorLight,
+    accentColorLight: org.accentColorLight,
+    bgColorDark: org.bgColorDark,
+    primaryColorDark: org.primaryColorDark,
+    accentColorDark: org.accentColorDark,
     invertLogoDark: org.invertLogoDark,
   };
 }
@@ -491,8 +552,12 @@ export async function updateOrganizationBranding(input: {
   orgId: string;
   displayName?: string;
   websiteUrl?: string | null;
-  primaryColor?: string | null;
-  accentColor?: string | null;
+  bgColorLight?: string | null;
+  primaryColorLight?: string | null;
+  accentColorLight?: string | null;
+  bgColorDark?: string | null;
+  primaryColorDark?: string | null;
+  accentColorDark?: string | null;
   invertLogoDark?: boolean;
   logoFile?: File | null;
   clearLogo?: boolean;
@@ -525,27 +590,34 @@ export async function updateOrganizationBranding(input: {
     }
   }
 
-  let primaryColor = existing.primaryColor;
-  if (input.primaryColor !== undefined) {
-    if (!input.primaryColor) {
-      primaryColor = null;
-    } else {
-      const normalized = normalizeHexColor(input.primaryColor);
-      if (!normalized) throw new Error('Primary color must be a hex value like #535F51.');
-      primaryColor = normalized;
-    }
-  }
+  const bgColorLight =
+    input.bgColorLight !== undefined
+      ? (resolveOptionalHex(input.bgColorLight, 'Light background color') ?? null)
+      : existing.bgColorLight;
+  const primaryColorLight =
+    input.primaryColorLight !== undefined
+      ? (resolveOptionalHex(input.primaryColorLight, 'Light primary color') ?? null)
+      : existing.primaryColorLight;
+  const accentColorLight =
+    input.accentColorLight !== undefined
+      ? (resolveOptionalHex(input.accentColorLight, 'Light accent color') ?? null)
+      : existing.accentColorLight;
+  const bgColorDark =
+    input.bgColorDark !== undefined
+      ? (resolveOptionalHex(input.bgColorDark, 'Dark background color') ?? null)
+      : existing.bgColorDark;
+  const primaryColorDark =
+    input.primaryColorDark !== undefined
+      ? (resolveOptionalHex(input.primaryColorDark, 'Dark primary color') ?? null)
+      : existing.primaryColorDark;
+  const accentColorDark =
+    input.accentColorDark !== undefined
+      ? (resolveOptionalHex(input.accentColorDark, 'Dark accent color') ?? null)
+      : existing.accentColorDark;
 
-  let accentColor = existing.accentColor;
-  if (input.accentColor !== undefined) {
-    if (!input.accentColor) {
-      accentColor = null;
-    } else {
-      const normalized = normalizeHexColor(input.accentColor);
-      if (!normalized) throw new Error('Accent color must be a hex value like #788F75.');
-      accentColor = normalized;
-    }
-  }
+  // Keep legacy columns in sync with light-mode primary/accent for older readers.
+  const legacyPrimary = primaryColorLight;
+  const legacyAccent = accentColorLight;
 
   const invertLogoDark =
     input.invertLogoDark !== undefined ? Boolean(input.invertLogoDark) : existing.invertLogoDark;
@@ -556,6 +628,12 @@ export async function updateOrganizationBranding(input: {
          website_url = ?,
          primary_color = ?,
          accent_color = ?,
+         bg_color_light = ?,
+         bg_color_dark = ?,
+         primary_color_light = ?,
+         primary_color_dark = ?,
+         accent_color_light = ?,
+         accent_color_dark = ?,
          invert_logo_dark = ?,
          updated_at = ?
      WHERE id = ?`,
@@ -563,8 +641,14 @@ export async function updateOrganizationBranding(input: {
     .bind(
       displayName,
       websiteUrl,
-      primaryColor,
-      accentColor,
+      legacyPrimary,
+      legacyAccent,
+      bgColorLight,
+      bgColorDark,
+      primaryColorLight,
+      primaryColorDark,
+      accentColorLight,
+      accentColorDark,
       invertLogoDark ? 1 : 0,
       ts,
       input.orgId,

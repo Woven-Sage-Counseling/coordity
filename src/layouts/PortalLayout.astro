@@ -5,8 +5,7 @@ import PortalFooter from '../components/PortalFooter.astro';
 import { getEnv } from '../lib/env';
 import { countUnreadMessages } from '../lib/messages';
 import {
-  DEFAULT_ORG_ACCENT_COLOR,
-  DEFAULT_ORG_PRIMARY_COLOR,
+  DEFAULT_ORG_COLORS,
   hexToRgbChannels,
 } from '../lib/organization';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
@@ -25,16 +24,37 @@ const orgFaviconHref = organization?.hasFavicon
   ? `/api/org/favicon?v=${organization.faviconUpdatedAt ?? 0}`
   : '/favicon.png';
 const invertLogoDark = organization?.invertLogoDark ?? false;
-const primaryHex = organization?.primaryColor ?? DEFAULT_ORG_PRIMARY_COLOR;
-const accentHex = organization?.accentColor ?? DEFAULT_ORG_ACCENT_COLOR;
-const primaryRgb = hexToRgbChannels(primaryHex) ?? '83 95 81';
-const accentRgb = hexToRgbChannels(accentHex) ?? '120 143 117';
+
+const lightBg = organization?.bgColorLight ?? DEFAULT_ORG_COLORS.light.background;
+const lightPrimary = organization?.primaryColorLight ?? DEFAULT_ORG_COLORS.light.primary;
+const lightAccent = organization?.accentColorLight ?? DEFAULT_ORG_COLORS.light.accent;
+const darkBg = organization?.bgColorDark ?? DEFAULT_ORG_COLORS.dark.background;
+const darkPrimary = organization?.primaryColorDark ?? DEFAULT_ORG_COLORS.dark.primary;
+const darkAccent = organization?.accentColorDark ?? DEFAULT_ORG_COLORS.dark.accent;
+
+const lightBgRgb = hexToRgbChannels(lightBg) ?? '247 244 238';
+const lightPrimaryRgb = hexToRgbChannels(lightPrimary) ?? '83 95 81';
+const lightAccentRgb = hexToRgbChannels(lightAccent) ?? '120 143 117';
+const darkBgRgb = hexToRgbChannels(darkBg) ?? '17 19 17';
+const darkPrimaryRgb = hexToRgbChannels(darkPrimary) ?? '186 198 182';
+const darkAccentRgb = hexToRgbChannels(darkAccent) ?? '138 158 134';
+
 const brandStyle = [
-  `--portal-sage-dark: ${primaryRgb}`,
-  `--portal-charcoal: ${primaryRgb}`,
-  `--portal-sage: ${accentRgb}`,
-  `--portal-sage-light: ${accentRgb}`,
-].join('; ');
+  `:root {`,
+  `--portal-cream: ${lightBgRgb};`,
+  `--portal-sage-dark: ${lightPrimaryRgb};`,
+  `--portal-charcoal: ${lightPrimaryRgb};`,
+  `--portal-sage: ${lightAccentRgb};`,
+  `--portal-sage-light: ${lightAccentRgb};`,
+  `}`,
+  `html.dark {`,
+  `--portal-cream: ${darkBgRgb};`,
+  `--portal-sage-dark: ${darkPrimaryRgb};`,
+  `--portal-charcoal: ${darkPrimaryRgb};`,
+  `--portal-sage: ${darkAccentRgb};`,
+  `--portal-sage-light: ${darkAccentRgb};`,
+  `}`,
+].join(' ');
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active';
@@ -56,7 +76,7 @@ const messagesUnread =
     <link rel="icon" href={orgFaviconHref} />
     <link rel="apple-touch-icon" href={orgFaviconHref} />
     <title>{title} | {orgName}</title>
-    <style is:inline set:html={`:root { ${brandStyle} }`} />
+    <style is:inline set:html={brandStyle} />
     <script is:inline define:vars={{ themeUserId: employee?.id ?? null }}>
       (function () {
         try {
