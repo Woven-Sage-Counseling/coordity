@@ -366,18 +366,36 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   width: 100%;
   /* Extra bottom room + soft fade so drop-shadows don't hard-clip */
   padding: 0.5rem 0.15rem 3.25rem;
-  -webkit-mask-image: linear-gradient(
+  --widget-mask-bottom: linear-gradient(
     to bottom,
     #000 0%,
     #000 calc(100% - 1.75rem),
     transparent 100%
   );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 calc(100% - 1.75rem),
+  --widget-mask-sides: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 4%,
+    #000 96%,
     transparent 100%
   );
+  -webkit-mask-image: var(--widget-mask-bottom);
+  mask-image: var(--widget-mask-bottom);
+}
+
+[data-widget-carousel][data-scrollable='true'] .widget-carousel-viewport {
+  -webkit-mask-image: var(--widget-mask-sides), var(--widget-mask-bottom);
+  -webkit-mask-composite: source-in;
+  mask-image: var(--widget-mask-sides), var(--widget-mask-bottom);
+  mask-composite: intersect;
+}
+
+[data-widget-carousel][data-solo='true'] .widget-carousel-viewport,
+[data-widget-carousel][data-scrollable='false'] .widget-carousel-viewport {
+  -webkit-mask-image: var(--widget-mask-bottom);
+  mask-image: var(--widget-mask-bottom);
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
 }
 
 .widget-carousel-track {
@@ -443,14 +461,13 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   }
 
   [data-widget-carousel][data-per-page='1'][data-scrollable='true'] .widget-carousel-viewport {
-    -webkit-mask-image: linear-gradient(
-      90deg,
+    --widget-mask-sides: linear-gradient(
+      to right,
       transparent 0%,
       #000 6%,
       #000 94%,
       transparent 100%
     );
-    mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
   }
 
   [data-widget-carousel][data-per-page='1'][data-scrollable='true'] .widget-carousel-slide {
