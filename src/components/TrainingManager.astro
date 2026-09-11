@@ -5,7 +5,7 @@ interface Props {
   modules: TrainingModule[];
   selectedModuleId: string | null;
   selectedItemId: string | null;
-  selectedView: 'settings' | 'item';
+  selectedView: 'settings' | 'item' | 'idle';
   assignments: TrainingLesson[];
   lessons: TrainingLesson[];
   blocksByItem: Record<string, TrainingBlock[]>;
@@ -96,8 +96,8 @@ const selectedAudience =
     Training is organized into modules — topics your team works through. Open a module on the left to
     see everything inside it in the middle column (the tasks and lessons people complete). Click one of
     those to edit its content on the right. Use
-    <span class="font-medium text-charcoal">Settings</span> in the middle column if you need to change
-    the module’s title, who can see it, or whether it’s visible yet.
+    <span class="font-medium text-charcoal">Settings</span> only when you need to change the module’s
+    title, who can see it, or whether it’s visible yet.
   </p>
 
   <div class="mt-3 space-y-3 transition-opacity duration-150" data-training-browse>
@@ -136,7 +136,7 @@ const selectedAudience =
             ) : (
               modules.map((module) => (
                 <a
-                  href={moduleHref(module.id, { view: 'settings' })}
+                  href={moduleHref(module.id)}
                   data-training-nav
                   class:list={[
                     'block rounded-lg px-2.5 py-2 text-sm transition',
@@ -315,18 +315,23 @@ const selectedAudience =
               ? `Editing “${selectedItem.title}”`
               : selectedView === 'settings' && selected
                 ? `Settings for “${selected.title}”`
-                : 'Select something in the middle'}
+                : selected
+                  ? 'Nothing selected yet'
+                  : 'Open a module to begin'}
           </p>
         </div>
         <div class="min-h-0 flex-1 overflow-y-auto p-4">
           {
             !selected ? (
               <div class="flex h-full min-h-[12rem] items-center justify-center text-center">
-                <p class="max-w-xs text-sm text-sage-dark/65">
-                  Pick a module on the left to see what’s inside and edit it here.
-                </p>
+                <div class="max-w-xs">
+                  <p class="text-sm font-semibold text-charcoal">No module open</p>
+                  <p class="mt-2 text-sm text-sage-dark/65">
+                    Pick a module on the left, or create one, to see what’s inside.
+                  </p>
+                </div>
               </div>
-            ) : selectedView === 'settings' || !selectedItem ? (
+            ) : selectedView === 'settings' ? (
               <div class="mx-auto max-w-lg">
                 <h3 class="text-lg font-semibold text-charcoal">Module settings</h3>
                 <p class="mt-1 text-sm text-sage-dark/65">
@@ -383,11 +388,8 @@ const selectedAudience =
                     ) : null}
                   </div>
                 </form>
-                <p class="mt-6 rounded-xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-3 py-3 text-sm text-sage-dark/70">
-                  Next: pick a quick task or lesson in the middle column, then add content on the right.
-                </p>
               </div>
-            ) : (
+            ) : selectedItem ? (
               <div class="mx-auto max-w-lg space-y-5">
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
@@ -606,6 +608,26 @@ const selectedAudience =
                     </label>
                     <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add</button>
                   </form>
+                </div>
+              </div>
+            ) : (
+              <div class="flex h-full min-h-[12rem] items-center justify-center text-center">
+                <div class="max-w-sm">
+                  {assignments.length + lessons.length === 0 ? (
+                    <>
+                      <p class="text-sm font-semibold text-charcoal">Nothing in this module yet</p>
+                      <p class="mt-2 text-sm text-sage-dark/65">
+                        Add a quick task or lesson in the middle column. When you select it, you’ll edit it here.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p class="text-sm font-semibold text-charcoal">Select something to edit</p>
+                      <p class="mt-2 text-sm text-sage-dark/65">
+                        Choose a quick task or lesson in the middle column. Settings is only for the module itself.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             )

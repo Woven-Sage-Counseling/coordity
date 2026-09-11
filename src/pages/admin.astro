@@ -156,12 +156,12 @@ const trainingSelectedItemId =
   selectedTrainingItemId && trainingItemIds.has(selectedTrainingItemId)
     ? selectedTrainingItemId
     : null;
-const trainingSelectedView: 'settings' | 'item' =
+const trainingSelectedView: 'settings' | 'item' | 'idle' =
   trainingSelectedItemId != null
     ? 'item'
-    : selectedTrainingViewParam === 'settings' || trainingSelectedId != null
+    : selectedTrainingViewParam === 'settings'
       ? 'settings'
-      : 'settings';
+      : 'idle';
 const trainingBlocksByItem: Record<string, Awaited<ReturnType<typeof listBlocks>>> = {};
 for (const item of [...trainingAssignments, ...trainingLessons]) {
   trainingBlocksByItem[item.id] = await safeLoad(

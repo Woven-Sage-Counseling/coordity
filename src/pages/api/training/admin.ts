@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!title) throw new Error('Module title is required.');
       if (roleKeys.length === 0) throw new Error('Assign at least one role.');
       const created = await createCustomModule({ orgId, title, description, roleKeys });
-      return redirectAdmin({ moduleId: created.id, view: 'settings' });
+      return redirectAdmin({ moduleId: created.id });
     }
 
     if (action === 'update-module') {
@@ -111,7 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'delete-lesson') {
       const moduleId = String(form.get('moduleId') ?? '').trim();
       await deleteLesson(orgId, String(form.get('lessonId') ?? '').trim());
-      return redirectAdmin({ moduleId, view: 'settings' });
+      return redirectAdmin({ moduleId });
     }
 
     if (action === 'create-block') {
@@ -156,7 +156,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       return redirectAdmin({
         moduleId,
-        ...(lessonId ? { itemId: lessonId } : { view: 'settings' as const }),
+        ...(lessonId ? { itemId: lessonId } : {}),
       });
     }
 
@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await deleteBlock(orgId, String(form.get('blockId') ?? '').trim());
       return redirectAdmin({
         moduleId,
-        ...(lessonId ? { itemId: lessonId } : { view: 'settings' as const }),
+        ...(lessonId ? { itemId: lessonId } : {}),
       });
     }
 
@@ -182,7 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await addQuizQuestion({ orgId, blockId, prompt, options, correctIndex });
       return redirectAdmin({
         moduleId,
-        ...(lessonId ? { itemId: lessonId } : { view: 'settings' as const }),
+        ...(lessonId ? { itemId: lessonId } : {}),
       });
     }
 
