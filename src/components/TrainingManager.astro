@@ -92,26 +92,6 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
   </p>
 
   <div class="mt-3 space-y-3 transition-opacity duration-150" data-training-browse>
-  {
-    selected ? (
-      <nav class="flex flex-wrap items-center gap-1.5 text-sm text-sage-dark/65" aria-label="Training selection">
-        <span class="font-medium text-charcoal">{selected.title}</span>
-        {selectedView === 'settings' ? (
-          <>
-            <span class="text-sage-dark/35">/</span>
-            <span>Module settings</span>
-          </>
-        ) : null}
-        {selectedItem ? (
-          <>
-            <span class="text-sage-dark/35">/</span>
-            <span>{selectedItem.title}</span>
-          </>
-        ) : null}
-      </nav>
-    ) : null
-  }
-
   <div class="overflow-hidden rounded-2xl border border-sage-dark/15 bg-white shadow-sm">
     <div class="grid min-h-[28rem] lg:h-[min(70vh,42rem)] lg:grid-cols-[13.5rem_15.5rem_minmax(0,1fr)]">
       {/* Column 1 — Modules */}
