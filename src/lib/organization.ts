@@ -433,6 +433,14 @@ export async function createOrganization(input: {
 
   const org = await getOrganizationById(orgId);
   if (!org) throw new Error('Could not create workspace.');
+
+  try {
+    const { seedTrainingForOrg } = await import('./training');
+    await seedTrainingForOrg(orgId);
+  } catch (error) {
+    console.error('training seed on org create failed', error);
+  }
+
   return org;
 }
 

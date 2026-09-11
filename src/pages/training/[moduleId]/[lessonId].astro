@@ -1,0 +1,228 @@
+---
+import PortalLayout from '../../../layouts/PortalLayout.astro';
+import {
+  extractYoutubeId,
+  getLesson,
+  getModuleProgressForUser,
+  latestQuizPass,
+  listBlocks,
+  listCompletedLessonIds,
+  moduleVisibleToRoles,
+} from '../../../lib/training';
+import { orgIdFromLocals } from '../../../lib/organization';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+const orgId = orgIdFromLocals(Astro.locals.organization);
+const moduleId = Astro.params.moduleId ?? '';
+const lessonId = Astro.params.lessonId ?? '';
+const roleKeys = employee.roles;
+const error = Astro.url.searchParams.get('error');
+const quizScore = Astro.url.searchParams.get('score');
+const quizPassed = Astro.url.searchParams.get('passed');
+
+const lesson = await getLesson(lessonId);
+if (!lesson || lesson.orgId !== orgId || lesson.moduleId !== moduleId) {
+  return Astro.redirect('/training');
+}
+
+const progress = await getModuleProgressForUser({
+  orgId,
+  moduleId,
+  userId: employee.id,
+});
+if (!progress || !moduleVisibleToRoles(progress.module, roleKeys) || !progress.module.visible) {
+  return Astro.redirect('/training');
+}
+
+const blocks = await listBlocks(lessonId);
+const completed = await listCompletedLessonIds(employee.id, [lessonId]);
+const isComplete = completed.has(lessonId);
+
+const quizPassMap = new Map<string, boolean>();
+for (const block of blocks.filter((b) => b.type === 'quiz')) {
+  quizPassMap.set(block.id, await latestQuizPass(employee.id, block.id));
+}
+
+const needsAck = blocks.some((b) => b.type === 'ack');
+const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassMap.get(b.id));
+---
+
+<PortalLayout title={lesson.title} wide>
+  <p class="text-sm text-sage-dark/65">
+    <a href="/training" class="hover:text-sage-dark">Training</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    <a href={`/training/${moduleId}`} class="hover:text-sage-dark">{progress.module.title}</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    {lesson.title}
+  </p>
+
+  <div class="mt-3 max-w-3xl">
+    <h1 class="font-display text-4xl text-charcoal">{lesson.title}</h1>
+    {
+      isComplete ? (
+        <p class="mt-3 text-sm font-semibold text-emerald-800">Lesson complete</p>
+      ) : null
+    }
+  </div>
+
+  {error ? <p class="mt-4 max-w-3xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
+  {
+    quizScore != null ? (
+      <p
+        class:list={[
+          'mt-4 max-w-3xl rounded-xl px-4 py-3 text-sm',
+          quizPassed === '1'
+            ? 'border border-emerald-200 bg-emerald-50 text-emerald-900'
+            : 'border border-amber-200 bg-amber-50 text-amber-950',
+        ]}
+      >
+        Quiz score: {quizScore}%{quizPassed === '1' ? ' — passed' : ' — try again to pass'}
+      </p>
+    ) : null
+  }
+
+  <div class="mt-8 max-w-3xl space-y-6">
+    {
+      blocks.length === 0 ? (
+        <p class="text-sm text-sage-dark/65">This lesson has no content yet.</p>
+      ) : (
+        blocks.map((block) => {
+          if (block.type === 'video') {
+            const id = block.youtubeUrl ? extractYoutubeId(block.youtubeUrl) : null;
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Video</h2>
+                {id ? (
+                  <div class="mt-4 aspect-video overflow-hidden rounded-xl bg-black">
+                    <iframe
+                      class="h-full w-full"
+                      src={`https://www.youtube.com/embed/${id}`}
+                      title="Lesson video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen
+                    />
+                  </div>
+                ) : (
+                  <p class="mt-3 text-sm text-sage-dark/65">Video coming soon.</p>
+                )}
+              </section>
+            );
+          }
+          if (block.type === 'written') {
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Lesson</h2>
+                <div class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-charcoal">
+                  {block.bodyText || 'Content coming soon.'}
+                </div>
+              </section>
+            );
+          }
+          if (block.type === 'resource') {
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Resource</h2>
+                {block.resourceUrl ? (
+                  <a
+                    class="mt-3 inline-flex text-sm font-semibold text-sage-dark underline-offset-2 hover:underline"
+                    href={block.resourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {block.resourceLabel || block.resourceUrl}
+                  </a>
+                ) : (
+                  <p class="mt-3 text-sm text-sage-dark/65">No link yet.</p>
+                )}
+              </section>
+            );
+          }
+          if (block.type === 'quiz') {
+            const passed = quizPassMap.get(block.id);
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Quiz</h2>
+                <p class="mt-2 text-sm text-sage-dark/70">
+                  Pass with {block.passPercent ?? 80}% or higher.
+                  {passed ? ' You have already passed this quiz.' : ''}
+                </p>
+                {block.questions.length === 0 ? (
+                  <p class="mt-3 text-sm text-sage-dark/65">No questions yet.</p>
+                ) : (
+                  <form method="post" action="/api/training/quiz" class="mt-4 space-y-5">
+                    <input type="hidden" name="blockId" value={block.id} />
+                    <input type="hidden" name="moduleId" value={moduleId} />
+                    <input type="hidden" name="lessonId" value={lessonId} />
+                    {block.questions.map((question, qIndex) => (
+                      <fieldset class="rounded-xl border border-sage-dark/10 p-4">
+                        <legend class="px-1 text-sm font-semibold text-charcoal">
+                          {qIndex + 1}. {question.prompt}
+                        </legend>
+                        <div class="mt-3 space-y-2">
+                          {question.options.map((option, oIndex) => (
+                            <label class="flex items-center gap-2 text-sm text-charcoal">
+                              <input
+                                type="radio"
+                                name={`q_${qIndex}`}
+                                value={String(oIndex)}
+                                required
+                              />
+                              {option}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                    ))}
+                    <button class="btn-primary" type="submit">Submit quiz</button>
+                  </form>
+                )}
+              </section>
+            );
+          }
+          if (block.type === 'ack') {
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                  Acknowledgment
+                </h2>
+                <p class="mt-3 text-sm text-charcoal">
+                  {block.ackPrompt || 'I acknowledge that I have completed this lesson.'}
+                </p>
+              </section>
+            );
+          }
+          return null;
+        })
+      )
+    }
+  </div>
+
+  {
+    !isComplete ? (
+      <form method="post" action="/api/training/complete-lesson" class="mt-8 max-w-3xl space-y-3">
+        <input type="hidden" name="moduleId" value={moduleId} />
+        <input type="hidden" name="lessonId" value={lessonId} />
+        {needsAck ? (
+          <label class="block text-sm font-medium text-charcoal">
+            Type your full name to acknowledge
+            <input class="field mt-1.5" type="text" name="ackName" required maxlength="80" />
+          </label>
+        ) : null}
+        {!quizzesOk ? (
+          <p class="text-sm text-amber-800">Pass all quizzes before marking this lesson complete.</p>
+        ) : null}
+        <button class="btn-primary" type="submit" disabled={!quizzesOk}>
+          Mark lesson complete
+        </button>
+      </form>
+    ) : (
+      <p class="mt-8">
+        <a class="text-sm font-semibold text-sage-dark hover:underline" href={`/training/${moduleId}`}>
+          Back to module
+        </a>
+      </p>
+    )
+  }
+</PortalLayout>

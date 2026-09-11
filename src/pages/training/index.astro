@@ -1,0 +1,101 @@
+---
+import PortalLayout from '../../layouts/PortalLayout.astro';
+import {
+  listModuleProgressForUser,
+} from '../../lib/training';
+import { orgIdFromLocals } from '../../lib/organization';
+
+export const prerender = false;
+
+const employee = Astro.locals.employee!;
+const orgId = orgIdFromLocals(Astro.locals.organization);
+const roleKeys = employee.roles;
+const modules = await listModuleProgressForUser({
+  orgId,
+  userId: employee.id,
+  roleKeys,
+}).catch(() => [] as Awaited<ReturnType<typeof listModuleProgressForUser>>);
+
+const overallCompleted = modules.reduce((sum, item) => sum + item.completedLessons, 0);
+const overallTotal = modules.reduce((sum, item) => sum + item.totalLessons, 0);
+const overallPercent =
+  overallTotal === 0 ? 0 : Math.round((overallCompleted / overallTotal) * 100);
+---
+
+<PortalLayout title="Training" wide>
+  <p class="text-sm text-sage-dark/65">
+    <a href="/" class="hover:text-sage-dark">Home</a>
+    <span class="mx-1.5 text-sage-dark/35">/</span>
+    Training
+  </p>
+
+  <div class="mt-3">
+    <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Training</h1>
+    <p class="mt-3 max-w-2xl text-sage-dark/75">
+      Complete onboarding and training modules assigned to your role.
+    </p>
+  </div>
+
+  <section class="card mt-8 max-w-3xl" aria-label="Overall training progress">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Overall</p>
+        <p class="mt-2 font-display text-4xl text-charcoal">{overallPercent}%</p>
+      </div>
+      <p class="text-sm text-sage-dark/65">
+        {overallCompleted} of {overallTotal} lessons complete
+      </p>
+    </div>
+    <div class="mt-4 h-2.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+      <div class="h-full rounded-full bg-sage-dark" style={`width: ${overallPercent}%`}></div>
+    </div>
+  </section>
+
+  <div class="mt-8 grid max-w-3xl gap-4">
+    {
+      modules.length === 0 ? (
+        <p class="text-sm text-sage-dark/65">No training modules are assigned to your role yet.</p>
+      ) : (
+        modules.map((item) => (
+          <a
+            href={`/training/${item.module.id}`}
+            class="card block transition hover:ring-1 hover:ring-sage-dark/20"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/50">
+                  {item.module.kind === 'onboarding'
+                    ? 'Onboarding'
+                    : item.module.kind === 'using_coordity'
+                      ? 'Using Coordity'
+                      : 'Module'}
+                </p>
+                <h2 class="mt-1 text-xl font-semibold text-charcoal">{item.module.title}</h2>
+                {item.module.description ? (
+                  <p class="mt-1 text-sm text-sage-dark/70">{item.module.description}</p>
+                ) : null}
+              </div>
+              <p class="shrink-0 text-sm font-semibold text-sage-dark/80">{item.percent}%</p>
+            </div>
+            <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#e3e5e8]">
+              <div
+                class:list={[
+                  'h-full rounded-full',
+                  item.complete ? 'bg-emerald-600' : 'bg-sage-dark',
+                ]}
+                style={`width: ${item.percent}%`}
+              />
+            </div>
+            <p class="mt-2 text-xs text-sage-dark/60">
+              {item.complete
+                ? 'Complete'
+                : item.completedLessons === 0
+                  ? 'Not started'
+                  : `${item.completedLessons} of ${item.totalLessons} lessons`}
+            </p>
+          </a>
+        ))
+      )
+    }
+  </div>
+</PortalLayout>

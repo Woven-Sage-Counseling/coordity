@@ -1,4 +1,5 @@
 import { getEnv } from './env';
+import { listModuleProgressForUser } from './training';
 
 export interface ProgressStep {
   id: string;
@@ -72,17 +73,30 @@ async function hasPhoneNumber(userId: string): Promise<boolean> {
   return Boolean(row?.phone?.trim());
 }
 
+export type ProgressUserContext = {
+  orgId: string;
+  roleKeys: string[];
+};
+
 /** Progress tracks shown on Home and /progress. */
-export async function listProgressTracksForUser(userId: string): Promise<ProgressTrack[]> {
-  const [avatarDone, calendarDone, phoneDone] = await Promise.all([
+export async function listProgressTracksForUser(
+  userId: string,
+  context: ProgressUserContext,
+): Promise<ProgressTrack[]> {
+  const [avatarDone, calendarDone, phoneDone, trainingModules] = await Promise.all([
     hasAvatar(userId),
     hasGoogleCalendar(userId),
     hasPhoneNumber(userId),
+    listModuleProgressForUser({
+      orgId: context.orgId,
+      userId,
+      roleKeys: context.roleKeys,
+    }).catch(() => []),
   ]);
 
   const onboarding = trackFromSteps(
     'onboarding',
-    'Onboarding',
+    'Account setup',
     'Get set up on the portal for day-to-day work.',
     [
       {
@@ -108,51 +122,19 @@ export async function listProgressTracksForUser(userId: string): Promise<Progres
 
   const training = trackFromSteps(
     'training',
-    'Required training',
-    'Role training modules will appear here as they are published.',
-    [
-      {
-        id: 'training.orientation',
-        label: 'Practice orientation',
-        done: false,
-      },
-      {
-        id: 'training.ehr',
-        label: 'EHR / documentation basics',
-        done: false,
-      },
-      {
-        id: 'training.clinical',
-        label: 'Clinical workflow overview',
-        done: false,
-      },
-    ],
+    'Training',
+    trainingModules.length === 0
+      ? 'Modules assigned to your role will appear here.'
+      : 'Complete the modules assigned to your role.',
+    trainingModules.map((item) => ({
+      id: `training.${item.module.id}`,
+      label: item.module.title,
+      done: item.complete,
+      href: `/training/${item.module.id}`,
+    })),
   );
 
-  const compliance = trackFromSteps(
-    'compliance',
-    'Compliance',
-    'Required policy acknowledgments and annual refreshers.',
-    [
-      {
-        id: 'compliance.handbook',
-        label: 'Employee handbook acknowledgment',
-        done: false,
-      },
-      {
-        id: 'compliance.hipaa',
-        label: 'HIPAA / privacy refresher',
-        done: false,
-      },
-      {
-        id: 'compliance.safety',
-        label: 'Workplace safety overview',
-        done: false,
-      },
-    ],
-  );
-
-  return [onboarding, training, compliance];
+  return [onboarding, training];
 }
 
 export function overallProgress(tracks: ProgressTrack[]): {

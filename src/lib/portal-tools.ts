@@ -50,8 +50,8 @@ export const PORTAL_TOOLS: PortalTool[] = [
   {
     widgetId: 'my_progress',
     label: 'My progress',
-    description: 'Onboarding, training, and compliance progress.',
-    href: '/progress',
+    description: 'Onboarding, training, and account setup progress.',
+    href: '/training',
   },
 ];
 

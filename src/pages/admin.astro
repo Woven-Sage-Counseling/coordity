@@ -10,6 +10,7 @@ import TimesheetBacklogManager from '../components/TimesheetBacklogManager.astro
 import TimesheetShiftEditManager from '../components/TimesheetShiftEditManager.astro';
 import TimesheetStatsViewer from '../components/TimesheetStatsViewer.astro';
 import WorkItemsManager from '../components/WorkItemsManager.astro';
+import TrainingManager from '../components/TrainingManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import {
   listProvidersForLookup,
@@ -27,6 +28,12 @@ import { listAssignedTasksForAdmin } from '../lib/tasks';
 import { listWorkCategoriesForAdmin } from '../lib/timesheet-work-categories';
 import { listBulletinBoardRequests } from '../lib/bulletin-board';
 import { orgIdFromLocals } from '../lib/organization';
+import {
+  listBlocks,
+  listLessons,
+  listTrainingModules,
+  listTrainingRoster,
+} from '../lib/training';
 
 export const prerender = false;
 
@@ -107,6 +114,9 @@ const tasksError = tasksLoadError;
 const tasksSaved = Astro.url.searchParams.get('tasksSaved');
 const workCategoriesSaved = Astro.url.searchParams.get('workCategoriesSaved');
 let workCategoriesError: string | null = Astro.url.searchParams.get('workCategoriesError');
+const trainingError = Astro.url.searchParams.get('trainingError');
+const trainingSaved = Astro.url.searchParams.get('trainingSaved') === '1';
+const selectedTrainingModuleId = Astro.url.searchParams.get('module');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetBacklog = timesheetBacklogRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetShiftEdits = timesheetShiftEditRequests.filter((request) => request.status === 'pending').length;
@@ -122,6 +132,28 @@ try {
     workCategoriesError = 'Work items are temporarily unavailable. Database migration may still be pending.';
   }
 }
+
+const trainingModules = await safeLoad(
+  'training-modules',
+  () => listTrainingModules(orgId, { includeHidden: true, includeArchived: false }),
+  [],
+);
+const trainingSelectedId =
+  selectedTrainingModuleId && trainingModules.some((m) => m.id === selectedTrainingModuleId)
+    ? selectedTrainingModuleId
+    : trainingModules[0]?.id ?? null;
+const trainingLessons = trainingSelectedId
+  ? await safeLoad('training-lessons', () => listLessons(trainingSelectedId), [])
+  : [];
+const trainingBlocksByLesson: Record<string, Awaited<ReturnType<typeof listBlocks>>> = {};
+for (const lesson of trainingLessons) {
+  trainingBlocksByLesson[lesson.id] = await safeLoad(
+    `training-blocks-${lesson.id}`,
+    () => listBlocks(lesson.id),
+    [],
+  );
+}
+const trainingRoster = await safeLoad('training-roster', () => listTrainingRoster(orgId), []);
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
@@ -266,6 +298,15 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           data-admin-open="work-items"
         >
           <span class="text-[15px] font-medium text-charcoal">Work items</span>
+          <span class="text-sage-dark/40" set:html={menuChevron} />
+        </button>
+        <div class="mx-4 border-t border-sage-dark/10"></div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
+          data-admin-open="training"
+        >
+          <span class="text-[15px] font-medium text-charcoal">Training</span>
           <span class="text-sage-dark/40" set:html={menuChevron} />
         </button>
         <div class="mx-4 border-t border-sage-dark/10"></div>
@@ -459,6 +500,34 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         categories={workCategories}
         error={workCategoriesError}
         saved={workCategoriesSaved === '1'}
+        embedded
+      />
+    </section>
+
+    <section class="hidden" data-admin-panel="training">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
+        data-admin-back
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Back
+      </button>
+      <PanelHeading
+        title="Training"
+        description="Build onboarding and training modules, assign them by role, and track completion. For videos, upload an unlisted YouTube video and paste the link."
+      />
+      <TrainingManager
+        modules={trainingModules}
+        selectedModuleId={trainingSelectedId}
+        lessons={trainingLessons}
+        blocksByLesson={trainingBlocksByLesson}
+        roles={roles.map((role) => ({ key: role.key, name: role.name }))}
+        roster={trainingRoster}
+        error={trainingError}
+        saved={trainingSaved}
         embedded
       />
     </section>
@@ -873,6 +942,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       people: '#people',
       tasks: '#tasks',
       'work-items': '#work-items',
+      training: '#training',
       credentialing: '#credentialing',
       branding: '#branding',
       roles: '#roles',
@@ -888,6 +958,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       if (hash === 'people') return 'people';
       if (hash === 'tasks') return 'tasks';
       if (hash === 'work-items' || hash === 'work-items-admin') return 'work-items';
+      if (hash === 'training' || hash === 'training-admin') return 'training';
       if (hash === 'credentialing' || hash === 'credentialing-admin') return 'credentialing';
       if (hash === 'branding' || hash === 'favicon') return 'branding';
       if (hash === 'roles' || hash === 'roles-heading') return 'roles';

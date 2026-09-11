@@ -100,7 +100,7 @@ const arrowClass =
                 {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
                 {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
                 {id === 'timesheet' ? <TimesheetCard userId={userId} /> : null}
-                {id === 'my_progress' ? <MyProgressCard userId={userId} /> : null}
+                {id === 'my_progress' ? <MyProgressCard userId={userId} employee={employee} /> : null}
                 {id === 'tasks' ? <TasksCard userId={userId} /> : null}
                 {id === 'credentialing' ? <CredentialingCard employee={employee} /> : null}
                 {id === 'quickbooks' ? <FinancialSnapshotCard /> : null}

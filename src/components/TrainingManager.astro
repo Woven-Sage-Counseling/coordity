@@ -1,0 +1,353 @@
+---
+import type { TrainingModule, TrainingLesson, TrainingBlock } from '../lib/training';
+
+interface Props {
+  modules: TrainingModule[];
+  selectedModuleId: string | null;
+  lessons: TrainingLesson[];
+  blocksByLesson: Record<string, TrainingBlock[]>;
+  roles: Array<{ key: string; name: string }>;
+  roster: Array<{
+    userId: string;
+    name: string;
+    email: string;
+    roleKeys: string[];
+    modules: Array<{ moduleId: string; title: string; percent: number; complete: boolean }>;
+  }>;
+  error?: string | null;
+  saved?: boolean;
+  embedded?: boolean;
+}
+
+const {
+  modules,
+  selectedModuleId,
+  lessons,
+  blocksByLesson,
+  roles,
+  roster,
+  error = null,
+  saved = false,
+  embedded = false,
+} = Astro.props;
+
+const selected = modules.find((m) => m.id === selectedModuleId) ?? modules[0] ?? null;
+---
+
+<section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} id="training" aria-labelledby="training-admin">
+  {!embedded ? <h2 id="training-admin" class="font-display text-3xl text-charcoal">Training</h2> : <h2 id="training-admin" class="sr-only">Training</h2>}
+
+  {error ? <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
+  {saved ? <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">Training saved.</p> : null}
+
+  <div class="mt-6 grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <aside class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Modules</p>
+      {
+        modules.map((module) => (
+          <a
+            href={`/admin?module=${module.id}#training`}
+            class:list={[
+              'block rounded-xl px-3 py-2 text-sm',
+              selected?.id === module.id
+                ? 'bg-charcoal text-white'
+                : 'bg-white/80 text-charcoal ring-1 ring-sage-dark/10 hover:bg-white',
+            ]}
+          >
+            <span class="font-semibold">{module.title}</span>
+            <span class="mt-0.5 block text-[11px] opacity-70">
+              {module.kind === 'onboarding'
+                ? 'Onboarding'
+                : module.kind === 'using_coordity'
+                  ? 'Using Coordity'
+                  : 'Custom'}
+              {!module.visible ? ' · hidden' : ''}
+            </span>
+          </a>
+        ))
+      }
+
+      <form method="post" action="/api/training/admin" class="mt-4 rounded-xl border border-dashed border-sage-dark/20 p-3">
+        <input type="hidden" name="action" value="create-module" />
+        <p class="text-xs font-semibold text-charcoal">New module</p>
+        <input class="field mt-2" type="text" name="title" required maxlength="120" placeholder="Title" />
+        <textarea class="field mt-2" name="description" rows="2" placeholder="Description"></textarea>
+        <div class="mt-2 space-y-1">
+          {roles.map((role) => (
+            <label class="flex items-center gap-2 text-xs text-charcoal">
+              <input type="checkbox" name="roleKeys" value={role.key} checked={role.key === 'employee'} />
+              {role.name}
+            </label>
+          ))}
+        </div>
+        <button class="btn-primary mt-3 !px-3 !py-1.5 text-xs" type="submit">Add module</button>
+      </form>
+    </aside>
+
+    <div class="min-w-0 space-y-6">
+      {
+        !selected ? (
+          <p class="text-sm text-sage-dark/65">Select or create a module.</p>
+        ) : (
+          <>
+            <form method="post" action="/api/training/admin" class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+              <input type="hidden" name="action" value="update-module" />
+              <input type="hidden" name="moduleId" value={selected.id} />
+              <h3 class="text-lg font-semibold text-charcoal">{selected.title}</h3>
+              <label class="mt-4 block text-sm font-medium text-charcoal">
+                Title
+                <input class="field" type="text" name="title" value={selected.title} required />
+              </label>
+              <label class="mt-3 block text-sm font-medium text-charcoal">
+                Description
+                <textarea class="field" name="description" rows="2">{selected.description}</textarea>
+              </label>
+              <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
+                <input type="checkbox" name="visible" value="1" checked={selected.visible} />
+                Visible to assigned roles
+              </label>
+              <p class="mt-1 text-xs text-sage-dark/55">
+                Using Coordity is visible by default. Uncheck to hide it for your team.
+              </p>
+              <div class="mt-3 grid gap-1 sm:grid-cols-2">
+                {roles.map((role) => (
+                  <label class="flex items-center gap-2 text-sm text-charcoal">
+                    <input
+                      type="checkbox"
+                      name="roleKeys"
+                      value={role.key}
+                      checked={selected.roleKeys.length === 0 || selected.roleKeys.includes(role.key)}
+                    />
+                    {role.name}
+                  </label>
+                ))}
+              </div>
+              <p class="mt-1 text-xs text-sage-dark/55">
+                Leave all checked (or none saved for system modules) to show to every role. Custom modules need at least one role.
+              </p>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save module</button>
+                {selected.kind === 'custom' ? (
+                  <button
+                    class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
+                    type="submit"
+                    name="action"
+                    value="archive-module"
+                  >
+                    Archive
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            <div class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+              <h3 class="text-sm font-semibold text-charcoal">Lessons</h3>
+              <form method="post" action="/api/training/admin" class="mt-3 flex flex-wrap gap-2">
+                <input type="hidden" name="action" value="create-lesson" />
+                <input type="hidden" name="moduleId" value={selected.id} />
+                <input class="field !mt-0 max-w-sm flex-1" type="text" name="title" required placeholder="New lesson title" />
+                <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Add lesson</button>
+              </form>
+
+              <div class="mt-5 space-y-5">
+                {
+                  lessons.map((lesson) => (
+                    <article class="rounded-xl border border-sage-dark/10 p-4">
+                      <form method="post" action="/api/training/admin" class="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="action" value="update-lesson" />
+                        <input type="hidden" name="moduleId" value={selected.id} />
+                        <input type="hidden" name="lessonId" value={lesson.id} />
+                        <label class="min-w-[12rem] flex-1 text-sm font-medium text-charcoal">
+                          Lesson title
+                          <input class="field" type="text" name="title" value={lesson.title} required />
+                        </label>
+                        <label class="flex items-center gap-2 pb-2 text-sm text-charcoal">
+                          <input type="checkbox" name="required" value="1" checked={lesson.required} />
+                          Required
+                        </label>
+                        <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Save</button>
+                        <button
+                          class="rounded-full border border-red-200 px-3 py-2 text-xs font-semibold text-red-700"
+                          type="submit"
+                          name="action"
+                          value="delete-lesson"
+                        >
+                          Delete
+                        </button>
+                      </form>
+
+                      <div class="mt-4 space-y-3">
+                        {(blocksByLesson[lesson.id] ?? []).map((block) => (
+                          <div class="rounded-lg bg-[#f7f8fa] p-3">
+                            <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+                              {block.type}
+                            </p>
+                            <form method="post" action="/api/training/admin" class="mt-2 space-y-2">
+                              <input type="hidden" name="action" value="update-block" />
+                              <input type="hidden" name="moduleId" value={selected.id} />
+                              <input type="hidden" name="blockId" value={block.id} />
+                              {block.type === 'video' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  YouTube link (upload as <strong>unlisted</strong>, then paste here)
+                                  <input class="field" type="url" name="youtubeUrl" value={block.youtubeUrl ?? ''} placeholder="https://www.youtube.com/watch?v=..." />
+                                </label>
+                              ) : null}
+                              {block.type === 'written' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Written content
+                                  <textarea class="field" name="bodyText" rows="4">{block.bodyText ?? ''}</textarea>
+                                </label>
+                              ) : null}
+                              {block.type === 'resource' ? (
+                                <>
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Link URL
+                                    <input class="field" type="url" name="resourceUrl" value={block.resourceUrl ?? ''} />
+                                  </label>
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Link label
+                                    <input class="field" type="text" name="resourceLabel" value={block.resourceLabel ?? ''} />
+                                  </label>
+                                </>
+                              ) : null}
+                              {block.type === 'ack' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Acknowledgment prompt
+                                  <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
+                                </label>
+                              ) : null}
+                              {block.type === 'quiz' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Pass percent
+                                  <input class="field" type="number" name="passPercent" min="1" max="100" value={block.passPercent ?? 80} />
+                                </label>
+                              ) : null}
+                              <div class="flex flex-wrap gap-2">
+                                <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Save block</button>
+                                <button
+                                  class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+                                  type="submit"
+                                  name="action"
+                                  value="delete-block"
+                                >
+                                  Delete block
+                                </button>
+                              </div>
+                            </form>
+
+                            {block.type === 'quiz' ? (
+                              <div class="mt-3 border-t border-sage-dark/10 pt-3">
+                                <p class="text-xs font-semibold text-charcoal">Questions</p>
+                                <ul class="mt-2 space-y-1 text-xs text-sage-dark/80">
+                                  {block.questions.map((q) => (
+                                    <li>
+                                      {q.prompt}{' '}
+                                      <span class="text-sage-dark/50">
+                                        ({q.options.length} options, correct #{q.correctIndex + 1})
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                                <form method="post" action="/api/training/admin" class="mt-3 grid gap-2 sm:grid-cols-2">
+                                  <input type="hidden" name="action" value="add-question" />
+                                  <input type="hidden" name="moduleId" value={selected.id} />
+                                  <input type="hidden" name="blockId" value={block.id} />
+                                  <label class="sm:col-span-2 text-xs font-medium text-charcoal">
+                                    Prompt
+                                    <input class="field" type="text" name="prompt" required />
+                                  </label>
+                                  {[0, 1, 2, 3].map((i) => (
+                                    <label class="text-xs font-medium text-charcoal">
+                                      Option {i + 1}
+                                      <input class="field" type="text" name={`option${i}`} required={i < 2} />
+                                    </label>
+                                  ))}
+                                  <label class="text-xs font-medium text-charcoal">
+                                    Correct option #
+                                    <input class="field" type="number" name="correctIndex" min="0" max="3" value="0" required />
+                                  </label>
+                                  <div class="flex items-end">
+                                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add question</button>
+                                  </div>
+                                </form>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+
+                      <form method="post" action="/api/training/admin" class="mt-3 flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="action" value="create-block" />
+                        <input type="hidden" name="moduleId" value={selected.id} />
+                        <input type="hidden" name="lessonId" value={lesson.id} />
+                        <label class="text-xs font-medium text-charcoal">
+                          Add content
+                          <select class="field" name="type">
+                            <option value="written">Written</option>
+                            <option value="video">YouTube video</option>
+                            <option value="resource">Link / resource</option>
+                            <option value="quiz">Quiz</option>
+                            <option value="ack">Acknowledgment</option>
+                          </select>
+                        </label>
+                        <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add</button>
+                      </form>
+                    </article>
+                  ))
+                }
+              </div>
+            </div>
+          </>
+        )
+      }
+
+      <div class="rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-charcoal">Team progress</h3>
+        <p class="mt-1 text-xs text-sage-dark/60">Percent complete for modules assigned to each person’s role.</p>
+        {
+          roster.length === 0 ? (
+            <p class="mt-4 text-sm text-sage-dark/65">No active members yet.</p>
+          ) : (
+            <div class="mt-4 overflow-x-auto">
+              <table class="min-w-full text-left text-sm">
+                <thead class="text-xs uppercase tracking-[0.12em] text-sage-dark/55">
+                  <tr>
+                    <th class="py-2 pr-4">Person</th>
+                    <th class="py-2">Modules</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roster.map((person) => (
+                    <tr class="border-t border-sage-dark/10 align-top">
+                      <td class="py-3 pr-4">
+                        <p class="font-semibold text-charcoal">{person.name}</p>
+                        <p class="text-xs text-sage-dark/55">{person.email}</p>
+                      </td>
+                      <td class="py-3">
+                        {person.modules.length === 0 ? (
+                          <span class="text-xs text-sage-dark/55">No assigned modules</span>
+                        ) : (
+                          <ul class="space-y-1">
+                            {person.modules.map((mod) => (
+                              <li class="text-xs text-charcoal">
+                                <span class="font-medium">{mod.title}</span>
+                                <span class="text-sage-dark/60"> — {mod.percent}%</span>
+                                {mod.complete ? (
+                                  <span class="ml-1 text-emerald-700">complete</span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</section>

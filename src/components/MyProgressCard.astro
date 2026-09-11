@@ -1,14 +1,19 @@
 ---
 import { listProgressTracksForUser, overallProgress } from '../lib/progress';
+import { orgIdFromLocals } from '../lib/organization';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
   userId: string;
+  employee: PortalEmployee;
 }
 
-const { userId } = Astro.props;
-const tracks = await listProgressTracksForUser(userId);
+const { userId, employee } = Astro.props;
+const tracks = await listProgressTracksForUser(userId, {
+  orgId: orgIdFromLocals(Astro.locals.organization),
+  roleKeys: employee.roles,
+});
 const overall = overallProgress(tracks);
 ---
 
@@ -23,7 +28,7 @@ const overall = overallProgress(tracks);
     widgetId="my_progress"
     title="My progress"
     headingId="home-my-progress-heading"
-    openHref="/progress"
+    openHref="/training"
   />
 
   <div
