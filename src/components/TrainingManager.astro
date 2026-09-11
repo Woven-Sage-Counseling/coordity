@@ -94,9 +94,9 @@ const selectedAudience =
 
   <p class="mt-4 max-w-3xl text-sm leading-relaxed text-sage-dark/75">
     Training is organized into modules — topics your team works through. Click a module on the left to
-    open it. The middle column shows what’s inside (tasks and lessons). Click one of those to edit it
-    on the right. Use <span class="font-medium text-charcoal">Settings</span> only when you need to
-    change the module’s title, who can see it, or whether it’s visible yet.
+    open it, then add assignments or lessons in the middle. Click one to put its content on the right.
+    Use <span class="font-medium text-charcoal">Settings</span> only for the module’s title, audience,
+    or visibility.
   </p>
 
   <div class="mt-3 space-y-3 transition-opacity duration-150" data-training-browse>
@@ -208,7 +208,7 @@ const selectedAudience =
                   </a>
                 </div>
                 <p class="mt-1.5 text-[11px] leading-snug text-sage-dark/60">
-                  Everything people complete for this topic — pick one to edit on the right.
+                  Build the list of things people finish for this topic.
                 </p>
               </>
             ) : (
@@ -222,18 +222,48 @@ const selectedAudience =
         {
           !selected ? (
             <p class="px-3 py-6 text-sm text-sage-dark/65">
-              Open a module on the left. Its tasks and lessons will show up here — like files inside a folder.
+              Open a module on the left to add assignments and lessons here.
             </p>
           ) : (
             <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <div class="border-b border-sage-dark/10 px-3 py-3">
+                <p class="text-sm font-semibold text-charcoal">What should people complete?</p>
+                <p class="mt-1 text-[11px] leading-relaxed text-sage-dark/65">
+                  Add items below, then click one to put content on the right. Use a
+                  <span class="font-medium text-charcoal">lesson</span> for multi-step training.
+                  Use an <span class="font-medium text-charcoal">assignment</span> for a single
+                  to-do (acknowledge a policy, open a link, short quiz).
+                </p>
+                <form method="post" action="/api/training/admin" class="mt-3 space-y-2">
+                  <input type="hidden" name="action" value="create-lesson" />
+                  <input type="hidden" name="moduleId" value={selected.id} />
+                  <input
+                    class="field !mt-0 !py-1.5 text-xs"
+                    type="text"
+                    name="title"
+                    required
+                    placeholder="Name what they should complete…"
+                  />
+                  <div class="flex gap-1.5">
+                    <select class="field !mt-0 min-w-0 flex-1 !py-1.5 text-xs" name="isAssignment" aria-label="Item type">
+                      <option value="0">Lesson — multi-step training</option>
+                      <option value="1">Assignment — one short to-do</option>
+                    </select>
+                    <button class="btn-primary shrink-0 !px-2.5 !py-1.5 text-xs" type="submit">Add</button>
+                  </div>
+                </form>
+              </div>
+
               <div class="border-b border-sage-dark/10 px-2 pb-2 pt-3">
                 <p class="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
-                  Quick tasks
+                  Assignments
                 </p>
-                <p class="mt-0.5 px-1 text-[11px] text-sage-dark/55">Simple one-off items</p>
+                <p class="mt-0.5 px-1 text-[11px] text-sage-dark/55">
+                  One-and-done — e.g. “Sign handbook”
+                </p>
                 <div class="mt-2 space-y-0.5">
                   {assignments.length === 0 ? (
-                    <p class="px-1 py-2 text-xs text-sage-dark/50">None yet</p>
+                    <p class="px-1 py-2 text-xs text-sage-dark/50">No assignments yet</p>
                   ) : (
                     assignments.map((item) => (
                       <a
@@ -248,30 +278,27 @@ const selectedAudience =
                       >
                         {item.title}
                         <span class="mt-0.5 block text-[11px] font-normal text-sage-dark/55">
-                          {(blocksByItem[item.id] ?? []).length} content
+                          {(blocksByItem[item.id] ?? []).length === 0
+                            ? 'Needs content'
+                            : `${(blocksByItem[item.id] ?? []).length} content block${(blocksByItem[item.id] ?? []).length === 1 ? '' : 's'}`}
                           {!item.required ? ' · optional' : ''}
                         </span>
                       </a>
                     ))
                   )}
                 </div>
-                <form method="post" action="/api/training/admin" class="mt-2 flex gap-1.5 px-1">
-                  <input type="hidden" name="action" value="create-lesson" />
-                  <input type="hidden" name="moduleId" value={selected.id} />
-                  <input type="hidden" name="isAssignment" value="1" />
-                  <input class="field !mt-0 min-w-0 flex-1 !py-1.5 text-xs" type="text" name="title" required placeholder="Add task…" />
-                  <button class="btn-primary shrink-0 !px-2.5 !py-1.5 text-xs" type="submit">Add</button>
-                </form>
               </div>
 
               <div class="px-2 pb-3 pt-3">
                 <p class="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
                   Lessons
                 </p>
-                <p class="mt-0.5 px-1 text-[11px] text-sage-dark/55">Step-by-step learning</p>
+                <p class="mt-0.5 px-1 text-[11px] text-sage-dark/55">
+                  Multi-step — e.g. “Week 1: Using the portal”
+                </p>
                 <div class="mt-2 space-y-0.5">
                   {lessons.length === 0 ? (
-                    <p class="px-1 py-2 text-xs text-sage-dark/50">None yet</p>
+                    <p class="px-1 py-2 text-xs text-sage-dark/50">No lessons yet</p>
                   ) : (
                     lessons.map((item) => (
                       <a
@@ -286,19 +313,15 @@ const selectedAudience =
                       >
                         {item.title}
                         <span class="mt-0.5 block text-[11px] font-normal text-sage-dark/55">
-                          {(blocksByItem[item.id] ?? []).length} content
+                          {(blocksByItem[item.id] ?? []).length === 0
+                            ? 'Needs content'
+                            : `${(blocksByItem[item.id] ?? []).length} content block${(blocksByItem[item.id] ?? []).length === 1 ? '' : 's'}`}
                           {!item.required ? ' · optional' : ''}
                         </span>
                       </a>
                     ))
                   )}
                 </div>
-                <form method="post" action="/api/training/admin" class="mt-2 flex gap-1.5 px-1">
-                  <input type="hidden" name="action" value="create-lesson" />
-                  <input type="hidden" name="moduleId" value={selected.id} />
-                  <input class="field !mt-0 min-w-0 flex-1 !py-1.5 text-xs" type="text" name="title" required placeholder="Add lesson…" />
-                  <button class="btn-primary shrink-0 !px-2.5 !py-1.5 text-xs" type="submit">Add</button>
-                </form>
               </div>
             </div>
           )
@@ -392,7 +415,7 @@ const selectedAudience =
               <div class="mx-auto max-w-lg space-y-5">
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
-                    {selectedIsAssignment ? 'Quick task' : 'Lesson'}
+                    {selectedIsAssignment ? 'Assignment' : 'Lesson'}
                   </p>
                   <h3 class="mt-1 text-lg font-semibold text-charcoal">{selectedItem.title}</h3>
                 </div>
@@ -616,14 +639,14 @@ const selectedAudience =
                     <>
                       <p class="text-sm font-semibold text-charcoal">Nothing in this module yet</p>
                       <p class="mt-2 text-sm text-sage-dark/65">
-                        Add a quick task or lesson in the middle column. When you select it, you’ll edit it here.
+                        In the middle column, add a lesson (multi-step training) or an assignment (one short to-do), then select it to add content here.
                       </p>
                     </>
                   ) : (
                     <>
                       <p class="text-sm font-semibold text-charcoal">Select something to edit</p>
                       <p class="mt-2 text-sm text-sage-dark/65">
-                        Choose a quick task or lesson in the middle column. Settings is only for the module itself.
+                        Choose an assignment or lesson in the middle column to edit its content here.
                       </p>
                     </>
                   )}
