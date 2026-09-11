@@ -61,7 +61,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (denied) return denied;
   const orgId = orgIdFromLocals(locals.organization);
   const form = await request.formData();
-  const action = String(form.get('action') ?? '').trim();
+  // Submit buttons may send a second `action` after a hidden field; prefer the last one.
+  const actionValues = form.getAll('action').map((v) => String(v).trim()).filter(Boolean);
+  const action = actionValues[actionValues.length - 1] ?? '';
   const asJson = wantsJson(request);
 
   try {

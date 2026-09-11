@@ -113,9 +113,9 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
   }
 
   <div class="overflow-hidden rounded-2xl border border-sage-dark/15 bg-white shadow-sm">
-    <div class="grid min-h-[32rem] lg:grid-cols-[13.5rem_15.5rem_minmax(0,1fr)]">
+    <div class="grid min-h-[28rem] lg:h-[min(70vh,42rem)] lg:grid-cols-[13.5rem_15.5rem_minmax(0,1fr)]">
       {/* Column 1 — Modules */}
-      <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r">
+      <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r lg:h-full">
         <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
           <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">Modules</p>
           <p class="mt-0.5 text-[11px] text-sage-dark/55">Topics / folders</p>
@@ -165,7 +165,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       </div>
 
       {/* Column 2 — Contents of selected module */}
-      <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r">
+      <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r lg:h-full">
         <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
           {
             selected ? (
@@ -318,7 +318,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       </div>
 
       {/* Column 3 — Detail editor */}
-      <div class="flex min-h-0 flex-col">
+      <div class="flex min-h-0 flex-col lg:h-full">
         <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
           <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">Editor</p>
           <p class="mt-0.5 text-[11px] text-sage-dark/55">
