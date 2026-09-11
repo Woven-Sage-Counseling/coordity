@@ -100,9 +100,10 @@ const selectedAudience =
     the module’s title, who can see it, or whether it’s visible yet.
   </p>
 
+  <div class="mt-3 space-y-3 transition-opacity duration-150" data-training-browse>
   {
     selected ? (
-      <nav class="mt-3 flex flex-wrap items-center gap-1.5 text-sm text-sage-dark/65" aria-label="Training selection">
+      <nav class="flex flex-wrap items-center gap-1.5 text-sm text-sage-dark/65" aria-label="Training selection">
         <span class="font-medium text-charcoal">{selected.title}</span>
         {selectedView === 'settings' ? (
           <>
@@ -120,7 +121,7 @@ const selectedAudience =
     ) : null
   }
 
-  <div class="mt-4 overflow-hidden rounded-2xl border border-sage-dark/15 bg-white shadow-sm">
+  <div class="overflow-hidden rounded-2xl border border-sage-dark/15 bg-white shadow-sm">
     <div class="grid min-h-[32rem] lg:grid-cols-[13.5rem_15.5rem_minmax(0,1fr)]">
       {/* Column 1 — Modules */}
       <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r">
@@ -136,6 +137,7 @@ const selectedAudience =
               modules.map((module) => (
                 <a
                   href={moduleHref(module.id, { view: 'settings' })}
+                  data-training-nav
                   class:list={[
                     'block rounded-lg px-2.5 py-2 text-sm transition',
                     selected?.id === module.id
@@ -195,6 +197,7 @@ const selectedAudience =
                   </div>
                   <a
                     href={moduleHref(selected.id, { view: 'settings' })}
+                    data-training-nav
                     class:list={[
                       'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
                       selectedView === 'settings'
@@ -236,6 +239,7 @@ const selectedAudience =
                     assignments.map((item) => (
                       <a
                         href={moduleHref(selected.id, { item: item.id })}
+                        data-training-nav
                         class:list={[
                           'block rounded-lg px-2.5 py-2 text-sm transition',
                           selectedItem?.id === item.id
@@ -273,6 +277,7 @@ const selectedAudience =
                     lessons.map((item) => (
                       <a
                         href={moduleHref(selected.id, { item: item.id })}
+                        data-training-nav
                         class:list={[
                           'block rounded-lg px-2.5 py-2 text-sm transition',
                           selectedItem?.id === item.id
@@ -609,6 +614,7 @@ const selectedAudience =
       </div>
     </div>
   </div>
+  </div>
 
   <div class="mt-8 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
     <h3 class="text-base font-semibold text-charcoal">Team progress</h3>
@@ -656,3 +662,90 @@ const selectedAudience =
     }
   </div>
 </section>
+
+<script>
+  (() => {
+    const FLAG = 'data-training-nav-bound';
+    if (document.documentElement.hasAttribute(FLAG)) return;
+    document.documentElement.setAttribute(FLAG, '1');
+
+    let loading = false;
+
+    const ensureTrainingPanelOpen = () => {
+      const shell = document.querySelector('[data-admin-shell]');
+      if (!(shell instanceof HTMLElement)) return;
+      const menu = shell.querySelector('[data-admin-menu]');
+      const header = shell.querySelector('[data-admin-header]');
+      const panels = shell.querySelectorAll('[data-admin-panel]');
+      if (header instanceof HTMLElement) header.classList.add('hidden');
+      if (menu instanceof HTMLElement) menu.classList.add('hidden');
+      panels.forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) return;
+        panel.classList.toggle('hidden', panel.dataset.adminPanel !== 'training');
+      });
+    };
+
+    const loadBrowse = async (url: string, push: boolean) => {
+      if (loading) return;
+      const current = document.querySelector('[data-training-browse]');
+      if (!(current instanceof HTMLElement)) {
+        window.location.assign(url);
+        return;
+      }
+
+      loading = true;
+      current.classList.add('pointer-events-none', 'opacity-55');
+      current.setAttribute('aria-busy', 'true');
+
+      try {
+        const response = await fetch(url, {
+          credentials: 'same-origin',
+          headers: { Accept: 'text/html', 'X-Requested-With': 'training-browse' },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const next = doc.querySelector('[data-training-browse]');
+        if (!(next instanceof HTMLElement)) throw new Error('Missing training browse markup');
+
+        current.replaceWith(next);
+        ensureTrainingPanelOpen();
+        if (push) {
+          history.pushState({ trainingBrowse: true }, '', url);
+        }
+      } catch {
+        window.location.assign(url);
+      } finally {
+        loading = false;
+        const browse = document.querySelector('[data-training-browse]');
+        if (browse instanceof HTMLElement) {
+          browse.classList.remove('pointer-events-none', 'opacity-55');
+          browse.removeAttribute('aria-busy');
+        }
+      }
+    };
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const link = event.target.closest('a[data-training-nav]');
+      if (!(link instanceof HTMLAnchorElement)) return;
+      if (event.defaultPrevented) return;
+      if (event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (link.target === '_blank') return;
+
+      const nextUrl = new URL(link.href, window.location.href);
+      const currentUrl = new URL(window.location.href);
+      if (nextUrl.pathname !== currentUrl.pathname) return;
+
+      event.preventDefault();
+      if (nextUrl.href === currentUrl.href) return;
+      void loadBrowse(nextUrl.href, true);
+    });
+
+    window.addEventListener('popstate', () => {
+      if (!document.querySelector('[data-training-browse]')) return;
+      void loadBrowse(window.location.href, false);
+    });
+  })();
+</script>

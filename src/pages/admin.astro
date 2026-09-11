@@ -1047,6 +1047,10 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       showPanel('work-items', false);
       return;
     }
+    if (params.has('trainingSaved') || params.has('trainingError') || params.has('module')) {
+      showPanel('training', false);
+      return;
+    }
     if (params.has('error') || params.has('announcementSaved')) {
       showPanel('announcements', false);
       return;
