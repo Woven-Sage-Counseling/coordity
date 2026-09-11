@@ -60,7 +60,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const moduleId = String(form.get('moduleId') ?? '').trim();
       const title = String(form.get('title') ?? '').trim();
       const description = String(form.get('description') ?? '').trim();
-      const visible = String(form.get('visible') ?? '') === '1';
       const roleKeys = form.getAll('roleKeys').map((v) => String(v));
       const existing = await getTrainingModule(moduleId, orgId);
       if (!existing) throw new Error('Module not found.');
@@ -72,7 +71,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         moduleId,
         title,
         description,
-        visible,
         roleKeys,
       });
       return redirectAdmin({ moduleId, view: 'settings' });
