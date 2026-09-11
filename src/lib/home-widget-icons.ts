@@ -35,6 +35,7 @@ export const DEFAULT_WIDGET_ICONS: Record<HomeWidgetId, WidgetIconId> = {
   time_off: 'calendar_plus',
   timesheet: 'clock',
   my_progress: 'chart',
+  training: 'clipboard',
   tasks: 'checklist',
   credentialing: 'badge',
   quickbooks: 'calendar',

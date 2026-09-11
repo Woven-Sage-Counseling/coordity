@@ -10,6 +10,7 @@ export type HomeWidgetId =
   | 'time_off'
   | 'timesheet'
   | 'my_progress'
+  | 'training'
   | 'tasks'
   | 'credentialing';
 
@@ -62,7 +63,7 @@ export const HOME_WIDGET_CATALOG: HomeWidgetDef[] = [
   {
     id: 'my_progress',
     label: 'My progress',
-    description: 'Onboarding, training, and compliance progress.',
+    description: 'Overall progress across account setup, training, and more.',
   },
   {
     id: 'tasks',
