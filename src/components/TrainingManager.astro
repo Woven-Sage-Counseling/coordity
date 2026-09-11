@@ -363,10 +363,6 @@ const selectedAudience =
             ) : selectedView === 'settings' ? (
               <div class="mx-auto max-w-lg">
                 <h3 class="text-lg font-semibold text-charcoal">Module settings</h3>
-                <p class="mt-1 text-sm text-sage-dark/65">
-                  {kindLabel(selected.kind)} · Audience: {selectedAudience}
-                  {!selected.visible ? ' · Currently hidden' : ''}
-                </p>
                 <form method="post" action="/api/training/admin" class="mt-5 space-y-4">
                   <input type="hidden" name="action" value="update-module" />
                   <input type="hidden" name="moduleId" value={selected.id} />
