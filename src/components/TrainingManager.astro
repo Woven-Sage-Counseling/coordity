@@ -74,16 +74,6 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
   if (opts?.item) params.set('item', opts.item);
   return `/admin?${params.toString()}#training`;
 }
-
-const selectedAudience =
-  selected == null
-    ? ''
-    : selected.roleKeys.length === 0
-      ? 'All roles'
-      : roles
-          .filter((role) => selected.roleKeys.includes(role.key))
-          .map((role) => role.name)
-          .join(', ') || 'All roles';
 ---
 
 <section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} id="training" aria-labelledby="training-admin">
