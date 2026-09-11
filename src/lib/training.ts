@@ -29,6 +29,7 @@ export interface TrainingLesson {
   title: string;
   sortOrder: number;
   required: boolean;
+  isAssignment: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -64,8 +65,11 @@ export interface TrainingBlock {
 export interface TrainingModuleProgress {
   module: TrainingModule;
   lessons: Array<TrainingLesson & { completed: boolean }>;
+  assignments: Array<TrainingLesson & { completed: boolean }>;
   completedLessons: number;
   totalLessons: number;
+  completedAssignments: number;
+  totalAssignments: number;
   percent: number;
   complete: boolean;
 }
@@ -323,11 +327,20 @@ export async function getTrainingModule(
   };
 }
 
-export async function listLessons(moduleId: string): Promise<TrainingLesson[]> {
+export async function listLessons(
+  moduleId: string,
+  options?: { assignmentsOnly?: boolean; includeAll?: boolean },
+): Promise<TrainingLesson[]> {
   const { DB } = getEnv();
+  let filter = '';
+  if (!options?.includeAll) {
+    filter = options?.assignmentsOnly ? 'AND is_assignment = 1' : 'AND is_assignment = 0';
+  }
   const rows = await DB.prepare(
-    `SELECT id, module_id, title, sort_order, required, created_at, updated_at
-     FROM training_lesson WHERE module_id = ? ORDER BY sort_order ASC, created_at ASC`,
+    `SELECT id, module_id, title, sort_order, required, is_assignment, created_at, updated_at
+     FROM training_lesson
+     WHERE module_id = ? ${filter}
+     ORDER BY sort_order ASC, created_at ASC`,
   )
     .bind(moduleId)
     .all<{
@@ -336,6 +349,7 @@ export async function listLessons(moduleId: string): Promise<TrainingLesson[]> {
       title: string;
       sort_order: number;
       required: number;
+      is_assignment: number;
       created_at: number;
       updated_at: number;
     }>();
@@ -345,9 +359,14 @@ export async function listLessons(moduleId: string): Promise<TrainingLesson[]> {
     title: row.title,
     sortOrder: row.sort_order,
     required: row.required === 1,
+    isAssignment: row.is_assignment === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
+}
+
+export async function listAssignments(moduleId: string): Promise<TrainingLesson[]> {
+  return listLessons(moduleId, { assignmentsOnly: true });
 }
 
 export async function getLesson(
@@ -355,7 +374,8 @@ export async function getLesson(
 ): Promise<(TrainingLesson & { orgId: string }) | null> {
   const { DB } = getEnv();
   const row = await DB.prepare(
-    `SELECT l.id, l.module_id, l.title, l.sort_order, l.required, l.created_at, l.updated_at, m.org_id
+    `SELECT l.id, l.module_id, l.title, l.sort_order, l.required, l.is_assignment,
+            l.created_at, l.updated_at, m.org_id
      FROM training_lesson l
      JOIN training_module m ON m.id = l.module_id
      WHERE l.id = ?`,
@@ -367,6 +387,7 @@ export async function getLesson(
       title: string;
       sort_order: number;
       required: number;
+      is_assignment: number;
       created_at: number;
       updated_at: number;
       org_id: string;
@@ -378,6 +399,7 @@ export async function getLesson(
     title: row.title,
     sortOrder: row.sort_order,
     required: row.required === 1,
+    isAssignment: row.is_assignment === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     orgId: row.org_id,
@@ -480,26 +502,47 @@ export async function getModuleProgressForUser(input: {
 }): Promise<TrainingModuleProgress | null> {
   const module = await getTrainingModule(input.moduleId, input.orgId);
   if (!module) return null;
-  const lessons = await listLessons(module.id);
+  const [lessons, assignments] = await Promise.all([
+    listLessons(module.id),
+    listAssignments(module.id),
+  ]);
+  const allItems = [...assignments, ...lessons];
   const completed = await listCompletedLessonIds(
     input.userId,
-    lessons.map((lesson) => lesson.id),
+    allItems.map((item) => item.id),
   );
-  const withStatus = lessons.map((lesson) => ({
+  const withLessonStatus = lessons.map((lesson) => ({
     ...lesson,
     completed: completed.has(lesson.id),
   }));
-  const required = withStatus.filter((lesson) => lesson.required);
-  const totalLessons = required.length || withStatus.length;
-  const completedLessons = (required.length ? required : withStatus).filter((l) => l.completed).length;
-  const percent = totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
+  const withAssignmentStatus = assignments.map((assignment) => ({
+    ...assignment,
+    completed: completed.has(assignment.id),
+  }));
+
+  const requiredLessons = withLessonStatus.filter((lesson) => lesson.required);
+  const lessonPool = requiredLessons.length ? requiredLessons : withLessonStatus;
+  const completedLessons = lessonPool.filter((l) => l.completed).length;
+  const totalLessons = lessonPool.length;
+
+  const requiredAssignments = withAssignmentStatus.filter((item) => item.required);
+  const assignmentPool = requiredAssignments.length ? requiredAssignments : withAssignmentStatus;
+  const completedAssignments = assignmentPool.filter((l) => l.completed).length;
+  const totalAssignments = assignmentPool.length;
+
+  const total = totalLessons + totalAssignments;
+  const done = completedLessons + completedAssignments;
+  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
   return {
     module,
-    lessons: withStatus,
+    lessons: withLessonStatus,
+    assignments: withAssignmentStatus,
     completedLessons,
     totalLessons,
+    completedAssignments,
+    totalAssignments,
     percent,
-    complete: totalLessons > 0 && completedLessons >= totalLessons,
+    complete: total > 0 && done >= total,
   };
 }
 
@@ -680,29 +723,44 @@ export async function createLesson(input: {
   orgId: string;
   moduleId: string;
   title: string;
+  isAssignment?: boolean;
 }): Promise<TrainingLesson> {
   const module = await getTrainingModule(input.moduleId, input.orgId);
   if (!module) throw new Error('Module not found.');
   const { DB } = getEnv();
   const ts = nowMs();
   const id = randomToken(16);
+  const isAssignment = Boolean(input.isAssignment);
   const maxSort = await DB.prepare(
-    `SELECT COALESCE(MAX(sort_order), -1) AS n FROM training_lesson WHERE module_id = ?`,
+    `SELECT COALESCE(MAX(sort_order), -1) AS n
+     FROM training_lesson
+     WHERE module_id = ? AND is_assignment = ?`,
   )
-    .bind(input.moduleId)
+    .bind(input.moduleId, isAssignment ? 1 : 0)
     .first<{ n: number }>();
   await DB.prepare(
-    `INSERT INTO training_lesson (id, module_id, title, sort_order, required, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 1, ?, ?)`,
+    `INSERT INTO training_lesson
+       (id, module_id, title, sort_order, required, is_assignment, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 1, ?, ?, ?)`,
   )
-    .bind(id, input.moduleId, input.title.trim(), Number(maxSort?.n ?? -1) + 1, ts, ts)
+    .bind(
+      id,
+      input.moduleId,
+      input.title.trim(),
+      Number(maxSort?.n ?? -1) + 1,
+      isAssignment ? 1 : 0,
+      ts,
+      ts,
+    )
     .run();
   await DB.prepare(`UPDATE training_module SET updated_at = ? WHERE id = ?`)
     .bind(ts, input.moduleId)
     .run();
-  const lessons = await listLessons(input.moduleId);
-  const lesson = lessons.find((item) => item.id === id);
-  if (!lesson) throw new Error('Could not create lesson.');
+  const items = isAssignment
+    ? await listAssignments(input.moduleId)
+    : await listLessons(input.moduleId);
+  const lesson = items.find((item) => item.id === id);
+  if (!lesson) throw new Error(isAssignment ? 'Could not create assignment.' : 'Could not create lesson.');
   return lesson;
 }
 

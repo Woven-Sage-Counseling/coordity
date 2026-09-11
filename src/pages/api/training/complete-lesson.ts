@@ -30,11 +30,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const blocks = await listBlocks(lessonId);
     const needsAck = blocks.some((b) => b.type === 'ack');
     if (needsAck && ackName.length < 2) {
-      throw new Error('Type your full name to acknowledge this lesson.');
+      throw new Error(
+        lesson.isAssignment
+          ? 'Type your full name to acknowledge this assignment.'
+          : 'Type your full name to acknowledge this lesson.',
+      );
     }
     for (const block of blocks.filter((b) => b.type === 'quiz')) {
       const passed = await latestQuizPass(employee.id, block.id);
-      if (!passed) throw new Error('Pass all quizzes before completing this lesson.');
+      if (!passed) {
+        throw new Error(
+          lesson.isAssignment
+            ? 'Pass all quizzes before completing this assignment.'
+            : 'Pass all quizzes before completing this lesson.',
+        );
+      }
     }
     await completeLesson({
       userId: employee.id,

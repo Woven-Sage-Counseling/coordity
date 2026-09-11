@@ -31,6 +31,7 @@ import { orgIdFromLocals } from '../lib/organization';
 import {
   listBlocks,
   listLessons,
+  listAssignments,
   listTrainingModules,
   listTrainingRoster,
 } from '../lib/training';
@@ -145,11 +146,14 @@ const trainingSelectedId =
 const trainingLessons = trainingSelectedId
   ? await safeLoad('training-lessons', () => listLessons(trainingSelectedId), [])
   : [];
-const trainingBlocksByLesson: Record<string, Awaited<ReturnType<typeof listBlocks>>> = {};
-for (const lesson of trainingLessons) {
-  trainingBlocksByLesson[lesson.id] = await safeLoad(
-    `training-blocks-${lesson.id}`,
-    () => listBlocks(lesson.id),
+const trainingAssignments = trainingSelectedId
+  ? await safeLoad('training-assignments', () => listAssignments(trainingSelectedId), [])
+  : [];
+const trainingBlocksByItem: Record<string, Awaited<ReturnType<typeof listBlocks>>> = {};
+for (const item of [...trainingAssignments, ...trainingLessons]) {
+  trainingBlocksByItem[item.id] = await safeLoad(
+    `training-blocks-${item.id}`,
+    () => listBlocks(item.id),
     [],
   );
 }
@@ -522,8 +526,9 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       <TrainingManager
         modules={trainingModules}
         selectedModuleId={trainingSelectedId}
+        assignments={trainingAssignments}
         lessons={trainingLessons}
-        blocksByLesson={trainingBlocksByLesson}
+        blocksByItem={trainingBlocksByItem}
         roles={roles.map((role) => ({ key: role.key, name: role.name }))}
         roster={trainingRoster}
         error={trainingError}

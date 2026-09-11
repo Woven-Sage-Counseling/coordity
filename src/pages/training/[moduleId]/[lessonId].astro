@@ -47,6 +47,8 @@ for (const block of blocks.filter((b) => b.type === 'quiz')) {
 
 const needsAck = blocks.some((b) => b.type === 'ack');
 const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassMap.get(b.id));
+const itemLabel = lesson.isAssignment ? 'assignment' : 'lesson';
+const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
 ---
 
 <PortalLayout title={lesson.title} wide>
@@ -59,10 +61,11 @@ const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassM
   </p>
 
   <div class="mt-3 max-w-3xl">
-    <h1 class="font-display text-4xl text-charcoal">{lesson.title}</h1>
+    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">{itemLabelTitle}</p>
+    <h1 class="mt-1 font-display text-4xl text-charcoal">{lesson.title}</h1>
     {
       isComplete ? (
-        <p class="mt-3 text-sm font-semibold text-emerald-800">Lesson complete</p>
+        <p class="mt-3 text-sm font-semibold text-emerald-800">{itemLabelTitle} complete</p>
       ) : null
     }
   </div>
@@ -86,7 +89,7 @@ const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassM
   <div class="mt-8 max-w-3xl space-y-6">
     {
       blocks.length === 0 ? (
-        <p class="text-sm text-sage-dark/65">This lesson has no content yet.</p>
+        <p class="text-sm text-sage-dark/65">This {itemLabel} has no content yet.</p>
       ) : (
         blocks.map((block) => {
           if (block.type === 'video') {
@@ -113,7 +116,7 @@ const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassM
           if (block.type === 'written') {
             return (
               <section class="card">
-                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Lesson</h2>
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Content</h2>
                 <div class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-charcoal">
                   {block.bodyText || 'Content coming soon.'}
                 </div>
@@ -188,7 +191,7 @@ const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassM
                   Acknowledgment
                 </h2>
                 <p class="mt-3 text-sm text-charcoal">
-                  {block.ackPrompt || 'I acknowledge that I have completed this lesson.'}
+                  {block.ackPrompt || `I acknowledge that I have completed this ${itemLabel}.`}
                 </p>
               </section>
             );
@@ -211,10 +214,10 @@ const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassM
           </label>
         ) : null}
         {!quizzesOk ? (
-          <p class="text-sm text-amber-800">Pass all quizzes before marking this lesson complete.</p>
+          <p class="text-sm text-amber-800">Pass all quizzes before marking this {itemLabel} complete.</p>
         ) : null}
         <button class="btn-primary" type="submit" disabled={!quizzesOk}>
-          Mark lesson complete
+          Mark {itemLabel} complete
         </button>
       </form>
     ) : (

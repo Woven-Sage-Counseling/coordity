@@ -16,8 +16,14 @@ const modules = await listModuleProgressForUser({
   roleKeys,
 }).catch(() => [] as Awaited<ReturnType<typeof listModuleProgressForUser>>);
 
-const overallCompleted = modules.reduce((sum, item) => sum + item.completedLessons, 0);
-const overallTotal = modules.reduce((sum, item) => sum + item.totalLessons, 0);
+const overallCompleted = modules.reduce(
+  (sum, item) => sum + item.completedLessons + item.completedAssignments,
+  0,
+);
+const overallTotal = modules.reduce(
+  (sum, item) => sum + item.totalLessons + item.totalAssignments,
+  0,
+);
 const overallPercent =
   overallTotal === 0 ? 0 : Math.round((overallCompleted / overallTotal) * 100);
 ---
@@ -43,7 +49,7 @@ const overallPercent =
         <p class="mt-2 font-display text-4xl text-charcoal">{overallPercent}%</p>
       </div>
       <p class="text-sm text-sage-dark/65">
-        {overallCompleted} of {overallTotal} lessons complete
+                {overallCompleted} of {overallTotal} items complete
       </p>
     </div>
     <div class="mt-4 h-2.5 overflow-hidden rounded-full bg-[#e3e5e8]">

@@ -22,6 +22,9 @@ const progress = await getModuleProgressForUser({
 if (!progress || !moduleVisibleToRoles(progress.module, roleKeys) || !progress.module.visible) {
   return Astro.redirect('/training');
 }
+
+const hasAssignments = progress.assignments.length > 0;
+const hasLessons = progress.lessons.length > 0;
 ---
 
 <PortalLayout title={progress.module.title} wide>
@@ -47,35 +50,80 @@ if (!progress || !moduleVisibleToRoles(progress.module, roleKeys) || !progress.m
     </div>
   </div>
 
-  <ol class="mt-8 max-w-3xl space-y-3">
-    {
-      progress.lessons.length === 0 ? (
-        <li class="text-sm text-sage-dark/65">No lessons in this module yet.</li>
-      ) : (
-        progress.lessons.map((lesson, index) => (
-          <li>
-            <a
-              href={`/training/${progress.module.id}/${lesson.id}`}
-              class="card flex items-center justify-between gap-3 transition hover:ring-1 hover:ring-sage-dark/20"
-            >
-              <div class="min-w-0">
-                <p class="text-xs text-sage-dark/50">Lesson {index + 1}</p>
-                <p class="mt-0.5 font-semibold text-charcoal">{lesson.title}</p>
-              </div>
-              <span
-                class:list={[
-                  'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
-                  lesson.completed
-                    ? 'bg-emerald-100 text-emerald-900'
-                    : 'bg-sage-dark/10 text-sage-dark/80',
-                ]}
+  {
+    hasAssignments ? (
+      <section class="mt-8 max-w-3xl" aria-labelledby="module-assignments">
+        <h2 id="module-assignments" class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+          Assignments
+        </h2>
+        <p class="mt-1 text-sm text-sage-dark/65">Tasks and acknowledgments for this module.</p>
+        <ol class="mt-4 space-y-3">
+          {progress.assignments.map((assignment, index) => (
+            <li>
+              <a
+                href={`/training/${progress.module.id}/${assignment.id}`}
+                class="card flex items-center justify-between gap-3 transition hover:ring-1 hover:ring-sage-dark/20"
               >
-                {lesson.completed ? 'Done' : 'Start'}
-              </span>
-            </a>
+                <div class="min-w-0">
+                  <p class="text-xs text-sage-dark/50">Assignment {index + 1}</p>
+                  <p class="mt-0.5 font-semibold text-charcoal">{assignment.title}</p>
+                </div>
+                <span
+                  class:list={[
+                    'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                    assignment.completed
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : 'bg-sage-dark/10 text-sage-dark/80',
+                  ]}
+                >
+                  {assignment.completed ? 'Done' : 'Start'}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ) : null
+  }
+
+  <section class="mt-8 max-w-3xl" aria-labelledby="module-lessons">
+    <h2 id="module-lessons" class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+      Lessons
+    </h2>
+    <ol class="mt-4 space-y-3">
+      {
+        !hasLessons ? (
+          <li class="text-sm text-sage-dark/65">
+            {hasAssignments
+              ? 'No lessons in this module yet.'
+              : 'No assignments or lessons in this module yet.'}
           </li>
-        ))
-      )
-    }
-  </ol>
+        ) : (
+          progress.lessons.map((lesson, index) => (
+            <li>
+              <a
+                href={`/training/${progress.module.id}/${lesson.id}`}
+                class="card flex items-center justify-between gap-3 transition hover:ring-1 hover:ring-sage-dark/20"
+              >
+                <div class="min-w-0">
+                  <p class="text-xs text-sage-dark/50">Lesson {index + 1}</p>
+                  <p class="mt-0.5 font-semibold text-charcoal">{lesson.title}</p>
+                </div>
+                <span
+                  class:list={[
+                    'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                    lesson.completed
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : 'bg-sage-dark/10 text-sage-dark/80',
+                  ]}
+                >
+                  {lesson.completed ? 'Done' : 'Start'}
+                </span>
+              </a>
+            </li>
+          ))
+        )
+      }
+    </ol>
+  </section>
 </PortalLayout>

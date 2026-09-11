@@ -77,8 +77,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'create-lesson') {
       const moduleId = String(form.get('moduleId') ?? '').trim();
       const title = String(form.get('title') ?? '').trim();
-      if (!title) throw new Error('Lesson title is required.');
-      await createLesson({ orgId, moduleId, title });
+      const isAssignment = String(form.get('isAssignment') ?? '') === '1';
+      if (!title) throw new Error(isAssignment ? 'Assignment title is required.' : 'Lesson title is required.');
+      await createLesson({ orgId, moduleId, title, isAssignment });
       return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
     }
 
