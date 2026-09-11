@@ -92,13 +92,11 @@ const selectedAudience =
   {error ? <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
   {saved ? <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">Saved.</p> : null}
 
-  <p class="mt-4 text-sm text-sage-dark/70">
-    Work left to right:
-    <span class="font-semibold text-charcoal">Module</span>
-    →
-    <span class="font-semibold text-charcoal">what’s inside</span>
-    →
-    <span class="font-semibold text-charcoal">edit details</span>
+  <p class="mt-4 max-w-3xl text-sm leading-relaxed text-sage-dark/75">
+    Training is organized into modules — topics your team works through. Choose a module on the left,
+    then pick a quick task or lesson in the middle to add content on the right. Start with
+    <span class="font-medium text-charcoal">Module settings</span> if you need to change the title,
+    who can see it, or whether it’s visible yet.
   </p>
 
   {
