@@ -19,11 +19,20 @@ import {
 
 export const prerender = false;
 
-function redirectAdmin(extra = ''): Response {
+function redirectAdmin(opts?: {
+  moduleId?: string;
+  itemId?: string;
+  view?: 'settings';
+}): Response {
+  const params = new URLSearchParams();
+  params.set('trainingSaved', '1');
+  if (opts?.moduleId) params.set('module', opts.moduleId);
+  if (opts?.itemId) params.set('item', opts.itemId);
+  if (opts?.view === 'settings') params.set('view', 'settings');
   return new Response(null, {
     status: 303,
     headers: {
-      Location: `/admin?trainingSaved=1${extra}#training`,
+      Location: `/admin?${params.toString()}#training`,
       'Cache-Control': 'no-store',
     },
   });
@@ -43,8 +52,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const roleKeys = form.getAll('roleKeys').map((v) => String(v));
       if (!title) throw new Error('Module title is required.');
       if (roleKeys.length === 0) throw new Error('Assign at least one role.');
-      await createCustomModule({ orgId, title, description, roleKeys });
-      return redirectAdmin();
+      const created = await createCustomModule({ orgId, title, description, roleKeys });
+      return redirectAdmin({ moduleId: created.id, view: 'settings' });
     }
 
     if (action === 'update-module') {
@@ -66,7 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         visible,
         roleKeys,
       });
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      return redirectAdmin({ moduleId, view: 'settings' });
     }
 
     if (action === 'archive-module') {
@@ -79,8 +88,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const title = String(form.get('title') ?? '').trim();
       const isAssignment = String(form.get('isAssignment') ?? '') === '1';
       if (!title) throw new Error(isAssignment ? 'Assignment title is required.' : 'Lesson title is required.');
-      await createLesson({ orgId, moduleId, title, isAssignment });
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      const created = await createLesson({ orgId, moduleId, title, isAssignment });
+      return redirectAdmin({ moduleId, itemId: created.id });
     }
 
     if (action === 'update-lesson') {
@@ -96,14 +105,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         roleKeys,
         availableRoleKeys,
       });
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      return redirectAdmin({ moduleId, itemId: lessonId });
     }
 
     if (action === 'delete-lesson') {
-      const lessonId = String(form.get('lessonId') ?? '').trim();
       const moduleId = String(form.get('moduleId') ?? '').trim();
-      await deleteLesson(orgId, lessonId);
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      await deleteLesson(orgId, String(form.get('lessonId') ?? '').trim());
+      return redirectAdmin({ moduleId, view: 'settings' });
     }
 
     if (action === 'create-block') {
@@ -121,12 +129,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ackPrompt: String(form.get('ackPrompt') ?? ''),
         passPercent: Number(form.get('passPercent') ?? 80) || 80,
       });
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      return redirectAdmin({ moduleId, itemId: lessonId });
     }
 
     if (action === 'update-block') {
       const blockId = String(form.get('blockId') ?? '').trim();
       const moduleId = String(form.get('moduleId') ?? '').trim();
+      const lessonId = String(form.get('lessonId') ?? '').trim();
       await updateBlock({
         orgId,
         blockId,
@@ -145,26 +154,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
           ? { passPercent: Number(form.get('passPercent') ?? 80) || 80 }
           : {}),
       });
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      return redirectAdmin({
+        moduleId,
+        ...(lessonId ? { itemId: lessonId } : { view: 'settings' as const }),
+      });
     }
 
     if (action === 'delete-block') {
-      const blockId = String(form.get('blockId') ?? '').trim();
       const moduleId = String(form.get('moduleId') ?? '').trim();
-      await deleteBlock(orgId, blockId);
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      const lessonId = String(form.get('lessonId') ?? '').trim();
+      await deleteBlock(orgId, String(form.get('blockId') ?? '').trim());
+      return redirectAdmin({
+        moduleId,
+        ...(lessonId ? { itemId: lessonId } : { view: 'settings' as const }),
+      });
     }
 
     if (action === 'add-question') {
       const blockId = String(form.get('blockId') ?? '').trim();
       const moduleId = String(form.get('moduleId') ?? '').trim();
+      const lessonId = String(form.get('lessonId') ?? '').trim();
       const prompt = String(form.get('prompt') ?? '').trim();
       const options = [0, 1, 2, 3]
         .map((i) => String(form.get(`option${i}`) ?? '').trim())
         .filter(Boolean);
       const correctIndex = Number(form.get('correctIndex') ?? 0);
       await addQuizQuestion({ orgId, blockId, prompt, options, correctIndex });
-      return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
+      return redirectAdmin({
+        moduleId,
+        ...(lessonId ? { itemId: lessonId } : { view: 'settings' as const }),
+      });
     }
 
     throw new Error('Unknown action.');

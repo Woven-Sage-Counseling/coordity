@@ -4,6 +4,8 @@ import type { TrainingModule, TrainingLesson, TrainingBlock } from '../lib/train
 interface Props {
   modules: TrainingModule[];
   selectedModuleId: string | null;
+  selectedItemId: string | null;
+  selectedView: 'settings' | 'item';
   assignments: TrainingLesson[];
   lessons: TrainingLesson[];
   blocksByItem: Record<string, TrainingBlock[]>;
@@ -23,6 +25,8 @@ interface Props {
 const {
   modules,
   selectedModuleId,
+  selectedItemId,
+  selectedView,
   assignments,
   lessons,
   blocksByItem,
@@ -34,8 +38,14 @@ const {
 } = Astro.props;
 
 const selected = modules.find((m) => m.id === selectedModuleId) ?? modules[0] ?? null;
+const allItems = selected ? [...assignments, ...lessons] : [];
+const selectedItem =
+  selectedView === 'item' && selectedItemId
+    ? allItems.find((item) => item.id === selectedItemId) ?? null
+    : null;
+const selectedBlocks = selectedItem ? (blocksByItem[selectedItem.id] ?? []) : [];
+const selectedIsAssignment = selectedItem ? Boolean(selectedItem.isAssignment) : false;
 
-/** Roles a lesson may use: module’s roles, or all org roles if the module is unrestricted. */
 const lessonRoleOptions = selected
   ? selected.roleKeys.length > 0
     ? roles.filter((role) => selected.roleKeys.includes(role.key))
@@ -57,44 +67,13 @@ function blockLabel(type: TrainingBlock['type']): string {
   return type;
 }
 
-const itemSections: Array<{
-  key: string;
-  title: string;
-  description: string;
-  emptyHint: string;
-  placeholder: string;
-  addLabel: string;
-  itemLabel: string;
-  isAssignment: boolean;
-  items: TrainingLesson[];
-}> = selected
-  ? [
-      {
-        key: 'assignments',
-        title: 'Quick tasks',
-        description:
-          'One-off items on this module — read a doc, acknowledge a policy, take a short quiz, or open a link. Use these when you do not need a full lesson.',
-        emptyHint: 'No quick tasks yet. Add one above if this module needs a simple checklist item.',
-        placeholder: 'e.g. Acknowledge handbook',
-        addLabel: 'Add quick task',
-        itemLabel: 'Task',
-        isAssignment: true,
-        items: assignments,
-      },
-      {
-        key: 'lessons',
-        title: 'Lessons',
-        description:
-          'Step-by-step learning inside this module. Each lesson can hold several pieces of content (writing, video, quiz, and more).',
-        emptyHint: 'No lessons yet. Add a lesson, then add content blocks inside it.',
-        placeholder: 'e.g. Getting started with the portal',
-        addLabel: 'Add lesson',
-        itemLabel: 'Lesson',
-        isAssignment: false,
-        items: lessons,
-      },
-    ]
-  : [];
+function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' }): string {
+  const params = new URLSearchParams();
+  params.set('module', moduleId);
+  if (opts?.view === 'settings') params.set('view', 'settings');
+  if (opts?.item) params.set('item', opts.item);
+  return `/admin?${params.toString()}#training`;
+}
 
 const selectedAudience =
   selected == null
@@ -111,543 +90,545 @@ const selectedAudience =
   {!embedded ? <h2 id="training-admin" class="font-display text-3xl text-charcoal">Training</h2> : <h2 id="training-admin" class="sr-only">Training</h2>}
 
   {error ? <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
-  {saved ? <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">Training saved.</p> : null}
+  {saved ? <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">Saved.</p> : null}
 
-  <div class="mt-5 rounded-2xl border border-sage-dark/10 bg-[#f7f8fa] px-4 py-4 sm:px-5">
-    <p class="text-sm font-semibold text-charcoal">How training works</p>
-    <ol class="mt-3 space-y-2 text-sm text-sage-dark/80">
-      <li class="flex gap-3">
-        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-charcoal text-[11px] font-semibold text-white">1</span>
-        <span><strong class="font-semibold text-charcoal">Pick or create a module</strong> in the list — a module is one training topic people work through.</span>
-      </li>
-      <li class="flex gap-3">
-        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-charcoal text-[11px] font-semibold text-white">2</span>
-        <span><strong class="font-semibold text-charcoal">Choose who sees it</strong>, then add quick tasks and/or lessons with content.</span>
-      </li>
-      <li class="flex gap-3">
-        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-charcoal text-[11px] font-semibold text-white">3</span>
-        <span><strong class="font-semibold text-charcoal">Check team progress</strong> at the bottom to see who has finished what.</span>
-      </li>
-    </ol>
-  </div>
+  <p class="mt-4 text-sm text-sage-dark/70">
+    Work left to right:
+    <span class="font-semibold text-charcoal">Module</span>
+    →
+    <span class="font-semibold text-charcoal">what’s inside</span>
+    →
+    <span class="font-semibold text-charcoal">edit details</span>
+  </p>
 
-  <div class="mt-6 grid gap-6 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
-    <aside class="space-y-3 xl:sticky xl:top-24 xl:self-start">
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Your modules</p>
-        <p class="mt-1 text-xs text-sage-dark/60">Select one to edit its settings and content.</p>
+  {
+    selected ? (
+      <nav class="mt-3 flex flex-wrap items-center gap-1.5 text-sm text-sage-dark/65" aria-label="Training selection">
+        <span class="font-medium text-charcoal">{selected.title}</span>
+        {selectedView === 'settings' ? (
+          <>
+            <span class="text-sage-dark/35">/</span>
+            <span>Module settings</span>
+          </>
+        ) : null}
+        {selectedItem ? (
+          <>
+            <span class="text-sage-dark/35">/</span>
+            <span>{selectedItem.title}</span>
+          </>
+        ) : null}
+      </nav>
+    ) : null
+  }
+
+  <div class="mt-4 overflow-hidden rounded-2xl border border-sage-dark/15 bg-white shadow-sm">
+    <div class="grid min-h-[32rem] lg:grid-cols-[13.5rem_15.5rem_minmax(0,1fr)]">
+      {/* Column 1 — Modules */}
+      <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r">
+        <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">1 · Modules</p>
+        </div>
+        <div class="flex-1 space-y-0.5 overflow-y-auto p-2">
+          {
+            modules.length === 0 ? (
+              <p class="px-2 py-4 text-sm text-sage-dark/65">None yet — create one below.</p>
+            ) : (
+              modules.map((module) => (
+                <a
+                  href={moduleHref(module.id, { view: 'settings' })}
+                  class:list={[
+                    'block rounded-lg px-2.5 py-2 text-sm transition',
+                    selected?.id === module.id
+                      ? 'bg-charcoal text-white'
+                      : 'text-charcoal hover:bg-[#f4f5f8]',
+                  ]}
+                >
+                  <span class="font-semibold leading-snug">{module.title}</span>
+                  <span
+                    class:list={[
+                      'mt-0.5 block text-[11px]',
+                      selected?.id === module.id ? 'text-white/65' : 'text-sage-dark/55',
+                    ]}
+                  >
+                    {kindLabel(module.kind)}
+                    {!module.visible ? ' · hidden' : ''}
+                  </span>
+                </a>
+              ))
+            )
+          }
+        </div>
+        <details class="border-t border-sage-dark/10 bg-[#fafbfc]">
+          <summary class="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            + New module
+          </summary>
+          <form method="post" action="/api/training/admin" class="space-y-2 border-t border-sage-dark/10 px-3 pb-3 pt-2">
+            <input type="hidden" name="action" value="create-module" />
+            <input class="field !mt-0" type="text" name="title" required maxlength="120" placeholder="Module title" />
+            <textarea class="field" name="description" rows="2" placeholder="Short description"></textarea>
+            <p class="text-[11px] font-medium text-charcoal">Who should see it?</p>
+            <div class="max-h-28 space-y-1 overflow-y-auto">
+              {roles.map((role) => (
+                <label class="flex items-center gap-2 text-xs text-charcoal">
+                  <input type="checkbox" name="roleKeys" value={role.key} checked={role.key === 'employee'} />
+                  {role.name}
+                </label>
+              ))}
+            </div>
+            <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Create</button>
+          </form>
+        </details>
       </div>
 
-      {
-        modules.length === 0 ? (
-          <p class="rounded-xl border border-dashed border-sage-dark/20 bg-white/70 px-3 py-4 text-sm text-sage-dark/65">
-            No modules yet. Create your first one below.
-          </p>
-        ) : (
-          <div class="space-y-1.5">
-            {modules.map((module) => (
-              <a
-                href={`/admin?module=${module.id}#training`}
-                class:list={[
-                  'block rounded-xl px-3 py-2.5 text-sm transition',
-                  selected?.id === module.id
-                    ? 'bg-charcoal text-white shadow-sm'
-                    : 'bg-white text-charcoal ring-1 ring-sage-dark/10 hover:bg-white hover:ring-sage-dark/20',
-                ]}
-              >
-                <span class="font-semibold leading-snug">{module.title}</span>
-                <span class:list={['mt-1 flex flex-wrap items-center gap-1.5 text-[11px]', selected?.id === module.id ? 'text-white/70' : 'text-sage-dark/60']}>
-                  <span>{kindLabel(module.kind)}</span>
-                  {!module.visible ? (
-                    <span class:list={['rounded-full px-1.5 py-0.5 font-medium', selected?.id === module.id ? 'bg-white/15 text-white' : 'bg-amber-100 text-amber-900']}>
-                      Hidden
-                    </span>
-                  ) : null}
-                </span>
-              </a>
-            ))}
-          </div>
-        )
-      }
-
-      <details class="rounded-xl border border-dashed border-sage-dark/20 bg-white/80 open:border-solid open:border-sage-dark/15 open:shadow-sm">
-        <summary class="cursor-pointer list-none px-3 py-3 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
-          <span class="flex items-center justify-between gap-2">
-            Create a module
-            <span class="text-sage-dark/40" aria-hidden="true">+</span>
-          </span>
-        </summary>
-        <form method="post" action="/api/training/admin" class="border-t border-sage-dark/10 px-3 pb-3 pt-3">
-          <input type="hidden" name="action" value="create-module" />
-          <label class="block text-xs font-medium text-charcoal">
-            Title
-            <input class="field mt-1" type="text" name="title" required maxlength="120" placeholder="e.g. HIPAA basics" />
-          </label>
-          <label class="mt-2 block text-xs font-medium text-charcoal">
-            Short description
-            <textarea class="field mt-1" name="description" rows="2" placeholder="What will people learn?"></textarea>
-          </label>
-          <p class="mt-3 text-xs font-medium text-charcoal">Who should see it?</p>
-          <div class="mt-1.5 space-y-1">
-            {roles.map((role) => (
-              <label class="flex items-center gap-2 text-xs text-charcoal">
-                <input type="checkbox" name="roleKeys" value={role.key} checked={role.key === 'employee'} />
-                {role.name}
-              </label>
-            ))}
-          </div>
-          <button class="btn-primary mt-3 !px-3 !py-1.5 text-xs" type="submit">Create module</button>
-        </form>
-      </details>
-    </aside>
-
-    <div class="min-w-0 space-y-6">
-      {
-        !selected ? (
-          <div class="rounded-2xl border border-dashed border-sage-dark/20 bg-white/70 px-5 py-8 text-center">
-            <p class="text-sm font-semibold text-charcoal">Start by creating a module</p>
-            <p class="mt-2 text-sm text-sage-dark/65">Use “Create a module” on the left, then add tasks or lessons.</p>
-          </div>
-        ) : (
-          <>
-            <div class="rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Step 1 · Module settings</p>
-                  <h3 class="mt-1 text-xl font-semibold text-charcoal">{selected.title}</h3>
-                  <p class="mt-1 text-sm text-sage-dark/65">
-                    {kindLabel(selected.kind)}
-                    <span class="mx-1.5 text-sage-dark/30">·</span>
-                    Audience: {selectedAudience}
-                    {!selected.visible ? (
-                      <>
-                        <span class="mx-1.5 text-sage-dark/30">·</span>
-                        <span class="font-medium text-amber-800">Currently hidden</span>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-              </div>
-
-              <form method="post" action="/api/training/admin" class="mt-5 space-y-4 border-t border-sage-dark/10 pt-5">
-                <input type="hidden" name="action" value="update-module" />
-                <input type="hidden" name="moduleId" value={selected.id} />
-                <label class="block text-sm font-medium text-charcoal">
-                  Title
-                  <input class="field" type="text" name="title" value={selected.title} required />
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Description
-                  <textarea class="field" name="description" rows="2" placeholder="Shown to learners on the module page">{selected.description}</textarea>
-                </label>
-
-                <div class="rounded-xl bg-[#f7f8fa] p-4">
-                  <p class="text-sm font-semibold text-charcoal">Who can see this module?</p>
-                  <p class="mt-1 text-xs text-sage-dark/60">
-                    People only see modules for their role. Leave every role checked to show it to everyone.
-                  </p>
-                  <div class="mt-3 grid gap-2 sm:grid-cols-2">
-                    {roles.map((role) => (
-                      <label class="flex items-center gap-2 text-sm text-charcoal">
-                        <input
-                          type="checkbox"
-                          name="roleKeys"
-                          value={role.key}
-                          checked={selected.roleKeys.length === 0 || selected.roleKeys.includes(role.key)}
-                        />
-                        {role.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <label class="flex items-start gap-2.5 text-sm text-charcoal">
-                  <input class="mt-0.5" type="checkbox" name="visible" value="1" checked={selected.visible} />
-                  <span>
-                    <span class="font-medium">Show this module to the team</span>
-                    <span class="mt-0.5 block text-xs text-sage-dark/60">
-                      Uncheck to hide it while you finish building content. Using Coordity starts visible by default.
-                    </span>
-                  </span>
-                </label>
-
-                <div class="flex flex-wrap gap-2 pt-1">
-                  <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save module settings</button>
-                  {selected.kind === 'custom' ? (
-                    <button
-                      class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
-                      type="submit"
-                      name="action"
-                      value="archive-module"
-                    >
-                      Archive module
-                    </button>
-                  ) : null}
-                </div>
-              </form>
-            </div>
-
-            <div class="space-y-4">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Step 2 · Content</p>
-                <p class="mt-1 text-sm text-sage-dark/70">
-                  Add what people should complete. Expand an item to edit its content.
-                </p>
-              </div>
-
-              {
-                itemSections.map((section) => (
-                  <div class="rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
-                    <div class="flex flex-wrap items-end justify-between gap-3">
-                      <div class="min-w-0">
-                        <h3 class="text-base font-semibold text-charcoal">{section.title}</h3>
-                        <p class="mt-1 max-w-2xl text-xs leading-relaxed text-sage-dark/65">{section.description}</p>
-                      </div>
-                      <p class="text-xs font-medium text-sage-dark/55">
-                        {section.items.length} {section.items.length === 1 ? section.itemLabel.toLowerCase() : `${section.itemLabel.toLowerCase()}s`}
-                      </p>
-                    </div>
-
-                    <form method="post" action="/api/training/admin" class="mt-4 flex flex-wrap gap-2">
-                      <input type="hidden" name="action" value="create-lesson" />
-                      <input type="hidden" name="moduleId" value={selected.id} />
-                      {section.isAssignment ? <input type="hidden" name="isAssignment" value="1" /> : null}
-                      <input
-                        class="field !mt-0 min-w-[14rem] flex-1"
-                        type="text"
-                        name="title"
-                        required
-                        placeholder={section.placeholder}
-                      />
-                      <button class="btn-primary !px-4 !py-2 text-sm" type="submit">
-                        {section.addLabel}
-                      </button>
-                    </form>
-
-                    <div class="mt-4 space-y-3">
-                      {section.items.length === 0 ? (
-                        <p class="rounded-xl bg-[#f7f8fa] px-3 py-3 text-sm text-sage-dark/65">{section.emptyHint}</p>
-                      ) : (
-                        section.items.map((item) => {
-                          const blocks = blocksByItem[item.id] ?? [];
-                          const needsContent = blocks.length === 0;
-                          return (
-                            <details
-                              class="group rounded-xl border border-sage-dark/10 bg-[#fafbfc] open:bg-white open:shadow-sm"
-                              open={needsContent}
-                            >
-                              <summary class="cursor-pointer list-none px-4 py-3 [&::-webkit-details-marker]:hidden">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                  <div class="min-w-0">
-                                    <p class="font-semibold text-charcoal">{item.title}</p>
-                                    <p class="mt-0.5 text-xs text-sage-dark/60">
-                                      {blocks.length === 0
-                                        ? 'No content yet — open to add some'
-                                        : `${blocks.length} content ${blocks.length === 1 ? 'block' : 'blocks'}`}
-                                      {item.required ? ' · Required' : ' · Optional'}
-                                    </p>
-                                  </div>
-                                  <span class="text-xs font-semibold text-sage-dark/45 group-open:hidden">Edit</span>
-                                  <span class="hidden text-xs font-semibold text-sage-dark/45 group-open:inline">Close</span>
-                                </div>
-                              </summary>
-
-                              <div class="space-y-4 border-t border-sage-dark/10 px-4 py-4">
-                                <form method="post" action="/api/training/admin" class="space-y-3">
-                                  <input type="hidden" name="action" value="update-lesson" />
-                                  <input type="hidden" name="moduleId" value={selected.id} />
-                                  <input type="hidden" name="lessonId" value={item.id} />
-                                  <div class="flex flex-wrap items-end gap-2">
-                                    <label class="min-w-[12rem] flex-1 text-sm font-medium text-charcoal">
-                                      {section.itemLabel} title
-                                      <input class="field" type="text" name="title" value={item.title} required />
-                                    </label>
-                                    <label class="flex items-center gap-2 pb-2 text-sm text-charcoal">
-                                      <input type="checkbox" name="required" value="1" checked={item.required} />
-                                      Required
-                                    </label>
-                                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Save</button>
-                                    <button
-                                      class="rounded-full border border-red-200 px-3 py-2 text-xs font-semibold text-red-700"
-                                      type="submit"
-                                      name="action"
-                                      value="delete-lesson"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                  <div>
-                                    <p class="text-xs font-medium text-charcoal">
-                                      Roles for this {section.itemLabel.toLowerCase()}
-                                    </p>
-                                    <p class="mt-0.5 text-[11px] text-sage-dark/55">
-                                      Limited to roles on the module. Leave all checked to match the module audience.
-                                    </p>
-                                    {lessonRoleOptions.length === 0 ? (
-                                      <p class="mt-2 text-xs text-amber-800">
-                                        Save module roles in Step 1 first, then choose roles here.
-                                      </p>
-                                    ) : (
-                                      <div class="mt-2 space-y-2">
-                                        {lessonRoleOptions.map((role) => (
-                                          <input type="hidden" name="availableLessonRoleKeys" value={role.key} />
-                                        ))}
-                                        <div class="grid gap-1 sm:grid-cols-2">
-                                          {lessonRoleOptions.map((role) => (
-                                            <label class="flex items-center gap-2 text-xs text-charcoal">
-                                              <input
-                                                type="checkbox"
-                                                name="lessonRoleKeys"
-                                                value={role.key}
-                                                checked={
-                                                  item.roleKeys.length === 0 ||
-                                                  item.roleKeys.includes(role.key)
-                                                }
-                                              />
-                                              {role.name}
-                                            </label>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </form>
-
-                                <div>
-                                  <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
-                                    Content blocks
-                                  </p>
-                                  <div class="mt-3 space-y-3">
-                                    {blocks.length === 0 ? (
-                                      <p class="text-sm text-sage-dark/65">
-                                        Nothing here yet. Add a content block below.
-                                      </p>
-                                    ) : (
-                                      blocks.map((block, index) => (
-                                        <div class="rounded-lg border border-sage-dark/10 bg-[#f7f8fa] p-3">
-                                          <p class="text-xs font-semibold text-charcoal">
-                                            {index + 1}. {blockLabel(block.type)}
-                                          </p>
-                                          <form method="post" action="/api/training/admin" class="mt-2 space-y-2">
-                                            <input type="hidden" name="action" value="update-block" />
-                                            <input type="hidden" name="moduleId" value={selected.id} />
-                                            <input type="hidden" name="blockId" value={block.id} />
-                                            {block.type === 'video' ? (
-                                              <label class="block text-xs font-medium text-charcoal">
-                                                YouTube link (upload as <strong>unlisted</strong>, then paste here)
-                                                <input
-                                                  class="field"
-                                                  type="url"
-                                                  name="youtubeUrl"
-                                                  value={block.youtubeUrl ?? ''}
-                                                  placeholder="https://www.youtube.com/watch?v=..."
-                                                />
-                                              </label>
-                                            ) : null}
-                                            {block.type === 'written' ? (
-                                              <label class="block text-xs font-medium text-charcoal">
-                                                Written content
-                                                <textarea class="field" name="bodyText" rows="4">{block.bodyText ?? ''}</textarea>
-                                              </label>
-                                            ) : null}
-                                            {block.type === 'resource' ? (
-                                              <>
-                                                <label class="block text-xs font-medium text-charcoal">
-                                                  Link URL
-                                                  <input
-                                                    class="field"
-                                                    type="url"
-                                                    name="resourceUrl"
-                                                    value={block.resourceUrl ?? ''}
-                                                  />
-                                                </label>
-                                                <label class="block text-xs font-medium text-charcoal">
-                                                  Link label
-                                                  <input
-                                                    class="field"
-                                                    type="text"
-                                                    name="resourceLabel"
-                                                    value={block.resourceLabel ?? ''}
-                                                  />
-                                                </label>
-                                              </>
-                                            ) : null}
-                                            {block.type === 'ack' ? (
-                                              <label class="block text-xs font-medium text-charcoal">
-                                                Acknowledgment prompt
-                                                <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
-                                              </label>
-                                            ) : null}
-                                            {block.type === 'quiz' ? (
-                                              <label class="block text-xs font-medium text-charcoal">
-                                                Pass percent
-                                                <input
-                                                  class="field"
-                                                  type="number"
-                                                  name="passPercent"
-                                                  min="1"
-                                                  max="100"
-                                                  value={block.passPercent ?? 80}
-                                                />
-                                              </label>
-                                            ) : null}
-                                            <div class="flex flex-wrap gap-2">
-                                              <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">
-                                                Save block
-                                              </button>
-                                              <button
-                                                class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
-                                                type="submit"
-                                                name="action"
-                                                value="delete-block"
-                                              >
-                                                Delete block
-                                              </button>
-                                            </div>
-                                          </form>
-
-                                          {block.type === 'quiz' ? (
-                                            <div class="mt-3 border-t border-sage-dark/10 pt-3">
-                                              <p class="text-xs font-semibold text-charcoal">Questions</p>
-                                              <ul class="mt-2 space-y-1 text-xs text-sage-dark/80">
-                                                {block.questions.map((q) => (
-                                                  <li>
-                                                    {q.prompt}{' '}
-                                                    <span class="text-sage-dark/50">
-                                                      ({q.options.length} options, correct #{q.correctIndex + 1})
-                                                    </span>
-                                                  </li>
-                                                ))}
-                                              </ul>
-                                              <form
-                                                method="post"
-                                                action="/api/training/admin"
-                                                class="mt-3 grid gap-2 sm:grid-cols-2"
-                                              >
-                                                <input type="hidden" name="action" value="add-question" />
-                                                <input type="hidden" name="moduleId" value={selected.id} />
-                                                <input type="hidden" name="blockId" value={block.id} />
-                                                <label class="sm:col-span-2 text-xs font-medium text-charcoal">
-                                                  Prompt
-                                                  <input class="field" type="text" name="prompt" required />
-                                                </label>
-                                                {[0, 1, 2, 3].map((i) => (
-                                                  <label class="text-xs font-medium text-charcoal">
-                                                    Option {i + 1}
-                                                    <input
-                                                      class="field"
-                                                      type="text"
-                                                      name={`option${i}`}
-                                                      required={i < 2}
-                                                    />
-                                                  </label>
-                                                ))}
-                                                <label class="text-xs font-medium text-charcoal">
-                                                  Correct option #
-                                                  <input
-                                                    class="field"
-                                                    type="number"
-                                                    name="correctIndex"
-                                                    min="0"
-                                                    max="3"
-                                                    value="0"
-                                                    required
-                                                  />
-                                                </label>
-                                                <div class="flex items-end">
-                                                  <button class="btn-primary !px-3 !py-2 text-xs" type="submit">
-                                                    Add question
-                                                  </button>
-                                                </div>
-                                              </form>
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-
-                                  <form method="post" action="/api/training/admin" class="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-sage-dark/20 bg-white p-3">
-                                    <input type="hidden" name="action" value="create-block" />
-                                    <input type="hidden" name="moduleId" value={selected.id} />
-                                    <input type="hidden" name="lessonId" value={item.id} />
-                                    <label class="text-xs font-medium text-charcoal">
-                                      Add content
-                                      <select class="field" name="type">
-                                        <option value="written">Written text</option>
-                                        <option value="video">YouTube video</option>
-                                        <option value="resource">Link / resource</option>
-                                        <option value="quiz">Quiz</option>
-                                        <option value="ack">Acknowledgment</option>
-                                      </select>
-                                    </label>
-                                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add content</button>
-                                  </form>
-                                </div>
-                              </div>
-                            </details>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                ))
-              }
-            </div>
-          </>
-        )
-      }
-
-      <div class="rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Step 3 · Team progress</p>
-        <h3 class="mt-1 text-base font-semibold text-charcoal">Who has completed what</h3>
-        <p class="mt-1 text-xs text-sage-dark/60">
-          Percent complete for modules each person can see based on their role.
-        </p>
+      {/* Column 2 — Contents of selected module */}
+      <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r">
+        <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">2 · Inside this module</p>
+        </div>
         {
-          roster.length === 0 ? (
-            <p class="mt-4 text-sm text-sage-dark/65">No active members yet.</p>
+          !selected ? (
+            <p class="px-3 py-6 text-sm text-sage-dark/65">Select a module on the left.</p>
           ) : (
-            <div class="mt-4 overflow-x-auto">
-              <table class="min-w-full text-left text-sm">
-                <thead class="text-xs uppercase tracking-[0.12em] text-sage-dark/55">
-                  <tr>
-                    <th class="py-2 pr-4">Person</th>
-                    <th class="py-2">Modules</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roster.map((person) => (
-                    <tr class="border-t border-sage-dark/10 align-top">
-                      <td class="py-3 pr-4">
-                        <p class="font-semibold text-charcoal">{person.name}</p>
-                        <p class="text-xs text-sage-dark/55">{person.email}</p>
-                      </td>
-                      <td class="py-3">
-                        {person.modules.length === 0 ? (
-                          <span class="text-xs text-sage-dark/55">No assigned modules</span>
-                        ) : (
-                          <ul class="space-y-1">
-                            {person.modules.map((mod) => (
-                              <li class="text-xs text-charcoal">
-                                <span class="font-medium">{mod.title}</span>
-                                <span class="text-sage-dark/60"> — {mod.percent}%</span>
-                                {mod.complete ? (
-                                  <span class="ml-1 text-emerald-700">complete</span>
-                                ) : null}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <div class="space-y-0.5 p-2">
+                <a
+                  href={moduleHref(selected.id, { view: 'settings' })}
+                  class:list={[
+                    'block rounded-lg px-2.5 py-2 text-sm transition',
+                    selectedView === 'settings'
+                      ? 'bg-sage/25 font-semibold text-charcoal ring-1 ring-sage-dark/15'
+                      : 'text-charcoal hover:bg-[#f4f5f8]',
+                  ]}
+                >
+                  Module settings
+                  <span class="mt-0.5 block text-[11px] font-normal text-sage-dark/55">
+                    Title, audience, visibility
+                  </span>
+                </a>
+              </div>
+
+              <div class="border-t border-sage-dark/10 px-2 pb-2 pt-3">
+                <p class="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
+                  Quick tasks
+                </p>
+                <p class="mt-0.5 px-1 text-[11px] text-sage-dark/55">One-off checklist items</p>
+                <div class="mt-2 space-y-0.5">
+                  {assignments.length === 0 ? (
+                    <p class="px-1 py-2 text-xs text-sage-dark/50">None yet</p>
+                  ) : (
+                    assignments.map((item) => (
+                      <a
+                        href={moduleHref(selected.id, { item: item.id })}
+                        class:list={[
+                          'block rounded-lg px-2.5 py-2 text-sm transition',
+                          selectedItem?.id === item.id
+                            ? 'bg-sage/25 font-semibold text-charcoal ring-1 ring-sage-dark/15'
+                            : 'text-charcoal hover:bg-[#f4f5f8]',
+                        ]}
+                      >
+                        {item.title}
+                        <span class="mt-0.5 block text-[11px] font-normal text-sage-dark/55">
+                          {(blocksByItem[item.id] ?? []).length} content
+                          {!item.required ? ' · optional' : ''}
+                        </span>
+                      </a>
+                    ))
+                  )}
+                </div>
+                <form method="post" action="/api/training/admin" class="mt-2 flex gap-1.5 px-1">
+                  <input type="hidden" name="action" value="create-lesson" />
+                  <input type="hidden" name="moduleId" value={selected.id} />
+                  <input type="hidden" name="isAssignment" value="1" />
+                  <input class="field !mt-0 min-w-0 flex-1 !py-1.5 text-xs" type="text" name="title" required placeholder="Add task…" />
+                  <button class="btn-primary shrink-0 !px-2.5 !py-1.5 text-xs" type="submit">Add</button>
+                </form>
+              </div>
+
+              <div class="border-t border-sage-dark/10 px-2 pb-3 pt-3">
+                <p class="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
+                  Lessons
+                </p>
+                <p class="mt-0.5 px-1 text-[11px] text-sage-dark/55">Multi-step learning</p>
+                <div class="mt-2 space-y-0.5">
+                  {lessons.length === 0 ? (
+                    <p class="px-1 py-2 text-xs text-sage-dark/50">None yet</p>
+                  ) : (
+                    lessons.map((item) => (
+                      <a
+                        href={moduleHref(selected.id, { item: item.id })}
+                        class:list={[
+                          'block rounded-lg px-2.5 py-2 text-sm transition',
+                          selectedItem?.id === item.id
+                            ? 'bg-sage/25 font-semibold text-charcoal ring-1 ring-sage-dark/15'
+                            : 'text-charcoal hover:bg-[#f4f5f8]',
+                        ]}
+                      >
+                        {item.title}
+                        <span class="mt-0.5 block text-[11px] font-normal text-sage-dark/55">
+                          {(blocksByItem[item.id] ?? []).length} content
+                          {!item.required ? ' · optional' : ''}
+                        </span>
+                      </a>
+                    ))
+                  )}
+                </div>
+                <form method="post" action="/api/training/admin" class="mt-2 flex gap-1.5 px-1">
+                  <input type="hidden" name="action" value="create-lesson" />
+                  <input type="hidden" name="moduleId" value={selected.id} />
+                  <input class="field !mt-0 min-w-0 flex-1 !py-1.5 text-xs" type="text" name="title" required placeholder="Add lesson…" />
+                  <button class="btn-primary shrink-0 !px-2.5 !py-1.5 text-xs" type="submit">Add</button>
+                </form>
+              </div>
             </div>
           )
         }
       </div>
+
+      {/* Column 3 — Detail editor */}
+      <div class="flex min-h-0 flex-col">
+        <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">3 · Edit here</p>
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto p-4">
+          {
+            !selected ? (
+              <div class="flex h-full min-h-[12rem] items-center justify-center text-center">
+                <p class="max-w-xs text-sm text-sage-dark/65">
+                  Pick a module on the left to see what’s inside and edit it here.
+                </p>
+              </div>
+            ) : selectedView === 'settings' || !selectedItem ? (
+              <div class="mx-auto max-w-lg">
+                <h3 class="text-lg font-semibold text-charcoal">Module settings</h3>
+                <p class="mt-1 text-sm text-sage-dark/65">
+                  {kindLabel(selected.kind)} · Audience: {selectedAudience}
+                  {!selected.visible ? ' · Currently hidden' : ''}
+                </p>
+                <form method="post" action="/api/training/admin" class="mt-5 space-y-4">
+                  <input type="hidden" name="action" value="update-module" />
+                  <input type="hidden" name="moduleId" value={selected.id} />
+                  <input type="hidden" name="returnView" value="settings" />
+                  <label class="block text-sm font-medium text-charcoal">
+                    Title
+                    <input class="field" type="text" name="title" value={selected.title} required />
+                  </label>
+                  <label class="block text-sm font-medium text-charcoal">
+                    Description
+                    <textarea class="field" name="description" rows="3">{selected.description}</textarea>
+                  </label>
+                  <div class="rounded-xl bg-[#f7f8fa] p-3">
+                    <p class="text-sm font-semibold text-charcoal">Who can see this?</p>
+                    <p class="mt-1 text-xs text-sage-dark/60">Leave all checked to show everyone.</p>
+                    <div class="mt-2 grid gap-1.5 sm:grid-cols-2">
+                      {roles.map((role) => (
+                        <label class="flex items-center gap-2 text-sm text-charcoal">
+                          <input
+                            type="checkbox"
+                            name="roleKeys"
+                            value={role.key}
+                            checked={selected.roleKeys.length === 0 || selected.roleKeys.includes(role.key)}
+                          />
+                          {role.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <label class="flex items-start gap-2 text-sm text-charcoal">
+                    <input class="mt-0.5" type="checkbox" name="visible" value="1" checked={selected.visible} />
+                    <span>
+                      <span class="font-medium">Show to the team</span>
+                      <span class="mt-0.5 block text-xs text-sage-dark/60">Uncheck while you finish building.</span>
+                    </span>
+                  </label>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save settings</button>
+                    {selected.kind === 'custom' ? (
+                      <button
+                        class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
+                        type="submit"
+                        name="action"
+                        value="archive-module"
+                      >
+                        Archive
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
+                <p class="mt-6 rounded-xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-3 py-3 text-sm text-sage-dark/70">
+                  Next: pick a quick task or lesson in the middle column, then add content on the right.
+                </p>
+              </div>
+            ) : (
+              <div class="mx-auto max-w-lg space-y-5">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
+                    {selectedIsAssignment ? 'Quick task' : 'Lesson'}
+                  </p>
+                  <h3 class="mt-1 text-lg font-semibold text-charcoal">{selectedItem.title}</h3>
+                </div>
+
+                <form method="post" action="/api/training/admin" class="space-y-3 rounded-xl border border-sage-dark/10 bg-[#fafbfc] p-3">
+                  <input type="hidden" name="action" value="update-lesson" />
+                  <input type="hidden" name="moduleId" value={selected.id} />
+                  <input type="hidden" name="lessonId" value={selectedItem.id} />
+                  <label class="block text-sm font-medium text-charcoal">
+                    Title
+                    <input class="field" type="text" name="title" value={selectedItem.title} required />
+                  </label>
+                  <label class="flex items-center gap-2 text-sm text-charcoal">
+                    <input type="checkbox" name="required" value="1" checked={selectedItem.required} />
+                    Required for completion
+                  </label>
+                  <div>
+                    <p class="text-xs font-medium text-charcoal">Roles for this item</p>
+                    <p class="mt-0.5 text-[11px] text-sage-dark/55">
+                      Limited to the module’s audience. Leave all checked to match the module.
+                    </p>
+                    {lessonRoleOptions.length === 0 ? (
+                      <p class="mt-2 text-xs text-amber-800">Save module roles first.</p>
+                    ) : (
+                      <div class="mt-2 space-y-2">
+                        {lessonRoleOptions.map((role) => (
+                          <input type="hidden" name="availableLessonRoleKeys" value={role.key} />
+                        ))}
+                        <div class="grid gap-1 sm:grid-cols-2">
+                          {lessonRoleOptions.map((role) => (
+                            <label class="flex items-center gap-2 text-xs text-charcoal">
+                              <input
+                                type="checkbox"
+                                name="lessonRoleKeys"
+                                value={role.key}
+                                checked={
+                                  selectedItem.roleKeys.length === 0 ||
+                                  selectedItem.roleKeys.includes(role.key)
+                                }
+                              />
+                              {role.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Save item</button>
+                    <button
+                      class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+                      type="submit"
+                      name="action"
+                      value="delete-lesson"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </form>
+
+                <div>
+                  <h4 class="text-sm font-semibold text-charcoal">Content people go through</h4>
+                  <p class="mt-1 text-xs text-sage-dark/60">
+                    Add writing, video, links, quizzes, or acknowledgments in order.
+                  </p>
+                  <div class="mt-3 space-y-3">
+                    {selectedBlocks.length === 0 ? (
+                      <p class="rounded-xl bg-[#f7f8fa] px-3 py-3 text-sm text-sage-dark/65">
+                        No content yet — add the first block below.
+                      </p>
+                    ) : (
+                      selectedBlocks.map((block, index) => (
+                        <div class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-3">
+                          <p class="text-xs font-semibold text-charcoal">
+                            {index + 1}. {blockLabel(block.type)}
+                          </p>
+                          <form method="post" action="/api/training/admin" class="mt-2 space-y-2">
+                            <input type="hidden" name="action" value="update-block" />
+                            <input type="hidden" name="moduleId" value={selected.id} />
+                            <input type="hidden" name="lessonId" value={selectedItem.id} />
+                            <input type="hidden" name="blockId" value={block.id} />
+                            {block.type === 'video' ? (
+                              <label class="block text-xs font-medium text-charcoal">
+                                YouTube link (upload as <strong>unlisted</strong>)
+                                <input
+                                  class="field"
+                                  type="url"
+                                  name="youtubeUrl"
+                                  value={block.youtubeUrl ?? ''}
+                                  placeholder="https://www.youtube.com/watch?v=..."
+                                />
+                              </label>
+                            ) : null}
+                            {block.type === 'written' ? (
+                              <label class="block text-xs font-medium text-charcoal">
+                                Written content
+                                <textarea class="field" name="bodyText" rows="5">{block.bodyText ?? ''}</textarea>
+                              </label>
+                            ) : null}
+                            {block.type === 'resource' ? (
+                              <>
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Link URL
+                                  <input class="field" type="url" name="resourceUrl" value={block.resourceUrl ?? ''} />
+                                </label>
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Link label
+                                  <input class="field" type="text" name="resourceLabel" value={block.resourceLabel ?? ''} />
+                                </label>
+                              </>
+                            ) : null}
+                            {block.type === 'ack' ? (
+                              <label class="block text-xs font-medium text-charcoal">
+                                Acknowledgment prompt
+                                <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
+                              </label>
+                            ) : null}
+                            {block.type === 'quiz' ? (
+                              <label class="block text-xs font-medium text-charcoal">
+                                Pass percent
+                                <input
+                                  class="field"
+                                  type="number"
+                                  name="passPercent"
+                                  min="1"
+                                  max="100"
+                                  value={block.passPercent ?? 80}
+                                />
+                              </label>
+                            ) : null}
+                            <div class="flex flex-wrap gap-2">
+                              <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Save block</button>
+                              <button
+                                class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+                                type="submit"
+                                name="action"
+                                value="delete-block"
+                              >
+                                Delete block
+                              </button>
+                            </div>
+                          </form>
+
+                          {block.type === 'quiz' ? (
+                            <div class="mt-3 border-t border-sage-dark/10 pt-3">
+                              <p class="text-xs font-semibold text-charcoal">Questions</p>
+                              <ul class="mt-2 space-y-1 text-xs text-sage-dark/80">
+                                {block.questions.map((q) => (
+                                  <li>
+                                    {q.prompt}{' '}
+                                    <span class="text-sage-dark/50">
+                                      ({q.options.length} options, correct #{q.correctIndex + 1})
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                              <form method="post" action="/api/training/admin" class="mt-3 grid gap-2 sm:grid-cols-2">
+                                <input type="hidden" name="action" value="add-question" />
+                                <input type="hidden" name="moduleId" value={selected.id} />
+                                <input type="hidden" name="lessonId" value={selectedItem.id} />
+                                <input type="hidden" name="blockId" value={block.id} />
+                                <label class="sm:col-span-2 text-xs font-medium text-charcoal">
+                                  Prompt
+                                  <input class="field" type="text" name="prompt" required />
+                                </label>
+                                {[0, 1, 2, 3].map((i) => (
+                                  <label class="text-xs font-medium text-charcoal">
+                                    Option {i + 1}
+                                    <input class="field" type="text" name={`option${i}`} required={i < 2} />
+                                  </label>
+                                ))}
+                                <label class="text-xs font-medium text-charcoal">
+                                  Correct option #
+                                  <input
+                                    class="field"
+                                    type="number"
+                                    name="correctIndex"
+                                    min="0"
+                                    max="3"
+                                    value="0"
+                                    required
+                                  />
+                                </label>
+                                <div class="flex items-end">
+                                  <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add question</button>
+                                </div>
+                              </form>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <form
+                    method="post"
+                    action="/api/training/admin"
+                    class="mt-3 flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-sage-dark/25 bg-white p-3"
+                  >
+                    <input type="hidden" name="action" value="create-block" />
+                    <input type="hidden" name="moduleId" value={selected.id} />
+                    <input type="hidden" name="lessonId" value={selectedItem.id} />
+                    <label class="text-xs font-medium text-charcoal">
+                      Add content
+                      <select class="field" name="type">
+                        <option value="written">Written text</option>
+                        <option value="video">YouTube video</option>
+                        <option value="resource">Link / resource</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="ack">Acknowledgment</option>
+                      </select>
+                    </label>
+                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add</button>
+                  </form>
+                </div>
+              </div>
+            )
+          }
+        </div>
+      </div>
     </div>
+  </div>
+
+  <div class="mt-8 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
+    <h3 class="text-base font-semibold text-charcoal">Team progress</h3>
+    <p class="mt-1 text-xs text-sage-dark/60">Who has completed modules assigned to their role.</p>
+    {
+      roster.length === 0 ? (
+        <p class="mt-4 text-sm text-sage-dark/65">No active members yet.</p>
+      ) : (
+        <div class="mt-4 overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead class="text-xs uppercase tracking-[0.12em] text-sage-dark/55">
+              <tr>
+                <th class="py-2 pr-4">Person</th>
+                <th class="py-2">Modules</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roster.map((person) => (
+                <tr class="border-t border-sage-dark/10 align-top">
+                  <td class="py-3 pr-4">
+                    <p class="font-semibold text-charcoal">{person.name}</p>
+                    <p class="text-xs text-sage-dark/55">{person.email}</p>
+                  </td>
+                  <td class="py-3">
+                    {person.modules.length === 0 ? (
+                      <span class="text-xs text-sage-dark/55">No assigned modules</span>
+                    ) : (
+                      <ul class="space-y-1">
+                        {person.modules.map((mod) => (
+                          <li class="text-xs text-charcoal">
+                            <span class="font-medium">{mod.title}</span>
+                            <span class="text-sage-dark/60"> — {mod.percent}%</span>
+                            {mod.complete ? <span class="ml-1 text-emerald-700">complete</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
   </div>
 </section>

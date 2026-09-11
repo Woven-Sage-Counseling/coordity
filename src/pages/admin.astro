@@ -118,6 +118,8 @@ let workCategoriesError: string | null = Astro.url.searchParams.get('workCategor
 const trainingError = Astro.url.searchParams.get('trainingError');
 const trainingSaved = Astro.url.searchParams.get('trainingSaved') === '1';
 const selectedTrainingModuleId = Astro.url.searchParams.get('module');
+const selectedTrainingItemId = Astro.url.searchParams.get('item');
+const selectedTrainingViewParam = Astro.url.searchParams.get('view');
 const pendingTimeOff = timeOffRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetBacklog = timesheetBacklogRequests.filter((request) => request.status === 'pending').length;
 const pendingTimesheetShiftEdits = timesheetShiftEditRequests.filter((request) => request.status === 'pending').length;
@@ -149,6 +151,17 @@ const trainingLessons = trainingSelectedId
 const trainingAssignments = trainingSelectedId
   ? await safeLoad('training-assignments', () => listAssignments(trainingSelectedId), [])
   : [];
+const trainingItemIds = new Set([...trainingAssignments, ...trainingLessons].map((item) => item.id));
+const trainingSelectedItemId =
+  selectedTrainingItemId && trainingItemIds.has(selectedTrainingItemId)
+    ? selectedTrainingItemId
+    : null;
+const trainingSelectedView: 'settings' | 'item' =
+  trainingSelectedItemId != null
+    ? 'item'
+    : selectedTrainingViewParam === 'settings' || trainingSelectedId != null
+      ? 'settings'
+      : 'settings';
 const trainingBlocksByItem: Record<string, Awaited<ReturnType<typeof listBlocks>>> = {};
 for (const item of [...trainingAssignments, ...trainingLessons]) {
   trainingBlocksByItem[item.id] = await safeLoad(
@@ -163,7 +176,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 ---
 
 <PortalLayout title="Admin" wide>
-  <div class="mx-auto max-w-4xl" data-admin-shell>
+  <div class="mx-auto max-w-6xl" data-admin-shell>
     <div data-admin-header>
       <p class="text-sm text-sage-dark/65">
         <a href="/" class="hover:text-sage-dark">Home</a>
@@ -521,11 +534,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       </button>
       <PanelHeading
         title="Training"
-        description="Create modules for your team, choose who sees each one, add quick tasks or lessons, then track completion. For videos, upload an unlisted YouTube video and paste the link."
+        description="Use the three columns: pick a module, choose what’s inside it, then edit on the right. For videos, upload an unlisted YouTube video and paste the link."
       />
       <TrainingManager
         modules={trainingModules}
         selectedModuleId={trainingSelectedId}
+        selectedItemId={trainingSelectedItemId}
+        selectedView={trainingSelectedView}
         assignments={trainingAssignments}
         lessons={trainingLessons}
         blocksByItem={trainingBlocksByItem}
