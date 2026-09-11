@@ -5,6 +5,7 @@ import {
   getLesson,
   getModuleProgressForUser,
   latestQuizPass,
+  lessonVisibleToRoles,
   listBlocks,
   listCompletedLessonIds,
   moduleVisibleToRoles,
@@ -31,9 +32,13 @@ const progress = await getModuleProgressForUser({
   orgId,
   moduleId,
   userId: employee.id,
+  roleKeys,
 });
 if (!progress || !moduleVisibleToRoles(progress.module, roleKeys) || !progress.module.visible) {
   return Astro.redirect('/training');
+}
+if (!lessonVisibleToRoles(lesson, roleKeys)) {
+  return Astro.redirect(`/training/${moduleId}`);
 }
 
 const blocks = await listBlocks(lessonId);

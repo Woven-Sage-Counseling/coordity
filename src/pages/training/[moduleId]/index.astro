@@ -17,6 +17,7 @@ const progress = await getModuleProgressForUser({
   orgId,
   moduleId,
   userId: employee.id,
+  roleKeys,
 }).catch(() => null as Awaited<ReturnType<typeof getModuleProgressForUser>>);
 
 if (!progress || !moduleVisibleToRoles(progress.module, roleKeys) || !progress.module.visible) {

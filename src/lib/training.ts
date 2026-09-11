@@ -30,6 +30,7 @@ export interface TrainingLesson {
   sortOrder: number;
   required: boolean;
   isAssignment: boolean;
+  roleKeys: string[];
   createdAt: number;
   updatedAt: number;
 }
@@ -125,6 +126,47 @@ async function listRoleKeysForModule(moduleId: string): Promise<string[]> {
     .bind(moduleId)
     .all<{ role_key: string }>();
   return (rows.results ?? []).map((row) => row.role_key);
+}
+
+async function listRoleKeysForLesson(lessonId: string): Promise<string[]> {
+  const { DB } = getEnv();
+  try {
+    const rows = await DB.prepare(
+      `SELECT role_key FROM training_lesson_role WHERE lesson_id = ? ORDER BY role_key`,
+    )
+      .bind(lessonId)
+      .all<{ role_key: string }>();
+    return (rows.results ?? []).map((row) => row.role_key);
+  } catch {
+    return [];
+  }
+}
+
+async function setLessonRoleKeys(lessonId: string, roleKeys: string[]): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(`DELETE FROM training_lesson_role WHERE lesson_id = ?`).bind(lessonId).run();
+  for (const key of roleKeys) {
+    await DB.prepare(`INSERT INTO training_lesson_role (lesson_id, role_key) VALUES (?, ?)`)
+      .bind(lessonId, key)
+      .run();
+  }
+}
+
+/** Roles a lesson/assignment may be restricted to, based on its module. */
+export function allowedLessonRolesForModule(
+  module: TrainingModule,
+  allOrgRoleKeys: string[],
+): string[] {
+  if (module.roleKeys.length === 0) return allOrgRoleKeys;
+  return module.roleKeys.filter((key) => allOrgRoleKeys.includes(key));
+}
+
+export function lessonVisibleToRoles(
+  lesson: Pick<TrainingLesson, 'roleKeys'>,
+  roleKeys: string[],
+): boolean {
+  if (lesson.roleKeys.length === 0) return true;
+  return lesson.roleKeys.some((key) => roleKeys.includes(key));
 }
 
 async function countLessons(moduleId: string): Promise<number> {
@@ -353,16 +395,21 @@ export async function listLessons(
       created_at: number;
       updated_at: number;
     }>();
-  return (rows.results ?? []).map((row) => ({
-    id: row.id,
-    moduleId: row.module_id,
-    title: row.title,
-    sortOrder: row.sort_order,
-    required: row.required === 1,
-    isAssignment: row.is_assignment === 1,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+  const lessons: TrainingLesson[] = [];
+  for (const row of rows.results ?? []) {
+    lessons.push({
+      id: row.id,
+      moduleId: row.module_id,
+      title: row.title,
+      sortOrder: row.sort_order,
+      required: row.required === 1,
+      isAssignment: row.is_assignment === 1,
+      roleKeys: await listRoleKeysForLesson(row.id),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    });
+  }
+  return lessons;
 }
 
 export async function listAssignments(moduleId: string): Promise<TrainingLesson[]> {
@@ -400,6 +447,7 @@ export async function getLesson(
     sortOrder: row.sort_order,
     required: row.required === 1,
     isAssignment: row.is_assignment === 1,
+    roleKeys: await listRoleKeysForLesson(row.id),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     orgId: row.org_id,
@@ -499,13 +547,23 @@ export async function getModuleProgressForUser(input: {
   orgId: string;
   moduleId: string;
   userId: string;
+  roleKeys?: string[];
 }): Promise<TrainingModuleProgress | null> {
   const module = await getTrainingModule(input.moduleId, input.orgId);
   if (!module) return null;
-  const [lessons, assignments] = await Promise.all([
+  const roleKeys = input.roleKeys ?? [];
+  const [lessonsRaw, assignmentsRaw] = await Promise.all([
     listLessons(module.id),
     listAssignments(module.id),
   ]);
+  const lessons =
+    roleKeys.length > 0
+      ? lessonsRaw.filter((lesson) => lessonVisibleToRoles(lesson, roleKeys))
+      : lessonsRaw;
+  const assignments =
+    roleKeys.length > 0
+      ? assignmentsRaw.filter((item) => lessonVisibleToRoles(item, roleKeys))
+      : assignmentsRaw;
   const allItems = [...assignments, ...lessons];
   const completed = await listCompletedLessonIds(
     input.userId,
@@ -558,6 +616,7 @@ export async function listModuleProgressForUser(input: {
       orgId: input.orgId,
       moduleId: module.id,
       userId: input.userId,
+      roleKeys: input.roleKeys,
     });
     if (progress) out.push(progress);
   }
@@ -662,6 +721,17 @@ export async function updateModule(input: {
         `INSERT INTO training_module_role (module_id, role_key) VALUES (?, ?)`,
       )
         .bind(input.moduleId, key)
+        .run();
+    }
+    // Drop lesson/assignment roles that are no longer allowed on the module.
+    if (input.roleKeys.length > 0) {
+      const placeholders = input.roleKeys.map(() => '?').join(', ');
+      await DB.prepare(
+        `DELETE FROM training_lesson_role
+         WHERE lesson_id IN (SELECT id FROM training_lesson WHERE module_id = ?)
+           AND role_key NOT IN (${placeholders})`,
+      )
+        .bind(input.moduleId, ...input.roleKeys)
         .run();
     }
   }
@@ -769,9 +839,14 @@ export async function updateLesson(input: {
   lessonId: string;
   title?: string;
   required?: boolean;
+  roleKeys?: string[];
+  /** Roles offered in the admin UI; used to detect “all checked” → inherit. */
+  availableRoleKeys?: string[];
 }): Promise<void> {
   const lesson = await getLesson(input.lessonId);
   if (!lesson || lesson.orgId !== input.orgId) throw new Error('Lesson not found.');
+  const module = await getTrainingModule(lesson.moduleId, input.orgId);
+  if (!module) throw new Error('Module not found.');
   const { DB } = getEnv();
   await DB.prepare(
     `UPDATE training_lesson SET title = ?, required = ?, updated_at = ? WHERE id = ?`,
@@ -783,6 +858,26 @@ export async function updateLesson(input: {
       input.lessonId,
     )
     .run();
+
+  if (input.roleKeys) {
+    const available =
+      input.availableRoleKeys && input.availableRoleKeys.length > 0
+        ? input.availableRoleKeys
+        : module.roleKeys;
+    if (available.length > 0) {
+      const invalid = input.roleKeys.filter((key) => !available.includes(key));
+      if (invalid.length > 0) {
+        throw new Error('Lesson roles must be a subset of the module’s roles.');
+      }
+    }
+    const selected =
+      available.length > 0
+        ? input.roleKeys.filter((key) => available.includes(key))
+        : input.roleKeys;
+    const coversAll = available.length > 0 && selected.length === available.length;
+    const storeKeys = selected.length === 0 || coversAll ? [] : selected;
+    await setLessonRoleKeys(input.lessonId, storeKeys);
+  }
 }
 
 export async function deleteLesson(orgId: string, lessonId: string): Promise<void> {
@@ -1015,6 +1110,7 @@ export async function listTrainingRoster(orgId: string): Promise<
         orgId,
         moduleId: module.id,
         userId: person.id,
+        roleKeys,
       });
       if (!progress) continue;
       modules.push({

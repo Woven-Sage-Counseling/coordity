@@ -86,11 +86,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'update-lesson') {
       const lessonId = String(form.get('lessonId') ?? '').trim();
       const moduleId = String(form.get('moduleId') ?? '').trim();
+      const roleKeys = form.getAll('lessonRoleKeys').map((v) => String(v));
+      const availableRoleKeys = form.getAll('availableLessonRoleKeys').map((v) => String(v));
       await updateLesson({
         orgId,
         lessonId,
         title: String(form.get('title') ?? ''),
         required: String(form.get('required') ?? '') === '1',
+        roleKeys,
+        availableRoleKeys,
       });
       return redirectAdmin(`&module=${encodeURIComponent(moduleId)}`);
     }
