@@ -1,33 +1,29 @@
 import { getEnv } from './env';
 
 const TIME_OFF_RECIPIENT = 'admin@wovensage.com';
-const DEFAULT_WOVEN_FROM = 'portal@wovensage.com';
-const DEFAULT_COORDITY_FROM = 'hello@coordity.com';
+/** Single Resend-verified From for all Coordity product email (client + tenant ops). */
+const DEFAULT_COORDITY_FROM = 'admin@coordity.com';
 
 export type AdminEmailPayload = {
   subject: string;
   text: string;
   html: string;
   replyTo?: string;
-  /** Overrides the default Woven Sage admin recipient when set. */
+  /** Overrides the default recipient when set. */
   to?: string | string[];
-  /**
-   * Overrides the From address. Use for Coordity-facing mail so it never
-   * appears to come from wovensage.com.
-   */
+  /** Overrides From. Defaults to admin@coordity.com. */
   from?: string;
 };
 
-/** From address for Coordity product / client-facing email. */
+/** From address for all Coordity-sent email (must be Resend-verified). */
 export function getCoordityFromEmail(): string {
   const env = getEnv();
-  return (env.COORDITY_FROM_EMAIL ?? DEFAULT_COORDITY_FROM).trim();
+  return (env.COORDITY_FROM_EMAIL ?? env.PORTAL_FROM_EMAIL ?? DEFAULT_COORDITY_FROM).trim();
 }
 
-/** From address for tenant portal ops email (defaults to Woven Sage). */
+/** @deprecated Use getCoordityFromEmail — tenant ops also send from Coordity. */
 export function getPortalFromEmail(): string {
-  const env = getEnv();
-  return (env.PORTAL_FROM_EMAIL ?? DEFAULT_WOVEN_FROM).trim();
+  return getCoordityFromEmail();
 }
 
 async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
@@ -37,7 +33,7 @@ async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
     throw new Error('Email is not configured for this portal yet.');
   }
 
-  const fromEmail = (payload.from ?? getPortalFromEmail()).trim();
+  const fromEmail = (payload.from ?? getCoordityFromEmail()).trim();
   const to = payload.to
     ? Array.isArray(payload.to)
       ? payload.to

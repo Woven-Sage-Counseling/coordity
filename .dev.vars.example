@@ -8,13 +8,13 @@ PORTAL_OWNER_EMAIL=admin@wovensage.com
 COORDITY_PLATFORM_OWNER_EMAIL=admin@coordity.com
 # Optional; falls back to PORTAL_BOOTSTRAP_TOKEN if unset
 # COORDITY_PLATFORM_BOOTSTRAP_TOKEN=replace-with-a-long-random-string
-# Coordity client-facing From (verify coordity.com in Resend first)
-COORDITY_FROM_EMAIL=hello@coordity.com
-# Tenant portal ops From (Woven Sage)
-PORTAL_FROM_EMAIL=portal@wovensage.com
+# From address for ALL outbound Coordity email (early access, invites, time off, etc.)
+# Verify coordity.com in Resend and use an address on that domain.
+COORDITY_FROM_EMAIL=admin@coordity.com
+PORTAL_FROM_EMAIL=admin@coordity.com
 PORTAL_ENVIRONMENT=preview
 
-# Resend (time-off + early access emails)
+# Resend
 # RESEND_API_KEY=
 
 # QuickBooks (optional until OAuth is connected)
