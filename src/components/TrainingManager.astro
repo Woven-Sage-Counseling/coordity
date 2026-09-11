@@ -93,11 +93,10 @@ const selectedAudience =
   {saved ? <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">Saved.</p> : null}
 
   <p class="mt-4 max-w-3xl text-sm leading-relaxed text-sage-dark/75">
-    Training is organized into modules — topics your team works through. Open a module on the left to
-    see everything inside it in the middle column (the tasks and lessons people complete). Click one of
-    those to edit its content on the right. Use
-    <span class="font-medium text-charcoal">Settings</span> only when you need to change the module’s
-    title, who can see it, or whether it’s visible yet.
+    Training is organized into modules — topics your team works through. Click a module on the left to
+    open it. The middle column shows what’s inside (tasks and lessons). Click one of those to edit it
+    on the right. Use <span class="font-medium text-charcoal">Settings</span> only when you need to
+    change the module’s title, who can see it, or whether it’s visible yet.
   </p>
 
   <div class="mt-3 space-y-3 transition-opacity duration-150" data-training-browse>
@@ -137,7 +136,7 @@ const selectedAudience =
               modules.map((module) => (
                 <a
                   href={moduleHref(module.id)}
-                  data-training-nav
+                  data-training-nav="module"
                   class:list={[
                     'block rounded-lg px-2.5 py-2 text-sm transition',
                     selected?.id === module.id
@@ -197,7 +196,7 @@ const selectedAudience =
                   </div>
                   <a
                     href={moduleHref(selected.id, { view: 'settings' })}
-                    data-training-nav
+                    data-training-nav="settings"
                     class:list={[
                       'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
                       selectedView === 'settings'
@@ -239,7 +238,7 @@ const selectedAudience =
                     assignments.map((item) => (
                       <a
                         href={moduleHref(selected.id, { item: item.id })}
-                        data-training-nav
+                        data-training-nav="item"
                         class:list={[
                           'block rounded-lg px-2.5 py-2 text-sm transition',
                           selectedItem?.id === item.id
@@ -277,7 +276,7 @@ const selectedAudience =
                     lessons.map((item) => (
                       <a
                         href={moduleHref(selected.id, { item: item.id })}
-                        data-training-nav
+                        data-training-nav="item"
                         class:list={[
                           'block rounded-lg px-2.5 py-2 text-sm transition',
                           selectedItem?.id === item.id
@@ -691,7 +690,7 @@ const selectedAudience =
     if (document.documentElement.hasAttribute(FLAG)) return;
     document.documentElement.setAttribute(FLAG, '1');
 
-    let loading = false;
+    let requestId = 0;
 
     const ensureTrainingPanelOpen = () => {
       const shell = document.querySelector('[data-admin-shell]');
@@ -707,38 +706,62 @@ const selectedAudience =
       });
     };
 
-    const loadBrowse = async (url: string, push: boolean) => {
-      if (loading) return;
+    const browseUrlFromLink = (link: HTMLAnchorElement) => {
+      const url = new URL(link.href, window.location.href);
+      const kind = link.getAttribute('data-training-nav');
+      // Opening a module should never keep Settings/item selection stuck on screen.
+      if (kind === 'module') {
+        url.searchParams.delete('view');
+        url.searchParams.delete('item');
+        url.searchParams.delete('trainingSaved');
+        url.searchParams.delete('trainingError');
+      }
+      url.hash = 'training';
+      return url;
+    };
+
+    const loadBrowse = async (url: URL, push: boolean) => {
       const current = document.querySelector('[data-training-browse]');
       if (!(current instanceof HTMLElement)) {
-        window.location.assign(url);
+        window.location.assign(url.href);
         return;
       }
 
-      loading = true;
+      const id = ++requestId;
       current.classList.add('pointer-events-none', 'opacity-55');
       current.setAttribute('aria-busy', 'true');
 
       try {
-        const response = await fetch(url, {
+        const fetchUrl = new URL(url.href);
+        fetchUrl.searchParams.set('_browse', String(Date.now()));
+        const response = await fetch(fetchUrl.pathname + fetchUrl.search, {
           credentials: 'same-origin',
+          cache: 'no-store',
           headers: { Accept: 'text/html', 'X-Requested-With': 'training-browse' },
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const html = await response.text();
+        if (id !== requestId) return;
+
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const next = doc.querySelector('[data-training-browse]');
         if (!(next instanceof HTMLElement)) throw new Error('Missing training browse markup');
 
-        current.replaceWith(next);
+        const imported = document.importNode(next, true);
+        const latest = document.querySelector('[data-training-browse]');
+        if (!(latest instanceof HTMLElement)) {
+          window.location.assign(url.href);
+          return;
+        }
+        latest.replaceWith(imported);
         ensureTrainingPanelOpen();
         if (push) {
-          history.pushState({ trainingBrowse: true }, '', url);
+          history.pushState({ trainingBrowse: true }, '', url.pathname + url.search + url.hash);
         }
       } catch {
-        window.location.assign(url);
+        if (id === requestId) window.location.assign(url.href);
       } finally {
-        loading = false;
+        if (id !== requestId) return;
         const browse = document.querySelector('[data-training-browse]');
         if (browse instanceof HTMLElement) {
           browse.classList.remove('pointer-events-none', 'opacity-55');
@@ -756,18 +779,23 @@ const selectedAudience =
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       if (link.target === '_blank') return;
 
-      const nextUrl = new URL(link.href, window.location.href);
+      const nextUrl = browseUrlFromLink(link);
       const currentUrl = new URL(window.location.href);
       if (nextUrl.pathname !== currentUrl.pathname) return;
 
       event.preventDefault();
-      if (nextUrl.href === currentUrl.href) return;
-      void loadBrowse(nextUrl.href, true);
+      const same =
+        nextUrl.pathname === currentUrl.pathname &&
+        nextUrl.searchParams.get('module') === currentUrl.searchParams.get('module') &&
+        nextUrl.searchParams.get('item') === currentUrl.searchParams.get('item') &&
+        nextUrl.searchParams.get('view') === currentUrl.searchParams.get('view');
+      if (same) return;
+      void loadBrowse(nextUrl, true);
     });
 
     window.addEventListener('popstate', () => {
       if (!document.querySelector('[data-training-browse]')) return;
-      void loadBrowse(window.location.href, false);
+      void loadBrowse(new URL(window.location.href), false);
     });
   })();
 </script>
