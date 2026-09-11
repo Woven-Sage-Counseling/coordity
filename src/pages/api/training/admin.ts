@@ -43,14 +43,14 @@ function redirectAdmin(opts?: {
   view?: 'settings';
 }): Response {
   const params = new URLSearchParams();
-  params.set('trainingSaved', '1');
   if (opts?.moduleId) params.set('module', opts.moduleId);
   if (opts?.itemId) params.set('item', opts.itemId);
   if (opts?.view === 'settings') params.set('view', 'settings');
+  const qs = params.toString();
   return new Response(null, {
     status: 303,
     headers: {
-      Location: `/admin?${params.toString()}#training`,
+      Location: `/admin${qs ? `?${qs}` : ''}#training`,
       'Cache-Control': 'no-store',
     },
   });

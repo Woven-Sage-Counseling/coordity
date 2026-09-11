@@ -19,7 +19,6 @@ interface Props {
     modules: Array<{ moduleId: string; title: string; percent: number; complete: boolean }>;
   }>;
   error?: string | null;
-  saved?: boolean;
   embedded?: boolean;
 }
 
@@ -34,7 +33,6 @@ const {
   roles,
   roster,
   error = null,
-  saved = false,
   embedded = false,
 } = Astro.props;
 
@@ -81,7 +79,6 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
   {!embedded ? <h2 id="training-admin" class="font-display text-3xl text-charcoal">Training</h2> : <h2 id="training-admin" class="sr-only">Training</h2>}
 
   {error ? <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
-  {saved ? <p class="mt-4 rounded-xl border border-sage-dark/15 bg-sage/10 px-4 py-3 text-sm text-sage-dark">Saved.</p> : null}
 
   <p class="mt-4 max-w-3xl text-sm leading-relaxed text-sage-dark/75">
     Training is organized into modules — topics your team works through. Click a module on the left,
