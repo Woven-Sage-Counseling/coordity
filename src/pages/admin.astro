@@ -116,7 +116,6 @@ const tasksSaved = Astro.url.searchParams.get('tasksSaved');
 const workCategoriesSaved = Astro.url.searchParams.get('workCategoriesSaved');
 let workCategoriesError: string | null = Astro.url.searchParams.get('workCategoriesError');
 const trainingError = Astro.url.searchParams.get('trainingError');
-const trainingSaved = Astro.url.searchParams.get('trainingSaved') === '1';
 const selectedTrainingModuleId = Astro.url.searchParams.get('module');
 const selectedTrainingItemId = Astro.url.searchParams.get('item');
 const selectedTrainingViewParam = Astro.url.searchParams.get('view');
@@ -547,7 +546,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         roles={roles.map((role) => ({ key: role.key, name: role.name }))}
         roster={trainingRoster}
         error={trainingError}
-        saved={trainingSaved}
         embedded
       />
     </section>
