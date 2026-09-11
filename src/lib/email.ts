@@ -30,7 +30,9 @@ async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
   const env = getEnv();
   const apiKey = env.RESEND_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error('Email is not configured for this portal yet.');
+    throw new Error(
+      'RESEND_API_KEY is not set on the portal. Add it in Cloudflare Pages secrets / GitHub Actions.',
+    );
   }
 
   const fromEmail = (payload.from ?? getCoordityFromEmail()).trim();
@@ -62,17 +64,21 @@ async function sendAdminEmail(payload: AdminEmailPayload): Promise<void> {
   };
 
   if (!response.ok) {
-    throw new Error(body.message ?? 'Unable to send email.');
+    const detail = body.message ?? body.name ?? `HTTP ${response.status}`;
+    throw new Error(`Resend rejected send from ${fromEmail}: ${detail}`);
   }
 }
 
-export async function notifyAdminEmail(payload: AdminEmailPayload): Promise<boolean> {
+export async function notifyAdminEmail(
+  payload: AdminEmailPayload,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     await sendAdminEmail(payload);
-    return true;
+    return { ok: true };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to send email.';
     console.error('admin email failed', error);
-    return false;
+    return { ok: false, error: message };
   }
 }
 

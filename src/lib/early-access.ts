@@ -368,8 +368,8 @@ export async function inviteEarlyAccessRequest(input: {
     replyTo: EARLY_ACCESS_EMAIL_TO,
   });
 
-  if (!sent) {
-    return { ok: false, error: 'Could not send the signup email. Try again in a moment.' };
+  if (!sent.ok) {
+    return { ok: false, error: sent.error };
   }
 
   await markEarlyAccessReviewed({
@@ -532,8 +532,8 @@ export async function submitEarlyAccessRequest(input: {
     from: getCoordityFromEmail(),
   });
 
-  if (!sent) {
-    console.error('early access email failed after save', { id: request.id });
+  if (!sent.ok) {
+    console.error('early access email failed after save', { id: request.id, error: sent.error });
   }
 
   return { ok: true, id: request.id };

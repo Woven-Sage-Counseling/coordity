@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }),
   );
 
-  if (!sent) {
+  if (!sent.ok) {
     return jsonError('Unable to send your report right now. Please try again later.', 503);
   }
 
