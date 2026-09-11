@@ -1,6 +1,6 @@
 import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
-import { notifyAdminEmail } from './email';
+import { getCoordityFromEmail, notifyAdminEmail } from './email';
 import { notifyUser } from './notifications';
 
 export const EARLY_ACCESS_SOURCE = 'early_access_request';
@@ -364,6 +364,7 @@ export async function inviteEarlyAccessRequest(input: {
       signupUrl,
     }),
     to: request.email,
+    from: getCoordityFromEmail(),
     replyTo: EARLY_ACCESS_EMAIL_TO,
   });
 
@@ -528,6 +529,7 @@ export async function submitEarlyAccessRequest(input: {
       message,
     }),
     to: EARLY_ACCESS_EMAIL_TO,
+    from: getCoordityFromEmail(),
   });
 
   if (!sent) {

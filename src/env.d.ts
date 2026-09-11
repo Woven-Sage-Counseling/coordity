@@ -84,6 +84,8 @@ interface Env {
   PORTAL_OWNER_EMAIL: string;
   COORDITY_PLATFORM_OWNER_EMAIL?: string;
   COORDITY_PLATFORM_BOOTSTRAP_TOKEN?: string;
+  /** From address for Coordity client-facing email (must be a Resend-verified domain). */
+  COORDITY_FROM_EMAIL?: string;
   PORTAL_FROM_EMAIL?: string;
   PORTAL_ENVIRONMENT: string;
   QB_CLIENT_ID?: string;
