@@ -1,5 +1,6 @@
 ---
 import type { TrainingModule, TrainingLesson, TrainingBlock } from '../lib/training';
+import { MODULE_TEMPLATES } from '../lib/training';
 
 interface Props {
   modules: TrainingModule[];
@@ -150,26 +151,17 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
             )
           }
         </div>
-        <details class="border-t border-sage-dark/10 bg-[#fafbfc]">
-          <summary class="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+        <div class="border-t border-sage-dark/10 bg-[#fafbfc] px-3 py-2.5">
+          <button
+            type="button"
+            class="w-full rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-charcoal transition hover:bg-white"
+            data-training-new-toggle
+            aria-expanded="false"
+            aria-controls="training-new-module-panel"
+          >
             + New module
-          </summary>
-          <form method="post" action="/api/training/admin" class="space-y-2 border-t border-sage-dark/10 px-3 pb-3 pt-2">
-            <input type="hidden" name="action" value="create-module" />
-            <input class="field !mt-0" type="text" name="title" required maxlength="120" placeholder="Module title" />
-            <textarea class="field" name="description" rows="2" placeholder="Short description"></textarea>
-            <p class="text-[11px] font-medium text-charcoal">Who should see it?</p>
-            <div class="max-h-28 space-y-1 overflow-y-auto">
-              {roles.map((role) => (
-                <label class="flex items-center gap-2 text-xs text-charcoal">
-                  <input type="checkbox" name="roleKeys" value={role.key} checked={role.key === 'employee'} />
-                  {role.name}
-                </label>
-              ))}
-            </div>
-            <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Create</button>
-          </form>
-        </details>
+          </button>
+        </div>
       </div>
 
       {/* Column 2 — Contents of selected module */}
@@ -643,6 +635,98 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
         </div>
       </div>
     </div>
+
+    <div
+      id="training-new-module-panel"
+      class="hidden border-t border-sage-dark/15 bg-[#f7f8fa] px-4 py-4"
+      data-training-new-panel
+    >
+      <div class="mx-auto max-w-3xl">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p class="text-sm font-semibold text-charcoal">New module</p>
+            <p class="mt-0.5 text-xs text-sage-dark/60">Pick a template or start custom, then fill in the details.</p>
+          </div>
+          <button
+            type="button"
+            class="rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark/70 hover:bg-white"
+            data-training-new-toggle
+          >
+            Close
+          </button>
+        </div>
+
+        <form method="post" action="/api/training/admin" class="mt-4 space-y-4" data-training-new-form>
+          <input type="hidden" name="action" value="create-module" />
+          <input type="hidden" name="templateId" value="custom" data-training-template-id />
+
+          <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {
+              MODULE_TEMPLATES.map((template) => (
+                <button
+                  type="button"
+                  class="rounded-xl border border-sage-dark/15 bg-white px-3 py-3 text-left transition hover:border-sage-dark/30 hover:shadow-sm data-[active=true]:border-charcoal data-[active=true]:ring-1 data-[active=true]:ring-charcoal"
+                  data-training-template={template.id}
+                  data-title={template.defaultTitle}
+                  data-description={template.defaultDescription}
+                  data-active={template.id === 'custom' ? 'true' : 'false'}
+                >
+                  <span class="block text-sm font-semibold text-charcoal">{template.label}</span>
+                  <span class="mt-1 block text-[11px] leading-snug text-sage-dark/60">{template.blurb}</span>
+                  {template.items.length > 0 ? (
+                    <span class="mt-2 block text-[10px] font-medium uppercase tracking-wide text-sage-dark/45">
+                      {template.items.length} starter item{template.items.length === 1 ? '' : 's'}
+                    </span>
+                  ) : (
+                    <span class="mt-2 block text-[10px] font-medium uppercase tracking-wide text-sage-dark/45">
+                      Blank
+                    </span>
+                  )}
+                </button>
+              ))
+            }
+          </div>
+
+          <div class="rounded-xl border border-sage-dark/10 bg-white p-4">
+            <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/50" data-training-new-detail-label>
+              Custom module
+            </p>
+            <label class="mt-3 block text-sm font-medium text-charcoal">
+              Module title
+              <input
+                class="field"
+                type="text"
+                name="title"
+                maxlength="120"
+                placeholder="e.g. HIPAA basics"
+                required
+                data-training-new-title
+              />
+            </label>
+            <label class="mt-3 block text-sm font-medium text-charcoal">
+              Description
+              <textarea
+                class="field"
+                name="description"
+                rows="2"
+                placeholder="What will people learn?"
+                data-training-new-description
+              ></textarea>
+            </label>
+            <p class="mt-3 text-sm font-medium text-charcoal">Who should see it?</p>
+            <div class="mt-2 grid max-h-36 gap-1.5 overflow-y-auto sm:grid-cols-2">
+              {roles.map((role) => (
+                <label class="flex items-center gap-2 text-sm text-charcoal">
+                  <input type="checkbox" name="roleKeys" value={role.key} checked={role.key === 'employee'} />
+                  {role.name}
+                </label>
+              ))}
+            </div>
+            <button class="btn-primary mt-4 !px-4 !py-2 text-sm" type="submit">Create module</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
   </div>
 
@@ -787,6 +871,56 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
         if (!(node instanceof HTMLDetailsElement)) return;
         if (!node.contains(event.target as Node)) node.open = false;
       });
+
+      const newToggle = event.target.closest('[data-training-new-toggle]');
+      if (newToggle instanceof HTMLElement) {
+        event.preventDefault();
+        const panel = document.querySelector('[data-training-new-panel]');
+        if (!(panel instanceof HTMLElement)) return;
+        const open = panel.classList.toggle('hidden') === false;
+        document.querySelectorAll('[data-training-new-toggle]').forEach((btn) => {
+          if (btn instanceof HTMLElement) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        if (open) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        return;
+      }
+
+      const templateBtn = event.target.closest('[data-training-template]');
+      if (templateBtn instanceof HTMLElement) {
+        event.preventDefault();
+        const templateId = templateBtn.getAttribute('data-training-template') ?? 'custom';
+        const title = templateBtn.getAttribute('data-title') ?? '';
+        const description = templateBtn.getAttribute('data-description') ?? '';
+        const label = templateBtn.querySelector('span')?.textContent?.trim() || 'Custom';
+
+        document.querySelectorAll('[data-training-template]').forEach((btn) => {
+          if (btn instanceof HTMLElement) {
+            btn.dataset.active = btn === templateBtn ? 'true' : 'false';
+          }
+        });
+
+        const idInput = document.querySelector('[data-training-template-id]');
+        const titleInput = document.querySelector('[data-training-new-title]');
+        const descriptionInput = document.querySelector('[data-training-new-description]');
+        const detailLabel = document.querySelector('[data-training-new-detail-label]');
+        if (idInput instanceof HTMLInputElement) idInput.value = templateId;
+        if (titleInput instanceof HTMLInputElement) {
+          titleInput.value = title;
+          titleInput.required = templateId === 'custom';
+          titleInput.placeholder =
+            templateId === 'custom' ? 'e.g. HIPAA basics' : 'Leave blank to use the template name';
+        }
+        if (descriptionInput instanceof HTMLTextAreaElement) {
+          descriptionInput.value = description;
+        }
+        if (detailLabel instanceof HTMLElement) {
+          detailLabel.textContent =
+            templateId === 'custom' ? 'Custom module' : `${label} details`;
+        }
+        return;
+      }
 
       const link = event.target.closest('a[data-training-nav]');
       if (!(link instanceof HTMLAnchorElement)) return;

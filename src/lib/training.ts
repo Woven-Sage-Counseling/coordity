@@ -777,6 +777,169 @@ export async function createCustomModule(input: {
   return created;
 }
 
+export type ModuleTemplateId = 'custom' | 'onboarding' | 'using_coordity' | 'compliance';
+
+export interface ModuleTemplateItem {
+  title: string;
+  isAssignment: boolean;
+  /** Optional written starter content for lessons. */
+  body?: string;
+  /** Optional acknowledgment prompt for assignments. */
+  ackPrompt?: string;
+}
+
+export interface ModuleTemplate {
+  id: ModuleTemplateId;
+  label: string;
+  blurb: string;
+  defaultTitle: string;
+  defaultDescription: string;
+  items: ModuleTemplateItem[];
+}
+
+/** Blueprints for “New module”. All create custom modules (editable copies). */
+export const MODULE_TEMPLATES: ModuleTemplate[] = [
+  {
+    id: 'onboarding',
+    label: 'New hire onboarding',
+    blurb: 'Handbook, setup, and first-week acknowledgments.',
+    defaultTitle: 'Onboarding',
+    defaultDescription: 'Documents, setup, and acknowledgments for new team members.',
+    items: [
+      {
+        title: 'Acknowledge employee handbook',
+        isAssignment: true,
+        ackPrompt: 'I have read and understand the employee handbook.',
+      },
+      {
+        title: 'Complete account setup',
+        isAssignment: true,
+        ackPrompt: 'I have added my phone number and profile photo in Account.',
+      },
+      {
+        title: 'Welcome to the practice',
+        isAssignment: false,
+        body: 'Welcome to the team. This module covers what to do in your first days — documents to review, account setup, and who to ask for help.',
+      },
+    ],
+  },
+  {
+    id: 'using_coordity',
+    label: 'Using Coordity',
+    blurb: 'How to use Home, WorkHub, time, and directory.',
+    defaultTitle: 'Using Coordity',
+    defaultDescription: 'Learn the employee portal — home, time, directory, and more.',
+    items: [
+      {
+        title: 'Welcome to your workspace',
+        isAssignment: false,
+        body: 'Coordity is your practice’s employee portal. Use Home for announcements and widgets, WorkHub for day-to-day tools, and Account to keep your profile up to date.',
+      },
+      {
+        title: 'Home, widgets, and shortcuts',
+        isAssignment: false,
+        body: 'Pin the tools you use most. Widgets on Home give a quick view of tasks, time off, timesheets, and progress. Shortcuts jump you to the pages you open often.',
+      },
+      {
+        title: 'Time, schedule, and time off',
+        isAssignment: false,
+        body: 'If your role includes timesheets, clock in from WorkHub or Home. Request time off from the Time off tool. Connect Google Calendar in Settings to see your schedule.',
+      },
+      {
+        title: 'Directory and messages',
+        isAssignment: false,
+        body: 'Find coworkers in Directory and message teammates from Messages. Keep your phone number and photo current so the team can reach you.',
+      },
+    ],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance & policies',
+    blurb: 'Policy acknowledgments and required reading.',
+    defaultTitle: 'Compliance & policies',
+    defaultDescription: 'Required policies and compliance acknowledgments for your role.',
+    items: [
+      {
+        title: 'Acknowledge privacy policy',
+        isAssignment: true,
+        ackPrompt: 'I have read and agree to follow the privacy policy.',
+      },
+      {
+        title: 'Acknowledge safety procedures',
+        isAssignment: true,
+        ackPrompt: 'I have reviewed the workplace safety procedures.',
+      },
+      {
+        title: 'Compliance overview',
+        isAssignment: false,
+        body: 'This module covers required policies for your role. Complete each acknowledgment and review the overview lesson.',
+      },
+    ],
+  },
+  {
+    id: 'custom',
+    label: 'Custom',
+    blurb: 'Start blank and build your own module.',
+    defaultTitle: '',
+    defaultDescription: '',
+    items: [],
+  },
+];
+
+export function getModuleTemplate(templateId: string): ModuleTemplate | null {
+  return MODULE_TEMPLATES.find((template) => template.id === templateId) ?? null;
+}
+
+export async function createModuleFromTemplate(input: {
+  orgId: string;
+  templateId: string;
+  title?: string;
+  description?: string;
+  roleKeys: string[];
+}): Promise<TrainingModule> {
+  const template = getModuleTemplate(input.templateId) ?? getModuleTemplate('custom');
+  if (!template) throw new Error('Unknown module template.');
+
+  const title = (input.title ?? '').trim() || template.defaultTitle;
+  if (!title) throw new Error('Module title is required.');
+  if (input.roleKeys.length === 0) throw new Error('Assign at least one role.');
+
+  const description = (input.description ?? '').trim() || template.defaultDescription;
+  const created = await createCustomModule({
+    orgId: input.orgId,
+    title,
+    description,
+    roleKeys: input.roleKeys,
+  });
+
+  for (const item of template.items) {
+    const lesson = await createLesson({
+      orgId: input.orgId,
+      moduleId: created.id,
+      title: item.title,
+      isAssignment: item.isAssignment,
+    });
+    if (item.body) {
+      await createBlock({
+        orgId: input.orgId,
+        lessonId: lesson.id,
+        type: 'written',
+        bodyText: item.body,
+      });
+    }
+    if (item.ackPrompt) {
+      await createBlock({
+        orgId: input.orgId,
+        lessonId: lesson.id,
+        type: 'ack',
+        ackPrompt: item.ackPrompt,
+      });
+    }
+  }
+
+  return created;
+}
+
 export async function archiveModule(orgId: string, moduleId: string): Promise<void> {
   const module = await getTrainingModule(moduleId, orgId);
   if (!module) throw new Error('Module not found.');

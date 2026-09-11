@@ -6,8 +6,8 @@ import {
   addQuizQuestion,
   archiveModule,
   createBlock,
-  createCustomModule,
   createLesson,
+  createModuleFromTemplate,
   deleteBlock,
   deleteLesson,
   getTrainingModule,
@@ -47,12 +47,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     if (action === 'create-module') {
+      const templateId = String(form.get('templateId') ?? 'custom').trim() || 'custom';
       const title = String(form.get('title') ?? '').trim();
       const description = String(form.get('description') ?? '').trim();
       const roleKeys = form.getAll('roleKeys').map((v) => String(v));
-      if (!title) throw new Error('Module title is required.');
       if (roleKeys.length === 0) throw new Error('Assign at least one role.');
-      const created = await createCustomModule({ orgId, title, description, roleKeys });
+      const created = await createModuleFromTemplate({
+        orgId,
+        templateId,
+        title,
+        description,
+        roleKeys,
+      });
       return redirectAdmin({ moduleId: created.id });
     }
 
