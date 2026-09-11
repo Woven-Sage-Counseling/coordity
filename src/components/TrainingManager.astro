@@ -270,7 +270,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                           ]}
                         >
                           <span class="flex items-center gap-2">
-                            <span class="min-w-0 flex-1 truncate">{item.title}</span>
+                            <span class="min-w-0 flex-1 truncate" data-item-title>{item.title}</span>
                             <span class="shrink-0 text-[10px] font-medium uppercase tracking-wide text-sage-dark/45">
                               Assignment
                             </span>
@@ -295,7 +295,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                           ]}
                         >
                           <span class="flex items-center gap-2">
-                            <span class="min-w-0 flex-1 truncate">{item.title}</span>
+                            <span class="min-w-0 flex-1 truncate" data-item-title>{item.title}</span>
                             <span class="shrink-0 text-[10px] font-medium uppercase tracking-wide text-sage-dark/45">
                               Lesson
                             </span>
@@ -345,17 +345,19 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
             ) : selectedView === 'settings' ? (
               <div class="mx-auto max-w-lg">
                 <h3 class="text-lg font-semibold text-charcoal">Module settings</h3>
-                <form method="post" action="/api/training/admin" class="mt-5 space-y-4">
+                <form
+                  method="post"
+                  action="/api/training/admin"
+                  class="mt-5 space-y-4"
+                  data-training-autosave
+                  data-training-autosave-ignore="textarea"
+                >
                   <input type="hidden" name="action" value="update-module" />
                   <input type="hidden" name="moduleId" value={selected.id} />
                   <input type="hidden" name="returnView" value="settings" />
                   <label class="block text-sm font-medium text-charcoal">
                     Module title
                     <input class="field" type="text" name="title" value={selected.title} required />
-                  </label>
-                  <label class="block text-sm font-medium text-charcoal">
-                    Description
-                    <textarea class="field" name="description" rows="3">{selected.description}</textarea>
                   </label>
                   <div class="rounded-xl bg-[#f7f8fa] p-3">
                     <p class="text-sm font-semibold text-charcoal">Who can see this?</p>
@@ -374,14 +376,20 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                       ))}
                     </div>
                   </div>
+                  <p class="text-[10px] text-sage-dark/50" data-training-autosave-status></p>
+                  <label class="block text-sm font-medium text-charcoal">
+                    Description
+                    <textarea class="field" name="description" rows="3">{selected.description}</textarea>
+                  </label>
                   <div class="flex flex-wrap gap-2">
-                    <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save settings</button>
+                    <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save description</button>
                     {selected.kind === 'custom' ? (
                       <button
                         class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
                         type="submit"
                         name="action"
                         value="archive-module"
+                        formnovalidate
                       >
                         Archive
                       </button>
@@ -391,68 +399,87 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
               </div>
             ) : selectedItem ? (
               <div class="mx-auto max-w-lg space-y-5">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
-                    {selectedIsAssignment ? 'Assignment' : 'Lesson'}
-                  </p>
-                  <h3 class="mt-1 text-lg font-semibold text-charcoal">{selectedItem.title}</h3>
-                </div>
-
-                <form method="post" action="/api/training/admin" class="space-y-3 rounded-xl border border-sage-dark/10 bg-[#fafbfc] p-3">
-                  <input type="hidden" name="action" value="update-lesson" />
-                  <input type="hidden" name="moduleId" value={selected.id} />
-                  <input type="hidden" name="lessonId" value={selectedItem.id} />
-                  <label class="block text-sm font-medium text-charcoal">
-                    Title
-                    <input class="field" type="text" name="title" value={selectedItem.title} required />
-                  </label>
-                  <label class="flex items-center gap-2 text-sm text-charcoal">
-                    <input type="checkbox" name="required" value="1" checked={selectedItem.required} />
-                    Required for completion
-                  </label>
-                  <div>
-                    <p class="text-xs font-medium text-charcoal">Roles for this item</p>
-                    <p class="mt-0.5 text-[11px] text-sage-dark/55">
-                      Limited to the module’s audience. Leave all checked to match the module.
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
+                      {selectedIsAssignment ? 'Assignment' : 'Lesson'}
                     </p>
-                    {lessonRoleOptions.length === 0 ? (
-                      <p class="mt-2 text-xs text-amber-800">Save module roles first.</p>
-                    ) : (
-                      <div class="mt-2 space-y-2">
-                        {lessonRoleOptions.map((role) => (
-                          <input type="hidden" name="availableLessonRoleKeys" value={role.key} />
-                        ))}
-                        <div class="grid gap-1 sm:grid-cols-2">
-                          {lessonRoleOptions.map((role) => (
-                            <label class="flex items-center gap-2 text-xs text-charcoal">
-                              <input
-                                type="checkbox"
-                                name="lessonRoleKeys"
-                                value={role.key}
-                                checked={
-                                  selectedItem.roleKeys.length === 0 ||
-                                  selectedItem.roleKeys.includes(role.key)
-                                }
-                              />
-                              {role.name}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <h3 class="mt-1 text-lg font-semibold text-charcoal" data-training-item-heading>
+                      {selectedItem.title}
+                    </h3>
                   </div>
-                  <div class="flex flex-wrap gap-2">
-                    <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Save item</button>
-                    <button
-                      class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
-                      type="submit"
-                      name="action"
-                      value="delete-lesson"
+                  <details class="relative shrink-0" data-training-item-settings>
+                    <summary class="cursor-pointer list-none rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 [&::-webkit-details-marker]:hidden hover:bg-[#f4f5f8]">
+                      Settings
+                    </summary>
+                    <form
+                      method="post"
+                      action="/api/training/admin"
+                      class="absolute right-0 z-20 mt-1.5 w-72 rounded-xl border border-sage-dark/15 bg-white p-3 shadow-lg"
+                      data-training-autosave
                     >
-                      Delete
-                    </button>
-                  </div>
-                </form>
+                      <input type="hidden" name="action" value="update-lesson" />
+                      <input type="hidden" name="moduleId" value={selected.id} />
+                      <input type="hidden" name="lessonId" value={selectedItem.id} />
+                      <label class="block text-sm font-medium text-charcoal">
+                        Title
+                        <input
+                          class="field"
+                          type="text"
+                          name="title"
+                          value={selectedItem.title}
+                          required
+                          data-training-item-title
+                        />
+                      </label>
+                      <label class="mt-3 flex items-center gap-2 text-sm text-charcoal">
+                        <input type="checkbox" name="required" value="1" checked={selectedItem.required} />
+                        Required for completion
+                      </label>
+                      <div class="mt-3">
+                        <p class="text-xs font-medium text-charcoal">Roles for this item</p>
+                        <p class="mt-0.5 text-[11px] text-sage-dark/55">
+                          Limited to the module’s audience. Leave all checked to match the module.
+                        </p>
+                        {lessonRoleOptions.length === 0 ? (
+                          <p class="mt-2 text-xs text-amber-800">Save module roles first.</p>
+                        ) : (
+                          <div class="mt-2 space-y-2">
+                            {lessonRoleOptions.map((role) => (
+                              <input type="hidden" name="availableLessonRoleKeys" value={role.key} />
+                            ))}
+                            <div class="grid gap-1 sm:grid-cols-2">
+                              {lessonRoleOptions.map((role) => (
+                                <label class="flex items-center gap-2 text-xs text-charcoal">
+                                  <input
+                                    type="checkbox"
+                                    name="lessonRoleKeys"
+                                    value={role.key}
+                                    checked={
+                                      selectedItem.roleKeys.length === 0 ||
+                                      selectedItem.roleKeys.includes(role.key)
+                                    }
+                                  />
+                                  {role.name}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <p class="mt-2 text-[10px] text-sage-dark/50" data-training-autosave-status></p>
+                      <button
+                        class="mt-3 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+                        type="submit"
+                        name="action"
+                        value="delete-lesson"
+                        formnovalidate
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </details>
+                </div>
 
                 <div>
                   <h4 class="text-sm font-semibold text-charcoal">Content people go through</h4>
@@ -465,126 +492,149 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                         No content yet — add the first block below.
                       </p>
                     ) : (
-                      selectedBlocks.map((block, index) => (
-                        <div class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-3">
-                          <p class="text-xs font-semibold text-charcoal">
-                            {index + 1}. {blockLabel(block.type)}
-                          </p>
-                          <form method="post" action="/api/training/admin" class="mt-2 space-y-2">
-                            <input type="hidden" name="action" value="update-block" />
-                            <input type="hidden" name="moduleId" value={selected.id} />
-                            <input type="hidden" name="lessonId" value={selectedItem.id} />
-                            <input type="hidden" name="blockId" value={block.id} />
-                            {block.type === 'video' ? (
-                              <label class="block text-xs font-medium text-charcoal">
-                                YouTube link (upload as <strong>unlisted</strong>)
-                                <input
-                                  class="field"
-                                  type="url"
-                                  name="youtubeUrl"
-                                  value={block.youtubeUrl ?? ''}
-                                  placeholder="https://www.youtube.com/watch?v=..."
-                                />
-                              </label>
-                            ) : null}
-                            {block.type === 'written' ? (
-                              <label class="block text-xs font-medium text-charcoal">
-                                Written content
-                                <textarea class="field" name="bodyText" rows="5">{block.bodyText ?? ''}</textarea>
-                              </label>
-                            ) : null}
-                            {block.type === 'resource' ? (
-                              <>
+                      selectedBlocks.map((block, index) => {
+                        const needsExplicitSave =
+                          block.type === 'written' || block.type === 'ack';
+                        return (
+                          <div class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-3">
+                            <p class="text-xs font-semibold text-charcoal">
+                              {index + 1}. {blockLabel(block.type)}
+                            </p>
+                            <form
+                              method="post"
+                              action="/api/training/admin"
+                              class="mt-2 space-y-2"
+                              {...(!needsExplicitSave ? { 'data-training-autosave': true } : {})}
+                            >
+                              <input type="hidden" name="action" value="update-block" />
+                              <input type="hidden" name="moduleId" value={selected.id} />
+                              <input type="hidden" name="lessonId" value={selectedItem.id} />
+                              <input type="hidden" name="blockId" value={block.id} />
+                              {block.type === 'video' ? (
                                 <label class="block text-xs font-medium text-charcoal">
-                                  Link URL
-                                  <input class="field" type="url" name="resourceUrl" value={block.resourceUrl ?? ''} />
+                                  YouTube link (upload as <strong>unlisted</strong>)
+                                  <input
+                                    class="field"
+                                    type="url"
+                                    name="youtubeUrl"
+                                    value={block.youtubeUrl ?? ''}
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                  />
                                 </label>
+                              ) : null}
+                              {block.type === 'written' ? (
                                 <label class="block text-xs font-medium text-charcoal">
-                                  Link label
-                                  <input class="field" type="text" name="resourceLabel" value={block.resourceLabel ?? ''} />
+                                  Written content
+                                  <textarea class="field" name="bodyText" rows="5">{block.bodyText ?? ''}</textarea>
                                 </label>
-                              </>
-                            ) : null}
-                            {block.type === 'ack' ? (
-                              <label class="block text-xs font-medium text-charcoal">
-                                Acknowledgment prompt
-                                <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
-                              </label>
-                            ) : null}
-                            {block.type === 'quiz' ? (
-                              <label class="block text-xs font-medium text-charcoal">
-                                Pass percent
-                                <input
-                                  class="field"
-                                  type="number"
-                                  name="passPercent"
-                                  min="1"
-                                  max="100"
-                                  value={block.passPercent ?? 80}
-                                />
-                              </label>
-                            ) : null}
-                            <div class="flex flex-wrap gap-2">
-                              <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">Save block</button>
-                              <button
-                                class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
-                                type="submit"
-                                name="action"
-                                value="delete-block"
-                              >
-                                Delete block
-                              </button>
-                            </div>
-                          </form>
-
-                          {block.type === 'quiz' ? (
-                            <div class="mt-3 border-t border-sage-dark/10 pt-3">
-                              <p class="text-xs font-semibold text-charcoal">Questions</p>
-                              <ul class="mt-2 space-y-1 text-xs text-sage-dark/80">
-                                {block.questions.map((q) => (
-                                  <li>
-                                    {q.prompt}{' '}
-                                    <span class="text-sage-dark/50">
-                                      ({q.options.length} options, correct #{q.correctIndex + 1})
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                              <form method="post" action="/api/training/admin" class="mt-3 grid gap-2 sm:grid-cols-2">
-                                <input type="hidden" name="action" value="add-question" />
-                                <input type="hidden" name="moduleId" value={selected.id} />
-                                <input type="hidden" name="lessonId" value={selectedItem.id} />
-                                <input type="hidden" name="blockId" value={block.id} />
-                                <label class="sm:col-span-2 text-xs font-medium text-charcoal">
-                                  Prompt
-                                  <input class="field" type="text" name="prompt" required />
-                                </label>
-                                {[0, 1, 2, 3].map((i) => (
-                                  <label class="text-xs font-medium text-charcoal">
-                                    Option {i + 1}
-                                    <input class="field" type="text" name={`option${i}`} required={i < 2} />
+                              ) : null}
+                              {block.type === 'resource' ? (
+                                <>
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Link URL
+                                    <input class="field" type="url" name="resourceUrl" value={block.resourceUrl ?? ''} />
                                   </label>
-                                ))}
-                                <label class="text-xs font-medium text-charcoal">
-                                  Correct option #
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Link label
+                                    <input
+                                      class="field"
+                                      type="text"
+                                      name="resourceLabel"
+                                      value={block.resourceLabel ?? ''}
+                                    />
+                                  </label>
+                                </>
+                              ) : null}
+                              {block.type === 'ack' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Acknowledgment prompt
+                                  <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
+                                </label>
+                              ) : null}
+                              {block.type === 'quiz' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Pass percent
                                   <input
                                     class="field"
                                     type="number"
-                                    name="correctIndex"
-                                    min="0"
-                                    max="3"
-                                    value="0"
-                                    required
+                                    name="passPercent"
+                                    min="1"
+                                    max="100"
+                                    value={block.passPercent ?? 80}
                                   />
                                 </label>
-                                <div class="flex items-end">
-                                  <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add question</button>
-                                </div>
-                              </form>
-                            </div>
-                          ) : null}
-                        </div>
-                      ))
+                              ) : null}
+                              <div class="flex flex-wrap items-center gap-2">
+                                {needsExplicitSave ? (
+                                  <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">
+                                    Save block
+                                  </button>
+                                ) : (
+                                  <p class="text-[10px] text-sage-dark/50" data-training-autosave-status></p>
+                                )}
+                                <button
+                                  class="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+                                  type="submit"
+                                  name="action"
+                                  value="delete-block"
+                                  formnovalidate
+                                >
+                                  Delete block
+                                </button>
+                              </div>
+                            </form>
+
+                            {block.type === 'quiz' ? (
+                              <div class="mt-3 border-t border-sage-dark/10 pt-3">
+                                <p class="text-xs font-semibold text-charcoal">Questions</p>
+                                <ul class="mt-2 space-y-1 text-xs text-sage-dark/80">
+                                  {block.questions.map((q) => (
+                                    <li>
+                                      {q.prompt}{' '}
+                                      <span class="text-sage-dark/50">
+                                        ({q.options.length} options, correct #{q.correctIndex + 1})
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                                <form method="post" action="/api/training/admin" class="mt-3 grid gap-2 sm:grid-cols-2">
+                                  <input type="hidden" name="action" value="add-question" />
+                                  <input type="hidden" name="moduleId" value={selected.id} />
+                                  <input type="hidden" name="lessonId" value={selectedItem.id} />
+                                  <input type="hidden" name="blockId" value={block.id} />
+                                  <label class="sm:col-span-2 text-xs font-medium text-charcoal">
+                                    Prompt
+                                    <input class="field" type="text" name="prompt" required />
+                                  </label>
+                                  {[0, 1, 2, 3].map((i) => (
+                                    <label class="text-xs font-medium text-charcoal">
+                                      Option {i + 1}
+                                      <input class="field" type="text" name={`option${i}`} required={i < 2} />
+                                    </label>
+                                  ))}
+                                  <label class="text-xs font-medium text-charcoal">
+                                    Correct option #
+                                    <input
+                                      class="field"
+                                      type="number"
+                                      name="correctIndex"
+                                      min="0"
+                                      max="3"
+                                      value="0"
+                                      required
+                                    />
+                                  </label>
+                                  <div class="flex items-end">
+                                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">
+                                      Add question
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
 
@@ -863,14 +913,105 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       }
     };
 
+    const setAutosaveStatus = (form: HTMLFormElement, message: string, isError = false) => {
+      const status = form.querySelector('[data-training-autosave-status]');
+      if (!(status instanceof HTMLElement)) return;
+      status.textContent = message;
+      status.classList.toggle('text-red-700', isError);
+      status.classList.toggle('text-sage-dark/50', !isError);
+    };
+
+    const syncLessonTitleUi = (form: HTMLFormElement, title: string) => {
+      const heading = document.querySelector('[data-training-item-heading]');
+      if (heading instanceof HTMLElement) heading.textContent = title;
+      const lessonId = new FormData(form).get('lessonId');
+      if (typeof lessonId !== 'string' || !lessonId) return;
+      document.querySelectorAll('a[data-training-nav="item"]').forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement)) return;
+        try {
+          const href = new URL(link.href, window.location.href);
+          if (href.searchParams.get('item') !== lessonId) return;
+        } catch {
+          return;
+        }
+        const titleEl = link.querySelector('[data-item-title]');
+        if (titleEl instanceof HTMLElement) titleEl.textContent = title;
+      });
+    };
+
+    const autosaveForm = async (form: HTMLFormElement) => {
+      if (form.dataset.autosaving === '1') {
+        form.dataset.autosaveQueued = '1';
+        return;
+      }
+      form.dataset.autosaving = '1';
+      setAutosaveStatus(form, 'Saving…');
+      try {
+        const response = await fetch(form.action || '/api/training/admin', {
+          method: 'POST',
+          body: new FormData(form),
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'training-autosave', Accept: 'application/json' },
+        });
+        const data = (await response.json().catch(() => null)) as
+          | { ok?: boolean; error?: string; title?: string }
+          | null;
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.error || `Could not save (${response.status})`);
+        }
+        setAutosaveStatus(form, 'Saved');
+        if (typeof data.title === 'string' && data.title) {
+          syncLessonTitleUi(form, data.title);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not save.';
+        setAutosaveStatus(form, message, true);
+      } finally {
+        form.dataset.autosaving = '0';
+        if (form.dataset.autosaveQueued === '1') {
+          form.dataset.autosaveQueued = '0';
+          void autosaveForm(form);
+        }
+      }
+    };
+
+    const shouldAutosaveField = (form: HTMLFormElement, field: Element) => {
+      const ignore = form.getAttribute('data-training-autosave-ignore') ?? '';
+      if (ignore.includes('textarea') && field instanceof HTMLTextAreaElement) return false;
+      return true;
+    };
+
+    let titleTimer: number | undefined;
+    document.addEventListener('change', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const form = event.target.closest('form[data-training-autosave]');
+      if (!(form instanceof HTMLFormElement)) return;
+      if (!shouldAutosaveField(form, event.target)) return;
+      void autosaveForm(form);
+    });
+
+    document.addEventListener('input', (event) => {
+      if (!(event.target instanceof HTMLInputElement)) return;
+      if (event.target.type === 'checkbox' || event.target.type === 'radio') return;
+      const form = event.target.closest('form[data-training-autosave]');
+      if (!(form instanceof HTMLFormElement)) return;
+      if (!shouldAutosaveField(form, event.target)) return;
+      window.clearTimeout(titleTimer);
+      titleTimer = window.setTimeout(() => {
+        void autosaveForm(form);
+      }, 450);
+    });
+
     document.addEventListener('click', (event) => {
       if (!(event.target instanceof Element)) return;
 
-      // Close + Add popovers when clicking outside them.
-      document.querySelectorAll('details[data-training-add][open]').forEach((node) => {
-        if (!(node instanceof HTMLDetailsElement)) return;
-        if (!node.contains(event.target as Node)) node.open = false;
-      });
+      // Close + Add / item settings popovers when clicking outside them.
+      document
+        .querySelectorAll('details[data-training-add][open], details[data-training-item-settings][open]')
+        .forEach((node) => {
+          if (!(node instanceof HTMLDetailsElement)) return;
+          if (!node.contains(event.target as Node)) node.open = false;
+        });
 
       const newToggle = event.target.closest('[data-training-new-toggle]');
       if (newToggle instanceof HTMLElement) {

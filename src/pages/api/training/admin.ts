@@ -19,6 +19,24 @@ import {
 
 export const prerender = false;
 
+function wantsJson(request: Request): boolean {
+  return request.headers.get('X-Requested-With') === 'training-autosave';
+}
+
+function jsonOk(extra: Record<string, unknown> = {}): Response {
+  return new Response(JSON.stringify({ ok: true, ...extra }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
+function jsonError(message: string): Response {
+  return new Response(JSON.stringify({ ok: false, error: message }), {
+    status: 400,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
 function redirectAdmin(opts?: {
   moduleId?: string;
   itemId?: string;
@@ -44,6 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const orgId = orgIdFromLocals(locals.organization);
   const form = await request.formData();
   const action = String(form.get('action') ?? '').trim();
+  const asJson = wantsJson(request);
 
   try {
     if (action === 'create-module') {
@@ -79,6 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description,
         roleKeys,
       });
+      if (asJson) return jsonOk({ moduleId });
       return redirectAdmin({ moduleId, view: 'settings' });
     }
 
@@ -101,14 +121,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const moduleId = String(form.get('moduleId') ?? '').trim();
       const roleKeys = form.getAll('lessonRoleKeys').map((v) => String(v));
       const availableRoleKeys = form.getAll('availableLessonRoleKeys').map((v) => String(v));
+      const title = String(form.get('title') ?? '');
       await updateLesson({
         orgId,
         lessonId,
-        title: String(form.get('title') ?? ''),
+        title,
         required: String(form.get('required') ?? '') === '1',
         roleKeys,
         availableRoleKeys,
       });
+      if (asJson) return jsonOk({ moduleId, itemId: lessonId, title: title.trim() });
       return redirectAdmin({ moduleId, itemId: lessonId });
     }
 
@@ -158,6 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           ? { passPercent: Number(form.get('passPercent') ?? 80) || 80 }
           : {}),
       });
+      if (asJson) return jsonOk({ moduleId, itemId: lessonId, blockId });
       return redirectAdmin({
         moduleId,
         ...(lessonId ? { itemId: lessonId } : {}),
@@ -193,6 +216,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     throw new Error('Unknown action.');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not update training.';
+    if (asJson) return jsonError(message);
     return formErrorRedirect('/admin', message, 'trainingError');
   }
 };
