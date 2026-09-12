@@ -95,4 +95,10 @@ interface Env {
   PRACTICE_OPERATIONS_START?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  DOCUSIGN_INTEGRATION_KEY?: string;
+  DOCUSIGN_SECRET_KEY?: string;
+  /** Auth host, e.g. https://account-d.docusign.com (demo) or https://account.docusign.com */
+  DOCUSIGN_AUTH_SERVER?: string;
+  /** Optional DocuSign Connect HMAC key for /api/docusign/webhook */
+  DOCUSIGN_CONNECT_HMAC_KEY?: string;
 }

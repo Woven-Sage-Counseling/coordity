@@ -10,6 +10,7 @@ import {
   listCompletedLessonIds,
   moduleVisibleToRoles,
 } from '../../../lib/training';
+import { getDocuSignEnvelopeForUser, latestDocuSignComplete } from '../../../lib/docusign';
 import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
@@ -22,6 +23,7 @@ const roleKeys = employee.roles;
 const error = Astro.url.searchParams.get('error');
 const quizScore = Astro.url.searchParams.get('score');
 const quizPassed = Astro.url.searchParams.get('passed');
+const docusignFlash = Astro.url.searchParams.get('docusign');
 
 const lesson = await getLesson(lessonId);
 if (!lesson || lesson.orgId !== orgId || lesson.moduleId !== moduleId) {
@@ -50,8 +52,21 @@ for (const block of blocks.filter((b) => b.type === 'quiz')) {
   quizPassMap.set(block.id, await latestQuizPass(employee.id, block.id));
 }
 
+const docusignDoneMap = new Map<string, boolean>();
+const docusignStatusMap = new Map<string, string>();
+for (const block of blocks.filter((b) => b.type === 'docusign')) {
+  const done = await latestDocuSignComplete(employee.id, block.id);
+  docusignDoneMap.set(block.id, done);
+  const envelope = await getDocuSignEnvelopeForUser(employee.id, block.id);
+  if (envelope) docusignStatusMap.set(block.id, envelope.status);
+}
+
 const needsAck = blocks.some((b) => b.type === 'ack');
 const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassMap.get(b.id));
+const docusignOk = blocks
+  .filter((b) => b.type === 'docusign')
+  .every((b) => docusignDoneMap.get(b.id));
+const canComplete = quizzesOk && docusignOk;
 const itemLabel = lesson.isAssignment ? 'assignment' : 'lesson';
 const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
 ---
@@ -76,6 +91,13 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
   </div>
 
   {error ? <p class="mt-4 max-w-3xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
+  {
+    docusignFlash === 'completed' ? (
+      <p class="mt-4 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        Document signed. You can continue this {itemLabel}.
+      </p>
+    ) : null
+  }
   {
     quizScore != null ? (
       <p
@@ -201,6 +223,42 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
               </section>
             );
           }
+          if (block.type === 'docusign') {
+            const signed = docusignDoneMap.get(block.id);
+            const status = docusignStatusMap.get(block.id);
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                  Document to sign
+                </h2>
+                <p class="mt-2 text-sm font-medium text-charcoal">
+                  {block.docusignTemplateName || 'Required document'}
+                </p>
+                {block.bodyText ? (
+                  <p class="mt-2 whitespace-pre-wrap text-sm text-sage-dark/75">{block.bodyText}</p>
+                ) : (
+                  <p class="mt-2 text-sm text-sage-dark/70">
+                    Review and sign this document to continue. It is saved to your organization’s DocuSign
+                    account when complete.
+                  </p>
+                )}
+                {signed ? (
+                  <p class="mt-4 text-sm font-semibold text-emerald-800">Signed</p>
+                ) : !block.docusignTemplateId ? (
+                  <p class="mt-4 text-sm text-amber-800">This document is not ready yet.</p>
+                ) : (
+                  <form method="post" action="/api/training/docusign/start" class="mt-4">
+                    <input type="hidden" name="blockId" value={block.id} />
+                    <input type="hidden" name="moduleId" value={moduleId} />
+                    <input type="hidden" name="lessonId" value={lessonId} />
+                    <button class="btn-primary" type="submit">
+                      {status ? 'Continue signing' : 'Sign document'}
+                    </button>
+                  </form>
+                )}
+              </section>
+            );
+          }
           return null;
         })
       )
@@ -221,7 +279,12 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
         {!quizzesOk ? (
           <p class="text-sm text-amber-800">Pass all quizzes before marking this {itemLabel} complete.</p>
         ) : null}
-        <button class="btn-primary" type="submit" disabled={!quizzesOk}>
+        {!docusignOk ? (
+          <p class="text-sm text-amber-800">
+            Sign all required documents before marking this {itemLabel} complete.
+          </p>
+        ) : null}
+        <button class="btn-primary" type="submit" disabled={!canComplete}>
           Mark {itemLabel} complete
         </button>
       </form>

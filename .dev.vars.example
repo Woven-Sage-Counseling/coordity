@@ -25,3 +25,9 @@ PORTAL_ENVIRONMENT=preview
 # Google Calendar (optional until OAuth is connected)
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=
+
+# DocuSign (optional until OAuth is connected)
+# DOCUSIGN_INTEGRATION_KEY=
+# DOCUSIGN_SECRET_KEY=
+# DOCUSIGN_AUTH_SERVER=https://account-d.docusign.com
+# DOCUSIGN_CONNECT_HMAC_KEY=

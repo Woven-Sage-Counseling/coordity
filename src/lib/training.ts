@@ -5,7 +5,7 @@ import { DEFAULT_ORG_ID } from './organization';
 export const TRAINING_MODULE_KINDS = ['onboarding', 'using_coordity', 'custom'] as const;
 export type TrainingModuleKind = (typeof TRAINING_MODULE_KINDS)[number];
 
-export const TRAINING_BLOCK_TYPES = ['video', 'written', 'resource', 'quiz', 'ack'] as const;
+export const TRAINING_BLOCK_TYPES = ['video', 'written', 'resource', 'quiz', 'ack', 'docusign'] as const;
 export type TrainingBlockType = (typeof TRAINING_BLOCK_TYPES)[number];
 
 export interface TrainingModule {
@@ -58,6 +58,8 @@ export interface TrainingBlock {
   hasFile: boolean;
   ackPrompt: string | null;
   passPercent: number | null;
+  docusignTemplateId: string | null;
+  docusignTemplateName: string | null;
   questions: TrainingQuizQuestion[];
   createdAt: number;
   updatedAt: number;
@@ -483,7 +485,8 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT id, lesson_id, type, sort_order, youtube_url, body_text, resource_url, resource_label,
-            file_name, file_mime, file_data, ack_prompt, pass_percent, created_at, updated_at
+            file_name, file_mime, file_data, ack_prompt, pass_percent,
+            docusign_template_id, docusign_template_name, created_at, updated_at
      FROM training_block WHERE lesson_id = ? ORDER BY sort_order ASC, created_at ASC`,
   )
     .bind(lessonId)
@@ -501,6 +504,8 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       file_data: string | null;
       ack_prompt: string | null;
       pass_percent: number | null;
+      docusign_template_id: string | null;
+      docusign_template_name: string | null;
       created_at: number;
       updated_at: number;
     }>();
@@ -522,6 +527,8 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       hasFile: Boolean(row.file_data),
       ackPrompt: row.ack_prompt,
       passPercent: row.pass_percent,
+      docusignTemplateId: row.docusign_template_id,
+      docusignTemplateName: row.docusign_template_name,
       questions: type === 'quiz' ? await listQuestions(row.id) : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -1060,6 +1067,8 @@ export async function createBlock(input: {
   resourceLabel?: string | null;
   ackPrompt?: string | null;
   passPercent?: number | null;
+  docusignTemplateId?: string | null;
+  docusignTemplateName?: string | null;
 }): Promise<TrainingBlock> {
   const lesson = await getLesson(input.lessonId);
   if (!lesson || lesson.orgId !== input.orgId) throw new Error('Lesson not found.');
@@ -1077,8 +1086,8 @@ export async function createBlock(input: {
   await DB.prepare(
     `INSERT INTO training_block
        (id, lesson_id, type, sort_order, youtube_url, body_text, resource_url, resource_label,
-        ack_prompt, pass_percent, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ack_prompt, pass_percent, docusign_template_id, docusign_template_name, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -1091,6 +1100,8 @@ export async function createBlock(input: {
       input.resourceLabel?.trim() || null,
       input.ackPrompt?.trim() || null,
       input.type === 'quiz' ? (input.passPercent ?? 80) : null,
+      input.type === 'docusign' ? input.docusignTemplateId?.trim() || null : null,
+      input.type === 'docusign' ? input.docusignTemplateName?.trim() || null : null,
       ts,
       ts,
     )
@@ -1110,11 +1121,13 @@ export async function updateBlock(input: {
   resourceLabel?: string | null;
   ackPrompt?: string | null;
   passPercent?: number | null;
+  docusignTemplateId?: string | null;
+  docusignTemplateName?: string | null;
 }): Promise<void> {
   const { DB } = getEnv();
   const row = await DB.prepare(
     `SELECT b.id, b.type, b.youtube_url, b.body_text, b.resource_url, b.resource_label,
-            b.ack_prompt, b.pass_percent, m.org_id
+            b.ack_prompt, b.pass_percent, b.docusign_template_id, b.docusign_template_name, m.org_id
      FROM training_block b
      JOIN training_lesson l ON l.id = b.lesson_id
      JOIN training_module m ON m.id = l.module_id
@@ -1130,6 +1143,8 @@ export async function updateBlock(input: {
       resource_label: string | null;
       ack_prompt: string | null;
       pass_percent: number | null;
+      docusign_template_id: string | null;
+      docusign_template_name: string | null;
       org_id: string;
     }>();
   if (!row || row.org_id !== input.orgId) throw new Error('Block not found.');
@@ -1151,6 +1166,17 @@ export async function updateBlock(input: {
     input.ackPrompt === undefined ? row.ack_prompt : (input.ackPrompt ?? '').trim() || null;
   const passPercent =
     input.passPercent === undefined ? row.pass_percent : input.passPercent;
+  const docusignTemplateId =
+    input.docusignTemplateId === undefined
+      ? row.docusign_template_id
+      : (input.docusignTemplateId ?? '').trim() || null;
+  const docusignTemplateName =
+    input.docusignTemplateName === undefined
+      ? row.docusign_template_name
+      : (input.docusignTemplateName ?? '').trim() || null;
+  if (row.type === 'docusign' && !docusignTemplateId) {
+    throw new Error('Choose a DocuSign template.');
+  }
   await DB.prepare(
     `UPDATE training_block
      SET youtube_url = ?,
@@ -1159,6 +1185,8 @@ export async function updateBlock(input: {
          resource_label = ?,
          ack_prompt = ?,
          pass_percent = ?,
+         docusign_template_id = ?,
+         docusign_template_name = ?,
          updated_at = ?
      WHERE id = ?`,
   )
@@ -1169,6 +1197,8 @@ export async function updateBlock(input: {
       resourceLabel,
       ackPrompt,
       passPercent,
+      docusignTemplateId,
+      docusignTemplateName,
       nowMs(),
       input.blockId,
     )

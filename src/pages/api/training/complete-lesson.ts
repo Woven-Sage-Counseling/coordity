@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { formErrorRedirect } from '../../../lib/http';
 import { orgIdFromLocals } from '../../../lib/organization';
+import { latestDocuSignComplete } from '../../../lib/docusign';
 import {
   completeLesson,
   getLesson,
@@ -43,6 +44,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           lesson.isAssignment
             ? 'Pass all quizzes before completing this assignment.'
             : 'Pass all quizzes before completing this lesson.',
+        );
+      }
+    }
+    for (const block of blocks.filter((b) => b.type === 'docusign')) {
+      const signed = await latestDocuSignComplete(employee.id, block.id);
+      if (!signed) {
+        throw new Error(
+          lesson.isAssignment
+            ? 'Sign all required documents before completing this assignment.'
+            : 'Sign all required documents before completing this lesson.',
         );
       }
     }

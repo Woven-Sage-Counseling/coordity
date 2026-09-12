@@ -156,6 +156,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         resourceLabel: String(form.get('resourceLabel') ?? ''),
         ackPrompt: String(form.get('ackPrompt') ?? ''),
         passPercent: Number(form.get('passPercent') ?? 80) || 80,
+        docusignTemplateId: String(form.get('docusignTemplateId') ?? ''),
+        docusignTemplateName: String(form.get('docusignTemplateName') ?? ''),
       });
       return redirectAdmin({ moduleId, itemId: lessonId });
     }
@@ -180,6 +182,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ...(form.has('ackPrompt') ? { ackPrompt: String(form.get('ackPrompt') ?? '') } : {}),
         ...(form.has('passPercent')
           ? { passPercent: Number(form.get('passPercent') ?? 80) || 80 }
+          : {}),
+        ...(form.has('docusignTemplateId')
+          ? (() => {
+              const raw = String(form.get('docusignTemplateId') ?? '').trim();
+              const sep = raw.indexOf('::');
+              const templateId = sep >= 0 ? raw.slice(0, sep) : raw;
+              const templateName =
+                sep >= 0
+                  ? raw.slice(sep + 2)
+                  : String(form.get('docusignTemplateName') ?? '').trim();
+              return {
+                docusignTemplateId: templateId,
+                docusignTemplateName: templateName,
+              };
+            })()
           : {}),
       });
       if (asJson) return jsonOk({ moduleId, itemId: lessonId, blockId });
