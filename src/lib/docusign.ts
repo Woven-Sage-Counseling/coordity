@@ -2,9 +2,17 @@ import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
 
 const OAUTH_STATE_PREFIX = 'docusign-oauth:';
+const DEFAULT_AUTH_SERVER = 'https://account-d.docusign.com';
 
 export interface DocuSignConnectionStatus {
+  /** Ready to click Connect (org-saved app or platform env). */
   configured: boolean;
+  /** Org has saved its own Integration Key. */
+  hasOrgApp: boolean;
+  /** Platform env fallback is available. */
+  hasPlatformApp: boolean;
+  integrationKey: string | null;
+  authServer: string;
   status: 'disconnected' | 'connected' | 'error';
   accountEmail: string | null;
   accountName: string | null;
@@ -31,11 +39,28 @@ type ConnectionRow = {
   status: string;
   last_error: string | null;
   connected_at: number | null;
+  integration_key: string | null;
+  secret_key_encrypted: string | null;
+  auth_server: string | null;
 };
 
-function authServer(): string {
-  const env = getEnv();
-  return (env.DOCUSIGN_AUTH_SERVER || 'https://account-d.docusign.com').replace(/\/$/, '');
+type AppCredentials = {
+  integrationKey: string;
+  secretKey: string;
+  authServer: string;
+  source: 'org' | 'platform';
+};
+
+function normalizeAuthServer(value: string | null | undefined): string {
+  const raw = (value || DEFAULT_AUTH_SERVER).trim().replace(/\/$/, '');
+  if (raw === 'production' || raw === 'prod' || raw.includes('account.docusign.com')) {
+    return 'https://account.docusign.com';
+  }
+  if (raw === 'demo' || raw === 'sandbox' || raw.includes('account-d.docusign.com')) {
+    return DEFAULT_AUTH_SERVER;
+  }
+  if (raw.startsWith('https://')) return raw;
+  return DEFAULT_AUTH_SERVER;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -83,21 +108,74 @@ function basicAuth(clientId: string, clientSecret: string): string {
   return btoa(`${clientId}:${clientSecret}`);
 }
 
-export function isDocuSignConfigured(): boolean {
+function platformAppConfigured(): boolean {
   const env = getEnv();
   return Boolean(env.DOCUSIGN_INTEGRATION_KEY && env.DOCUSIGN_SECRET_KEY);
 }
 
-export function docusignAuthorizationUrl(state: string, redirectUri: string): string {
+/** @deprecated Prefer getDocuSignConnectionStatus(orgId).configured */
+export function isDocuSignConfigured(): boolean {
+  return platformAppConfigured();
+}
+
+async function connectionRow(orgId: string): Promise<ConnectionRow | null> {
+  const { DB } = getEnv();
+  return (
+    (await DB.prepare(
+      `SELECT org_id, account_id, base_uri, account_email, account_name,
+              access_token_encrypted, refresh_token_encrypted, token_expires_at,
+              status, last_error, connected_at,
+              integration_key, secret_key_encrypted, auth_server
+       FROM docusign_connection WHERE org_id = ?`,
+    )
+      .bind(orgId)
+      .first<ConnectionRow>()) ?? null
+  );
+}
+
+async function resolveAppCredentials(orgId: string): Promise<AppCredentials | null> {
+  const row = await connectionRow(orgId);
+  if (row?.integration_key?.trim() && row.secret_key_encrypted) {
+    try {
+      return {
+        integrationKey: row.integration_key.trim(),
+        secretKey: await decryptSecret(row.secret_key_encrypted),
+        authServer: normalizeAuthServer(row.auth_server),
+        source: 'org',
+      };
+    } catch {
+      // Fall through to platform credentials.
+    }
+  }
   const env = getEnv();
+  if (env.DOCUSIGN_INTEGRATION_KEY && env.DOCUSIGN_SECRET_KEY) {
+    return {
+      integrationKey: env.DOCUSIGN_INTEGRATION_KEY,
+      secretKey: env.DOCUSIGN_SECRET_KEY,
+      authServer: normalizeAuthServer(env.DOCUSIGN_AUTH_SERVER),
+      source: 'platform',
+    };
+  }
+  return null;
+}
+
+export async function isOrgDocuSignReady(orgId: string): Promise<boolean> {
+  return Boolean(await resolveAppCredentials(orgId));
+}
+
+export function docusignAuthorizationUrl(
+  state: string,
+  redirectUri: string,
+  credentials: Pick<AppCredentials, 'integrationKey' | 'authServer'>,
+): string {
   const params = new URLSearchParams({
     response_type: 'code',
     scope: 'signature extended',
-    client_id: env.DOCUSIGN_INTEGRATION_KEY ?? '',
+    client_id: credentials.integrationKey,
     redirect_uri: redirectUri,
     state,
   });
-  return `${authServer()}/oauth/auth?${params.toString()}`;
+  return `${credentials.authServer}/oauth/auth?${params.toString()}`;
 }
 
 export async function saveDocuSignOauthState(
@@ -127,19 +205,51 @@ export async function readDocuSignOauthState(
   }
 }
 
-async function requestTokens(body: URLSearchParams): Promise<{
+export async function saveDocuSignAppSettings(input: {
+  orgId: string;
+  integrationKey: string;
+  secretKey?: string | null;
+  authServer: string;
+}): Promise<void> {
+  const integrationKey = input.integrationKey.trim();
+  if (!integrationKey) throw new Error('Integration Key is required.');
+  const authServer = normalizeAuthServer(input.authServer);
+  const existing = await connectionRow(input.orgId);
+  const secretInput = input.secretKey?.trim() || '';
+  if (!secretInput && !existing?.secret_key_encrypted) {
+    throw new Error('Secret Key is required the first time you save.');
+  }
+  const secretEncrypted = secretInput
+    ? await encryptSecret(secretInput)
+    : existing!.secret_key_encrypted!;
+  const { DB } = getEnv();
+  const ts = nowMs();
+  await DB.prepare(
+    `INSERT INTO docusign_connection
+       (org_id, integration_key, secret_key_encrypted, auth_server, status, updated_at)
+     VALUES (?, ?, ?, ?, 'disconnected', ?)
+     ON CONFLICT(org_id) DO UPDATE SET
+       integration_key = excluded.integration_key,
+       secret_key_encrypted = excluded.secret_key_encrypted,
+       auth_server = excluded.auth_server,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(input.orgId, integrationKey, secretEncrypted, authServer, ts)
+    .run();
+}
+
+async function requestTokens(
+  credentials: AppCredentials,
+  body: URLSearchParams,
+): Promise<{
   access_token: string;
   refresh_token: string;
   expires_in: number;
 }> {
-  const env = getEnv();
-  if (!env.DOCUSIGN_INTEGRATION_KEY || !env.DOCUSIGN_SECRET_KEY) {
-    throw new Error('DocuSign credentials are not configured.');
-  }
-  const response = await fetch(`${authServer()}/oauth/token`, {
+  const response = await fetch(`${credentials.authServer}/oauth/token`, {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${basicAuth(env.DOCUSIGN_INTEGRATION_KEY, env.DOCUSIGN_SECRET_KEY)}`,
+      Authorization: `Basic ${basicAuth(credentials.integrationKey, credentials.secretKey)}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body,
@@ -155,13 +265,16 @@ async function requestTokens(body: URLSearchParams): Promise<{
   };
 }
 
-async function fetchUserInfo(accessToken: string): Promise<{
+async function fetchUserInfo(
+  credentials: AppCredentials,
+  accessToken: string,
+): Promise<{
   email: string;
   name: string;
   accountId: string;
   baseUri: string;
 }> {
-  const response = await fetch(`${authServer()}/oauth/userinfo`, {
+  const response = await fetch(`${credentials.authServer}/oauth/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) {
@@ -196,14 +309,17 @@ export async function exchangeDocuSignCode(input: {
   code: string;
   redirectUri: string;
 }): Promise<void> {
+  const credentials = await resolveAppCredentials(input.orgId);
+  if (!credentials) throw new Error('DocuSign app settings are missing. Save them under Integrations first.');
   const tokens = await requestTokens(
+    credentials,
     new URLSearchParams({
       grant_type: 'authorization_code',
       code: input.code,
       redirect_uri: input.redirectUri,
     }),
   );
-  const info = await fetchUserInfo(tokens.access_token);
+  const info = await fetchUserInfo(credentials, tokens.access_token);
   const { DB } = getEnv();
   const ts = nowMs();
   await DB.prepare(
@@ -242,47 +358,32 @@ export async function exchangeDocuSignCode(input: {
     .run();
 }
 
-async function connectionRow(orgId: string): Promise<ConnectionRow | null> {
-  const { DB } = getEnv();
-  return (
-    (await DB.prepare(
-      `SELECT org_id, account_id, base_uri, account_email, account_name,
-              access_token_encrypted, refresh_token_encrypted, token_expires_at,
-              status, last_error, connected_at
-       FROM docusign_connection WHERE org_id = ?`,
-    )
-      .bind(orgId)
-      .first<ConnectionRow>()) ?? null
-  );
-}
-
 export async function getDocuSignConnectionStatus(orgId: string): Promise<DocuSignConnectionStatus> {
-  const configured = isDocuSignConfigured();
   const row = await connectionRow(orgId);
-  if (!row) {
-    return {
-      configured,
-      status: 'disconnected',
-      accountEmail: null,
-      accountName: null,
-      accountId: null,
-      lastError: null,
-      connectedAt: null,
-    };
-  }
+  const credentials = await resolveAppCredentials(orgId);
+  const hasOrgApp = Boolean(row?.integration_key && row?.secret_key_encrypted);
+  const hasPlatformApp = platformAppConfigured();
   const status =
-    row.status === 'connected' || row.status === 'error' || row.status === 'disconnected'
+    row?.status === 'connected' || row?.status === 'error' || row?.status === 'disconnected'
       ? row.status
       : 'disconnected';
   return {
-    configured,
+    configured: Boolean(credentials),
+    hasOrgApp,
+    hasPlatformApp,
+    integrationKey: row?.integration_key ?? (hasPlatformApp ? 'Using Coordity platform app' : null),
+    authServer: credentials?.authServer ?? normalizeAuthServer(row?.auth_server),
     status,
-    accountEmail: row.account_email,
-    accountName: row.account_name,
-    accountId: row.account_id,
-    lastError: row.last_error,
-    connectedAt: row.connected_at,
+    accountEmail: row?.account_email ?? null,
+    accountName: row?.account_name ?? null,
+    accountId: row?.account_id ?? null,
+    lastError: row?.last_error ?? null,
+    connectedAt: row?.connected_at ?? null,
   };
+}
+
+export async function getDocuSignAuthCredentials(orgId: string): Promise<AppCredentials | null> {
+  return resolveAppCredentials(orgId);
 }
 
 export async function disconnectDocuSign(orgId: string): Promise<void> {
@@ -340,8 +441,11 @@ async function validAccessToken(orgId: string): Promise<{
   }
 
   try {
+    const credentials = await resolveAppCredentials(orgId);
+    if (!credentials) throw new Error('DocuSign app settings are missing.');
     const refreshToken = await decryptSecret(row.refresh_token_encrypted);
     const tokens = await requestTokens(
+      credentials,
       new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,

@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { randomToken } from '../../../lib/crypto';
 import {
   docusignAuthorizationUrl,
-  isDocuSignConfigured,
+  getDocuSignAuthCredentials,
   saveDocuSignOauthState,
 } from '../../../lib/docusign';
 import { requireManagementAccess } from '../../../lib/management-access';
@@ -15,13 +15,14 @@ export const POST: APIRoute = async ({ locals, url }) => {
   if (denied) return denied;
   const orgId = orgIdFromLocals(locals.organization);
 
-  if (!isDocuSignConfigured()) {
+  const credentials = await getDocuSignAuthCredentials(orgId);
+  if (!credentials) {
     return new Response(null, {
       status: 303,
       headers: {
         Location:
           '/admin?integrationsError=' +
-          encodeURIComponent('DocuSign app credentials are not configured on this server.') +
+          encodeURIComponent('Save your DocuSign Integration Key and Secret Key first, then click Connect.') +
           '#integrations',
       },
     });
@@ -36,6 +37,6 @@ export const POST: APIRoute = async ({ locals, url }) => {
   });
   return new Response(null, {
     status: 303,
-    headers: { Location: docusignAuthorizationUrl(state, redirectUri) },
+    headers: { Location: docusignAuthorizationUrl(state, redirectUri, credentials) },
   });
 };
