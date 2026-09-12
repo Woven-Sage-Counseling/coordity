@@ -715,16 +715,31 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
           <ol class="space-y-3 text-sm text-sage-dark/80">
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-              <p class="font-semibold text-charcoal">1. Create a DocuSign app (one-time)</p>
+              <p class="font-semibold text-charcoal">1. Create an Integration Key in DocuSign Developer Console</p>
               <p class="mt-1">
-                In DocuSign, open <span class="font-medium text-charcoal">Settings → Integrations → Apps and Keys</span>
-                (or Admin → Apps and Keys), then <span class="font-medium text-charcoal">Add App and Integration Key</span>.
+                Production DocuSign can’t create new keys. Open the
+                <span class="font-medium text-charcoal"> Developer Console</span>
+                (banner: “build and manage your integrations”) or go to
+                <a
+                  class="font-medium text-sage-dark underline underline-offset-2"
+                  href="https://developers.docusign.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  developers.docusign.com
+                </a>
+                and sign in with a <span class="font-medium text-charcoal">developer / demo</span> account.
+              </p>
+              <p class="mt-1.5">
+                Then create an app / Integration Key. Later, when you’re ready for live documents, use DocuSign’s
+                <span class="font-medium text-charcoal">go-live</span> process to move that app into production.
               </p>
             </li>
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-              <p class="font-semibold text-charcoal">2. Add this Redirect URI in that DocuSign app</p>
+              <p class="font-semibold text-charcoal">2. Add this Redirect URI on that app</p>
               <p class="mt-1 text-xs text-sage-dark/60">
-                Use your organization’s Coordity address (not a shared preview link).
+                In the Developer Console app settings, add this exact Redirect URI. Use your organization’s Coordity
+                address (not a shared preview link).
               </p>
               <div class="mt-2 flex flex-wrap items-center gap-2">
                 <code
@@ -742,11 +757,16 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                 </button>
               </div>
               <p class="mt-1.5 text-xs text-sage-dark/60">
-                Paste it exactly under Additional settings → Redirect URIs, then Save.
+                Also add a Secret Key on the app if DocuSign asks for one, then save.
               </p>
             </li>
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
               <p class="font-semibold text-charcoal">3. Paste your keys here</p>
+              <p class="mt-1 text-xs text-sage-dark/60">
+                Copy the Integration Key (and Secret Key) from Developer Console. For first-time setup, keep the
+                environment on <span class="font-medium text-charcoal">Demo / developer</span>. Switch to Production
+                only after DocuSign go-live.
+              </p>
               <form method="post" action="/api/docusign/settings" class="mt-3 space-y-3">
                 <label class="block text-xs font-medium text-charcoal">
                   Integration Key
@@ -782,13 +802,13 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                       value="demo"
                       selected={docusignStatus.authServer.includes('account-d.docusign.com')}
                     >
-                      Demo / developer (account-d.docusign.com)
+                      Demo / developer (start here)
                     </option>
                     <option
                       value="production"
                       selected={docusignStatus.authServer.includes('account.docusign.com') && !docusignStatus.authServer.includes('account-d')}
                     >
-                      Production (account.docusign.com)
+                      Production (after DocuSign go-live)
                     </option>
                   </select>
                 </label>
@@ -810,7 +830,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
               <p class="font-semibold text-charcoal">4. Connect your DocuSign login</p>
               <p class="mt-1">
-                Click Connect, sign in with the company DocuSign account, and allow access. That’s it.
+                Click Connect, sign in with the matching DocuSign account (developer account for Demo, production
+                account after go-live), and allow access.
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <form method="post" action="/api/docusign/connect">
