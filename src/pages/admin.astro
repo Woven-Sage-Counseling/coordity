@@ -656,44 +656,63 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       }
 
       <div class="mt-6 space-y-4">
-        <div class="rounded-2xl border border-sage-dark/10 bg-white p-5 shadow-sm">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 class="text-lg font-semibold text-charcoal">DocuSign</h3>
+        <details
+          class="group rounded-2xl border border-sage-dark/10 bg-white shadow-sm open:pb-5"
+          open={
+            docusignStatus.status !== 'connected' ||
+            Boolean(integrationsError) ||
+            integrationsSaved === 'docusign' ||
+            integrationsSaved === 'docusign-settings' ||
+            integrationsSaved === 'docusign-disconnected'
+              ? true
+              : undefined
+          }
+        >
+          <summary class="flex cursor-pointer list-none items-start justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-lg font-semibold text-charcoal">DocuSign</h3>
+                <span
+                  class:list={[
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                    docusignStatus.status === 'connected'
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : docusignStatus.status === 'error'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-[#f0f1f4] text-sage-dark/70',
+                  ]}
+                >
+                  {docusignStatus.status}
+                </span>
+              </div>
               <p class="mt-1 text-sm text-sage-dark/70">
                 Connect your company DocuSign so employees can sign contracts and policies inside training.
                 Signed files stay in your DocuSign account.
               </p>
+              {
+                docusignStatus.accountEmail || docusignStatus.accountName ? (
+                  <p class="mt-2 text-sm text-charcoal">
+                    Connected as {docusignStatus.accountName}
+                    {docusignStatus.accountEmail ? ` · ${docusignStatus.accountEmail}` : ''}
+                  </p>
+                ) : null
+              }
             </div>
             <span
-              class:list={[
-                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
-                docusignStatus.status === 'connected'
-                  ? 'bg-emerald-100 text-emerald-900'
-                  : docusignStatus.status === 'error'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-[#f0f1f4] text-sage-dark/70',
-              ]}
-            >
-              {docusignStatus.status}
-            </span>
-          </div>
+              class="mt-1 shrink-0 text-sage-dark/40 transition group-open:rotate-90"
+              aria-hidden="true"
+              set:html={menuChevron}
+            />
+          </summary>
 
-          {
-            docusignStatus.accountEmail || docusignStatus.accountName ? (
-              <p class="mt-3 text-sm text-charcoal">
-                Connected as {docusignStatus.accountName}
-                {docusignStatus.accountEmail ? ` · ${docusignStatus.accountEmail}` : ''}
-              </p>
-            ) : null
-          }
+          <div class="border-t border-sage-dark/10 px-5 pt-4">
           {
             docusignStatus.lastError ? (
-              <p class="mt-2 text-sm text-red-700">{docusignStatus.lastError}</p>
+              <p class="mb-3 text-sm text-red-700">{docusignStatus.lastError}</p>
             ) : null
           }
 
-          <ol class="mt-5 space-y-3 text-sm text-sage-dark/80">
+          <ol class="space-y-3 text-sm text-sage-dark/80">
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
               <p class="font-semibold text-charcoal">1. Create a DocuSign app (one-time)</p>
               <p class="mt-1">
@@ -819,7 +838,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               }
             </li>
           </ol>
-        </div>
+          </div>
+        </details>
 
         <div class="rounded-2xl border border-sage-dark/10 bg-white p-5 shadow-sm">
           <div class="flex flex-wrap items-start justify-between gap-3">
