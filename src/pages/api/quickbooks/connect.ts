@@ -1,28 +1,34 @@
 import type { APIRoute } from 'astro';
-import { hasPermission } from '../../../lib/permissions';
-import { QuickBooksProvider } from '../../../lib/financials/quickbooks';
 import { randomToken } from '../../../lib/crypto';
+import { QuickBooksProvider } from '../../../lib/financials/quickbooks';
+import { orgCanonicalOrigin } from '../../../lib/organization';
+import { hasPermission } from '../../../lib/permissions';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ locals, url }) => {
+export const POST: APIRoute = async ({ locals, request }) => {
   if (!hasPermission(locals.employee, 'financials:manage')) {
     return new Response('Forbidden', { status: 403 });
   }
 
   const provider = new QuickBooksProvider();
-  if (!provider.isConfigured()) {
+  if (!(await provider.isReady())) {
     return new Response(null, {
       status: 303,
-      headers: { Location: '/financials?error=' + encodeURIComponent('QuickBooks secrets are not configured.') },
+      headers: {
+        Location:
+          '/admin?integrationsError=' +
+          encodeURIComponent('Save your QuickBooks Client ID and Client Secret first, then click Connect.') +
+          '#integrations',
+      },
     });
   }
 
-  const redirectUri = `${url.origin}/api/quickbooks/callback`;
+  const redirectUri = `${orgCanonicalOrigin(locals.organization, request.url)}/api/quickbooks/callback`;
   const state = randomToken(16);
   await provider.saveOauthState(state, locals.employee!.id);
   return new Response(null, {
     status: 303,
-    headers: { Location: provider.authorizationUrl(state, redirectUri) },
+    headers: { Location: await provider.authorizationUrlForConnect(state, redirectUri) },
   });
 };

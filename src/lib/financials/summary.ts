@@ -1,4 +1,4 @@
-import { getEnv, practiceOperationsStart, qbApiEnvironment } from '../env';
+import { getEnv, practiceOperationsStart } from '../env';
 import { ManualSnapshotProvider } from './manual-snapshot';
 import { averagingStart, resolvePeriodFromSearch, resolvePreset } from './periods';
 import { QuickBooksProvider } from './quickbooks';
@@ -94,9 +94,7 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
       ? cash.boaReserveCents / reserveTargetCents
       : null;
 
-  const connection = await env.DB.prepare(
-    `SELECT status, last_sync_at, last_error FROM quickbooks_connection WHERE id = 'default'`,
-  ).first<{ status: 'disconnected' | 'connected' | 'error'; last_sync_at: number | null; last_error: string | null }>();
+  const qbStatus = await qb.getConnectionStatus();
 
   const selectedMeta = parseSnapshotMeta(snapshot);
   const reserveMeta = parseSnapshotMeta(reserveSnapshot);
@@ -118,11 +116,11 @@ export async function getFinancialSummary(search?: URLSearchParams | null): Prom
     transactions,
     bankAccounts,
     quickbooks: {
-      configured: qb.isConfigured(),
-      status: connection?.status ?? 'disconnected',
-      lastSyncAt: connection?.last_sync_at ?? null,
-      lastError: connection?.last_error ?? null,
-      environment: qbApiEnvironment(),
+      configured: qbStatus.configured,
+      status: qbStatus.status,
+      lastSyncAt: qbStatus.lastSyncAt,
+      lastError: qbStatus.lastError,
+      environment: qbStatus.environment,
     },
   };
 }

@@ -37,6 +37,24 @@ interface ConnectionRow {
   refresh_token_expires_at: number | null;
   connected_by: string | null;
   status: 'disconnected' | 'connected' | 'error';
+  client_id: string | null;
+  client_secret_encrypted: string | null;
+  environment: string | null;
+  last_error: string | null;
+  last_sync_at: number | null;
+  connected_at: number | null;
+}
+
+export interface QuickBooksConnectionStatus {
+  configured: boolean;
+  hasOrgApp: boolean;
+  hasPlatformApp: boolean;
+  clientId: string | null;
+  environment: 'sandbox' | 'production';
+  status: 'disconnected' | 'connected' | 'error';
+  lastError: string | null;
+  lastSyncAt: number | null;
+  connectedAt: number | null;
 }
 
 interface QbCol {
@@ -129,10 +147,6 @@ function apiHost(environment: QbEnvironment): string {
   return environment === 'production'
     ? 'https://quickbooks.api.intuit.com'
     : 'https://sandbox-quickbooks.api.intuit.com';
-}
-
-function qbEnvironment(): QbEnvironment {
-  return qbApiEnvironment();
 }
 
 function dollarsToCents(value: string | number | undefined): number {
@@ -426,20 +440,124 @@ function basicAuth(clientId: string, clientSecret: string): string {
 
 export class QuickBooksProvider implements FinancialDataProvider {
   isConfigured(): boolean {
+    // Sync check for platform env only; prefer async isReady() when org keys may exist.
     const env = getEnv();
     return Boolean(env.QB_CLIENT_ID && env.QB_CLIENT_SECRET);
   }
 
-  authorizationUrl(state: string, redirectUri: string): string {
+  async isReady(): Promise<boolean> {
+    return Boolean(await this.resolveAppCredentials());
+  }
+
+  private platformConfigured(): boolean {
     const env = getEnv();
+    return Boolean(env.QB_CLIENT_ID && env.QB_CLIENT_SECRET);
+  }
+
+  private async resolveAppCredentials(): Promise<{
+    clientId: string;
+    clientSecret: string;
+    environment: QbEnvironment;
+    source: 'org' | 'platform';
+  } | null> {
+    const row = await this.connection();
+    if (row?.client_id?.trim() && row.client_secret_encrypted) {
+      try {
+        return {
+          clientId: row.client_id.trim(),
+          clientSecret: await this.decryptStoredSecret(row.client_secret_encrypted),
+          environment: row.environment === 'production' ? 'production' : 'sandbox',
+          source: 'org',
+        };
+      } catch {
+        // Fall through to platform credentials.
+      }
+    }
+    const env = getEnv();
+    if (env.QB_CLIENT_ID && env.QB_CLIENT_SECRET) {
+      return {
+        clientId: env.QB_CLIENT_ID,
+        clientSecret: env.QB_CLIENT_SECRET,
+        environment: qbApiEnvironment(),
+        source: 'platform',
+      };
+    }
+    return null;
+  }
+
+  async getConnectionStatus(): Promise<QuickBooksConnectionStatus> {
+    const row = await this.connection();
+    const credentials = await this.resolveAppCredentials();
+    const hasOrgApp = Boolean(row?.client_id && row?.client_secret_encrypted);
+    const status =
+      row?.status === 'connected' || row?.status === 'error' || row?.status === 'disconnected'
+        ? row.status
+        : 'disconnected';
+    return {
+      configured: Boolean(credentials),
+      hasOrgApp,
+      hasPlatformApp: this.platformConfigured(),
+      clientId: row?.client_id ?? (this.platformConfigured() ? 'Using Coordity platform app' : null),
+      environment: credentials?.environment ?? (row?.environment === 'production' ? 'production' : 'sandbox'),
+      status,
+      lastError: row?.last_error ?? null,
+      lastSyncAt: row?.last_sync_at ?? null,
+      connectedAt: row?.connected_at ?? null,
+    };
+  }
+
+  async saveAppSettings(input: {
+    clientId: string;
+    clientSecret?: string | null;
+    environment: string;
+  }): Promise<void> {
+    const clientId = input.clientId.trim();
+    if (!clientId) throw new Error('Client ID is required.');
+    const environment = input.environment === 'production' ? 'production' : 'sandbox';
+    const existing = await this.connection();
+    const secretInput = input.clientSecret?.trim() || '';
+    if (!secretInput && !existing?.client_secret_encrypted) {
+      throw new Error('Client Secret is required the first time you save.');
+    }
+    const secretEncrypted = secretInput
+      ? await encryptSecret(secretInput)
+      : existing!.client_secret_encrypted!;
+    const { DB } = getEnv();
+    const ts = nowMs();
+    if (existing) {
+      await DB.prepare(
+        `UPDATE quickbooks_connection
+         SET client_id = ?, client_secret_encrypted = ?, environment = ?
+         WHERE id = ?`,
+      )
+        .bind(clientId, secretEncrypted, environment, CONNECTION_ID)
+        .run();
+      return;
+    }
+    await DB.prepare(
+      `INSERT INTO quickbooks_connection
+         (id, client_id, client_secret_encrypted, environment, status, connected_at)
+       VALUES (?, ?, ?, ?, 'disconnected', ?)`,
+    )
+      .bind(CONNECTION_ID, clientId, secretEncrypted, environment, ts)
+      .run();
+  }
+
+  authorizationUrl(state: string, redirectUri: string, clientId: string): string {
     const params = new URLSearchParams({
-      client_id: env.QB_CLIENT_ID ?? '',
+      client_id: clientId,
       response_type: 'code',
       scope: 'com.intuit.quickbooks.accounting',
       redirect_uri: redirectUri,
       state,
     });
     return `${INTUIT_AUTH}?${params.toString()}`;
+  }
+
+  async authorizationUrlForConnect(state: string, redirectUri: string): Promise<string> {
+    const credentials = await this.resolveAppCredentials();
+    if (!credentials) throw new Error('QuickBooks app settings are missing.');
+    return this.authorizationUrl(state, redirectUri, credentials.clientId);
   }
 
   async saveOauthState(state: string, userId: string): Promise<void> {
@@ -468,12 +586,11 @@ export class QuickBooksProvider implements FinancialDataProvider {
   }
 
   async exchangeCode(code: string, redirectUri: string, realmId: string, userId: string): Promise<void> {
-    const env = getEnv();
-    if (!env.QB_CLIENT_ID || !env.QB_CLIENT_SECRET) {
-      throw new Error('QuickBooks credentials are not configured.');
-    }
+    const credentials = await this.resolveAppCredentials();
+    if (!credentials) throw new Error('QuickBooks app settings are missing. Save them under Integrations first.');
 
     const tokens = await this.requestTokens(
+      credentials,
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
@@ -707,8 +824,9 @@ export class QuickBooksProvider implements FinancialDataProvider {
       await this.upsertCash('boa_reserve', 'Bank of America reserve', boa, periodEnd);
     }
 
+    const envName = (await this.resolveAppCredentials())?.environment ?? qbApiEnvironment();
     const notes = JSON.stringify({
-      label: `Live QuickBooks ${qbEnvironment()} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
+      label: `Live QuickBooks ${envName} ${basis} P&L ${pnl.Header?.StartPeriod ?? periodStart} to ${pnl.Header?.EndPeriod ?? periodEnd}.`,
       qboNet: parsed.net,
       qboExpenses: parsed.expenses,
       lines: pnlLines,
@@ -751,14 +869,16 @@ export class QuickBooksProvider implements FinancialDataProvider {
     });
   }
 
-  private async requestTokens(body: URLSearchParams): Promise<TokenResponse> {
-    const env = getEnv();
+  private async requestTokens(
+    credentials: { clientId: string; clientSecret: string },
+    body: URLSearchParams,
+  ): Promise<TokenResponse> {
     const response = await fetch(INTUIT_TOKEN, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${basicAuth(env.QB_CLIENT_ID ?? '', env.QB_CLIENT_SECRET ?? '')}`,
+        Authorization: `Basic ${basicAuth(credentials.clientId, credentials.clientSecret)}`,
       },
       body,
     });
@@ -775,25 +895,33 @@ export class QuickBooksProvider implements FinancialDataProvider {
     const refreshExpires = tokens.x_refresh_token_expires_in
       ? nowMs() + tokens.x_refresh_token_expires_in * 1000
       : nowMs() + 100 * 24 * 60 * 60 * 1000;
+    const ts = nowMs();
 
     await env.DB.prepare(
-      `UPDATE quickbooks_connection
-       SET realm_id = ?, access_token_encrypted = ?, refresh_token_encrypted = ?,
-           access_token_expires_at = ?, refresh_token_expires_at = ?,
-           connected_by = COALESCE(?, connected_by),
-           connected_at = COALESCE(connected_at, ?),
-           status = 'connected', last_error = NULL
-       WHERE id = ?`,
+      `INSERT INTO quickbooks_connection
+         (id, realm_id, access_token_encrypted, refresh_token_encrypted,
+          access_token_expires_at, refresh_token_expires_at, connected_by, connected_at, status, last_error)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'connected', NULL)
+       ON CONFLICT(id) DO UPDATE SET
+         realm_id = excluded.realm_id,
+         access_token_encrypted = excluded.access_token_encrypted,
+         refresh_token_encrypted = excluded.refresh_token_encrypted,
+         access_token_expires_at = excluded.access_token_expires_at,
+         refresh_token_expires_at = excluded.refresh_token_expires_at,
+         connected_by = COALESCE(excluded.connected_by, quickbooks_connection.connected_by),
+         connected_at = COALESCE(quickbooks_connection.connected_at, excluded.connected_at),
+         status = 'connected',
+         last_error = NULL`,
     )
       .bind(
+        CONNECTION_ID,
         realmId,
         await encryptSecret(tokens.access_token),
         await encryptSecret(tokens.refresh_token),
         accessExpires,
         refreshExpires,
         userId || null,
-        nowMs(),
-        CONNECTION_ID,
+        ts,
       )
       .run();
   }
@@ -825,7 +953,10 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
   private async refreshAccessToken(row: ConnectionRow): Promise<string> {
     try {
+      const credentials = await this.resolveAppCredentials();
+      if (!credentials) throw new Error('QuickBooks app settings are missing.');
       const refreshed = await this.requestTokens(
+        credentials,
         new URLSearchParams({
           grant_type: 'refresh_token',
           refresh_token: await this.decryptStoredSecret(row.refresh_token_encrypted!),
@@ -847,7 +978,8 @@ export class QuickBooksProvider implements FinancialDataProvider {
     const { DB } = getEnv();
     return DB.prepare(
       `SELECT realm_id, access_token_encrypted, refresh_token_encrypted,
-              access_token_expires_at, refresh_token_expires_at, connected_by, status
+              access_token_expires_at, refresh_token_expires_at, connected_by, status,
+              client_id, client_secret_encrypted, environment, last_error, last_sync_at, connected_at
        FROM quickbooks_connection WHERE id = ?`,
     )
       .bind(CONNECTION_ID)
@@ -870,8 +1002,9 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
   private async qbGet(accessToken: string, realmId: string, path: string): Promise<unknown> {
     const separator = path.includes('?') ? '&' : '?';
+    const environment = (await this.resolveAppCredentials())?.environment ?? qbApiEnvironment();
     const response = await fetch(
-      `${apiHost(qbEnvironment())}/v3/company/${realmId}${path}${separator}minorversion=75`,
+      `${apiHost(environment)}/v3/company/${realmId}${path}${separator}minorversion=75`,
       {
       headers: {
         Accept: 'application/json',

@@ -40,7 +40,6 @@ import {
   listDocuSignStatusesForLesson,
   listDocuSignTemplates,
 } from '../lib/docusign';
-import { getEnv } from '../lib/env';
 import { QuickBooksProvider } from '../lib/financials/quickbooks';
 import { hasPermission } from '../lib/permissions';
 
@@ -215,19 +214,25 @@ const docusignStatuses = docusignStatusesRaw.map((row) => ({
   userName: rosterByUser.get(row.userId) ?? row.userId,
 }));
 
-const qbProvider = new QuickBooksProvider();
-const qbConfigured = qbProvider.isConfigured();
-const qbRow = await safeLoad(
-  'qb-connection',
-  async () =>
-    getEnv()
-      .DB.prepare(`SELECT status, last_error, last_sync_at FROM quickbooks_connection WHERE id = ?`)
-      .bind('default')
-      .first<{ status: string; last_error: string | null; last_sync_at: number | null }>(),
-  null,
+const qbStatus = await safeLoad(
+  'qb-status',
+  () => new QuickBooksProvider().getConnectionStatus(),
+  {
+    configured: false,
+    hasOrgApp: false,
+    hasPlatformApp: false,
+    clientId: null,
+    environment: 'sandbox' as const,
+    status: 'disconnected' as const,
+    lastError: null,
+    lastSyncAt: null,
+    connectedAt: null,
+  },
 );
+const qbConnected = qbStatus.status === 'connected';
 const canManageQuickBooks = hasPermission(employee, 'financials:manage');
 const docusignRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/docusign/callback`;
+const quickbooksRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/quickbooks/callback`;
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
@@ -651,7 +656,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                 ? 'DocuSign keys saved. You can connect now.'
                 : integrationsSaved === 'docusign'
                   ? 'DocuSign connected.'
-                  : 'Saved.'}
+                  : integrationsSaved === 'quickbooks-settings'
+                    ? 'QuickBooks keys saved. You can connect now.'
+                    : integrationsSaved === 'quickbooks'
+                      ? 'QuickBooks connected.'
+                      : 'Saved.'}
           </p>
         ) : null
       }
@@ -866,55 +875,187 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
           </div>
         </details>
 
-        <div class="rounded-2xl border border-sage-dark/10 bg-white p-5 shadow-sm">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 class="text-lg font-semibold text-charcoal">QuickBooks</h3>
+        <details
+          class="group rounded-2xl border border-sage-dark/10 bg-white shadow-sm open:pb-5"
+          open={
+            qbStatus.status !== 'connected' ||
+            Boolean(integrationsError) ||
+            integrationsSaved === 'quickbooks' ||
+            integrationsSaved === 'quickbooks-settings'
+              ? true
+              : undefined
+          }
+        >
+          <summary class="flex cursor-pointer list-none items-start justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-lg font-semibold text-charcoal">QuickBooks</h3>
+                <span
+                  class:list={[
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                    qbStatus.status === 'connected'
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : qbStatus.status === 'error'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-[#f0f1f4] text-sage-dark/70',
+                  ]}
+                >
+                  {qbStatus.status}
+                </span>
+              </div>
               <p class="mt-1 text-sm text-sage-dark/70">
-                Org financial sync. Connect here or manage reports on Financials.
+                Connect QuickBooks Online so Financials can sync company books into Coordity.
               </p>
             </div>
             <span
-              class:list={[
-                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
-                qbRow?.status === 'connected'
-                  ? 'bg-emerald-100 text-emerald-900'
-                  : qbRow?.status === 'error'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-[#f0f1f4] text-sage-dark/70',
-              ]}
-            >
-              {qbRow?.status || 'disconnected'}
-            </span>
-          </div>
-          {
-            qbRow?.last_error ? <p class="mt-2 text-sm text-red-700">{qbRow.last_error}</p> : null
-          }
-          {
-            !qbConfigured ? (
-              <p class="mt-3 text-sm text-amber-800">QuickBooks secrets are not configured on this server.</p>
-            ) : null
-          }
-          <div class="mt-4 flex flex-wrap gap-2">
+              class="mt-1 shrink-0 text-sage-dark/40 transition group-open:rotate-90"
+              aria-hidden="true"
+              set:html={menuChevron}
+            />
+          </summary>
+
+          <div class="border-t border-sage-dark/10 px-5 pt-4">
             {
-              canManageQuickBooks ? (
-                <form method="post" action="/api/quickbooks/connect">
-                  <button class="btn-primary !px-4 !py-2 text-sm" type="submit" disabled={!qbConfigured}>
-                    {qbRow?.status === 'connected' ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
-                  </button>
-                </form>
-              ) : (
+              qbStatus.lastError ? (
+                <p class="mb-3 text-sm text-red-700">{qbStatus.lastError}</p>
+              ) : null
+            }
+            {
+              !canManageQuickBooks ? (
                 <p class="text-sm text-sage-dark/65">You need Financials manage permission to connect QuickBooks.</p>
+              ) : (
+                <ol class="space-y-3 text-sm text-sage-dark/80">
+                  <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
+                    <p class="font-semibold text-charcoal">1. Create a QuickBooks app (one-time)</p>
+                    <p class="mt-1">
+                      Go to
+                      <a
+                        class="font-medium text-sage-dark underline underline-offset-2"
+                        href="https://developer.intuit.com/app/developer/dashboard"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        developer.intuit.com
+                      </a>
+                      , sign in, and create an app that includes
+                      <span class="font-medium text-charcoal"> QuickBooks Online accounting</span> API access.
+                    </p>
+                  </li>
+                  <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
+                    <p class="font-semibold text-charcoal">2. Add this Redirect URI in that Intuit app</p>
+                    <p class="mt-1 text-xs text-sage-dark/60">
+                      In the app’s Keys & OAuth settings, add this exact Redirect URI. Use your organization’s Coordity
+                      address.
+                    </p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                      <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                        {quickbooksRedirectUri}
+                      </code>
+                      <button
+                        type="button"
+                        class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                        data-copy-text={quickbooksRedirectUri}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </li>
+                  <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
+                    <p class="font-semibold text-charcoal">3. Paste your keys here</p>
+                    <p class="mt-1 text-xs text-sage-dark/60">
+                      Copy the Client ID and Client Secret from Intuit. Use
+                      <span class="font-medium text-charcoal"> Development / Sandbox</span> keys first; switch to
+                      Production keys when the Intuit app is live.
+                    </p>
+                    <form method="post" action="/api/quickbooks/settings" class="mt-3 space-y-3">
+                      <label class="block text-xs font-medium text-charcoal">
+                        Client ID
+                        <input
+                          class="field mt-1"
+                          type="text"
+                          name="clientId"
+                          required
+                          autocomplete="off"
+                          placeholder="QuickBooks Client ID"
+                          value={qbStatus.hasOrgApp ? (qbStatus.clientId ?? '') : ''}
+                        />
+                      </label>
+                      <label class="block text-xs font-medium text-charcoal">
+                        Client Secret
+                        <input
+                          class="field mt-1"
+                          type="password"
+                          name="clientSecret"
+                          autocomplete="new-password"
+                          placeholder={
+                            qbStatus.hasOrgApp
+                              ? 'Leave blank to keep the saved secret'
+                              : 'Paste the Client Secret from Intuit'
+                          }
+                          {...(!qbStatus.hasOrgApp ? { required: true } : {})}
+                        />
+                      </label>
+                      <label class="block text-xs font-medium text-charcoal">
+                        QuickBooks environment
+                        <select class="field mt-1" name="environment">
+                          <option value="sandbox" selected={qbStatus.environment === 'sandbox'}>
+                            Sandbox / development (start here)
+                          </option>
+                          <option value="production" selected={qbStatus.environment === 'production'}>
+                            Production (after Intuit app go-live)
+                          </option>
+                        </select>
+                      </label>
+                      <button class="btn-primary !px-4 !py-2 text-sm" type="submit">
+                        Save QuickBooks keys
+                      </button>
+                    </form>
+                    {
+                      qbStatus.hasOrgApp ? (
+                        <p class="mt-2 text-xs text-emerald-800">Keys saved. Continue to step 4.</p>
+                      ) : qbStatus.hasPlatformApp ? (
+                        <p class="mt-2 text-xs text-sage-dark/60">
+                          Optional: Coordity already has platform QuickBooks keys, so you can skip to Connect — or
+                          save your own Intuit app keys above.
+                        </p>
+                      ) : null
+                    }
+                  </li>
+                  <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
+                    <p class="font-semibold text-charcoal">4. Connect your QuickBooks company</p>
+                    <p class="mt-1">
+                      Click Connect, sign in to Intuit, and choose the company file Coordity should sync.
+                    </p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <form method="post" action="/api/quickbooks/connect">
+                        <button
+                          class="btn-primary !px-4 !py-2 text-sm"
+                          type="submit"
+                          disabled={!qbStatus.configured}
+                        >
+                          {qbConnected ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
+                        </button>
+                      </form>
+                      <a
+                        href="/financials"
+                        class="rounded-full border border-sage-dark/20 px-4 py-2 text-sm font-semibold text-sage-dark transition hover:bg-sage/10"
+                      >
+                        Open Financials
+                      </a>
+                    </div>
+                    {
+                      !qbStatus.configured ? (
+                        <p class="mt-2 text-xs text-amber-800">
+                          Save your Client ID and Client Secret in step 3 first.
+                        </p>
+                      ) : null
+                    }
+                  </li>
+                </ol>
               )
             }
-            <a
-              href="/financials"
-              class="rounded-full border border-sage-dark/20 px-4 py-2 text-sm font-semibold text-sage-dark transition hover:bg-sage/10"
-            >
-              Open Financials
-            </a>
           </div>
-        </div>
+        </details>
 
         <div class="rounded-2xl border border-sage-dark/10 bg-white p-5 shadow-sm">
           <h3 class="text-lg font-semibold text-charcoal">Google Calendar</h3>
