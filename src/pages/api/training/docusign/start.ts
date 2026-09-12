@@ -6,12 +6,12 @@ import {
   upsertTrainingEnvelope,
 } from '../../../../lib/docusign';
 import { formErrorRedirect } from '../../../../lib/http';
-import { orgIdFromLocals } from '../../../../lib/organization';
+import { orgCanonicalOrigin, orgIdFromLocals } from '../../../../lib/organization';
 import { getLesson, listBlocks } from '../../../../lib/training';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, locals, url }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   const employee = locals.employee;
   if (!employee || employee.status !== 'active') {
     return new Response('Forbidden', { status: 403 });
@@ -42,7 +42,8 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
       });
     }
 
-    const returnUrl = `${url.origin}/api/training/docusign/return?moduleId=${encodeURIComponent(moduleId)}&lessonId=${encodeURIComponent(lessonId)}&blockId=${encodeURIComponent(blockId)}`;
+    const origin = orgCanonicalOrigin(locals.organization, request.url);
+    const returnUrl = `${origin}/api/training/docusign/return?moduleId=${encodeURIComponent(moduleId)}&lessonId=${encodeURIComponent(lessonId)}&blockId=${encodeURIComponent(blockId)}`;
     const session = await createEmbeddedSigningSession({
       orgId,
       templateId: block.docusignTemplateId,

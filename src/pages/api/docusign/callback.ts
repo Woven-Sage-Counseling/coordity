@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { exchangeDocuSignCode, readDocuSignOauthState } from '../../../lib/docusign';
 import { requireManagementAccess } from '../../../lib/management-access';
-import { orgIdFromLocals } from '../../../lib/organization';
+import { orgCanonicalOrigin, orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -19,7 +19,7 @@ function integrationsRedirect(opts?: { error?: string; saved?: string }): Respon
   });
 }
 
-export const GET: APIRoute = async ({ locals, url }) => {
+export const GET: APIRoute = async ({ locals, url, request }) => {
   const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
   const orgId = orgIdFromLocals(locals.organization);
@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
       orgId,
       userId: locals.employee!.id,
       code,
-      redirectUri: `${url.origin}/api/docusign/callback`,
+      redirectUri: `${orgCanonicalOrigin(locals.organization, request.url)}/api/docusign/callback`,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to connect DocuSign.';

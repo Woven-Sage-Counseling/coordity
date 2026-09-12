@@ -319,6 +319,27 @@ export function tenantOrigin(slug: string, requestUrl?: string): string {
   return `https://${slug}.coordity.com`;
 }
 
+/**
+ * Public origin for OAuth redirect URIs and tenant-facing links.
+ * Always uses https://{slug}.coordity.com outside localhost so shared
+ * preview hosts (pages.dev / portal.wovensage.com) never leak into org setup.
+ */
+export function orgCanonicalOrigin(
+  organization: { slug: string } | null | undefined,
+  requestUrl: string,
+): string {
+  const slug = organization?.slug?.trim().toLowerCase();
+  const url = new URL(requestUrl);
+  const host = url.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost')) {
+    return url.origin;
+  }
+  if (slug) {
+    return `https://${slug}.coordity.com`;
+  }
+  return tenantOrigin(DEFAULT_ORG_SLUG, requestUrl);
+}
+
 export async function getOrganizationById(id: string): Promise<PortalOrganization | null> {
   try {
     const row = await queryOrganization((select) => ({

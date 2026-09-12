@@ -6,11 +6,11 @@ import {
   saveDocuSignOauthState,
 } from '../../../lib/docusign';
 import { requireManagementAccess } from '../../../lib/management-access';
-import { orgIdFromLocals } from '../../../lib/organization';
+import { orgCanonicalOrigin, orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ locals, url }) => {
+export const POST: APIRoute = async ({ locals, url, request }) => {
   const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
   const orgId = orgIdFromLocals(locals.organization);
@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const redirectUri = `${url.origin}/api/docusign/callback`;
+  const redirectUri = `${orgCanonicalOrigin(locals.organization, request.url)}/api/docusign/callback`;
   const state = randomToken(16);
   await saveDocuSignOauthState(state, {
     userId: locals.employee!.id,
