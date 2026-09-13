@@ -159,8 +159,14 @@ export function defaultBlockRequired(type: TrainingBlockType): boolean {
   return type === 'quiz' || type === 'ack' || type === 'docusign' || type === 'contact';
 }
 
+/** Written text is always informational — never required and never review-gated. */
+export function canToggleBlockRequired(type: TrainingBlockType): boolean {
+  return type !== 'written';
+}
+
+/** Content types that can be marked required (learner confirms review). */
 export function isContentBlockType(type: TrainingBlockType): boolean {
-  return type === 'video' || type === 'written' || type === 'resource';
+  return type === 'video' || type === 'resource';
 }
 
 export function extractYoutubeId(url: string): string | null {
@@ -583,7 +589,12 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       lessonId: row.lesson_id,
       type,
       sortOrder: row.sort_order,
-      required: row.required == null ? defaultBlockRequired(type) : row.required === 1,
+      required:
+        type === 'written'
+          ? false
+          : row.required == null
+            ? defaultBlockRequired(type)
+            : row.required === 1,
       youtubeUrl: row.youtube_url,
       bodyText: row.body_text,
       resourceUrl: row.resource_url,
@@ -1159,8 +1170,11 @@ export async function createBlock(input: {
     input.type === 'contact'
       ? serializeContactFields(input.contactFields ?? ['fullName', 'phone', 'workEmail'])
       : null;
-  const required =
-    input.required == null ? defaultBlockRequired(input.type) : Boolean(input.required);
+  const required = !canToggleBlockRequired(input.type)
+    ? false
+    : input.required == null
+      ? defaultBlockRequired(input.type)
+      : Boolean(input.required);
   await DB.prepare(
     `INSERT INTO training_block
        (id, lesson_id, type, sort_order, required, youtube_url, body_text, resource_url, resource_label,
@@ -1233,10 +1247,12 @@ export async function updateBlock(input: {
   if (input.youtubeUrl != null && input.youtubeUrl.trim() && !extractYoutubeId(input.youtubeUrl)) {
     throw new Error('Enter a valid YouTube link.');
   }
-  const required =
-    input.required === undefined
+  const blockType = parseBlockType(row.type);
+  const required = !canToggleBlockRequired(blockType)
+    ? false
+    : input.required === undefined
       ? row.required == null
-        ? defaultBlockRequired(parseBlockType(row.type))
+        ? defaultBlockRequired(blockType)
         : row.required === 1
       : Boolean(input.required);
   const youtubeUrl =

@@ -216,27 +216,14 @@ function blockHeading(label: string, required: boolean) {
             );
           }
           if (block.type === 'written') {
-            const reviewed = contentReviewMap.get(block.id);
             return (
               <section class="card">
                 <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
-                  {blockHeading('Content', block.required)}
+                  Content
                 </h2>
                 <div class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-charcoal">
                   {block.bodyText || 'Content coming soon.'}
                 </div>
-                {block.required && !isComplete ? (
-                  reviewed ? (
-                    <p class="mt-4 text-sm font-semibold text-emerald-800">Marked as reviewed</p>
-                  ) : (
-                    <form method="post" action="/api/training/review-block" class="mt-4">
-                      <input type="hidden" name="blockId" value={block.id} />
-                      <input type="hidden" name="moduleId" value={moduleId} />
-                      <input type="hidden" name="lessonId" value={lessonId} />
-                      <button class="btn-primary" type="submit">I’ve reviewed this</button>
-                    </form>
-                  )
-                ) : null}
               </section>
             );
           }
