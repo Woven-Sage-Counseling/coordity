@@ -2,8 +2,10 @@
 import PortalLayout from '../../../layouts/PortalLayout.astro';
 import {
   extractYoutubeId,
+  getBlockResponse,
   getLesson,
   getModuleProgressForUser,
+  hasBlockResponse,
   latestQuizPass,
   lessonVisibleToRoles,
   listBlocks,
@@ -24,6 +26,7 @@ const error = Astro.url.searchParams.get('error');
 const quizScore = Astro.url.searchParams.get('score');
 const quizPassed = Astro.url.searchParams.get('passed');
 const docusignFlash = Astro.url.searchParams.get('docusign');
+const contactFlash = Astro.url.searchParams.get('contact');
 
 const lesson = await getLesson(lessonId);
 if (!lesson || lesson.orgId !== orgId || lesson.moduleId !== moduleId) {
@@ -61,12 +64,23 @@ for (const block of blocks.filter((b) => b.type === 'docusign')) {
   if (envelope) docusignStatusMap.set(block.id, envelope.status);
 }
 
+const contactDoneMap = new Map<string, boolean>();
+const contactAnswersMap = new Map<string, Awaited<ReturnType<typeof getBlockResponse>>>();
+for (const block of blocks.filter((b) => b.type === 'contact')) {
+  const answers = await getBlockResponse(employee.id, block.id);
+  contactAnswersMap.set(block.id, answers);
+  contactDoneMap.set(block.id, await hasBlockResponse(employee.id, block.id));
+}
+
 const needsAck = blocks.some((b) => b.type === 'ack');
 const quizzesOk = blocks.filter((b) => b.type === 'quiz').every((b) => quizPassMap.get(b.id));
 const docusignOk = blocks
   .filter((b) => b.type === 'docusign')
   .every((b) => docusignDoneMap.get(b.id));
-const canComplete = quizzesOk && docusignOk;
+const contactOk = blocks
+  .filter((b) => b.type === 'contact')
+  .every((b) => contactDoneMap.get(b.id));
+const canComplete = quizzesOk && docusignOk && contactOk;
 const itemLabel = lesson.isAssignment ? 'assignment' : 'lesson';
 const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
 ---
@@ -95,6 +109,13 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
     docusignFlash === 'completed' ? (
       <p class="mt-4 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
         Document signed. You can continue this {itemLabel}.
+      </p>
+    ) : null
+  }
+  {
+    contactFlash === 'saved' ? (
+      <p class="mt-4 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        Contact details saved.
       </p>
     ) : null
   }
@@ -259,6 +280,79 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
               </section>
             );
           }
+          if (block.type === 'contact') {
+            const saved = contactAnswersMap.get(block.id);
+            const defaults = {
+              fullName: saved?.fullName || employee.name || '',
+              phone: saved?.phone || employee.phone || '',
+              workEmail: saved?.workEmail || employee.email || '',
+              jobTitle: saved?.jobTitle || employee.jobTitle || '',
+            };
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                  Contact details
+                </h2>
+                <p class="mt-2 text-sm text-sage-dark/70">
+                  {block.bodyText ||
+                    'Confirm your contact information. We’ll fill empty account fields from what you enter here.'}
+                </p>
+                {contactDoneMap.get(block.id) ? (
+                  <p class="mt-3 text-sm font-semibold text-emerald-800">Saved for this {itemLabel}.</p>
+                ) : null}
+                <form method="post" action="/api/training/contact" class="mt-4 space-y-3">
+                  <input type="hidden" name="blockId" value={block.id} />
+                  <input type="hidden" name="moduleId" value={moduleId} />
+                  <input type="hidden" name="lessonId" value={lessonId} />
+                  <label class="block text-sm font-medium text-charcoal">
+                    Full name
+                    <input
+                      class="field mt-1.5"
+                      type="text"
+                      name="fullName"
+                      required
+                      maxlength="80"
+                      value={defaults.fullName}
+                    />
+                  </label>
+                  <label class="block text-sm font-medium text-charcoal">
+                    Phone number
+                    <input
+                      class="field mt-1.5"
+                      type="tel"
+                      name="phone"
+                      required
+                      value={defaults.phone}
+                      placeholder="(555) 555-5555"
+                    />
+                  </label>
+                  <label class="block text-sm font-medium text-charcoal">
+                    Work email
+                    <input
+                      class="field mt-1.5"
+                      type="email"
+                      name="workEmail"
+                      required
+                      value={defaults.workEmail}
+                    />
+                  </label>
+                  <label class="block text-sm font-medium text-charcoal">
+                    Job title <span class="font-normal text-sage-dark/55">(optional)</span>
+                    <input
+                      class="field mt-1.5"
+                      type="text"
+                      name="jobTitle"
+                      maxlength="80"
+                      value={defaults.jobTitle}
+                    />
+                  </label>
+                  <button class="btn-primary" type="submit">
+                    {contactDoneMap.get(block.id) ? 'Update contact details' : 'Save contact details'}
+                  </button>
+                </form>
+              </section>
+            );
+          }
           return null;
         })
       )
@@ -282,6 +376,11 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
         {!docusignOk ? (
           <p class="text-sm text-amber-800">
             Sign all required documents before marking this {itemLabel} complete.
+          </p>
+        ) : null}
+        {!contactOk ? (
+          <p class="text-sm text-amber-800">
+            Save your contact details before marking this {itemLabel} complete.
           </p>
         ) : null}
         <button class="btn-primary" type="submit" disabled={!canComplete}>

@@ -1,12 +1,28 @@
 import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
+import { formatPhoneNumber, updateDirectoryProfile, updateEmployeeJobTitle } from './employees';
 import { DEFAULT_ORG_ID } from './organization';
 
 export const TRAINING_MODULE_KINDS = ['onboarding', 'using_coordity', 'custom'] as const;
 export type TrainingModuleKind = (typeof TRAINING_MODULE_KINDS)[number];
 
-export const TRAINING_BLOCK_TYPES = ['video', 'written', 'resource', 'quiz', 'ack', 'docusign'] as const;
+export const TRAINING_BLOCK_TYPES = [
+  'video',
+  'written',
+  'resource',
+  'quiz',
+  'ack',
+  'docusign',
+  'contact',
+] as const;
 export type TrainingBlockType = (typeof TRAINING_BLOCK_TYPES)[number];
+
+export interface ContactDetailsAnswers {
+  fullName: string;
+  phone: string;
+  workEmail: string;
+  jobTitle: string;
+}
 
 export interface TrainingModule {
   id: string;
@@ -1355,4 +1371,363 @@ export async function listQuizScoresForUser(userId: string, orgId: string): Prom
     passed: row.passed === 1,
     createdAt: row.created_at,
   }));
+}
+
+function parseContactAnswers(raw: string | null | undefined): ContactDetailsAnswers | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ContactDetailsAnswers>;
+    return {
+      fullName: String(parsed.fullName ?? '').trim(),
+      phone: String(parsed.phone ?? '').trim(),
+      workEmail: String(parsed.workEmail ?? '').trim(),
+      jobTitle: String(parsed.jobTitle ?? '').trim(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getBlockResponse(
+  userId: string,
+  blockId: string,
+): Promise<ContactDetailsAnswers | null> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT answers_json FROM training_block_response WHERE user_id = ? AND block_id = ?`,
+  )
+    .bind(userId, blockId)
+    .first<{ answers_json: string }>();
+  return parseContactAnswers(row?.answers_json);
+}
+
+export async function hasBlockResponse(userId: string, blockId: string): Promise<boolean> {
+  const answers = await getBlockResponse(userId, blockId);
+  if (!answers) return false;
+  return Boolean(answers.fullName && answers.phone && answers.workEmail);
+}
+
+export async function saveContactDetailsResponse(input: {
+  userId: string;
+  blockId: string;
+  orgId: string;
+  answers: ContactDetailsAnswers;
+}): Promise<{ answers: ContactDetailsAnswers; profileUpdated: string[] }> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT b.id, b.type, m.org_id
+     FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ?`,
+  )
+    .bind(input.blockId)
+    .first<{ id: string; type: string; org_id: string }>();
+  if (!block || block.org_id !== input.orgId || block.type !== 'contact') {
+    throw new Error('Contact details block not found.');
+  }
+
+  const answers: ContactDetailsAnswers = {
+    fullName: input.answers.fullName.trim(),
+    phone: input.answers.phone.trim(),
+    workEmail: input.answers.workEmail.trim(),
+    jobTitle: input.answers.jobTitle.trim(),
+  };
+  if (answers.fullName.length < 2) throw new Error('Enter your full name.');
+  if (!answers.workEmail.includes('@')) throw new Error('Enter a valid work email.');
+  const formattedPhone = formatPhoneNumber(answers.phone);
+  answers.phone = formattedPhone ?? answers.phone;
+
+  await DB.prepare(
+    `INSERT INTO training_block_response (user_id, block_id, answers_json, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, block_id) DO UPDATE SET
+       answers_json = excluded.answers_json,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(input.userId, input.blockId, JSON.stringify(answers), nowMs())
+    .run();
+
+  const profile = await DB.prepare(
+    `SELECT u.name, u.email, p.phone, p.job_title
+     FROM user u
+     JOIN employee_profile p ON p.user_id = u.id
+     WHERE u.id = ?`,
+  )
+    .bind(input.userId)
+    .first<{ name: string; email: string; phone: string | null; job_title: string | null }>();
+
+  const profileUpdated: string[] = [];
+  if (profile) {
+    const nameEmpty = !profile.name?.trim();
+    const phoneEmpty = !profile.phone?.trim();
+    const jobEmpty = !profile.job_title?.trim();
+
+    if (nameEmpty || phoneEmpty) {
+      await updateDirectoryProfile({
+        userId: input.userId,
+        ...(nameEmpty ? { name: answers.fullName } : {}),
+        ...(phoneEmpty ? { phone: answers.phone } : {}),
+        actorUserId: input.userId,
+      });
+      if (nameEmpty) profileUpdated.push('name');
+      if (phoneEmpty) profileUpdated.push('phone');
+    }
+    if (jobEmpty && answers.jobTitle) {
+      await updateEmployeeJobTitle({
+        userId: input.userId,
+        jobTitle: answers.jobTitle,
+        actorUserId: input.userId,
+      });
+      profileUpdated.push('jobTitle');
+    }
+  }
+
+  return { answers, profileUpdated };
+}
+
+export async function getTrainingUserReview(
+  orgId: string,
+  userId: string,
+): Promise<{
+  userId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  jobTitle: string | null;
+  modules: Array<{
+    moduleId: string;
+    title: string;
+    percent: number;
+    complete: boolean;
+    lessons: Array<{
+      lessonId: string;
+      title: string;
+      isAssignment: boolean;
+      completed: boolean;
+      completedAt: number | null;
+      ackName: string | null;
+      blocks: Array<{
+        blockId: string;
+        type: TrainingBlockType;
+        label: string;
+        status: string;
+        detail: string | null;
+        contactAnswers: ContactDetailsAnswers | null;
+        quizAnswers: Array<{ prompt: string; selected: string; correct: string; isCorrect: boolean }> | null;
+        docusignStatus: string | null;
+      }>;
+    }>;
+  }>;
+} | null> {
+  const { DB } = getEnv();
+  const person = await DB.prepare(
+    `SELECT u.id, u.name, u.email, p.phone, p.job_title
+     FROM user u
+     JOIN organization_member om ON om.user_id = u.id
+     JOIN employee_profile p ON p.user_id = u.id
+     WHERE u.id = ? AND om.org_id = ? AND p.status = 'active'`,
+  )
+    .bind(userId, orgId)
+    .first<{
+      id: string;
+      name: string;
+      email: string;
+      phone: string | null;
+      job_title: string | null;
+    }>();
+  if (!person) return null;
+
+  const roles = await DB.prepare(
+    `SELECT r.key FROM user_role ur JOIN role r ON r.id = ur.role_id WHERE ur.user_id = ?`,
+  )
+    .bind(userId)
+    .all<{ key: string }>();
+  const roleKeys = (roles.results ?? []).map((r) => r.key);
+  const allModules = await listTrainingModules(orgId, { includeHidden: true });
+  const visibleModules = allModules.filter(
+    (module) => module.visible && moduleVisibleToRoles(module, roleKeys),
+  );
+
+  const modules = [];
+  for (const module of visibleModules) {
+    const progress = await getModuleProgressForUser({
+      orgId,
+      moduleId: module.id,
+      userId,
+      roleKeys,
+    });
+    if (!progress) continue;
+
+    const items = [...progress.lessons, ...progress.assignments];
+    const lessons = [];
+    for (const lesson of items) {
+      const progressRow = await DB.prepare(
+        `SELECT completed_at, ack_name FROM training_lesson_progress
+         WHERE user_id = ? AND lesson_id = ?`,
+      )
+        .bind(userId, lesson.id)
+        .first<{ completed_at: number; ack_name: string | null }>();
+      const blocks = await listBlocks(lesson.id);
+      const blockReviews = [];
+      for (const block of blocks) {
+        if (block.type === 'quiz') {
+          const attempt = await DB.prepare(
+            `SELECT score, passed, answers_json, created_at
+             FROM training_quiz_attempt
+             WHERE user_id = ? AND block_id = ?
+             ORDER BY created_at DESC LIMIT 1`,
+          )
+            .bind(userId, block.id)
+            .first<{ score: number; passed: number; answers_json: string; created_at: number }>();
+          let quizAnswers: Array<{
+            prompt: string;
+            selected: string;
+            correct: string;
+            isCorrect: boolean;
+          }> | null = null;
+          if (attempt) {
+            let indexes: number[] = [];
+            try {
+              const raw = JSON.parse(attempt.answers_json) as unknown;
+              indexes = Array.isArray(raw) ? raw.map((n) => Number(n)) : [];
+            } catch {
+              indexes = [];
+            }
+            quizAnswers = block.questions.map((question, index) => {
+              const chosen = indexes[index];
+              const selectedLabel =
+                chosen != null && question.options[chosen] != null
+                  ? question.options[chosen]!
+                  : '(no answer)';
+              const correctLabel = question.options[question.correctIndex] ?? '';
+              return {
+                prompt: question.prompt,
+                selected: selectedLabel,
+                correct: correctLabel,
+                isCorrect: chosen === question.correctIndex,
+              };
+            });
+          }
+          blockReviews.push({
+            blockId: block.id,
+            type: block.type,
+            label: 'Quiz',
+            status: attempt
+              ? attempt.passed === 1
+                ? `Passed (${attempt.score}%)`
+                : `Not passed (${attempt.score}%)`
+              : 'Not submitted',
+            detail: null,
+            contactAnswers: null,
+            quizAnswers,
+            docusignStatus: null,
+          });
+          continue;
+        }
+
+        if (block.type === 'ack') {
+          blockReviews.push({
+            blockId: block.id,
+            type: block.type,
+            label: 'Acknowledgment',
+            status: progressRow?.ack_name ? 'Signed' : lesson.completed ? 'Completed' : 'Pending',
+            detail: progressRow?.ack_name
+              ? `Acknowledged as “${progressRow.ack_name}”`
+              : block.ackPrompt,
+            contactAnswers: null,
+            quizAnswers: null,
+            docusignStatus: null,
+          });
+          continue;
+        }
+
+        if (block.type === 'docusign') {
+          const envelope = await DB.prepare(
+            `SELECT status, completed_at FROM training_docusign_envelope
+             WHERE user_id = ? AND block_id = ?`,
+          )
+            .bind(userId, block.id)
+            .first<{ status: string; completed_at: number | null }>();
+          const status = envelope?.status ?? 'missing';
+          blockReviews.push({
+            blockId: block.id,
+            type: block.type,
+            label: block.docusignTemplateName || 'DocuSign document',
+            status:
+              status === 'completed'
+                ? 'Signed'
+                : status === 'missing'
+                  ? 'Not started'
+                  : `In progress (${status})`,
+            detail: null,
+            contactAnswers: null,
+            quizAnswers: null,
+            docusignStatus: status,
+          });
+          continue;
+        }
+
+        if (block.type === 'contact') {
+          const contactAnswers = await getBlockResponse(userId, block.id);
+          blockReviews.push({
+            blockId: block.id,
+            type: block.type,
+            label: 'Contact details',
+            status: contactAnswers ? 'Submitted' : 'Not submitted',
+            detail: null,
+            contactAnswers,
+            quizAnswers: null,
+            docusignStatus: null,
+          });
+          continue;
+        }
+
+        blockReviews.push({
+          blockId: block.id,
+          type: block.type,
+          label:
+            block.type === 'video'
+              ? 'Video'
+              : block.type === 'written'
+                ? 'Written'
+                : block.type === 'resource'
+                  ? 'Resource'
+                  : block.type,
+          status: lesson.completed ? 'Completed with lesson' : 'Content',
+          detail: block.type === 'resource' ? block.resourceLabel || block.resourceUrl : null,
+          contactAnswers: null,
+          quizAnswers: null,
+          docusignStatus: null,
+        });
+      }
+
+      lessons.push({
+        lessonId: lesson.id,
+        title: lesson.title,
+        isAssignment: lesson.isAssignment,
+        completed: lesson.completed,
+        completedAt: progressRow?.completed_at ?? null,
+        ackName: progressRow?.ack_name ?? null,
+        blocks: blockReviews,
+      });
+    }
+
+    modules.push({
+      moduleId: module.id,
+      title: module.title,
+      percent: progress.percent,
+      complete: progress.complete,
+      lessons,
+    });
+  }
+
+  return {
+    userId: person.id,
+    name: person.name,
+    email: person.email,
+    phone: person.phone,
+    jobTitle: person.job_title,
+    modules,
+  };
 }

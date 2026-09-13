@@ -1,10 +1,11 @@
 import type { APIRoute } from 'astro';
+import { latestDocuSignComplete } from '../../../lib/docusign';
 import { formErrorRedirect } from '../../../lib/http';
 import { orgIdFromLocals } from '../../../lib/organization';
-import { latestDocuSignComplete } from '../../../lib/docusign';
 import {
   completeLesson,
   getLesson,
+  hasBlockResponse,
   latestQuizPass,
   listBlocks,
 } from '../../../lib/training';
@@ -54,6 +55,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           lesson.isAssignment
             ? 'Sign all required documents before completing this assignment.'
             : 'Sign all required documents before completing this lesson.',
+        );
+      }
+    }
+    for (const block of blocks.filter((b) => b.type === 'contact')) {
+      const saved = await hasBlockResponse(employee.id, block.id);
+      if (!saved) {
+        throw new Error(
+          lesson.isAssignment
+            ? 'Save your contact details before completing this assignment.'
+            : 'Save your contact details before completing this lesson.',
         );
       }
     }

@@ -29,6 +29,7 @@ import { listWorkCategoriesForAdmin } from '../lib/timesheet-work-categories';
 import { listBulletinBoardRequests } from '../lib/bulletin-board';
 import { orgCanonicalOrigin, orgIdFromLocals } from '../lib/organization';
 import {
+  getTrainingUserReview,
   listBlocks,
   listLessons,
   listAssignments,
@@ -179,6 +180,10 @@ for (const item of [...trainingAssignments, ...trainingLessons]) {
   );
 }
 const trainingRoster = await safeLoad('training-roster', () => listTrainingRoster(orgId), []);
+const trainingTraineeId = Astro.url.searchParams.get('trainee')?.trim() || null;
+const trainingTraineeReview = trainingTraineeId
+  ? await safeLoad('training-trainee-review', () => getTrainingUserReview(orgId, trainingTraineeId), null)
+  : null;
 
 const docusignStatus = await safeLoad(
   'docusign-status',
@@ -619,6 +624,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         blocksByItem={trainingBlocksByItem}
         roles={roles.map((role) => ({ key: role.key, name: role.name }))}
         roster={trainingRoster}
+        traineeReview={trainingTraineeReview}
         docusignConnected={docusignConnected}
         docusignTemplates={docusignTemplates}
         docusignStatuses={docusignStatuses}

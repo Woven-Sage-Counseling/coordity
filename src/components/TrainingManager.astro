@@ -18,6 +18,47 @@ interface Props {
     roleKeys: string[];
     modules: Array<{ moduleId: string; title: string; percent: number; complete: boolean }>;
   }>;
+  traineeReview?: {
+    userId: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    jobTitle: string | null;
+    modules: Array<{
+      moduleId: string;
+      title: string;
+      percent: number;
+      complete: boolean;
+      lessons: Array<{
+        lessonId: string;
+        title: string;
+        isAssignment: boolean;
+        completed: boolean;
+        completedAt: number | null;
+        ackName: string | null;
+        blocks: Array<{
+          blockId: string;
+          type: string;
+          label: string;
+          status: string;
+          detail: string | null;
+          contactAnswers: {
+            fullName: string;
+            phone: string;
+            workEmail: string;
+            jobTitle: string;
+          } | null;
+          quizAnswers: Array<{
+            prompt: string;
+            selected: string;
+            correct: string;
+            isCorrect: boolean;
+          }> | null;
+          docusignStatus: string | null;
+        }>;
+      }>;
+    }>;
+  } | null;
   docusignConnected?: boolean;
   docusignTemplates?: Array<{ templateId: string; name: string }>;
   docusignStatuses?: Array<{
@@ -41,6 +82,7 @@ const {
   blocksByItem,
   roles,
   roster,
+  traineeReview = null,
   docusignConnected = false,
   docusignTemplates = [],
   docusignStatuses = [],
@@ -76,7 +118,17 @@ function blockLabel(type: TrainingBlock['type']): string {
   if (type === 'quiz') return 'Quiz';
   if (type === 'ack') return 'Acknowledgment';
   if (type === 'docusign') return 'DocuSign document';
+  if (type === 'contact') return 'Contact details';
   return type;
+}
+
+function traineeHref(userId: string): string {
+  const params = new URLSearchParams();
+  if (selectedModuleId) params.set('module', selectedModuleId);
+  if (selectedView === 'settings') params.set('view', 'settings');
+  if (selectedItemId) params.set('item', selectedItemId);
+  params.set('trainee', userId);
+  return `/admin?${params.toString()}#training-progress`;
 }
 
 function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' }): string {
@@ -474,7 +526,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                 <div>
                   <h4 class="text-sm font-semibold text-charcoal">Content people go through</h4>
                   <p class="mt-1 text-xs text-sage-dark/60">
-                    Add writing, video, links, quizzes, or acknowledgments in order.
+                    Add writing, video, links, quizzes, contact details, or acknowledgments in order.
                   </p>
                   <div class="mt-3 space-y-3">
                     {selectedBlocks.length === 0 ? (
@@ -486,7 +538,8 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                         const needsExplicitSave =
                           block.type === 'written' ||
                           block.type === 'ack' ||
-                          block.type === 'docusign';
+                          block.type === 'docusign' ||
+                          block.type === 'contact';
                         const signedForBlock = docusignStatuses.filter(
                           (row) => row.blockId === block.id && row.status === 'completed',
                         );
@@ -544,6 +597,17 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                 <label class="block text-xs font-medium text-charcoal">
                                   Acknowledgment prompt
                                   <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
+                                </label>
+                              ) : null}
+                              {block.type === 'contact' ? (
+                                <label class="block text-xs font-medium text-charcoal">
+                                  Instructions (shown to employees)
+                                  <textarea
+                                    class="field"
+                                    name="bodyText"
+                                    rows="2"
+                                    placeholder="Confirm your contact information for onboarding."
+                                  >{block.bodyText ?? ''}</textarea>
                                 </label>
                               ) : null}
                               {block.type === 'quiz' ? (
@@ -707,6 +771,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                         <option value="resource">Link / resource</option>
                         <option value="quiz">Quiz</option>
                         <option value="ack">Acknowledgment</option>
+                        <option value="contact">Contact details</option>
                         <option value="docusign">DocuSign document</option>
                       </select>
                     </label>
@@ -834,47 +899,165 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
   </div>
   </div>
 
-  <div class="mt-8 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm">
+  <div class="mt-8 scroll-mt-24 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm" id="training-progress">
     <h3 class="text-base font-semibold text-charcoal">Team progress</h3>
-    <p class="mt-1 text-xs text-sage-dark/60">Who has completed modules assigned to their role.</p>
+    <p class="mt-1 text-xs text-sage-dark/60">
+      Search one person at a time to review lesson answers, signed documents, and contact details.
+    </p>
     {
       roster.length === 0 ? (
         <p class="mt-4 text-sm text-sage-dark/65">No active members yet.</p>
       ) : (
-        <div class="mt-4 overflow-x-auto">
-          <table class="min-w-full text-left text-sm">
-            <thead class="text-xs uppercase tracking-[0.12em] text-sage-dark/55">
-              <tr>
-                <th class="py-2 pr-4">Person</th>
-                <th class="py-2">Modules</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roster.map((person) => (
-                <tr class="border-t border-sage-dark/10 align-top">
-                  <td class="py-3 pr-4">
-                    <p class="font-semibold text-charcoal">{person.name}</p>
-                    <p class="text-xs text-sage-dark/55">{person.email}</p>
-                  </td>
-                  <td class="py-3">
-                    {person.modules.length === 0 ? (
-                      <span class="text-xs text-sage-dark/55">No assigned modules</span>
-                    ) : (
-                      <ul class="space-y-1">
-                        {person.modules.map((mod) => (
-                          <li class="text-xs text-charcoal">
-                            <span class="font-medium">{mod.title}</span>
-                            <span class="text-sage-dark/60"> — {mod.percent}%</span>
-                            {mod.complete ? <span class="ml-1 text-emerald-700">complete</span> : null}
-                          </li>
+        <div class="mt-4 space-y-4">
+          <form method="get" action="/admin" class="flex flex-wrap gap-2" data-training-trainee-search>
+            {selectedModuleId ? <input type="hidden" name="module" value={selectedModuleId} /> : null}
+            {selectedView === 'settings' ? <input type="hidden" name="view" value="settings" /> : null}
+            {selectedItemId ? <input type="hidden" name="item" value={selectedItemId} /> : null}
+            <input type="hidden" name="trainee" value={traineeReview?.userId ?? ''} data-training-trainee-id />
+            <label class="relative min-w-[16rem] flex-1">
+              <span class="sr-only">Search team member</span>
+              <input
+                class="field"
+                type="search"
+                name="q"
+                placeholder="Search by name or email"
+                autocomplete="off"
+                data-training-trainee-query
+                value={traineeReview ? `${traineeReview.name} · ${traineeReview.email}` : ''}
+              />
+              <div
+                class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-56 overflow-y-auto rounded-xl border border-sage-dark/15 bg-white py-1 shadow-lg"
+                data-training-trainee-results
+              ></div>
+            </label>
+            <button class="btn-primary !px-4 !py-2 text-sm" type="submit" data-training-trainee-open>
+              View
+            </button>
+          </form>
+
+          <script type="application/json" data-training-roster-json set:html={JSON.stringify(
+            roster.map((person) => ({
+              userId: person.userId,
+              name: person.name,
+              email: person.email,
+              href: traineeHref(person.userId),
+            })),
+          )} />
+
+          {
+            traineeReview ? (
+              <div class="space-y-4 rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                <div>
+                  <p class="text-lg font-semibold text-charcoal">{traineeReview.name}</p>
+                  <p class="text-sm text-sage-dark/70">{traineeReview.email}</p>
+                  <p class="mt-1 text-xs text-sage-dark/60">
+                    {[traineeReview.phone, traineeReview.jobTitle].filter(Boolean).join(' · ') || 'No phone or job title on account yet'}
+                  </p>
+                </div>
+
+                {traineeReview.modules.length === 0 ? (
+                  <p class="text-sm text-sage-dark/65">No assigned modules for this person.</p>
+                ) : (
+                  traineeReview.modules.map((mod) => (
+                    <details class="rounded-xl border border-sage-dark/10 bg-white p-3" open={mod.percent < 100}>
+                      <summary class="cursor-pointer list-none">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                          <p class="font-semibold text-charcoal">{mod.title}</p>
+                          <p class="text-xs text-sage-dark/65">
+                            {mod.percent}%{mod.complete ? ' · complete' : ''}
+                          </p>
+                        </div>
+                      </summary>
+                      <div class="mt-3 space-y-3 border-t border-sage-dark/10 pt-3">
+                        {mod.lessons.map((lesson) => (
+                          <div class="rounded-lg bg-[#f7f8fa] p-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                              <p class="text-sm font-semibold text-charcoal">
+                                {lesson.isAssignment ? 'Assignment' : 'Lesson'}: {lesson.title}
+                              </p>
+                              <span
+                                class:list={[
+                                  'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                  lesson.completed
+                                    ? 'bg-emerald-100 text-emerald-900'
+                                    : 'bg-white text-sage-dark/70 ring-1 ring-sage-dark/10',
+                                ]}
+                              >
+                                {lesson.completed ? 'Complete' : 'In progress'}
+                              </span>
+                            </div>
+                            {lesson.ackName ? (
+                              <p class="mt-1 text-xs text-sage-dark/65">Acknowledged as “{lesson.ackName}”</p>
+                            ) : null}
+                            <ul class="mt-3 space-y-2">
+                              {lesson.blocks.map((block) => (
+                                <li class="rounded-lg border border-sage-dark/10 bg-white px-3 py-2">
+                                  <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <p class="text-xs font-semibold text-charcoal">{block.label}</p>
+                                    <p class="text-[11px] text-sage-dark/65">{block.status}</p>
+                                  </div>
+                                  {block.detail ? (
+                                    <p class="mt-1 text-xs text-sage-dark/70">{block.detail}</p>
+                                  ) : null}
+                                  {block.contactAnswers ? (
+                                    <dl class="mt-2 grid gap-1 text-xs text-charcoal sm:grid-cols-2">
+                                      <div>
+                                        <dt class="text-sage-dark/55">Name</dt>
+                                        <dd>{block.contactAnswers.fullName || '—'}</dd>
+                                      </div>
+                                      <div>
+                                        <dt class="text-sage-dark/55">Phone</dt>
+                                        <dd>{block.contactAnswers.phone || '—'}</dd>
+                                      </div>
+                                      <div>
+                                        <dt class="text-sage-dark/55">Work email</dt>
+                                        <dd>{block.contactAnswers.workEmail || '—'}</dd>
+                                      </div>
+                                      <div>
+                                        <dt class="text-sage-dark/55">Job title</dt>
+                                        <dd>{block.contactAnswers.jobTitle || '—'}</dd>
+                                      </div>
+                                    </dl>
+                                  ) : null}
+                                  {block.quizAnswers ? (
+                                    <ul class="mt-2 space-y-1.5">
+                                      {block.quizAnswers.map((answer, index) => (
+                                        <li class="text-xs text-charcoal">
+                                          <p class="font-medium">
+                                            {index + 1}. {answer.prompt}
+                                          </p>
+                                          <p
+                                            class:list={[
+                                              'mt-0.5',
+                                              answer.isCorrect ? 'text-emerald-800' : 'text-amber-900',
+                                            ]}
+                                          >
+                                            Answer: {answer.selected}
+                                            {!answer.isCorrect ? ` · Correct: ${answer.correct}` : ''}
+                                          </p>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
+                                  {block.type === 'docusign' && block.docusignStatus !== 'completed' ? (
+                                    <p class="mt-1 text-xs text-amber-800">Document still missing or incomplete.</p>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         ))}
-                      </ul>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </div>
+                    </details>
+                  ))
+                )}
+              </div>
+            ) : (
+              <p class="rounded-xl bg-[#f7f8fa] px-3 py-3 text-sm text-sage-dark/65">
+                Search for a teammate above to open their full training review.
+              </p>
+            )
+          }
         </div>
       )
     }
@@ -1142,5 +1325,115 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       if (!document.querySelector('[data-training-browse]')) return;
       void loadBrowse(new URL(window.location.href), false);
     });
+
+    const bindTraineeSearch = () => {
+      const form = document.querySelector('[data-training-trainee-search]');
+      const query = document.querySelector('[data-training-trainee-query]');
+      const results = document.querySelector('[data-training-trainee-results]');
+      const hiddenId = document.querySelector('[data-training-trainee-id]');
+      const rosterEl = document.querySelector('[data-training-roster-json]');
+      if (
+        !(form instanceof HTMLFormElement) ||
+        !(query instanceof HTMLInputElement) ||
+        !(results instanceof HTMLElement) ||
+        !(hiddenId instanceof HTMLInputElement) ||
+        !(rosterEl instanceof HTMLElement)
+      ) {
+        return;
+      }
+
+      let people: Array<{ userId: string; name: string; email: string; href: string }> = [];
+      try {
+        people = JSON.parse(rosterEl.textContent || '[]') as typeof people;
+      } catch {
+        people = [];
+      }
+
+      const hideResults = () => {
+        results.classList.add('hidden');
+        results.innerHTML = '';
+      };
+
+      const escapeHtml = (value: string) =>
+        value
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;');
+
+      const showMatches = (term: string) => {
+        const needle = term.trim().toLowerCase();
+        const matches = people
+          .filter((person) => {
+            if (!needle) return true;
+            return (
+              person.name.toLowerCase().includes(needle) ||
+              person.email.toLowerCase().includes(needle)
+            );
+          })
+          .slice(0, 8);
+        if (matches.length === 0) {
+          results.innerHTML =
+            '<p class="px-3 py-2 text-xs text-sage-dark/60">No matching teammates.</p>';
+          results.classList.remove('hidden');
+          return;
+        }
+        results.innerHTML = matches
+          .map(
+            (person) =>
+              `<button type="button" class="block w-full px-3 py-2 text-left hover:bg-[#f7f8fa]" data-trainee-pick="${escapeHtml(person.userId)}" data-trainee-href="${escapeHtml(person.href)}">
+                <span class="block text-sm font-semibold text-charcoal">${escapeHtml(person.name)}</span>
+                <span class="block text-xs text-sage-dark/60">${escapeHtml(person.email)}</span>
+              </button>`,
+          )
+          .join('');
+        results.classList.remove('hidden');
+      };
+
+      query.addEventListener('focus', () => showMatches(query.value));
+      query.addEventListener('input', () => {
+        hiddenId.value = '';
+        showMatches(query.value);
+      });
+      results.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('[data-trainee-pick]') : null;
+        if (!(button instanceof HTMLElement)) return;
+        const userId = button.getAttribute('data-trainee-pick') || '';
+        const href = button.getAttribute('data-trainee-href') || '';
+        const person = people.find((row) => row.userId === userId);
+        if (!person || !href) return;
+        hiddenId.value = userId;
+        query.value = `${person.name} · ${person.email}`;
+        hideResults();
+        window.location.assign(href);
+      });
+      document.addEventListener('click', (event) => {
+        if (!(event.target instanceof Node)) return;
+        if (form.contains(event.target)) return;
+        hideResults();
+      });
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const selected =
+          people.find((person) => person.userId === hiddenId.value) ||
+          people.find((person) => {
+            const needle = query.value.trim().toLowerCase();
+            return (
+              person.name.toLowerCase() === needle ||
+              person.email.toLowerCase() === needle ||
+              `${person.name} · ${person.email}`.toLowerCase() === needle ||
+              person.name.toLowerCase().includes(needle) ||
+              person.email.toLowerCase().includes(needle)
+            );
+          });
+        if (selected) {
+          window.location.assign(selected.href);
+          return;
+        }
+        showMatches(query.value);
+      });
+    };
+
+    bindTraineeSearch();
   })();
 </script>
