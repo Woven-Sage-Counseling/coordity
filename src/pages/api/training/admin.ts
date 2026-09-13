@@ -186,13 +186,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
             : undefined,
         uploadDocs:
           type === 'upload'
-            ? form
-                .getAll('uploadDocs')
-                .map((value) => String(value))
-                .filter(
-                  (value): value is 'photoId' | 'therapistLicense' | 'npiRecord' | 'caqhNumber' | 'malpracticeInsurance' | 'other' =>
-                    ['photoId', 'therapistLicense', 'npiRecord', 'caqhNumber', 'malpracticeInsurance', 'other'].includes(value),
-                )
+            ? (() => {
+                const selected = form
+                  .getAll('uploadDocs')
+                  .map((value) => String(value))
+                  .filter(
+                    (
+                      value,
+                    ): value is
+                      | 'photoId'
+                      | 'therapistLicense'
+                      | 'npiRecord'
+                      | 'caqhNumber'
+                      | 'malpracticeInsurance'
+                      | 'other' =>
+                      [
+                        'photoId',
+                        'therapistLicense',
+                        'npiRecord',
+                        'caqhNumber',
+                        'malpracticeInsurance',
+                        'other',
+                      ].includes(value),
+                  );
+                return selected.length > 0 ? selected : ['photoId'];
+              })()
             : undefined,
         uploadOtherLabel:
           type === 'upload' ? String(form.get('uploadOtherLabel') ?? '').trim() || null : undefined,

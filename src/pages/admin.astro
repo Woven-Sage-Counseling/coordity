@@ -153,7 +153,7 @@ const trainingModules = await safeLoad(
 const trainingSelectedId =
   selectedTrainingModuleId && trainingModules.some((m) => m.id === selectedTrainingModuleId)
     ? selectedTrainingModuleId
-    : null;
+    : (trainingModules[0]?.id ?? null);
 const trainingLessons = trainingSelectedId
   ? await safeLoad('training-lessons', () => listLessons(trainingSelectedId), [])
   : [];

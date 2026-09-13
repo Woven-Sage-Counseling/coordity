@@ -7,6 +7,7 @@ export const ISSUE_REPORT_SOURCE = 'issue_report';
 export const FEATURE_SUGGESTION_SOURCE = 'feature_suggestion';
 export const TIMESHEET_BACKLOG_SOURCE = 'timesheet_backlog';
 export const TIMESHEET_SHIFT_EDIT_SOURCE = 'timesheet_shift_edit';
+export const TRAINING_UPLOAD_COMPLETE_SOURCE = 'training_upload_complete';
 
 export const ACTIVE_NOTIFICATIONS_LIMIT = 500;
 

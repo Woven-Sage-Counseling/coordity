@@ -1243,9 +1243,7 @@ export async function createBlock(input: {
   if (input.type === 'contact' && input.contactFields && input.contactFields.length === 0) {
     throw new Error('Select at least one contact field.');
   }
-  if (input.type === 'upload' && input.uploadDocs && input.uploadDocs.length === 0) {
-    throw new Error('Select at least one document to collect.');
-  }
+  // Upload docs default to photo ID when creating without an explicit selection.
   const { DB } = getEnv();
   const ts = nowMs();
   const id = randomToken(16);
@@ -2323,5 +2321,82 @@ export async function getTrainingUserReview(
     phone: person.phone,
     jobTitle: person.job_title,
     modules,
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export function summarizeUploadDocsForLesson(blocks: TrainingBlock[]): string[] {
+  const labels: string[] = [];
+  for (const block of blocks) {
+    if (block.type !== 'upload') continue;
+    for (const key of block.uploadDocs) {
+      labels.push(uploadDocLabel(key, block.uploadOtherLabel));
+    }
+  }
+  return labels;
+}
+
+export function buildTrainingUploadCompleteNotification(input: {
+  employeeName: string;
+  moduleTitle: string;
+  lessonTitle: string;
+  isAssignment: boolean;
+}): { title: string; body: string } {
+  const kind = input.isAssignment ? 'assignment' : 'lesson';
+  return {
+    title: 'Training documents to review',
+    body: `${input.employeeName} completed ${kind} “${input.lessonTitle}” in ${input.moduleTitle} with document uploads.`,
+  };
+}
+
+export function buildTrainingUploadCompleteEmail(input: {
+  employeeName: string;
+  employeeEmail: string;
+  moduleTitle: string;
+  lessonTitle: string;
+  isAssignment: boolean;
+  docLabels: string[];
+  reviewUrl: string;
+}): { subject: string; text: string; html: string; replyTo: string } {
+  const kind = input.isAssignment ? 'assignment' : 'lesson';
+  const subject = `Training documents from ${input.employeeName}`;
+  const docLines =
+    input.docLabels.length > 0
+      ? input.docLabels.map((label) => `- ${label}`)
+      : ['- Uploaded documents'];
+
+  const text = [
+    `${input.employeeName} (${input.employeeEmail}) completed ${kind} “${input.lessonTitle}” in ${input.moduleTitle}.`,
+    '',
+    'Documents requested:',
+    ...docLines,
+    '',
+    `Review in admin: ${input.reviewUrl}`,
+  ].join('\n');
+
+  const htmlDocs =
+    input.docLabels.length > 0
+      ? input.docLabels.map((label) => `<li>${escapeHtml(label)}</li>`).join('')
+      : '<li>Uploaded documents</li>';
+
+  const html = `
+    <p><strong>${escapeHtml(input.employeeName)}</strong> (${escapeHtml(input.employeeEmail)}) completed ${escapeHtml(kind)} “${escapeHtml(input.lessonTitle)}” in ${escapeHtml(input.moduleTitle)}.</p>
+    <p><strong>Documents requested:</strong></p>
+    <ul>${htmlDocs}</ul>
+    <p><a href="${escapeHtml(input.reviewUrl)}">Review in admin</a></p>
+  `.trim();
+
+  return {
+    subject,
+    text,
+    html,
+    replyTo: input.employeeEmail,
   };
 }

@@ -1,16 +1,25 @@
 import type { APIRoute } from 'astro';
 import { latestDocuSignComplete } from '../../../lib/docusign';
+import { notifyAdminEmail } from '../../../lib/email';
 import { formErrorRedirect } from '../../../lib/http';
+import {
+  TRAINING_UPLOAD_COMPLETE_SOURCE,
+  notifyManagementUsers,
+} from '../../../lib/notifications';
 import { orgIdFromLocals } from '../../../lib/organization';
 import {
+  buildTrainingUploadCompleteEmail,
+  buildTrainingUploadCompleteNotification,
   completeLesson,
   getLesson,
+  getTrainingModule,
   hasBlockResponse,
   hasContentReview,
   hasUploadResponse,
   isContentBlockType,
   latestQuizPass,
   listBlocks,
+  summarizeUploadDocsForLesson,
 } from '../../../lib/training';
 
 export const prerender = false;
@@ -95,6 +104,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
       lessonId,
       ackName: needsAck ? ackName : null,
     });
+
+    if (blocks.some((block) => block.type === 'upload')) {
+      const module = await getTrainingModule(moduleId, orgId);
+      const moduleTitle = module?.title ?? 'Training';
+      const notification = buildTrainingUploadCompleteNotification({
+        employeeName: employee.name,
+        moduleTitle,
+        lessonTitle: lesson.title,
+        isAssignment: lesson.isAssignment,
+      });
+      try {
+        await notifyManagementUsers({
+          ...notification,
+          excludeUserId: employee.id,
+          sourceType: TRAINING_UPLOAD_COMPLETE_SOURCE,
+          sourceId: `${employee.id}:${lessonId}`,
+        });
+      } catch (error) {
+        console.error('training upload management notify failed', error);
+      }
+
+      const reviewUrl = new URL(
+        `/admin?${new URLSearchParams({ trainee: employee.id }).toString()}#training-progress`,
+        request.url,
+      ).toString();
+      await notifyAdminEmail(
+        buildTrainingUploadCompleteEmail({
+          employeeName: employee.name,
+          employeeEmail: employee.email,
+          moduleTitle,
+          lessonTitle: lesson.title,
+          isAssignment: lesson.isAssignment,
+          docLabels: summarizeUploadDocsForLesson(blocks),
+          reviewUrl,
+        }),
+      );
+    }
+
     return new Response(null, {
       status: 303,
       headers: { Location: `/training/${moduleId}?saved=lesson`, 'Cache-Control': 'no-store' },
