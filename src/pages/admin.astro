@@ -224,6 +224,8 @@ const qbStatus = await safeLoad(
     clientId: null,
     environment: 'sandbox' as const,
     status: 'disconnected' as const,
+    companyName: null,
+    connectedEmail: null,
     lastError: null,
     lastSyncAt: null,
     connectedAt: null,
@@ -903,6 +905,14 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               <p class="mt-1 text-sm text-sage-dark/70">
                 Connect QuickBooks Online so Financials can sync company books into Coordity.
               </p>
+              {
+                qbStatus.companyName || qbStatus.connectedEmail ? (
+                  <p class="mt-2 text-sm text-charcoal">
+                    Connected as {qbStatus.companyName || qbStatus.connectedEmail}
+                    {qbStatus.companyName && qbStatus.connectedEmail ? ` · ${qbStatus.connectedEmail}` : ''}
+                  </p>
+                ) : null
+              }
             </div>
             <span
               class="mt-1 shrink-0 text-sage-dark/40 transition group-open:rotate-90"

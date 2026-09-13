@@ -40,6 +40,8 @@ interface ConnectionRow {
   client_id: string | null;
   client_secret_encrypted: string | null;
   environment: string | null;
+  company_name: string | null;
+  connected_email: string | null;
   last_error: string | null;
   last_sync_at: number | null;
   connected_at: number | null;
@@ -52,6 +54,8 @@ export interface QuickBooksConnectionStatus {
   clientId: string | null;
   environment: 'sandbox' | 'production';
   status: 'disconnected' | 'connected' | 'error';
+  companyName: string | null;
+  connectedEmail: string | null;
   lastError: string | null;
   lastSyncAt: number | null;
   connectedAt: number | null;
@@ -493,6 +497,8 @@ export class QuickBooksProvider implements FinancialDataProvider {
       row?.status === 'connected' || row?.status === 'error' || row?.status === 'disconnected'
         ? row.status
         : 'disconnected';
+    const connectedEmail =
+      row?.connected_email ?? (row?.connected_by ? await this.userEmail(row.connected_by) : null);
     return {
       configured: Boolean(credentials),
       hasOrgApp,
@@ -500,6 +506,8 @@ export class QuickBooksProvider implements FinancialDataProvider {
       clientId: row?.client_id ?? (this.platformConfigured() ? 'Using Coordity platform app' : null),
       environment: credentials?.environment ?? (row?.environment === 'production' ? 'production' : 'sandbox'),
       status,
+      companyName: row?.company_name ?? null,
+      connectedEmail,
       lastError: row?.last_error ?? null,
       lastSyncAt: row?.last_sync_at ?? null,
       connectedAt: row?.connected_at ?? null,
@@ -547,7 +555,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
     const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
-      scope: 'com.intuit.quickbooks.accounting',
+      scope: 'com.intuit.quickbooks.accounting openid profile email',
       redirect_uri: redirectUri,
       state,
     });
@@ -599,6 +607,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
     );
 
     await this.storeTokens(tokens, realmId, userId);
+    await this.storeConnectionIdentity(tokens.access_token, realmId, userId);
     await this.syncSnapshot();
   }
 
@@ -609,6 +618,10 @@ export class QuickBooksProvider implements FinancialDataProvider {
       const connection = await this.connection();
       if (!connection?.realm_id) {
         throw new Error('QuickBooks is not connected.');
+      }
+
+      if (!connection.company_name || !connection.connected_email) {
+        await this.storeConnectionIdentity(accessToken, connection.realm_id, connection.connected_by);
       }
 
       await this.fetchAndStorePnl(accessToken, connection.realm_id, ytd.start, ytd.end, { includeBanks: true });
@@ -979,11 +992,72 @@ export class QuickBooksProvider implements FinancialDataProvider {
     return DB.prepare(
       `SELECT realm_id, access_token_encrypted, refresh_token_encrypted,
               access_token_expires_at, refresh_token_expires_at, connected_by, status,
-              client_id, client_secret_encrypted, environment, last_error, last_sync_at, connected_at
+              client_id, client_secret_encrypted, environment, company_name, connected_email,
+              last_error, last_sync_at, connected_at
        FROM quickbooks_connection WHERE id = ?`,
     )
       .bind(CONNECTION_ID)
       .first<ConnectionRow>();
+  }
+
+  private async userEmail(userId: string): Promise<string | null> {
+    const row = await getEnv()
+      .DB.prepare(`SELECT email FROM user WHERE id = ?`)
+      .bind(userId)
+      .first<{ email: string }>();
+    return row?.email ?? null;
+  }
+
+  private async storeConnectionIdentity(
+    accessToken: string,
+    realmId: string,
+    userId: string | null | undefined,
+  ): Promise<void> {
+    let companyName: string | null = null;
+    let connectedEmail: string | null = null;
+
+    try {
+      const payload = (await this.qbGet(accessToken, realmId, `/companyinfo/${realmId}`)) as {
+        CompanyInfo?: { CompanyName?: string; Email?: { Address?: string } };
+      };
+      companyName = payload.CompanyInfo?.CompanyName?.trim() || null;
+      connectedEmail = payload.CompanyInfo?.Email?.Address?.trim() || null;
+    } catch {
+      // Keep going — userinfo / Coordity email can still fill the display.
+    }
+
+    if (!connectedEmail) {
+      try {
+        const response = await fetch('https://accounts.platform.intuit.com/v1/openid_connect/userinfo', {
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (response.ok) {
+          const profile = (await response.json()) as { email?: string };
+          connectedEmail = profile.email?.trim() || null;
+        }
+      } catch {
+        // Optional OpenID claim; accounting-only tokens skip this.
+      }
+    }
+
+    if (!connectedEmail && userId) {
+      connectedEmail = await this.userEmail(userId);
+    }
+
+    if (!companyName && !connectedEmail) return;
+
+    await getEnv()
+      .DB.prepare(
+        `UPDATE quickbooks_connection
+         SET company_name = COALESCE(?, company_name),
+             connected_email = COALESCE(?, connected_email)
+         WHERE id = ?`,
+      )
+      .bind(companyName, connectedEmail, CONNECTION_ID)
+      .run();
   }
 
   private async validAccessToken(): Promise<string> {
