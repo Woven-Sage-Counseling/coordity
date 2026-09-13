@@ -1,6 +1,6 @@
 ---
 import type { TrainingModule, TrainingLesson, TrainingBlock } from '../lib/training';
-import { CONTACT_FIELD_OPTIONS, MODULE_TEMPLATES } from '../lib/training';
+import { CONTACT_FIELD_OPTIONS, MODULE_TEMPLATES, extractYoutubeId } from '../lib/training';
 
 interface Props {
   modules: TrainingModule[];
@@ -522,16 +522,202 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                         </button>
                       </form>
                     </details>
-                    <a
-                      href={`/training/${selected.id}/${selectedItem.id}?preview=1`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
                       class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
+                      data-training-preview-open
                     >
                       Preview
-                    </a>
+                    </button>
                   </div>
                 </div>
+
+                <dialog
+                  class="w-[min(40rem,calc(100vw-2rem))] max-h-[min(90vh,52rem)] overflow-hidden rounded-2xl border border-sage-dark/15 bg-white p-0 shadow-xl backdrop:bg-charcoal/40"
+                  data-training-preview-dialog
+                >
+                  <div class="flex items-center justify-between gap-3 border-b border-sage-dark/10 px-4 py-3">
+                    <div class="min-w-0">
+                      <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+                        Learner preview
+                      </p>
+                      <p class="truncate text-sm font-semibold text-charcoal">{selectedItem.title}</p>
+                    </div>
+                    <button
+                      type="button"
+                      class="rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark/70 hover:bg-[#f4f5f8]"
+                      data-training-preview-close
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div class="max-h-[min(78vh,44rem)] space-y-4 overflow-y-auto px-4 py-4">
+                    {
+                      selectedBlocks.length === 0 ? (
+                        <p class="text-sm text-sage-dark/65">This {selectedIsAssignment ? 'assignment' : 'lesson'} has no content yet.</p>
+                      ) : (
+                        selectedBlocks.map((block) => {
+                          if (block.type === 'video') {
+                            const youtubeId = block.youtubeUrl ? extractYoutubeId(block.youtubeUrl) : null;
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Video</h4>
+                                {youtubeId ? (
+                                  <div class="mt-3 aspect-video overflow-hidden rounded-xl bg-black">
+                                    <iframe
+                                      class="h-full w-full"
+                                      src={`https://www.youtube.com/embed/${youtubeId}`}
+                                      title="Lesson video preview"
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                      allowfullscreen
+                                    />
+                                  </div>
+                                ) : (
+                                  <p class="mt-3 text-sm text-sage-dark/65">Video coming soon.</p>
+                                )}
+                              </section>
+                            );
+                          }
+                          if (block.type === 'written') {
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Content</h4>
+                                <div class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-charcoal">
+                                  {block.bodyText || 'Content coming soon.'}
+                                </div>
+                              </section>
+                            );
+                          }
+                          if (block.type === 'resource') {
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Resource</h4>
+                                {block.resourceUrl ? (
+                                  <p class="mt-3 text-sm font-semibold text-sage-dark">
+                                    {block.resourceLabel || block.resourceUrl}
+                                  </p>
+                                ) : (
+                                  <p class="mt-3 text-sm text-sage-dark/65">No link yet.</p>
+                                )}
+                              </section>
+                            );
+                          }
+                          if (block.type === 'quiz') {
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Quiz</h4>
+                                <p class="mt-2 text-sm text-sage-dark/70">
+                                  Pass with {block.passPercent ?? 80}% or higher.
+                                </p>
+                                {block.questions.length === 0 ? (
+                                  <p class="mt-3 text-sm text-sage-dark/65">No questions yet.</p>
+                                ) : (
+                                  <div class="mt-4 space-y-4">
+                                    {block.questions.map((question, qIndex) => (
+                                      <fieldset class="rounded-xl border border-sage-dark/10 bg-white p-4">
+                                        <legend class="px-1 text-sm font-semibold text-charcoal">
+                                          {qIndex + 1}. {question.prompt}
+                                        </legend>
+                                        <div class="mt-3 space-y-2">
+                                          {question.options.map((option) => (
+                                            <label class="flex items-center gap-2 text-sm text-charcoal">
+                                              <input type="radio" disabled />
+                                              {option}
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </fieldset>
+                                    ))}
+                                  </div>
+                                )}
+                              </section>
+                            );
+                          }
+                          if (block.type === 'ack') {
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                                  Acknowledgment
+                                </h4>
+                                <p class="mt-3 text-sm text-charcoal">
+                                  {block.ackPrompt ||
+                                    `I acknowledge that I have completed this ${selectedIsAssignment ? 'assignment' : 'lesson'}.`}
+                                </p>
+                                <label class="mt-4 block text-sm font-medium text-charcoal">
+                                  Type your full name to acknowledge
+                                  <input class="field mt-1.5" type="text" disabled placeholder="Full name" />
+                                </label>
+                              </section>
+                            );
+                          }
+                          if (block.type === 'docusign') {
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                                  Document to sign
+                                </h4>
+                                <p class="mt-2 text-sm font-medium text-charcoal">
+                                  {block.docusignTemplateName || 'Required document'}
+                                </p>
+                                {block.bodyText ? (
+                                  <p class="mt-2 whitespace-pre-wrap text-sm text-sage-dark/75">{block.bodyText}</p>
+                                ) : (
+                                  <p class="mt-2 text-sm text-sage-dark/70">
+                                    Review and sign this document to continue.
+                                  </p>
+                                )}
+                                <button class="btn-primary mt-4" type="button" disabled>
+                                  Sign document
+                                </button>
+                              </section>
+                            );
+                          }
+                          if (block.type === 'contact') {
+                            const fields = CONTACT_FIELD_OPTIONS.filter((field) =>
+                              block.contactFields.includes(field.key),
+                            );
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                                  Contact details
+                                </h4>
+                                {block.bodyText ? (
+                                  <p class="mt-2 text-sm text-sage-dark/70">{block.bodyText}</p>
+                                ) : (
+                                  <p class="mt-2 text-sm text-sage-dark/70">
+                                    Fill in the details below. Empty account fields will be updated from your answers.
+                                  </p>
+                                )}
+                                <div class="mt-4 space-y-3">
+                                  {fields.map((field) => (
+                                    <label class="block text-sm font-medium text-charcoal">
+                                      {field.label}
+                                      {!field.required ? (
+                                        <span class="font-normal text-sage-dark/55"> (optional)</span>
+                                      ) : null}
+                                      <input
+                                        class="field mt-1.5"
+                                        type={field.inputType}
+                                        disabled
+                                        placeholder={field.key === 'phone' ? '(555) 555-5555' : field.label}
+                                      />
+                                    </label>
+                                  ))}
+                                </div>
+                              </section>
+                            );
+                          }
+                          return null;
+                        })
+                      )
+                    }
+                    <div class="rounded-xl border border-dashed border-sage-dark/20 px-4 py-3">
+                      <button class="btn-primary" type="button" disabled>
+                        Mark {selectedIsAssignment ? 'assignment' : 'lesson'} complete
+                      </button>
+                    </div>
+                  </div>
+                </dialog>
 
                 <div>
                   <h4 class="text-sm font-semibold text-charcoal">Content people go through</h4>
@@ -1457,5 +1643,35 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
     };
 
     bindTraineeSearch();
+
+    const bindLessonPreview = () => {
+      document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const openBtn = target.closest('[data-training-preview-open]');
+        if (openBtn) {
+          const root = openBtn.closest('[data-training-browse]') ?? document;
+          const dialog = root.querySelector('[data-training-preview-dialog]');
+          if (dialog instanceof HTMLDialogElement && typeof dialog.showModal === 'function') {
+            dialog.showModal();
+          }
+          return;
+        }
+
+        const closeBtn = target.closest('[data-training-preview-close]');
+        if (closeBtn) {
+          const dialog = closeBtn.closest('dialog');
+          if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
+          return;
+        }
+
+        if (target instanceof HTMLDialogElement && target.hasAttribute('data-training-preview-dialog')) {
+          target.close();
+        }
+      });
+    };
+
+    bindLessonPreview();
   })();
 </script>
