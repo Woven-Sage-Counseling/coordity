@@ -248,6 +248,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         blockId: String(form.get('blockId') ?? '').trim(),
         direction,
       });
+      if (asJson) {
+        return jsonOk({
+          moduleId,
+          itemId: lessonId || moved.lessonId,
+          direction,
+          blockId: String(form.get('blockId') ?? '').trim(),
+        });
+      }
       return redirectAdmin({
         moduleId,
         itemId: lessonId || moved.lessonId,
