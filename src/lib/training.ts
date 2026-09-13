@@ -102,6 +102,7 @@ export interface TrainingBlock {
   lessonId: string;
   type: TrainingBlockType;
   sortOrder: number;
+  required: boolean;
   youtubeUrl: string | null;
   bodyText: string | null;
   resourceUrl: string | null;
@@ -152,6 +153,14 @@ function parseOptions(raw: string): string[] {
   } catch {
     return [];
   }
+}
+
+export function defaultBlockRequired(type: TrainingBlockType): boolean {
+  return type === 'quiz' || type === 'ack' || type === 'docusign' || type === 'contact';
+}
+
+export function isContentBlockType(type: TrainingBlockType): boolean {
+  return type === 'video' || type === 'written' || type === 'resource';
 }
 
 export function extractYoutubeId(url: string): string | null {
@@ -539,7 +548,7 @@ async function listQuestions(blockId: string): Promise<TrainingQuizQuestion[]> {
 export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
-    `SELECT id, lesson_id, type, sort_order, youtube_url, body_text, resource_url, resource_label,
+    `SELECT id, lesson_id, type, sort_order, required, youtube_url, body_text, resource_url, resource_label,
             file_name, file_mime, file_data, ack_prompt, pass_percent,
             docusign_template_id, docusign_template_name, created_at, updated_at
      FROM training_block WHERE lesson_id = ? ORDER BY sort_order ASC, created_at ASC`,
@@ -550,6 +559,7 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       lesson_id: string;
       type: string;
       sort_order: number;
+      required: number | null;
       youtube_url: string | null;
       body_text: string | null;
       resource_url: string | null;
@@ -573,6 +583,7 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       lessonId: row.lesson_id,
       type,
       sortOrder: row.sort_order,
+      required: row.required == null ? defaultBlockRequired(type) : row.required === 1,
       youtubeUrl: row.youtube_url,
       bodyText: row.body_text,
       resourceUrl: row.resource_url,
@@ -1117,6 +1128,7 @@ export async function createBlock(input: {
   orgId: string;
   lessonId: string;
   type: TrainingBlockType;
+  required?: boolean;
   youtubeUrl?: string | null;
   bodyText?: string | null;
   resourceUrl?: string | null;
@@ -1147,17 +1159,20 @@ export async function createBlock(input: {
     input.type === 'contact'
       ? serializeContactFields(input.contactFields ?? ['fullName', 'phone', 'workEmail'])
       : null;
+  const required =
+    input.required == null ? defaultBlockRequired(input.type) : Boolean(input.required);
   await DB.prepare(
     `INSERT INTO training_block
-       (id, lesson_id, type, sort_order, youtube_url, body_text, resource_url, resource_label,
+       (id, lesson_id, type, sort_order, required, youtube_url, body_text, resource_url, resource_label,
         ack_prompt, pass_percent, docusign_template_id, docusign_template_name, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
       input.lessonId,
       input.type,
       Number(maxSort?.n ?? -1) + 1,
+      required ? 1 : 0,
       input.youtubeUrl?.trim() || null,
       input.bodyText?.trim() || null,
       input.resourceUrl?.trim() || null,
@@ -1179,6 +1194,7 @@ export async function createBlock(input: {
 export async function updateBlock(input: {
   orgId: string;
   blockId: string;
+  required?: boolean;
   youtubeUrl?: string | null;
   bodyText?: string | null;
   resourceUrl?: string | null;
@@ -1191,7 +1207,7 @@ export async function updateBlock(input: {
 }): Promise<void> {
   const { DB } = getEnv();
   const row = await DB.prepare(
-    `SELECT b.id, b.type, b.youtube_url, b.body_text, b.resource_url, b.resource_label,
+    `SELECT b.id, b.type, b.required, b.youtube_url, b.body_text, b.resource_url, b.resource_label,
             b.ack_prompt, b.pass_percent, b.docusign_template_id, b.docusign_template_name, m.org_id
      FROM training_block b
      JOIN training_lesson l ON l.id = b.lesson_id
@@ -1202,6 +1218,7 @@ export async function updateBlock(input: {
     .first<{
       id: string;
       type: string;
+      required: number | null;
       youtube_url: string | null;
       body_text: string | null;
       resource_url: string | null;
@@ -1216,6 +1233,12 @@ export async function updateBlock(input: {
   if (input.youtubeUrl != null && input.youtubeUrl.trim() && !extractYoutubeId(input.youtubeUrl)) {
     throw new Error('Enter a valid YouTube link.');
   }
+  const required =
+    input.required === undefined
+      ? row.required == null
+        ? defaultBlockRequired(parseBlockType(row.type))
+        : row.required === 1
+      : Boolean(input.required);
   const youtubeUrl =
     input.youtubeUrl === undefined ? row.youtube_url : (input.youtubeUrl ?? '').trim() || null;
   const bodyText = input.bodyText === undefined ? row.body_text : input.bodyText;
@@ -1250,7 +1273,8 @@ export async function updateBlock(input: {
   }
   await DB.prepare(
     `UPDATE training_block
-     SET youtube_url = ?,
+     SET required = ?,
+         youtube_url = ?,
          body_text = ?,
          resource_url = ?,
          resource_label = ?,
@@ -1262,6 +1286,7 @@ export async function updateBlock(input: {
      WHERE id = ?`,
   )
     .bind(
+      required ? 1 : 0,
       youtubeUrl,
       bodyText,
       resourceUrl,
@@ -1518,6 +1543,51 @@ export async function hasBlockResponse(userId: string, blockId: string): Promise
     if (key === 'phone') return value.length > 0;
     return value.length > 0;
   });
+}
+
+export async function hasContentReview(userId: string, blockId: string): Promise<boolean> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT answers_json FROM training_block_response WHERE user_id = ? AND block_id = ?`,
+  )
+    .bind(userId, blockId)
+    .first<{ answers_json: string }>();
+  if (!row?.answers_json) return false;
+  try {
+    const parsed = JSON.parse(row.answers_json) as { reviewed?: boolean };
+    return parsed.reviewed === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function saveContentReview(input: {
+  userId: string;
+  blockId: string;
+  orgId: string;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT b.id, b.type, m.org_id
+     FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ?`,
+  )
+    .bind(input.blockId)
+    .first<{ id: string; type: string; org_id: string }>();
+  if (!block || block.org_id !== input.orgId || !isContentBlockType(parseBlockType(block.type))) {
+    throw new Error('Content block not found.');
+  }
+  await DB.prepare(
+    `INSERT INTO training_block_response (user_id, block_id, answers_json, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, block_id) DO UPDATE SET
+       answers_json = excluded.answers_json,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(input.userId, input.blockId, JSON.stringify({ reviewed: true }), nowMs())
+    .run();
 }
 
 export async function saveContactDetailsResponse(input: {

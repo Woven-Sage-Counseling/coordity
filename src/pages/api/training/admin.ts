@@ -151,6 +151,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         orgId,
         lessonId,
         type,
+        required: form.has('blockRequiredConfigured')
+          ? String(form.get('blockRequired') ?? '') === '1'
+          : undefined,
         youtubeUrl: String(form.get('youtubeUrl') ?? ''),
         bodyText: String(form.get('bodyText') ?? ''),
         resourceUrl: String(form.get('resourceUrl') ?? ''),
@@ -182,6 +185,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await updateBlock({
         orgId,
         blockId,
+        ...(form.has('blockRequiredConfigured')
+          ? { required: String(form.get('blockRequired') ?? '') === '1' }
+          : {}),
         ...(form.has('youtubeUrl')
           ? { youtubeUrl: String(form.get('youtubeUrl') ?? '') }
           : {}),

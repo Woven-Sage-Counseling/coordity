@@ -6,6 +6,8 @@ import {
   completeLesson,
   getLesson,
   hasBlockResponse,
+  hasContentReview,
+  isContentBlockType,
   latestQuizPass,
   listBlocks,
 } from '../../../lib/training';
@@ -30,7 +32,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       throw new Error('Lesson not found.');
     }
     const blocks = await listBlocks(lessonId);
-    const needsAck = blocks.some((b) => b.type === 'ack');
+    const requiredBlocks = blocks.filter((block) => block.required);
+    const needsAck = requiredBlocks.some((b) => b.type === 'ack');
     if (needsAck && ackName.length < 2) {
       throw new Error(
         lesson.isAssignment
@@ -38,34 +41,43 @@ export const POST: APIRoute = async ({ request, locals }) => {
           : 'Type your full name to acknowledge this lesson.',
       );
     }
-    for (const block of blocks.filter((b) => b.type === 'quiz')) {
-      const passed = await latestQuizPass(employee.id, block.id);
-      if (!passed) {
-        throw new Error(
-          lesson.isAssignment
-            ? 'Pass all quizzes before completing this assignment.'
-            : 'Pass all quizzes before completing this lesson.',
-        );
-      }
-    }
-    for (const block of blocks.filter((b) => b.type === 'docusign')) {
-      const signed = await latestDocuSignComplete(employee.id, block.id);
-      if (!signed) {
-        throw new Error(
-          lesson.isAssignment
-            ? 'Sign all required documents before completing this assignment.'
-            : 'Sign all required documents before completing this lesson.',
-        );
-      }
-    }
-    for (const block of blocks.filter((b) => b.type === 'contact')) {
-      const saved = await hasBlockResponse(employee.id, block.id);
-      if (!saved) {
-        throw new Error(
-          lesson.isAssignment
-            ? 'Save your contact details before completing this assignment.'
-            : 'Save your contact details before completing this lesson.',
-        );
+    for (const block of requiredBlocks) {
+      if (block.type === 'quiz') {
+        const passed = await latestQuizPass(employee.id, block.id);
+        if (!passed) {
+          throw new Error(
+            lesson.isAssignment
+              ? 'Pass all required quizzes before completing this assignment.'
+              : 'Pass all required quizzes before completing this lesson.',
+          );
+        }
+      } else if (block.type === 'docusign') {
+        const signed = await latestDocuSignComplete(employee.id, block.id);
+        if (!signed) {
+          throw new Error(
+            lesson.isAssignment
+              ? 'Sign all required documents before completing this assignment.'
+              : 'Sign all required documents before completing this lesson.',
+          );
+        }
+      } else if (block.type === 'contact') {
+        const saved = await hasBlockResponse(employee.id, block.id);
+        if (!saved) {
+          throw new Error(
+            lesson.isAssignment
+              ? 'Save required contact details before completing this assignment.'
+              : 'Save required contact details before completing this lesson.',
+          );
+        }
+      } else if (isContentBlockType(block.type)) {
+        const reviewed = await hasContentReview(employee.id, block.id);
+        if (!reviewed) {
+          throw new Error(
+            lesson.isAssignment
+              ? 'Mark all required sections as reviewed before completing this assignment.'
+              : 'Mark all required sections as reviewed before completing this lesson.',
+          );
+        }
       }
     }
     await completeLesson({
