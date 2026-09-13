@@ -1,6 +1,6 @@
 ---
 import type { TrainingModule, TrainingLesson, TrainingBlock } from '../lib/training';
-import { MODULE_TEMPLATES } from '../lib/training';
+import { CONTACT_FIELD_OPTIONS, MODULE_TEMPLATES } from '../lib/training';
 
 interface Props {
   modules: TrainingModule[];
@@ -600,15 +600,35 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                 </label>
                               ) : null}
                               {block.type === 'contact' ? (
-                                <label class="block text-xs font-medium text-charcoal">
-                                  Instructions (shown to employees)
-                                  <textarea
-                                    class="field"
-                                    name="bodyText"
-                                    rows="2"
-                                    placeholder="Confirm your contact information for onboarding."
-                                  >{block.bodyText ?? ''}</textarea>
-                                </label>
+                                <div class="space-y-2">
+                                  <input type="hidden" name="contactFieldsConfigured" value="1" />
+                                  <p class="text-xs font-medium text-charcoal">Fields to collect</p>
+                                  <p class="text-[11px] text-sage-dark/60">
+                                    Choose what appears as short-answer questions for the learner.
+                                  </p>
+                                  <div class="grid gap-1.5 sm:grid-cols-2">
+                                    {CONTACT_FIELD_OPTIONS.map((field) => (
+                                      <label class="flex items-center gap-2 text-xs text-charcoal">
+                                        <input
+                                          type="checkbox"
+                                          name="contactFields"
+                                          value={field.key}
+                                          checked={block.contactFields.includes(field.key)}
+                                        />
+                                        {field.label}
+                                      </label>
+                                    ))}
+                                  </div>
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Optional intro
+                                    <textarea
+                                      class="field"
+                                      name="bodyText"
+                                      rows="2"
+                                      placeholder="Add a short note above the fields if you want."
+                                    >{block.bodyText ?? ''}</textarea>
+                                  </label>
+                                </div>
                               ) : null}
                               {block.type === 'quiz' ? (
                                 <label class="block text-xs font-medium text-charcoal">
@@ -1001,22 +1021,14 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                   ) : null}
                                   {block.contactAnswers ? (
                                     <dl class="mt-2 grid gap-1 text-xs text-charcoal sm:grid-cols-2">
-                                      <div>
-                                        <dt class="text-sage-dark/55">Name</dt>
-                                        <dd>{block.contactAnswers.fullName || '—'}</dd>
-                                      </div>
-                                      <div>
-                                        <dt class="text-sage-dark/55">Phone</dt>
-                                        <dd>{block.contactAnswers.phone || '—'}</dd>
-                                      </div>
-                                      <div>
-                                        <dt class="text-sage-dark/55">Work email</dt>
-                                        <dd>{block.contactAnswers.workEmail || '—'}</dd>
-                                      </div>
-                                      <div>
-                                        <dt class="text-sage-dark/55">Job title</dt>
-                                        <dd>{block.contactAnswers.jobTitle || '—'}</dd>
-                                      </div>
+                                      {CONTACT_FIELD_OPTIONS.filter((field) =>
+                                        block.contactAnswers?.[field.key],
+                                      ).map((field) => (
+                                        <div>
+                                          <dt class="text-sage-dark/55">{field.label}</dt>
+                                          <dd>{block.contactAnswers?.[field.key] || '—'}</dd>
+                                        </div>
+                                      ))}
                                     </dl>
                                   ) : null}
                                   {block.quizAnswers ? (

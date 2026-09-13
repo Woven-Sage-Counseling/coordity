@@ -1,6 +1,7 @@
 ---
 import PortalLayout from '../../../layouts/PortalLayout.astro';
 import {
+  CONTACT_FIELD_OPTIONS,
   extractYoutubeId,
   getBlockResponse,
   getLesson,
@@ -282,6 +283,9 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
           }
           if (block.type === 'contact') {
             const saved = contactAnswersMap.get(block.id);
+            const fields = CONTACT_FIELD_OPTIONS.filter((field) =>
+              block.contactFields.includes(field.key),
+            );
             const defaults = {
               fullName: saved?.fullName || employee.name || '',
               phone: saved?.phone || employee.phone || '',
@@ -293,10 +297,13 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
                 <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
                   Contact details
                 </h2>
-                <p class="mt-2 text-sm text-sage-dark/70">
-                  {block.bodyText ||
-                    'Confirm your contact information. We’ll fill empty account fields from what you enter here.'}
-                </p>
+                {block.bodyText ? (
+                  <p class="mt-2 text-sm text-sage-dark/70">{block.bodyText}</p>
+                ) : (
+                  <p class="mt-2 text-sm text-sage-dark/70">
+                    Fill in the details below. Empty account fields will be updated from your answers.
+                  </p>
+                )}
                 {contactDoneMap.get(block.id) ? (
                   <p class="mt-3 text-sm font-semibold text-emerald-800">Saved for this {itemLabel}.</p>
                 ) : null}
@@ -304,50 +311,25 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
                   <input type="hidden" name="blockId" value={block.id} />
                   <input type="hidden" name="moduleId" value={moduleId} />
                   <input type="hidden" name="lessonId" value={lessonId} />
-                  <label class="block text-sm font-medium text-charcoal">
-                    Full name
-                    <input
-                      class="field mt-1.5"
-                      type="text"
-                      name="fullName"
-                      required
-                      maxlength="80"
-                      value={defaults.fullName}
-                    />
-                  </label>
-                  <label class="block text-sm font-medium text-charcoal">
-                    Phone number
-                    <input
-                      class="field mt-1.5"
-                      type="tel"
-                      name="phone"
-                      required
-                      value={defaults.phone}
-                      placeholder="(555) 555-5555"
-                    />
-                  </label>
-                  <label class="block text-sm font-medium text-charcoal">
-                    Work email
-                    <input
-                      class="field mt-1.5"
-                      type="email"
-                      name="workEmail"
-                      required
-                      value={defaults.workEmail}
-                    />
-                  </label>
-                  <label class="block text-sm font-medium text-charcoal">
-                    Job title <span class="font-normal text-sage-dark/55">(optional)</span>
-                    <input
-                      class="field mt-1.5"
-                      type="text"
-                      name="jobTitle"
-                      maxlength="80"
-                      value={defaults.jobTitle}
-                    />
-                  </label>
+                  {fields.map((field) => (
+                    <label class="block text-sm font-medium text-charcoal">
+                      {field.label}
+                      {!field.required ? (
+                        <span class="font-normal text-sage-dark/55"> (optional)</span>
+                      ) : null}
+                      <input
+                        class="field mt-1.5"
+                        type={field.inputType}
+                        name={field.key}
+                        required={field.required}
+                        maxlength={field.key === 'fullName' || field.key === 'jobTitle' ? 80 : undefined}
+                        value={defaults[field.key] ?? ''}
+                        placeholder={field.key === 'phone' ? '(555) 555-5555' : undefined}
+                      />
+                    </label>
+                  ))}
                   <button class="btn-primary" type="submit">
-                    {contactDoneMap.get(block.id) ? 'Update contact details' : 'Save contact details'}
+                    {contactDoneMap.get(block.id) ? 'Update answers' : 'Save answers'}
                   </button>
                 </form>
               </section>

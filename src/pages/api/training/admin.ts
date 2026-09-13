@@ -158,6 +158,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         passPercent: Number(form.get('passPercent') ?? 80) || 80,
         docusignTemplateId: String(form.get('docusignTemplateId') ?? ''),
         docusignTemplateName: String(form.get('docusignTemplateName') ?? ''),
+        contactFields:
+          type === 'contact'
+            ? (() => {
+                const selected = form
+                  .getAll('contactFields')
+                  .map((value) => String(value))
+                  .filter((value): value is 'fullName' | 'phone' | 'workEmail' | 'jobTitle' =>
+                    ['fullName', 'phone', 'workEmail', 'jobTitle'].includes(value),
+                  );
+                return selected.length > 0 ? selected : ['fullName', 'phone', 'workEmail'];
+              })()
+            : undefined,
       });
       return redirectAdmin({ moduleId, itemId: lessonId });
     }
@@ -182,6 +194,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ...(form.has('ackPrompt') ? { ackPrompt: String(form.get('ackPrompt') ?? '') } : {}),
         ...(form.has('passPercent')
           ? { passPercent: Number(form.get('passPercent') ?? 80) || 80 }
+          : {}),
+        ...(form.has('contactFieldsConfigured')
+          ? {
+              contactFields: form
+                .getAll('contactFields')
+                .map((value) => String(value))
+                .filter((value): value is 'fullName' | 'phone' | 'workEmail' | 'jobTitle' =>
+                  ['fullName', 'phone', 'workEmail', 'jobTitle'].includes(value),
+                ),
+            }
           : {}),
         ...(form.has('docusignTemplateId')
           ? (() => {

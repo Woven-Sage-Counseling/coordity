@@ -24,6 +24,43 @@ export interface ContactDetailsAnswers {
   jobTitle: string;
 }
 
+export const CONTACT_FIELD_KEYS = ['fullName', 'phone', 'workEmail', 'jobTitle'] as const;
+export type ContactFieldKey = (typeof CONTACT_FIELD_KEYS)[number];
+
+export const CONTACT_FIELD_OPTIONS: Array<{
+  key: ContactFieldKey;
+  label: string;
+  shortLabel: string;
+  inputType: 'text' | 'tel' | 'email';
+  required: boolean;
+}> = [
+  { key: 'fullName', label: 'Name', shortLabel: 'Name', inputType: 'text', required: true },
+  { key: 'phone', label: 'Phone number', shortLabel: 'Phone', inputType: 'tel', required: true },
+  { key: 'workEmail', label: 'Email', shortLabel: 'Email', inputType: 'email', required: true },
+  { key: 'jobTitle', label: 'Job title', shortLabel: 'Job title', inputType: 'text', required: false },
+];
+
+export function parseContactFields(raw: string | null | undefined): ContactFieldKey[] {
+  if (!raw?.trim()) return ['fullName'];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return ['fullName'];
+    const keys = parsed
+      .map((item) => String(item))
+      .filter((item): item is ContactFieldKey =>
+        CONTACT_FIELD_KEYS.includes(item as ContactFieldKey),
+      );
+    return keys.length > 0 ? keys : ['fullName'];
+  } catch {
+    return ['fullName'];
+  }
+}
+
+export function serializeContactFields(fields: ContactFieldKey[]): string {
+  const unique = CONTACT_FIELD_KEYS.filter((key) => fields.includes(key));
+  return JSON.stringify(unique.length > 0 ? unique : ['fullName']);
+}
+
 export interface TrainingModule {
   id: string;
   orgId: string;
@@ -76,6 +113,8 @@ export interface TrainingBlock {
   passPercent: number | null;
   docusignTemplateId: string | null;
   docusignTemplateName: string | null;
+  /** Selected short-answer fields for contact blocks. */
+  contactFields: ContactFieldKey[];
   questions: TrainingQuizQuestion[];
   createdAt: number;
   updatedAt: number;
@@ -545,6 +584,7 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       passPercent: row.pass_percent,
       docusignTemplateId: row.docusign_template_id,
       docusignTemplateName: row.docusign_template_name,
+      contactFields: type === 'contact' ? parseContactFields(row.resource_label) : [],
       questions: type === 'quiz' ? await listQuestions(row.id) : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -1085,11 +1125,15 @@ export async function createBlock(input: {
   passPercent?: number | null;
   docusignTemplateId?: string | null;
   docusignTemplateName?: string | null;
+  contactFields?: ContactFieldKey[] | null;
 }): Promise<TrainingBlock> {
   const lesson = await getLesson(input.lessonId);
   if (!lesson || lesson.orgId !== input.orgId) throw new Error('Lesson not found.');
   if (input.type === 'video' && input.youtubeUrl && !extractYoutubeId(input.youtubeUrl)) {
     throw new Error('Enter a valid YouTube link.');
+  }
+  if (input.type === 'contact' && input.contactFields && input.contactFields.length === 0) {
+    throw new Error('Select at least one contact field.');
   }
   const { DB } = getEnv();
   const ts = nowMs();
@@ -1099,6 +1143,10 @@ export async function createBlock(input: {
   )
     .bind(input.lessonId)
     .first<{ n: number }>();
+  const contactFieldsJson =
+    input.type === 'contact'
+      ? serializeContactFields(input.contactFields ?? ['fullName', 'phone', 'workEmail'])
+      : null;
   await DB.prepare(
     `INSERT INTO training_block
        (id, lesson_id, type, sort_order, youtube_url, body_text, resource_url, resource_label,
@@ -1113,7 +1161,7 @@ export async function createBlock(input: {
       input.youtubeUrl?.trim() || null,
       input.bodyText?.trim() || null,
       input.resourceUrl?.trim() || null,
-      input.resourceLabel?.trim() || null,
+      input.type === 'contact' ? contactFieldsJson : input.resourceLabel?.trim() || null,
       input.ackPrompt?.trim() || null,
       input.type === 'quiz' ? (input.passPercent ?? 80) : null,
       input.type === 'docusign' ? input.docusignTemplateId?.trim() || null : null,
@@ -1139,6 +1187,7 @@ export async function updateBlock(input: {
   passPercent?: number | null;
   docusignTemplateId?: string | null;
   docusignTemplateName?: string | null;
+  contactFields?: ContactFieldKey[] | null;
 }): Promise<void> {
   const { DB } = getEnv();
   const row = await DB.prepare(
@@ -1174,10 +1223,16 @@ export async function updateBlock(input: {
     input.resourceUrl === undefined
       ? row.resource_url
       : (input.resourceUrl ?? '').trim() || null;
-  const resourceLabel =
+  let resourceLabel =
     input.resourceLabel === undefined
       ? row.resource_label
       : (input.resourceLabel ?? '').trim() || null;
+  if (row.type === 'contact' && input.contactFields !== undefined) {
+    if (!input.contactFields || input.contactFields.length === 0) {
+      throw new Error('Select at least one contact field.');
+    }
+    resourceLabel = serializeContactFields(input.contactFields);
+  }
   const ackPrompt =
     input.ackPrompt === undefined ? row.ack_prompt : (input.ackPrompt ?? '').trim() || null;
   const passPercent =
@@ -1402,9 +1457,25 @@ export async function getBlockResponse(
 }
 
 export async function hasBlockResponse(userId: string, blockId: string): Promise<boolean> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT type, resource_label FROM training_block WHERE id = ?`,
+  )
+    .bind(blockId)
+    .first<{ type: string; resource_label: string | null }>();
+  if (!block || block.type !== 'contact') return false;
+  const fields = parseContactFields(block.resource_label);
   const answers = await getBlockResponse(userId, blockId);
   if (!answers) return false;
-  return Boolean(answers.fullName && answers.phone && answers.workEmail);
+  return fields.every((key) => {
+    const option = CONTACT_FIELD_OPTIONS.find((item) => item.key === key);
+    if (!option?.required) return true;
+    const value = answers[key]?.trim() ?? '';
+    if (key === 'fullName') return value.length >= 2;
+    if (key === 'workEmail') return value.includes('@');
+    if (key === 'phone') return value.length > 0;
+    return value.length > 0;
+  });
 }
 
 export async function saveContactDetailsResponse(input: {
@@ -1415,28 +1486,41 @@ export async function saveContactDetailsResponse(input: {
 }): Promise<{ answers: ContactDetailsAnswers; profileUpdated: string[] }> {
   const { DB } = getEnv();
   const block = await DB.prepare(
-    `SELECT b.id, b.type, m.org_id
+    `SELECT b.id, b.type, b.resource_label, m.org_id
      FROM training_block b
      JOIN training_lesson l ON l.id = b.lesson_id
      JOIN training_module m ON m.id = l.module_id
      WHERE b.id = ?`,
   )
     .bind(input.blockId)
-    .first<{ id: string; type: string; org_id: string }>();
+    .first<{ id: string; type: string; resource_label: string | null; org_id: string }>();
   if (!block || block.org_id !== input.orgId || block.type !== 'contact') {
     throw new Error('Contact details block not found.');
   }
 
-  const answers: ContactDetailsAnswers = {
-    fullName: input.answers.fullName.trim(),
-    phone: input.answers.phone.trim(),
-    workEmail: input.answers.workEmail.trim(),
-    jobTitle: input.answers.jobTitle.trim(),
+  const fields = parseContactFields(block.resource_label);
+  const existing = (await getBlockResponse(input.userId, input.blockId)) ?? {
+    fullName: '',
+    phone: '',
+    workEmail: '',
+    jobTitle: '',
   };
-  if (answers.fullName.length < 2) throw new Error('Enter your full name.');
-  if (!answers.workEmail.includes('@')) throw new Error('Enter a valid work email.');
-  const formattedPhone = formatPhoneNumber(answers.phone);
-  answers.phone = formattedPhone ?? answers.phone;
+  const answers: ContactDetailsAnswers = { ...existing };
+
+  for (const key of fields) {
+    const raw = input.answers[key]?.trim() ?? '';
+    if (key === 'fullName') {
+      if (raw.length < 2) throw new Error('Enter your name.');
+      answers.fullName = raw;
+    } else if (key === 'phone') {
+      answers.phone = formatPhoneNumber(raw) ?? raw;
+    } else if (key === 'workEmail') {
+      if (!raw.includes('@')) throw new Error('Enter a valid email.');
+      answers.workEmail = raw;
+    } else if (key === 'jobTitle') {
+      answers.jobTitle = raw;
+    }
+  }
 
   await DB.prepare(
     `INSERT INTO training_block_response (user_id, block_id, answers_json, updated_at)
@@ -1462,18 +1546,21 @@ export async function saveContactDetailsResponse(input: {
     const nameEmpty = !profile.name?.trim();
     const phoneEmpty = !profile.phone?.trim();
     const jobEmpty = !profile.job_title?.trim();
+    const wantsName = fields.includes('fullName') && nameEmpty && answers.fullName;
+    const wantsPhone = fields.includes('phone') && phoneEmpty && answers.phone;
+    const wantsJob = fields.includes('jobTitle') && jobEmpty && answers.jobTitle;
 
-    if (nameEmpty || phoneEmpty) {
+    if (wantsName || wantsPhone) {
       await updateDirectoryProfile({
         userId: input.userId,
-        ...(nameEmpty ? { name: answers.fullName } : {}),
-        ...(phoneEmpty ? { phone: answers.phone } : {}),
+        ...(wantsName ? { name: answers.fullName } : {}),
+        ...(wantsPhone ? { phone: answers.phone } : {}),
         actorUserId: input.userId,
       });
-      if (nameEmpty) profileUpdated.push('name');
-      if (phoneEmpty) profileUpdated.push('phone');
+      if (wantsName) profileUpdated.push('name');
+      if (wantsPhone) profileUpdated.push('phone');
     }
-    if (jobEmpty && answers.jobTitle) {
+    if (wantsJob) {
       await updateEmployeeJobTitle({
         userId: input.userId,
         jobTitle: answers.jobTitle,
