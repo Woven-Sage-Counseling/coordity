@@ -724,11 +724,9 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
           <ol class="space-y-3 text-sm text-sage-dark/80">
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-              <p class="font-semibold text-charcoal">1. Create an Integration Key in DocuSign Developer Console</p>
+              <p class="font-semibold text-charcoal">1. Create an app in DocuSign Developer Console</p>
               <p class="mt-1">
-                Production DocuSign can’t create new keys. Open the
-                <span class="font-medium text-charcoal"> Developer Console</span>
-                (banner: “build and manage your integrations”) or go to
+                Open the Developer Console (go to
                 <a
                   class="font-medium text-sage-dark underline underline-offset-2"
                   href="https://developers.docusign.com/"
@@ -737,18 +735,20 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                 >
                   developers.docusign.com
                 </a>
-                and sign in with a <span class="font-medium text-charcoal">developer / demo</span> account.
+                ) and sign in with your organization’s account.
               </p>
               <p class="mt-1.5">
-                Then create an app / Integration Key. Later, when you’re ready for live documents, use DocuSign’s
-                <span class="font-medium text-charcoal">go-live</span> process to move that app into production.
+                Then click <span class="font-medium text-charcoal">+ Add</span> next to API Integrations. Add the name
+                of this integration (we recommend
+                <span class="font-medium text-charcoal">“Coordity”</span>).
               </p>
             </li>
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-              <p class="font-semibold text-charcoal">2. Add this Redirect URI on that app</p>
-              <p class="mt-1 text-xs text-sage-dark/60">
-                In the Developer Console app settings, add this exact Redirect URI. Use your organization’s Coordity
-                address (not a shared preview link).
+              <p class="font-semibold text-charcoal">2. Add the Redirect URI and Client Secret</p>
+              <p class="mt-1">
+                Scroll down to Additional Settings, click <span class="font-medium text-charcoal">+ Add</span> under
+                Redirect URL, and add this Redirect URI on that app. Hit Save. Go to Authentication, then click
+                <span class="font-medium text-charcoal">+ Add</span> under Client Secret.
               </p>
               <div class="mt-2 flex flex-wrap items-center gap-2">
                 <code
@@ -765,20 +765,17 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                   Copy
                 </button>
               </div>
-              <p class="mt-1.5 text-xs text-sage-dark/60">
-                Also add a Secret Key on the app if DocuSign asks for one, then save.
-              </p>
             </li>
             <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
               <p class="font-semibold text-charcoal">3. Paste your keys here</p>
               <p class="mt-1 text-xs text-sage-dark/60">
-                Copy the Integration Key (and Secret Key) from Developer Console. For first-time setup, keep the
+                Copy the Client ID (and Client Secret) from Developer Console. For first-time setup, keep the
                 environment on <span class="font-medium text-charcoal">Demo / developer</span>. Switch to Production
                 only after DocuSign go-live.
               </p>
               <form method="post" action="/api/docusign/settings" class="mt-3 space-y-3">
                 <label class="block text-xs font-medium text-charcoal">
-                  Integration Key
+                  Client ID
                   <input
                     class="field mt-1"
                     type="text"
@@ -790,7 +787,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                   />
                 </label>
                 <label class="block text-xs font-medium text-charcoal">
-                  Secret Key
+                  Client Secret
                   <input
                     class="field mt-1"
                     type="password"
@@ -799,7 +796,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
                     placeholder={
                       docusignStatus.hasOrgApp
                         ? 'Leave blank to keep the saved secret'
-                        : 'Add a secret key in DocuSign, then paste it'
+                        : 'Add a client secret in DocuSign, then paste it'
                     }
                     {...(!docusignStatus.hasOrgApp ? { required: true } : {})}
                   />
@@ -867,7 +864,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
               </div>
               {
                 !docusignStatus.configured ? (
-                  <p class="mt-2 text-xs text-amber-800">Save your Integration Key and Secret Key in step 3 first.</p>
+                  <p class="mt-2 text-xs text-amber-800">Save your Client ID and Client Secret in step 3 first.</p>
                 ) : null
               }
             </li>
