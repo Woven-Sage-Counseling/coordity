@@ -224,13 +224,6 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     <p class="mt-0.5 break-words text-sm font-semibold leading-snug text-charcoal">{selected.title}</p>
                   </div>
                   <div class="flex shrink-0 flex-col items-end gap-1">
-                    <button
-                      type="button"
-                      class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
-                      data-training-preview-open="module"
-                    >
-                      Preview
-                    </button>
                     <a
                       href={moduleHref(selected.id, { view: 'settings' })}
                       data-training-nav="settings"
@@ -243,6 +236,13 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     >
                       Settings
                     </a>
+                    <button
+                      type="button"
+                      class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
+                      data-training-preview-open="module"
+                    >
+                      Preview
+                    </button>
                   </div>
                 </div>
                 <p class="mt-1.5 text-[11px] leading-snug text-sage-dark/60">
@@ -493,14 +493,22 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       {/* Column 3 — Detail editor */}
       <div class="flex min-h-0 flex-col lg:h-full">
         <div class="border-b border-sage-dark/10 bg-[#f7f8fa] px-3 py-2.5">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">Editor</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+            {selectedItem
+              ? selectedIsAssignment
+                ? 'In this assignment'
+                : 'In this lesson'
+              : selectedView === 'settings' && selected
+                ? 'In this module'
+                : 'In this lesson'}
+          </p>
           <p class="mt-0.5 text-[11px] text-sage-dark/55">
             {selectedItem
-              ? `Editing “${selectedItem.title}”`
+              ? selectedItem.title
               : selectedView === 'settings' && selected
                 ? `Settings for “${selected.title}”`
                 : selected
-                  ? 'Nothing selected yet'
+                  ? 'Select a lesson or assignment to edit'
                   : 'Open a module to begin'}
           </p>
         </div>
