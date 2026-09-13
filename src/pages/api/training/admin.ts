@@ -91,18 +91,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const roleKeys = form.getAll('roleKeys').map((v) => String(v));
       const existing = await getTrainingModule(moduleId, orgId);
       if (!existing) throw new Error('Module not found.');
-      if (existing.kind === 'custom' && roleKeys.length === 0) {
+      if (form.has('roleKeysConfigured') && existing.kind === 'custom' && roleKeys.length === 0) {
         throw new Error('Assign at least one role to custom modules.');
       }
       await updateModule({
         orgId,
         moduleId,
-        title,
-        description,
-        roleKeys,
+        ...(form.has('title') ? { title } : {}),
+        ...(form.has('description') ? { description } : {}),
+        ...(form.has('roleKeysConfigured') ? { roleKeys } : {}),
       });
       if (asJson) return jsonOk({ moduleId });
-      return redirectAdmin({ moduleId, view: 'settings' });
+      const returnView = String(form.get('returnView') ?? '').trim();
+      return redirectAdmin({
+        moduleId,
+        ...(returnView === 'settings' ? { view: 'settings' as const } : {}),
+      });
     }
 
     if (action === 'archive-module') {

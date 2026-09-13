@@ -153,9 +153,8 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
   <p class="mt-4 max-w-3xl text-sm leading-relaxed text-sage-dark/75">
     Training is organized into modules — topics your team works through. Click a module on the left,
     then build its list in the middle with <span class="font-medium text-charcoal">+ Add</span>.
-    Select an item to edit its content on the right. Use
-    <span class="font-medium text-charcoal">Settings</span> only for the module’s title, audience, or
-    visibility.
+    Select an item to edit its content on the right. Add intro text for the module, and use
+    <span class="font-medium text-charcoal">Preview</span> to see the learner view.
   </p>
 
   <div class="mt-3 space-y-3 transition-opacity duration-150" data-training-browse>
@@ -224,21 +223,30 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     </p>
                     <p class="mt-0.5 break-words text-sm font-semibold leading-snug text-charcoal">{selected.title}</p>
                   </div>
-                  <a
-                    href={moduleHref(selected.id, { view: 'settings' })}
-                    data-training-nav="settings"
-                    class:list={[
-                      'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
-                      selectedView === 'settings'
-                        ? 'bg-charcoal text-white'
-                        : 'bg-white text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]',
-                    ]}
-                  >
-                    Settings
-                  </a>
+                  <div class="flex shrink-0 flex-col items-end gap-1">
+                    <button
+                      type="button"
+                      class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
+                      data-training-preview-open="module"
+                    >
+                      Preview
+                    </button>
+                    <a
+                      href={moduleHref(selected.id, { view: 'settings' })}
+                      data-training-nav="settings"
+                      class:list={[
+                        'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
+                        selectedView === 'settings'
+                          ? 'bg-charcoal text-white'
+                          : 'bg-white text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]',
+                      ]}
+                    >
+                      Settings
+                    </a>
+                  </div>
                 </div>
                 <p class="mt-1.5 text-[11px] leading-snug text-sage-dark/60">
-                  Build the list of things people finish for this topic.
+                  Add intro text, then lessons and assignments for people to finish.
                 </p>
               </>
             ) : (
@@ -256,6 +264,26 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
             </p>
           ) : (
             <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <form
+                method="post"
+                action="/api/training/admin"
+                class="border-b border-sage-dark/10 px-2.5 py-2.5"
+                data-training-autosave
+              >
+                <input type="hidden" name="action" value="update-module" />
+                <input type="hidden" name="moduleId" value={selected.id} />
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
+                  Intro text
+                  <textarea
+                    class="field mt-1.5 !py-1.5 text-xs font-normal normal-case tracking-normal"
+                    name="description"
+                    rows="3"
+                    placeholder="Optional description shown at the top of this module for learners…"
+                  >{selected.description}</textarea>
+                </label>
+                <p class="mt-1 text-[10px] text-sage-dark/50" data-training-autosave-status></p>
+              </form>
+
               <div class="flex items-center justify-between gap-2 border-b border-sage-dark/10 px-2.5 py-2">
                 <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/50">
                   To complete
@@ -362,6 +390,99 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
             </div>
           )
         }
+
+        {
+          selected ? (
+            <dialog
+              class="w-[min(40rem,calc(100vw-2rem))] max-h-[min(90vh,52rem)] overflow-hidden rounded-2xl border border-sage-dark/15 bg-white p-0 shadow-xl backdrop:bg-charcoal/40"
+              data-training-preview-dialog="module"
+            >
+              <div class="flex items-center justify-between gap-3 border-b border-sage-dark/10 px-4 py-3">
+                <div class="min-w-0">
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+                    Learner preview
+                  </p>
+                  <p class="truncate text-sm font-semibold text-charcoal">{selected.title}</p>
+                </div>
+                <button
+                  type="button"
+                  class="rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark/70 hover:bg-[#f4f5f8]"
+                  data-training-preview-close
+                >
+                  Close
+                </button>
+              </div>
+              <div class="max-h-[min(78vh,44rem)] space-y-5 overflow-y-auto px-4 py-4">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Module</p>
+                  <h3 class="mt-1 font-display text-2xl text-charcoal">{selected.title}</h3>
+                  {selected.description ? (
+                    <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-sage-dark/75">
+                      {selected.description}
+                    </p>
+                  ) : (
+                    <p class="mt-3 text-sm text-sage-dark/55">No intro text yet.</p>
+                  )}
+                  <p class="mt-4 text-sm font-semibold text-sage-dark/80">0% complete</p>
+                  <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#e3e5e8]">
+                    <div class="h-full w-0 rounded-full bg-sage-dark" />
+                  </div>
+                </div>
+
+                {assignments.length > 0 ? (
+                  <section>
+                    <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                      Assignments
+                    </h4>
+                    <p class="mt-1 text-sm text-sage-dark/65">Tasks and acknowledgments for this module.</p>
+                    <ol class="mt-3 space-y-2">
+                      {assignments.map((item, index) => (
+                        <li class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] px-3 py-3">
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                              <p class="text-[11px] text-sage-dark/50">Assignment {index + 1}</p>
+                              <p class="mt-0.5 text-sm font-semibold text-charcoal">{item.title}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-sage-dark/10 px-2.5 py-1 text-[11px] font-semibold text-sage-dark/80">
+                              Start
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                ) : null}
+
+                <section>
+                  <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">Lessons</h4>
+                  <ol class="mt-3 space-y-2">
+                    {lessons.length === 0 ? (
+                      <li class="text-sm text-sage-dark/65">
+                        {assignments.length > 0
+                          ? 'No lessons in this module yet.'
+                          : 'No assignments or lessons in this module yet.'}
+                      </li>
+                    ) : (
+                      lessons.map((item, index) => (
+                        <li class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] px-3 py-3">
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                              <p class="text-[11px] text-sage-dark/50">Lesson {index + 1}</p>
+                              <p class="mt-0.5 text-sm font-semibold text-charcoal">{item.title}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-sage-dark/10 px-2.5 py-1 text-[11px] font-semibold text-sage-dark/80">
+                              Start
+                            </span>
+                          </div>
+                        </li>
+                      ))
+                    )}
+                  </ol>
+                </section>
+              </div>
+            </dialog>
+          ) : null
+        }
       </div>
 
       {/* Column 3 — Detail editor */}
@@ -402,6 +523,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   <input type="hidden" name="action" value="update-module" />
                   <input type="hidden" name="moduleId" value={selected.id} />
                   <input type="hidden" name="returnView" value="settings" />
+                  <input type="hidden" name="roleKeysConfigured" value="1" />
                   <label class="block text-sm font-medium text-charcoal">
                     Module title
                     <input class="field" type="text" name="title" value={selected.title} required />
@@ -425,11 +547,14 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   </div>
                   <p class="text-[10px] text-sage-dark/50" data-training-autosave-status></p>
                   <label class="block text-sm font-medium text-charcoal">
-                    Description
-                    <textarea class="field" name="description" rows="3">{selected.description}</textarea>
+                    Intro text
+                    <span class="mt-0.5 block text-xs font-normal text-sage-dark/55">
+                      Shown at the top of the module for learners. You can also edit this in the middle column.
+                    </span>
+                    <textarea class="field mt-1.5" name="description" rows="3">{selected.description}</textarea>
                   </label>
                   <div class="flex flex-wrap gap-2">
-                    <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save description</button>
+                    <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save intro text</button>
                     {selected.kind === 'custom' ? (
                       <button
                         class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
@@ -530,7 +655,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     <button
                       type="button"
                       class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
-                      data-training-preview-open
+                      data-training-preview-open="lesson"
                     >
                       Preview
                     </button>
@@ -539,7 +664,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
 
                 <dialog
                   class="w-[min(40rem,calc(100vw-2rem))] max-h-[min(90vh,52rem)] overflow-hidden rounded-2xl border border-sage-dark/15 bg-white p-0 shadow-xl backdrop:bg-charcoal/40"
-                  data-training-preview-dialog
+                  data-training-preview-dialog="lesson"
                 >
                   <div class="flex items-center justify-between gap-3 border-b border-sage-dark/10 px-4 py-3">
                     <div class="min-w-0">
@@ -1525,8 +1650,15 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
     });
 
     document.addEventListener('input', (event) => {
-      if (!(event.target instanceof HTMLInputElement)) return;
-      if (event.target.type === 'checkbox' || event.target.type === 'radio') return;
+      if (
+        !(event.target instanceof HTMLInputElement) &&
+        !(event.target instanceof HTMLTextAreaElement)
+      ) {
+        return;
+      }
+      if (event.target instanceof HTMLInputElement) {
+        if (event.target.type === 'checkbox' || event.target.type === 'radio') return;
+      }
       const form = event.target.closest('form[data-training-autosave]');
       if (!(form instanceof HTMLFormElement)) return;
       if (!shouldAutosaveField(form, event.target)) return;
@@ -1808,8 +1940,9 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
 
         const openBtn = target.closest('[data-training-preview-open]');
         if (openBtn) {
+          const kind = openBtn.getAttribute('data-training-preview-open') || 'lesson';
           const root = openBtn.closest('[data-training-browse]') ?? document;
-          const dialog = root.querySelector('[data-training-preview-dialog]');
+          const dialog = root.querySelector(`[data-training-preview-dialog="${kind}"]`);
           if (dialog instanceof HTMLDialogElement && typeof dialog.showModal === 'function') {
             dialog.showModal();
           }
@@ -1823,7 +1956,10 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
           return;
         }
 
-        if (target instanceof HTMLDialogElement && target.hasAttribute('data-training-preview-dialog')) {
+        if (
+          target instanceof HTMLDialogElement &&
+          target.hasAttribute('data-training-preview-dialog')
+        ) {
           target.close();
         }
       });
