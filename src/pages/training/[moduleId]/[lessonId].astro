@@ -15,6 +15,7 @@ import {
 } from '../../../lib/training';
 import { getDocuSignEnvelopeForUser, latestDocuSignComplete } from '../../../lib/docusign';
 import { orgIdFromLocals } from '../../../lib/organization';
+import { canAccessManagement } from '../../../lib/permissions';
 
 export const prerender = false;
 
@@ -28,6 +29,8 @@ const quizScore = Astro.url.searchParams.get('score');
 const quizPassed = Astro.url.searchParams.get('passed');
 const docusignFlash = Astro.url.searchParams.get('docusign');
 const contactFlash = Astro.url.searchParams.get('contact');
+const isPreview =
+  Astro.url.searchParams.get('preview') === '1' && canAccessManagement(employee);
 
 const lesson = await getLesson(lessonId);
 if (!lesson || lesson.orgId !== orgId || lesson.moduleId !== moduleId) {
@@ -38,12 +41,15 @@ const progress = await getModuleProgressForUser({
   orgId,
   moduleId,
   userId: employee.id,
-  roleKeys,
+  roleKeys: isPreview ? [] : roleKeys,
 });
-if (!progress || !moduleVisibleToRoles(progress.module, roleKeys) || !progress.module.visible) {
+if (
+  !progress ||
+  (!isPreview && (!moduleVisibleToRoles(progress.module, roleKeys) || !progress.module.visible))
+) {
   return Astro.redirect('/training');
 }
-if (!lessonVisibleToRoles(lesson, roleKeys)) {
+if (!isPreview && !lessonVisibleToRoles(lesson, roleKeys)) {
   return Astro.redirect(`/training/${moduleId}`);
 }
 
@@ -98,6 +104,13 @@ const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
   <div class="mt-3 max-w-3xl">
     <p class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">{itemLabelTitle}</p>
     <h1 class="mt-1 font-display text-4xl text-charcoal">{lesson.title}</h1>
+    {
+      isPreview ? (
+        <p class="mt-3 rounded-xl border border-sage-dark/15 bg-[#f7f8fa] px-3 py-2 text-sm text-sage-dark/80">
+          Preview mode — this is how the {itemLabel} looks to learners.
+        </p>
+      ) : null
+    }
     {
       isComplete ? (
         <p class="mt-3 text-sm font-semibold text-emerald-800">{itemLabelTitle} complete</p>
