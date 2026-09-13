@@ -11,6 +11,7 @@ import {
   deleteBlock,
   deleteLesson,
   getTrainingModule,
+  moveBlock,
   updateBlock,
   updateLesson,
   updateModule,
@@ -235,6 +236,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return redirectAdmin({
         moduleId,
         ...(lessonId ? { itemId: lessonId } : {}),
+      });
+    }
+
+    if (action === 'move-block') {
+      const moduleId = String(form.get('moduleId') ?? '').trim();
+      const lessonId = String(form.get('lessonId') ?? '').trim();
+      const direction = String(form.get('direction') ?? '').trim() === 'up' ? 'up' : 'down';
+      const moved = await moveBlock({
+        orgId,
+        blockId: String(form.get('blockId') ?? '').trim(),
+        direction,
+      });
+      return redirectAdmin({
+        moduleId,
+        itemId: lessonId || moved.lessonId,
       });
     }
 

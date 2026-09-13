@@ -1291,6 +1291,48 @@ export async function deleteBlock(orgId: string, blockId: string): Promise<void>
   await DB.prepare(`DELETE FROM training_block WHERE id = ?`).bind(blockId).run();
 }
 
+export async function moveBlock(input: {
+  orgId: string;
+  blockId: string;
+  direction: 'up' | 'down';
+}): Promise<{ lessonId: string }> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT b.id, b.lesson_id, m.org_id
+     FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ?`,
+  )
+    .bind(input.blockId)
+    .first<{ id: string; lesson_id: string; org_id: string }>();
+  if (!row || row.org_id !== input.orgId) throw new Error('Block not found.');
+
+  const neighbors = await DB.prepare(
+    `SELECT id FROM training_block WHERE lesson_id = ? ORDER BY sort_order ASC, created_at ASC`,
+  )
+    .bind(row.lesson_id)
+    .all<{ id: string }>();
+  const ordered = (neighbors.results ?? []).map((block) => block.id);
+  const index = ordered.indexOf(row.id);
+  if (index < 0) throw new Error('Block not found.');
+  const swapIndex = input.direction === 'up' ? index - 1 : index + 1;
+  if (swapIndex >= 0 && swapIndex < ordered.length) {
+    const current = ordered[index]!;
+    ordered[index] = ordered[swapIndex]!;
+    ordered[swapIndex] = current;
+  }
+
+  const ts = nowMs();
+  for (let position = 0; position < ordered.length; position += 1) {
+    await DB.prepare(`UPDATE training_block SET sort_order = ?, updated_at = ? WHERE id = ?`)
+      .bind(position, ts, ordered[position]!)
+      .run();
+  }
+
+  return { lessonId: row.lesson_id };
+}
+
 export async function addQuizQuestion(input: {
   orgId: string;
   blockId: string;

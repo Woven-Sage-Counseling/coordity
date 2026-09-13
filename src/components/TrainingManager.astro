@@ -965,6 +965,57 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                 </form>
                               </div>
                             ) : null}
+
+                            <div class="mt-3 flex justify-end gap-1">
+                              <form method="post" action="/api/training/admin">
+                                <input type="hidden" name="action" value="move-block" />
+                                <input type="hidden" name="moduleId" value={selected.id} />
+                                <input type="hidden" name="lessonId" value={selectedItem.id} />
+                                <input type="hidden" name="blockId" value={block.id} />
+                                <input type="hidden" name="direction" value="up" />
+                                <button
+                                  class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sage-dark/20 bg-white text-sage-dark hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
+                                  type="submit"
+                                  aria-label="Move block up"
+                                  disabled={index === 0}
+                                  title="Move up"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path
+                                      d="M8 12V4M8 4L4.5 7.5M8 4l3.5 3.5"
+                                      stroke="currentColor"
+                                      stroke-width="1.75"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                    />
+                                  </svg>
+                                </button>
+                              </form>
+                              <form method="post" action="/api/training/admin">
+                                <input type="hidden" name="action" value="move-block" />
+                                <input type="hidden" name="moduleId" value={selected.id} />
+                                <input type="hidden" name="lessonId" value={selectedItem.id} />
+                                <input type="hidden" name="blockId" value={block.id} />
+                                <input type="hidden" name="direction" value="down" />
+                                <button
+                                  class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sage-dark/20 bg-white text-sage-dark hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
+                                  type="submit"
+                                  aria-label="Move block down"
+                                  disabled={index === selectedBlocks.length - 1}
+                                  title="Move down"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path
+                                      d="M8 4v8M8 12l3.5-3.5M8 12L4.5 8.5"
+                                      stroke="currentColor"
+                                      stroke-width="1.75"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                    />
+                                  </svg>
+                                </button>
+                              </form>
+                            </div>
                           </div>
                         );
                       })
