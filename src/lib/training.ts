@@ -14,8 +14,84 @@ export const TRAINING_BLOCK_TYPES = [
   'ack',
   'docusign',
   'contact',
+  'upload',
 ] as const;
 export type TrainingBlockType = (typeof TRAINING_BLOCK_TYPES)[number];
+
+export const UPLOAD_MAX_BYTES = 1_250_000;
+
+export const UPLOAD_DOC_KEYS = [
+  'photoId',
+  'therapistLicense',
+  'npiRecord',
+  'caqhNumber',
+  'malpracticeInsurance',
+  'other',
+] as const;
+export type UploadDocKey = (typeof UPLOAD_DOC_KEYS)[number];
+
+export const UPLOAD_DOC_OPTIONS: Array<{
+  key: UploadDocKey;
+  label: string;
+  acceptsText: boolean;
+}> = [
+  { key: 'photoId', label: 'Government / photo ID', acceptsText: false },
+  { key: 'therapistLicense', label: 'Therapist license', acceptsText: false },
+  { key: 'npiRecord', label: 'NPI record', acceptsText: true },
+  { key: 'caqhNumber', label: 'CAQH', acceptsText: true },
+  { key: 'malpracticeInsurance', label: 'Malpractice insurance proof', acceptsText: false },
+  { key: 'other', label: 'Other document', acceptsText: false },
+];
+
+export interface UploadBlockConfig {
+  docs: UploadDocKey[];
+  otherLabel: string | null;
+}
+
+export function uploadDocAcceptsText(key: UploadDocKey): boolean {
+  return key === 'npiRecord' || key === 'caqhNumber';
+}
+
+export function uploadDocLabel(key: UploadDocKey, otherLabel: string | null): string {
+  if (key === 'other' && otherLabel?.trim()) return otherLabel.trim();
+  return UPLOAD_DOC_OPTIONS.find((item) => item.key === key)?.label ?? key;
+}
+
+export function parseUploadConfig(raw: string | null | undefined): UploadBlockConfig {
+  if (!raw?.trim()) return { docs: ['photoId'], otherLabel: null };
+  try {
+    const parsed = JSON.parse(raw) as { docs?: unknown; otherLabel?: unknown };
+    const docs = Array.isArray(parsed.docs)
+      ? parsed.docs
+          .map((item) => String(item))
+          .filter((item): item is UploadDocKey => UPLOAD_DOC_KEYS.includes(item as UploadDocKey))
+      : [];
+    const otherLabel =
+      typeof parsed.otherLabel === 'string' && parsed.otherLabel.trim()
+        ? parsed.otherLabel.trim()
+        : null;
+    return { docs: docs.length > 0 ? docs : ['photoId'], otherLabel };
+  } catch {
+    return { docs: ['photoId'], otherLabel: null };
+  }
+}
+
+export function serializeUploadConfig(config: UploadBlockConfig): string {
+  const docs = UPLOAD_DOC_KEYS.filter((key) => config.docs.includes(key));
+  return JSON.stringify({
+    docs: docs.length > 0 ? docs : ['photoId'],
+    ...(config.otherLabel?.trim() ? { otherLabel: config.otherLabel.trim() } : {}),
+  });
+}
+
+export interface TrainingUploadFile {
+  docKey: UploadDocKey;
+  fileName: string | null;
+  fileMime: string | null;
+  hasFile: boolean;
+  textValue: string | null;
+  updatedAt: number;
+}
 
 export interface ContactDetailsAnswers {
   fullName: string;
@@ -116,6 +192,9 @@ export interface TrainingBlock {
   docusignTemplateName: string | null;
   /** Selected short-answer fields for contact blocks. */
   contactFields: ContactFieldKey[];
+  /** Selected document types for upload blocks. */
+  uploadDocs: UploadDocKey[];
+  uploadOtherLabel: string | null;
   questions: TrainingQuizQuestion[];
   createdAt: number;
   updatedAt: number;
@@ -156,7 +235,7 @@ function parseOptions(raw: string): string[] {
 }
 
 export function defaultBlockRequired(type: TrainingBlockType): boolean {
-  return type === 'quiz' || type === 'ack' || type === 'docusign' || type === 'contact';
+  return type === 'quiz' || type === 'ack' || type === 'docusign' || type === 'contact' || type === 'upload';
 }
 
 /** Written text is always informational — never required and never review-gated. */
@@ -607,6 +686,10 @@ export async function listBlocks(lessonId: string): Promise<TrainingBlock[]> {
       docusignTemplateId: row.docusign_template_id,
       docusignTemplateName: row.docusign_template_name,
       contactFields: type === 'contact' ? parseContactFields(row.resource_label) : [],
+      uploadDocs:
+        type === 'upload' ? parseUploadConfig(row.resource_label).docs : [],
+      uploadOtherLabel:
+        type === 'upload' ? parseUploadConfig(row.resource_label).otherLabel : null,
       questions: type === 'quiz' ? await listQuestions(row.id) : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -1149,6 +1232,8 @@ export async function createBlock(input: {
   docusignTemplateId?: string | null;
   docusignTemplateName?: string | null;
   contactFields?: ContactFieldKey[] | null;
+  uploadDocs?: UploadDocKey[] | null;
+  uploadOtherLabel?: string | null;
 }): Promise<TrainingBlock> {
   const lesson = await getLesson(input.lessonId);
   if (!lesson || lesson.orgId !== input.orgId) throw new Error('Lesson not found.');
@@ -1157,6 +1242,9 @@ export async function createBlock(input: {
   }
   if (input.type === 'contact' && input.contactFields && input.contactFields.length === 0) {
     throw new Error('Select at least one contact field.');
+  }
+  if (input.type === 'upload' && input.uploadDocs && input.uploadDocs.length === 0) {
+    throw new Error('Select at least one document to collect.');
   }
   const { DB } = getEnv();
   const ts = nowMs();
@@ -1169,6 +1257,15 @@ export async function createBlock(input: {
   const contactFieldsJson =
     input.type === 'contact'
       ? serializeContactFields(input.contactFields ?? ['fullName', 'phone', 'workEmail'])
+      : null;
+  const uploadDocs: UploadDocKey[] =
+    input.uploadDocs && input.uploadDocs.length > 0 ? input.uploadDocs : ['photoId'];
+  const uploadConfigJson =
+    input.type === 'upload'
+      ? serializeUploadConfig({
+          docs: uploadDocs,
+          otherLabel: input.uploadOtherLabel ?? null,
+        })
       : null;
   const required = !canToggleBlockRequired(input.type)
     ? false
@@ -1190,7 +1287,11 @@ export async function createBlock(input: {
       input.youtubeUrl?.trim() || null,
       input.bodyText?.trim() || null,
       input.resourceUrl?.trim() || null,
-      input.type === 'contact' ? contactFieldsJson : input.resourceLabel?.trim() || null,
+      input.type === 'contact'
+        ? contactFieldsJson
+        : input.type === 'upload'
+          ? uploadConfigJson
+          : input.resourceLabel?.trim() || null,
       input.ackPrompt?.trim() || null,
       input.type === 'quiz' ? (input.passPercent ?? 80) : null,
       input.type === 'docusign' ? input.docusignTemplateId?.trim() || null : null,
@@ -1218,6 +1319,8 @@ export async function updateBlock(input: {
   docusignTemplateId?: string | null;
   docusignTemplateName?: string | null;
   contactFields?: ContactFieldKey[] | null;
+  uploadDocs?: UploadDocKey[] | null;
+  uploadOtherLabel?: string | null;
 }): Promise<void> {
   const { DB } = getEnv();
   const row = await DB.prepare(
@@ -1271,6 +1374,26 @@ export async function updateBlock(input: {
       throw new Error('Select at least one contact field.');
     }
     resourceLabel = serializeContactFields(input.contactFields);
+  }
+  if (row.type === 'upload') {
+    const existingConfig = parseUploadConfig(row.resource_label);
+    if (input.uploadDocs !== undefined) {
+      if (!input.uploadDocs || input.uploadDocs.length === 0) {
+        throw new Error('Select at least one document to collect.');
+      }
+      resourceLabel = serializeUploadConfig({
+        docs: input.uploadDocs,
+        otherLabel:
+          input.uploadOtherLabel !== undefined
+            ? input.uploadOtherLabel
+            : existingConfig.otherLabel,
+      });
+    } else if (input.uploadOtherLabel !== undefined) {
+      resourceLabel = serializeUploadConfig({
+        docs: existingConfig.docs,
+        otherLabel: input.uploadOtherLabel,
+      });
+    }
   }
   const ackPrompt =
     input.ackPrompt === undefined ? row.ack_prompt : (input.ackPrompt ?? '').trim() || null;
@@ -1701,6 +1824,218 @@ export async function saveContactDetailsResponse(input: {
   return { answers, profileUpdated };
 }
 
+const UPLOAD_ALLOWED_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
+export async function listUploadFiles(
+  userId: string,
+  blockId: string,
+): Promise<TrainingUploadFile[]> {
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT doc_key, file_name, file_mime, file_data, text_value, updated_at
+     FROM training_upload_file
+     WHERE user_id = ? AND block_id = ?
+     ORDER BY doc_key ASC`,
+  )
+    .bind(userId, blockId)
+    .all<{
+      doc_key: string;
+      file_name: string | null;
+      file_mime: string | null;
+      file_data: string | null;
+      text_value: string | null;
+      updated_at: number;
+    }>();
+  return (rows.results ?? [])
+    .filter((row): row is typeof row & { doc_key: UploadDocKey } =>
+      UPLOAD_DOC_KEYS.includes(row.doc_key as UploadDocKey),
+    )
+    .map((row) => ({
+      docKey: row.doc_key,
+      fileName: row.file_name,
+      fileMime: row.file_mime,
+      hasFile: Boolean(row.file_data),
+      textValue: row.text_value,
+      updatedAt: row.updated_at,
+    }));
+}
+
+function uploadDocSatisfied(key: UploadDocKey, row: TrainingUploadFile | undefined): boolean {
+  if (!row) return false;
+  if (uploadDocAcceptsText(key)) {
+    return row.hasFile || Boolean(row.textValue?.trim());
+  }
+  return row.hasFile;
+}
+
+export async function hasUploadResponse(userId: string, blockId: string): Promise<boolean> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT type, resource_label FROM training_block WHERE id = ?`,
+  )
+    .bind(blockId)
+    .first<{ type: string; resource_label: string | null }>();
+  if (!block || block.type !== 'upload') return false;
+  const config = parseUploadConfig(block.resource_label);
+  const files = await listUploadFiles(userId, blockId);
+  const byKey = new Map(files.map((file) => [file.docKey, file]));
+  return config.docs.every((key) => uploadDocSatisfied(key, byKey.get(key)));
+}
+
+export async function saveUploadDoc(input: {
+  userId: string;
+  blockId: string;
+  orgId: string;
+  docKey: UploadDocKey;
+  file?: { name: string; mime: string; data: string } | null;
+  textValue?: string | null;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT b.id, b.type, b.resource_label, m.org_id
+     FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ?`,
+  )
+    .bind(input.blockId)
+    .first<{ id: string; type: string; resource_label: string | null; org_id: string }>();
+  if (!block || block.org_id !== input.orgId || block.type !== 'upload') {
+    throw new Error('Document upload block not found.');
+  }
+  const config = parseUploadConfig(block.resource_label);
+  if (!config.docs.includes(input.docKey)) {
+    throw new Error('That document is not requested for this block.');
+  }
+
+  const existingRow = await DB.prepare(
+    `SELECT file_name, file_mime, file_data, text_value
+     FROM training_upload_file
+     WHERE user_id = ? AND block_id = ? AND doc_key = ?`,
+  )
+    .bind(input.userId, input.blockId, input.docKey)
+    .first<{
+      file_name: string | null;
+      file_mime: string | null;
+      file_data: string | null;
+      text_value: string | null;
+    }>();
+
+  let fileName = existingRow?.file_name ?? null;
+  let fileMime = existingRow?.file_mime ?? null;
+  let fileData = existingRow?.file_data ?? null;
+  let textValue = existingRow?.text_value ?? null;
+
+  if (input.file) {
+    if (!UPLOAD_ALLOWED_MIMES.has(input.file.mime)) {
+      throw new Error('Use a JPEG, PNG, WebP, or PDF file.');
+    }
+    if (input.file.data.length > UPLOAD_MAX_BYTES) {
+      throw new Error('File is too large (max about 1.2MB).');
+    }
+    fileName = input.file.name;
+    fileMime = input.file.mime;
+    fileData = input.file.data;
+  }
+
+  if (input.textValue !== undefined) {
+    textValue = input.textValue === null ? null : input.textValue.trim() || null;
+  }
+
+  const satisfied = uploadDocAcceptsText(input.docKey)
+    ? Boolean(fileData) || Boolean(textValue?.trim())
+    : Boolean(fileData);
+  if (!satisfied) {
+    throw new Error(
+      uploadDocAcceptsText(input.docKey)
+        ? 'Upload a file or enter the value.'
+        : 'Upload a file.',
+    );
+  }
+
+  await DB.prepare(
+    `INSERT INTO training_upload_file
+       (user_id, block_id, doc_key, file_name, file_mime, file_data, text_value, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, block_id, doc_key) DO UPDATE SET
+       file_name = excluded.file_name,
+       file_mime = excluded.file_mime,
+       file_data = excluded.file_data,
+       text_value = excluded.text_value,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(
+      input.userId,
+      input.blockId,
+      input.docKey,
+      fileName,
+      fileMime,
+      fileData,
+      textValue,
+      nowMs(),
+    )
+    .run();
+}
+
+export async function getUploadFileForDownload(input: {
+  orgId: string;
+  userId: string;
+  blockId: string;
+  docKey: UploadDocKey;
+}): Promise<{ fileName: string | null; fileMime: string; fileData: string } | null> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT b.id, m.org_id FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ?`,
+  )
+    .bind(input.blockId)
+    .first<{ id: string; org_id: string }>();
+  if (!block || block.org_id !== input.orgId) return null;
+  const row = await DB.prepare(
+    `SELECT file_name, file_mime, file_data
+     FROM training_upload_file
+     WHERE user_id = ? AND block_id = ? AND doc_key = ?`,
+  )
+    .bind(input.userId, input.blockId, input.docKey)
+    .first<{ file_name: string | null; file_mime: string | null; file_data: string | null }>();
+  if (!row?.file_data || !row.file_mime) return null;
+  return {
+    fileName: row.file_name,
+    fileMime: row.file_mime,
+    fileData: row.file_data,
+  };
+}
+
+export async function deleteUploadDoc(input: {
+  orgId: string;
+  userId: string;
+  blockId: string;
+  docKey: UploadDocKey;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT b.id, m.org_id FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ?`,
+  )
+    .bind(input.blockId)
+    .first<{ id: string; org_id: string }>();
+  if (!block || block.org_id !== input.orgId) throw new Error('Block not found.');
+  await DB.prepare(
+    `DELETE FROM training_upload_file WHERE user_id = ? AND block_id = ? AND doc_key = ?`,
+  )
+    .bind(input.userId, input.blockId, input.docKey)
+    .run();
+}
+
 export async function getTrainingUserReview(
   orgId: string,
   userId: string,
@@ -1729,6 +2064,14 @@ export async function getTrainingUserReview(
         status: string;
         detail: string | null;
         contactAnswers: ContactDetailsAnswers | null;
+        uploadSubmissions: Array<{
+          docKey: UploadDocKey;
+          label: string;
+          hasFile: boolean;
+          hasText: boolean;
+          textValue: string | null;
+          fileName: string | null;
+        }> | null;
         quizAnswers: Array<{ prompt: string; selected: string; correct: string; isCorrect: boolean }> | null;
         docusignStatus: string | null;
       }>;
@@ -1835,6 +2178,7 @@ export async function getTrainingUserReview(
               : 'Not submitted',
             detail: null,
             contactAnswers: null,
+            uploadSubmissions: null,
             quizAnswers,
             docusignStatus: null,
           });
@@ -1851,6 +2195,7 @@ export async function getTrainingUserReview(
               ? `Acknowledged as “${progressRow.ack_name}”`
               : block.ackPrompt,
             contactAnswers: null,
+            uploadSubmissions: null,
             quizAnswers: null,
             docusignStatus: null,
           });
@@ -1877,6 +2222,7 @@ export async function getTrainingUserReview(
                   : `In progress (${status})`,
             detail: null,
             contactAnswers: null,
+            uploadSubmissions: null,
             quizAnswers: null,
             docusignStatus: status,
           });
@@ -1892,6 +2238,38 @@ export async function getTrainingUserReview(
             status: contactAnswers ? 'Submitted' : 'Not submitted',
             detail: null,
             contactAnswers,
+            uploadSubmissions: null,
+            quizAnswers: null,
+            docusignStatus: null,
+          });
+          continue;
+        }
+
+        if (block.type === 'upload') {
+          const uploads = await listUploadFiles(userId, block.id);
+          const byKey = new Map(uploads.map((file) => [file.docKey, file]));
+          const submissions = block.uploadDocs.map((docKey) => {
+            const row = byKey.get(docKey);
+            return {
+              docKey,
+              label: uploadDocLabel(docKey, block.uploadOtherLabel),
+              hasFile: Boolean(row?.hasFile),
+              hasText: Boolean(row?.textValue?.trim()),
+              textValue: row?.textValue ?? null,
+              fileName: row?.fileName ?? null,
+            };
+          });
+          const complete = block.uploadDocs.every((docKey) =>
+            uploadDocSatisfied(docKey, byKey.get(docKey)),
+          );
+          blockReviews.push({
+            blockId: block.id,
+            type: block.type,
+            label: 'Document uploads',
+            status: complete ? 'Submitted' : 'Incomplete',
+            detail: null,
+            contactAnswers: null,
+            uploadSubmissions: submissions,
             quizAnswers: null,
             docusignStatus: null,
           });
@@ -1912,6 +2290,7 @@ export async function getTrainingUserReview(
           status: lesson.completed ? 'Completed with lesson' : 'Content',
           detail: block.type === 'resource' ? block.resourceLabel || block.resourceUrl : null,
           contactAnswers: null,
+          uploadSubmissions: null,
           quizAnswers: null,
           docusignStatus: null,
         });

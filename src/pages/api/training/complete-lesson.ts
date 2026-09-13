@@ -7,6 +7,7 @@ import {
   getLesson,
   hasBlockResponse,
   hasContentReview,
+  hasUploadResponse,
   isContentBlockType,
   latestQuizPass,
   listBlocks,
@@ -67,6 +68,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
             lesson.isAssignment
               ? 'Save required contact details before completing this assignment.'
               : 'Save required contact details before completing this lesson.',
+          );
+        }
+      } else if (block.type === 'upload') {
+        const saved = await hasUploadResponse(employee.id, block.id);
+        if (!saved) {
+          throw new Error(
+            lesson.isAssignment
+              ? 'Upload all required documents before completing this assignment.'
+              : 'Upload all required documents before completing this lesson.',
           );
         }
       } else if (isContentBlockType(block.type)) {

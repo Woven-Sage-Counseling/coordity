@@ -3,8 +3,11 @@ import type { TrainingModule, TrainingLesson, TrainingBlock } from '../lib/train
 import {
   CONTACT_FIELD_OPTIONS,
   MODULE_TEMPLATES,
+  UPLOAD_DOC_OPTIONS,
   canToggleBlockRequired,
   extractYoutubeId,
+  uploadDocAcceptsText,
+  uploadDocLabel,
 } from '../lib/training';
 
 interface Props {
@@ -53,6 +56,14 @@ interface Props {
             workEmail: string;
             jobTitle: string;
           } | null;
+          uploadSubmissions: Array<{
+            docKey: string;
+            label: string;
+            hasFile: boolean;
+            hasText: boolean;
+            textValue: string | null;
+            fileName: string | null;
+          }> | null;
           quizAnswers: Array<{
             prompt: string;
             selected: string;
@@ -124,6 +135,7 @@ function blockLabel(type: TrainingBlock['type']): string {
   if (type === 'ack') return 'Acknowledgment';
   if (type === 'docusign') return 'DocuSign document';
   if (type === 'contact') return 'Contact details';
+  if (type === 'upload') return 'Document uploads';
   return type;
 }
 
@@ -828,6 +840,38 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                               </section>
                             );
                           }
+                          if (block.type === 'upload') {
+                            const docs = UPLOAD_DOC_OPTIONS.filter((doc) =>
+                              block.uploadDocs.includes(doc.key),
+                            );
+                            return (
+                              <section class="rounded-xl border border-sage-dark/10 bg-[#f7f8fa] p-4">
+                                <h4 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                                  Document uploads{reqNote}
+                                </h4>
+                                {block.bodyText ? (
+                                  <p class="mt-2 text-sm text-sage-dark/70">{block.bodyText}</p>
+                                ) : (
+                                  <p class="mt-2 text-sm text-sage-dark/70">
+                                    Upload the requested documents below.
+                                  </p>
+                                )}
+                                <div class="mt-4 space-y-3">
+                                  {docs.map((doc) => (
+                                    <div class="rounded-lg border border-sage-dark/10 bg-white p-3">
+                                      <p class="text-sm font-medium text-charcoal">
+                                        {uploadDocLabel(doc.key, block.uploadOtherLabel)}
+                                      </p>
+                                      {uploadDocAcceptsText(doc.key) ? (
+                                        <input class="field mt-2" type="text" disabled placeholder="Or enter value" />
+                                      ) : null}
+                                      <input class="field mt-2" type="file" disabled />
+                                    </div>
+                                  ))}
+                                </div>
+                              </section>
+                            );
+                          }
                           if (block.type === 'contact') {
                             const fields = CONTACT_FIELD_OPTIONS.filter((field) =>
                               block.contactFields.includes(field.key),
@@ -878,7 +922,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                 <div>
                   <h4 class="text-sm font-semibold text-charcoal">Content people go through</h4>
                   <p class="mt-1 text-xs text-sage-dark/60">
-                    Add writing, video, links, quizzes, contact details, or acknowledgments in order.
+                    Add writing, video, links, quizzes, contact details, document uploads, or acknowledgments in order.
                   </p>
                   <div class="mt-3 space-y-3">
                     {selectedBlocks.length === 0 ? (
@@ -891,7 +935,8 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                           block.type === 'written' ||
                           block.type === 'ack' ||
                           block.type === 'docusign' ||
-                          block.type === 'contact';
+                          block.type === 'contact' ||
+                          block.type === 'upload';
                         const signedForBlock = docusignStatuses.filter(
                           (row) => row.blockId === block.id && row.status === 'completed',
                         );
@@ -968,6 +1013,43 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                   Acknowledgment prompt
                                   <textarea class="field" name="ackPrompt" rows="2">{block.ackPrompt ?? ''}</textarea>
                                 </label>
+                              ) : null}
+                              {block.type === 'upload' ? (
+                                <div class="space-y-2">
+                                  <input type="hidden" name="uploadDocsConfigured" value="1" />
+                                  <input type="hidden" name="uploadOtherLabelConfigured" value="1" />
+                                  <p class="text-xs font-medium text-charcoal">Documents to collect</p>
+                                  <p class="text-[11px] text-sage-dark/60">
+                                    Choose what learners upload. NPI and CAQH accept a file or short text.
+                                  </p>
+                                  <div class="grid gap-1.5 sm:grid-cols-2">
+                                    {UPLOAD_DOC_OPTIONS.map((doc) => (
+                                      <label class="flex items-center gap-2 text-xs text-charcoal">
+                                        <input
+                                          type="checkbox"
+                                          name="uploadDocs"
+                                          value={doc.key}
+                                          checked={block.uploadDocs.includes(doc.key)}
+                                        />
+                                        {doc.label}
+                                      </label>
+                                    ))}
+                                  </div>
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Other document label
+                                    <input
+                                      class="field"
+                                      type="text"
+                                      name="uploadOtherLabel"
+                                      value={block.uploadOtherLabel ?? ''}
+                                      placeholder="Only used when “Other document” is checked"
+                                    />
+                                  </label>
+                                  <label class="block text-xs font-medium text-charcoal">
+                                    Optional intro
+                                    <textarea class="field" name="bodyText" rows="2">{block.bodyText ?? ''}</textarea>
+                                  </label>
+                                </div>
                               ) : null}
                               {block.type === 'contact' ? (
                                 <div class="space-y-2">
@@ -1215,6 +1297,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                         <option value="quiz">Quiz</option>
                         <option value="ack">Acknowledgment</option>
                         <option value="contact">Contact details</option>
+                        <option value="upload">Document uploads</option>
                         <option value="docusign">DocuSign document</option>
                       </select>
                     </label>
@@ -1470,6 +1553,52 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                             Answer: {answer.selected}
                                             {!answer.isCorrect ? ` · Correct: ${answer.correct}` : ''}
                                           </p>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
+                                  {block.uploadSubmissions ? (
+                                    <ul class="mt-2 space-y-2">
+                                      {block.uploadSubmissions.map((submission) => (
+                                        <li class="rounded-lg border border-sage-dark/10 bg-[#f7f8fa] px-2.5 py-2 text-xs">
+                                          <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <p class="font-medium text-charcoal">{submission.label}</p>
+                                            <p class="text-sage-dark/65">
+                                              {submission.hasFile && submission.hasText
+                                                ? 'File + text'
+                                                : submission.hasFile
+                                                  ? 'File uploaded'
+                                                  : submission.hasText
+                                                    ? 'Text only'
+                                                    : 'Missing'}
+                                            </p>
+                                          </div>
+                                          {submission.textValue ? (
+                                            <p class="mt-1 text-charcoal">{submission.textValue}</p>
+                                          ) : null}
+                                          {submission.hasFile ? (
+                                            <div class="mt-2 flex flex-wrap gap-2">
+                                              <a
+                                                class="font-semibold text-sage-dark underline-offset-2 hover:underline"
+                                                href={`/api/training/upload/file/${traineeReview?.userId}/${block.blockId}/${submission.docKey}`}
+                                              >
+                                                Download{submission.fileName ? ` (${submission.fileName})` : ''}
+                                              </a>
+                                              <form method="post" action="/api/training/upload/delete">
+                                                <input type="hidden" name="userId" value={traineeReview?.userId} />
+                                                <input type="hidden" name="blockId" value={block.blockId} />
+                                                <input type="hidden" name="docKey" value={submission.docKey} />
+                                                <input type="hidden" name="trainee" value={traineeReview?.userId} />
+                                                <button
+                                                  class="font-semibold text-red-700 underline-offset-2 hover:underline"
+                                                  type="submit"
+                                                  onclick="return confirm('Permanently delete this upload?');"
+                                                >
+                                                  Delete permanently
+                                                </button>
+                                              </form>
+                                            </div>
+                                          ) : null}
                                         </li>
                                       ))}
                                     </ul>

@@ -2,18 +2,23 @@
 import PortalLayout from '../../../layouts/PortalLayout.astro';
 import {
   CONTACT_FIELD_OPTIONS,
+  UPLOAD_DOC_OPTIONS,
   extractYoutubeId,
   getBlockResponse,
   getLesson,
   getModuleProgressForUser,
   hasBlockResponse,
   hasContentReview,
+  hasUploadResponse,
   isContentBlockType,
   latestQuizPass,
   lessonVisibleToRoles,
   listBlocks,
   listCompletedLessonIds,
+  listUploadFiles,
   moduleVisibleToRoles,
+  uploadDocAcceptsText,
+  uploadDocLabel,
 } from '../../../lib/training';
 import { getDocuSignEnvelopeForUser, latestDocuSignComplete } from '../../../lib/docusign';
 import { orgIdFromLocals } from '../../../lib/organization';
@@ -31,6 +36,7 @@ const quizScore = Astro.url.searchParams.get('score');
 const quizPassed = Astro.url.searchParams.get('passed');
 const docusignFlash = Astro.url.searchParams.get('docusign');
 const contactFlash = Astro.url.searchParams.get('contact');
+const uploadFlash = Astro.url.searchParams.get('upload');
 const reviewFlash = Astro.url.searchParams.get('review');
 const isPreview =
   Astro.url.searchParams.get('preview') === '1' && canAccessManagement(employee);
@@ -82,6 +88,14 @@ for (const block of blocks.filter((b) => b.type === 'contact')) {
   contactDoneMap.set(block.id, await hasBlockResponse(employee.id, block.id));
 }
 
+const uploadDoneMap = new Map<string, boolean>();
+const uploadFilesMap = new Map<string, Awaited<ReturnType<typeof listUploadFiles>>>();
+for (const block of blocks.filter((b) => b.type === 'upload')) {
+  const files = await listUploadFiles(employee.id, block.id);
+  uploadFilesMap.set(block.id, files);
+  uploadDoneMap.set(block.id, await hasUploadResponse(employee.id, block.id));
+}
+
 const contentReviewMap = new Map<string, boolean>();
 for (const block of blocks.filter((b) => isContentBlockType(b.type))) {
   contentReviewMap.set(block.id, await hasContentReview(employee.id, block.id));
@@ -98,10 +112,13 @@ const docusignOk = requiredBlocks
 const contactOk = requiredBlocks
   .filter((b) => b.type === 'contact')
   .every((b) => contactDoneMap.get(b.id));
+const uploadOk = requiredBlocks
+  .filter((b) => b.type === 'upload')
+  .every((b) => uploadDoneMap.get(b.id));
 const contentOk = requiredBlocks
   .filter((b) => isContentBlockType(b.type))
   .every((b) => contentReviewMap.get(b.id));
-const canComplete = quizzesOk && docusignOk && contactOk && contentOk;
+const canComplete = quizzesOk && docusignOk && contactOk && uploadOk && contentOk;
 const itemLabel = lesson.isAssignment ? 'assignment' : 'lesson';
 const itemLabelTitle = lesson.isAssignment ? 'Assignment' : 'Lesson';
 
@@ -148,6 +165,13 @@ function blockHeading(label: string, required: boolean) {
     contactFlash === 'saved' ? (
       <p class="mt-4 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
         Contact details saved.
+      </p>
+    ) : null
+  }
+  {
+    uploadFlash === 'saved' ? (
+      <p class="mt-4 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        Document saved.
       </p>
     ) : null
   }
@@ -407,6 +431,95 @@ function blockHeading(label: string, required: boolean) {
               </section>
             );
           }
+          if (block.type === 'upload') {
+            const files = uploadFilesMap.get(block.id) ?? [];
+            const byKey = new Map(files.map((file) => [file.docKey, file]));
+            const docs = UPLOAD_DOC_OPTIONS.filter((doc) => block.uploadDocs.includes(doc.key));
+            return (
+              <section class="card">
+                <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
+                  {blockHeading('Document uploads', block.required)}
+                </h2>
+                {block.bodyText ? (
+                  <p class="mt-2 text-sm text-sage-dark/70">{block.bodyText}</p>
+                ) : (
+                  <p class="mt-2 text-sm text-sage-dark/70">
+                    Upload the requested documents below. JPEG, PNG, WebP, or PDF up to about 1.2MB each.
+                  </p>
+                )}
+                {uploadDoneMap.get(block.id) ? (
+                  <p class="mt-3 text-sm font-semibold text-emerald-800">All requested documents saved.</p>
+                ) : null}
+                <div class="mt-4 space-y-4">
+                  {docs.map((doc) => {
+                    const saved = byKey.get(doc.key);
+                    const label = uploadDocLabel(doc.key, block.uploadOtherLabel);
+                    return (
+                      <div class="rounded-xl border border-sage-dark/10 p-4">
+                        <p class="text-sm font-medium text-charcoal">{label}</p>
+                        {saved?.hasFile || saved?.textValue ? (
+                          <p class="mt-1 text-xs text-emerald-800">
+                            {saved.hasFile && saved.textValue?.trim()
+                              ? 'File and text saved'
+                              : saved.hasFile
+                                ? `File saved${saved.fileName ? `: ${saved.fileName}` : ''}`
+                                : 'Text saved'}
+                          </p>
+                        ) : null}
+                        {saved?.hasFile ? (
+                          <p class="mt-2">
+                            <a
+                              class="text-sm font-semibold text-sage-dark underline-offset-2 hover:underline"
+                              href={`/api/training/upload/file/${employee.id}/${block.id}/${doc.key}`}
+                            >
+                              Download your file
+                            </a>
+                          </p>
+                        ) : null}
+                        <form
+                          method="post"
+                          action="/api/training/upload"
+                          enctype="multipart/form-data"
+                          class="mt-3 space-y-3"
+                        >
+                          <input type="hidden" name="blockId" value={block.id} />
+                          <input type="hidden" name="moduleId" value={moduleId} />
+                          <input type="hidden" name="lessonId" value={lessonId} />
+                          <input type="hidden" name="docKey" value={doc.key} />
+                          {uploadDocAcceptsText(doc.key) ? (
+                            <label class="block text-sm font-medium text-charcoal">
+                              {doc.key === 'npiRecord' ? 'NPI number' : 'CAQH number or ID'}
+                              <span class="font-normal text-sage-dark/55"> (optional if you upload a file)</span>
+                              <input
+                                class="field mt-1.5"
+                                type="text"
+                                name="textValue"
+                                maxlength="80"
+                                value={saved?.textValue ?? ''}
+                              />
+                            </label>
+                          ) : null}
+                          <label class="block text-sm font-medium text-charcoal">
+                            {uploadDocAcceptsText(doc.key) ? 'Or upload a file' : 'Upload file'}
+                            <input
+                              class="field mt-1.5"
+                              type="file"
+                              name="file"
+                              accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+                              required={!uploadDocAcceptsText(doc.key) && !saved?.hasFile && !saved?.textValue}
+                            />
+                          </label>
+                          <button class="btn-primary" type="submit">
+                            {saved?.hasFile || saved?.textValue ? 'Update' : 'Save'}
+                          </button>
+                        </form>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          }
           return null;
         })
       )
@@ -435,6 +548,11 @@ function blockHeading(label: string, required: boolean) {
         {!contactOk ? (
           <p class="text-sm text-amber-800">
             Save required contact details before marking this {itemLabel} complete.
+          </p>
+        ) : null}
+        {!uploadOk ? (
+          <p class="text-sm text-amber-800">
+            Upload all required documents before marking this {itemLabel} complete.
           </p>
         ) : null}
         {!contentOk ? (

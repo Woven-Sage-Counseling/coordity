@@ -184,6 +184,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 return selected.length > 0 ? selected : ['fullName', 'phone', 'workEmail'];
               })()
             : undefined,
+        uploadDocs:
+          type === 'upload'
+            ? form
+                .getAll('uploadDocs')
+                .map((value) => String(value))
+                .filter(
+                  (value): value is 'photoId' | 'therapistLicense' | 'npiRecord' | 'caqhNumber' | 'malpracticeInsurance' | 'other' =>
+                    ['photoId', 'therapistLicense', 'npiRecord', 'caqhNumber', 'malpracticeInsurance', 'other'].includes(value),
+                )
+            : undefined,
+        uploadOtherLabel:
+          type === 'upload' ? String(form.get('uploadOtherLabel') ?? '').trim() || null : undefined,
       });
       return redirectAdmin({ moduleId, itemId: lessonId });
     }
@@ -221,6 +233,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   ['fullName', 'phone', 'workEmail', 'jobTitle'].includes(value),
                 ),
             }
+          : {}),
+        ...(form.has('uploadDocsConfigured')
+          ? {
+              uploadDocs: form
+                .getAll('uploadDocs')
+                .map((value) => String(value))
+                .filter(
+                  (value): value is 'photoId' | 'therapistLicense' | 'npiRecord' | 'caqhNumber' | 'malpracticeInsurance' | 'other' =>
+                    ['photoId', 'therapistLicense', 'npiRecord', 'caqhNumber', 'malpracticeInsurance', 'other'].includes(value),
+                ),
+            }
+          : {}),
+        ...(form.has('uploadOtherLabelConfigured')
+          ? { uploadOtherLabel: String(form.get('uploadOtherLabel') ?? '').trim() || null }
           : {}),
         ...(form.has('docusignTemplateId')
           ? (() => {
