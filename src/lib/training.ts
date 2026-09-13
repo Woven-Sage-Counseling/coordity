@@ -789,7 +789,7 @@ export async function updateModule(input: {
   )
     .bind(
       input.title?.trim() || module.title,
-      input.description?.trim() ?? module.description,
+      input.description !== undefined ? input.description.trim() : module.description || '',
       input.visible == null ? (module.visible ? 1 : 0) : input.visible ? 1 : 0,
       ts,
       input.moduleId,

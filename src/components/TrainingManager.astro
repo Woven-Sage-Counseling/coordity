@@ -281,7 +281,12 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     placeholder="Optional description shown at the top of this module for learners…"
                   >{selected.description}</textarea>
                 </label>
-                <p class="mt-1 text-[10px] text-sage-dark/50" data-training-autosave-status></p>
+                <div class="mt-1.5 flex items-center justify-between gap-2">
+                  <p class="text-[10px] text-sage-dark/50" data-training-autosave-status></p>
+                  <button class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]" type="submit">
+                    Save
+                  </button>
+                </div>
               </form>
 
               <div class="flex items-center justify-between gap-2 border-b border-sage-dark/10 px-2.5 py-2">
@@ -1612,11 +1617,18 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
           credentials: 'same-origin',
           headers: { 'X-Requested-With': 'training-autosave', Accept: 'application/json' },
         });
-        const data = (await response.json().catch(() => null)) as
-          | { ok?: boolean; error?: string; title?: string }
-          | null;
+        const raw = await response.text();
+        let data: { ok?: boolean; error?: string; title?: string } | null = null;
+        try {
+          data = JSON.parse(raw) as { ok?: boolean; error?: string; title?: string };
+        } catch {
+          data = null;
+        }
         if (!response.ok || !data?.ok) {
-          throw new Error(data?.error || `Could not save (${response.status})`);
+          throw new Error(
+            data?.error ||
+              (raw.trim() ? raw.trim().slice(0, 160) : `Could not save (${response.status})`),
+          );
         }
         setAutosaveStatus(form, 'Saved');
         if (typeof data.title === 'string' && data.title) {
@@ -1688,6 +1700,22 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
     document.addEventListener('submit', (event) => {
       const form = event.target;
       if (!(form instanceof HTMLFormElement)) return;
+
+      if (form.hasAttribute('data-training-autosave')) {
+        const submitter = 'submitter' in event ? (event as SubmitEvent).submitter : null;
+        if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
+          const namedAction =
+            submitter.name === 'action' ? String(submitter.value || '').trim() : '';
+          // Let archive/delete (and other alternate actions) do a normal POST.
+          if (namedAction && namedAction !== String(new FormData(form).get('action') ?? '').trim()) {
+            return;
+          }
+        }
+        event.preventDefault();
+        void autosaveForm(form);
+        return;
+      }
+
       if (!form.hasAttribute('data-training-move-block')) return;
       event.preventDefault();
 

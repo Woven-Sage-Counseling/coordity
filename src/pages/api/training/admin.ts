@@ -21,7 +21,9 @@ import {
 export const prerender = false;
 
 function wantsJson(request: Request): boolean {
-  return request.headers.get('X-Requested-With') === 'training-autosave';
+  if (request.headers.get('X-Requested-With') === 'training-autosave') return true;
+  const accept = request.headers.get('Accept') ?? '';
+  return accept.includes('application/json');
 }
 
 function jsonOk(extra: Record<string, unknown> = {}): Response {
@@ -58,14 +60,17 @@ function redirectAdmin(opts?: {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const asJson = wantsJson(request);
   const denied = requireManagementAccess(locals.employee);
-  if (denied) return denied;
+  if (denied) {
+    if (asJson) return jsonError('Forbidden');
+    return denied;
+  }
   const orgId = orgIdFromLocals(locals.organization);
   const form = await request.formData();
   // Submit buttons may send a second `action` after a hidden field; prefer the last one.
   const actionValues = form.getAll('action').map((v) => String(v).trim()).filter(Boolean);
   const action = actionValues[actionValues.length - 1] ?? '';
-  const asJson = wantsJson(request);
 
   try {
     if (action === 'create-module') {
@@ -86,20 +91,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'update-module') {
       const moduleId = String(form.get('moduleId') ?? '').trim();
-      const title = String(form.get('title') ?? '').trim();
-      const description = String(form.get('description') ?? '').trim();
+      const titleRaw = form.get('title');
+      const descriptionRaw = form.get('description');
+      const roleKeysConfigured = form.get('roleKeysConfigured');
       const roleKeys = form.getAll('roleKeys').map((v) => String(v));
       const existing = await getTrainingModule(moduleId, orgId);
       if (!existing) throw new Error('Module not found.');
-      if (form.has('roleKeysConfigured') && existing.kind === 'custom' && roleKeys.length === 0) {
+      if (roleKeysConfigured != null && existing.kind === 'custom' && roleKeys.length === 0) {
         throw new Error('Assign at least one role to custom modules.');
       }
       await updateModule({
         orgId,
         moduleId,
-        ...(form.has('title') ? { title } : {}),
-        ...(form.has('description') ? { description } : {}),
-        ...(form.has('roleKeysConfigured') ? { roleKeys } : {}),
+        ...(titleRaw != null ? { title: String(titleRaw).trim() } : {}),
+        ...(descriptionRaw != null ? { description: String(descriptionRaw).trim() } : {}),
+        ...(roleKeysConfigured != null ? { roleKeys } : {}),
       });
       if (asJson) return jsonOk({ moduleId });
       const returnView = String(form.get('returnView') ?? '').trim();
