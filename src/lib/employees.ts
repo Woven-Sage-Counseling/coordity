@@ -339,8 +339,7 @@ export async function listRoles(orgId?: string) {
 
 export async function listRolesWithPermissions(orgId?: string) {
   if (orgId) {
-    const { ensureOrganizationRoles, listOrganizationRolesWithPermissions } = await import('./org-roles');
-    await ensureOrganizationRoles(orgId);
+    const { listOrganizationRolesWithPermissions } = await import('./org-roles');
     return listOrganizationRolesWithPermissions(orgId);
   }
   const roles = await listRoles();

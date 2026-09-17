@@ -144,47 +144,61 @@ export async function ensureOrganizationRoles(orgId: string): Promise<OrgRole[]>
       .all<{ id: string; key: string; name: string; description: string }>();
 
     for (const global of globalRoles.results ?? []) {
-      const existing = await DB.prepare(
-        `SELECT id FROM organization_role WHERE org_id = ? AND key = ?`,
-      )
-        .bind(orgId, global.key)
-        .first<{ id: string }>();
-
-      if (existing) {
-        const permCount = await DB.prepare(
-          `SELECT COUNT(*) AS n FROM organization_role_permission WHERE role_id = ?`,
+      try {
+        const existing = await DB.prepare(
+          `SELECT id FROM organization_role WHERE org_id = ? AND key = ?`,
         )
-          .bind(existing.id)
-          .first<{ n: number }>();
-        if (Number(permCount?.n ?? 0) === 0) {
-          await copyPermissionsFromGlobalRole(global.id, existing.id);
+          .bind(orgId, global.key)
+          .first<{ id: string }>();
+
+        if (existing) {
+          const permCount = await DB.prepare(
+            `SELECT COUNT(*) AS n FROM organization_role_permission WHERE role_id = ?`,
+          )
+            .bind(existing.id)
+            .first<{ n: number }>();
+          if (Number(permCount?.n ?? 0) === 0) {
+            await copyPermissionsFromGlobalRole(global.id, existing.id);
+          }
+          continue;
         }
-        continue;
-      }
 
-      const id = `orole_${orgId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12)}_${global.key}`.slice(0, 64);
-      await DB.prepare(
-        `INSERT INTO organization_role
-           (id, org_id, key, name, description, is_system, sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
-      )
-        .bind(
-          id,
-          orgId,
-          global.key,
-          global.name,
-          global.description,
-          SYSTEM_SORT[global.key] ?? 50,
-          ts,
-          ts,
+        const id = `orole_${orgId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12)}_${global.key}`.slice(0, 64);
+        await DB.prepare(
+          `INSERT INTO organization_role
+             (id, org_id, key, name, description, is_system, sort_order, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
         )
-        .run();
-      await copyPermissionsFromGlobalRole(global.id, id);
+          .bind(
+            id,
+            orgId,
+            global.key,
+            global.name,
+            global.description,
+            SYSTEM_SORT[global.key] ?? 50,
+            ts,
+            ts,
+          )
+          .run();
+        await copyPermissionsFromGlobalRole(global.id, id);
+      } catch (error) {
+        console.error(`ensureOrganizationRoles seed failed for ${global.key}`, error);
+      }
     }
   }
 
-  await remapAssignmentsToOrgRoles(orgId);
-  return listOrganizationRoles(orgId);
+  try {
+    await remapAssignmentsToOrgRoles(orgId);
+  } catch (error) {
+    // Remap is best-effort; still return seeded roles for Admin UI.
+    console.error('remapAssignmentsToOrgRoles failed', error);
+  }
+  try {
+    return await listOrganizationRoles(orgId);
+  } catch (error) {
+    console.error('listOrganizationRoles failed', error);
+    return [];
+  }
 }
 
 async function remapAssignmentsToOrgRoles(orgId: string): Promise<void> {
@@ -278,13 +292,58 @@ export async function listOrganizationRoles(orgId: string): Promise<OrgRole[]> {
 }
 
 export async function listOrganizationRolesWithPermissions(orgId: string) {
-  const roles = await ensureOrganizationRoles(orgId);
+  let roles: OrgRole[] = [];
+  try {
+    roles = await ensureOrganizationRoles(orgId);
+  } catch (error) {
+    console.error('ensureOrganizationRoles failed', error);
+    roles = [];
+  }
+  if (roles.length === 0) {
+    // Fallback so Admin always shows the Woven Sage defaults even if org seeding fails.
+    const { DB } = getEnv();
+    const globalRoles = await DB.prepare(
+      `SELECT id, key, name, description FROM role
+       WHERE key IN (${SYSTEM_ROLE_KEYS.map(() => '?').join(',')})
+       ORDER BY CASE key
+         WHEN 'owner' THEN 0 WHEN 'owner_view' THEN 1 WHEN 'finance' THEN 2
+         WHEN 'manager' THEN 3 WHEN 'it' THEN 4 WHEN 'clinician' THEN 5
+         WHEN 'employee' THEN 6 WHEN 'intern' THEN 7 ELSE 8 END`,
+    )
+      .bind(...SYSTEM_ROLE_KEYS)
+      .all<{ id: string; key: string; name: string; description: string }>();
+
+    const out = [];
+    for (const row of globalRoles.results ?? []) {
+      const perms = await DB.prepare(
+        `SELECT p.key AS permission_key
+         FROM role_permission rp
+         JOIN permission p ON p.id = rp.permission_id
+         WHERE rp.role_id = ?
+         ORDER BY p.key`,
+      )
+        .bind(row.id)
+        .all<{ permission_key: string }>();
+      out.push({
+        id: row.id,
+        key: row.key,
+        name: row.name,
+        description: row.description,
+        isSystem: true,
+        permissions: (perms.results ?? []).map((p) => ({
+          key: p.permission_key,
+          description: permissionPlainLanguage[p.permission_key] ?? p.permission_key,
+        })),
+      });
+    }
+    return out;
+  }
   return roles.map((role) => ({
     id: role.id,
     key: role.key,
     name: role.name,
     description: role.description,
-    isSystem: role.isSystem,
+    isSystem: role.isSystem || isSystemRoleKey(role.key),
     permissions: role.permissions.map((key) => ({
       key,
       description: permissionPlainLanguage[key] ?? key,
