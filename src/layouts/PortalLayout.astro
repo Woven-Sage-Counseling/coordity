@@ -75,9 +75,13 @@ const primaryNav = [
   { href: '/workspace', label: 'WorkHub' },
   { href: '/apps', label: 'Quick links' },
   { href: '/directory', label: 'Directory' },
-  { href: '/messages', label: 'Messages', badge: true },
+  { href: '/messages', label: 'Messages', badge: true as const },
   { href: '/account', label: 'Account' },
-] as const;
+  ...(canSeeFinancials ? [{ href: '/financials', label: 'Financials' }] : []),
+  ...(canSeeManagement ? [{ href: '/admin', label: 'Admin' }] : []),
+];
+
+const navSep = `<svg width="6" height="6" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true"><path d="M3 0.5 5.5 3 3 5.5 0.5 3Z" opacity="0.55"/></svg>`;
 ---
 
 <!doctype html>
@@ -120,9 +124,9 @@ const primaryNav = [
                 Workspace
               </span>
             </a>
-            <nav class="flex flex-wrap items-center justify-end gap-x-2 gap-y-2 text-sm" aria-label="Primary">
+            <nav class="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-2 text-sm" aria-label="Primary">
               <div
-                class="relative inline-flex flex-wrap items-center gap-x-0.5 gap-y-1"
+                class="relative inline-flex flex-wrap items-center gap-x-0 gap-y-1"
                 data-portal-nav
               >
                 <span
@@ -131,70 +135,52 @@ const primaryNav = [
                   aria-hidden="true"
                 ></span>
                 {
-                  primaryNav.map((item) => {
+                  primaryNav.map((item, index) => {
                     const active = navIsActive(item.href);
                     return (
-                      <a
-                        href={item.href}
-                        data-portal-nav-link
-                        data-nav-href={item.href}
-                        aria-current={active ? 'page' : undefined}
-                        class:list={[
-                          'relative z-10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors',
-                          active
-                            ? 'font-medium text-charcoal'
-                            : 'text-sage-dark/80 hover:text-sage-dark',
-                        ]}
-                      >
-                        {item.label}
-                        {'badge' in item && item.badge ? (
+                      <>
+                        {index > 0 ? (
                           <span
-                            class:list={[
-                              'rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white',
-                              messagesUnread > 0 ? '' : 'hidden',
-                            ]}
-                            data-messages-nav-badge
-                          >
-                            {messagesUnread > 99 ? '99+' : messagesUnread}
-                          </span>
+                            class="pointer-events-none relative z-10 mx-0.5 inline-flex shrink-0 items-center self-center text-sage-dark/35"
+                            aria-hidden="true"
+                            set:html={navSep}
+                          />
                         ) : null}
-                      </a>
+                        <a
+                          href={item.href}
+                          data-portal-nav-link
+                          data-nav-href={item.href}
+                          aria-current={active ? 'page' : undefined}
+                          class:list={[
+                            'relative z-10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors',
+                            active
+                              ? 'font-medium text-charcoal'
+                              : 'text-sage-dark/80 hover:text-sage-dark',
+                          ]}
+                        >
+                          {item.label}
+                          {'badge' in item && item.badge ? (
+                            <span
+                              class:list={[
+                                'rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white',
+                                messagesUnread > 0 ? '' : 'hidden',
+                              ]}
+                              data-messages-nav-badge
+                            >
+                              {messagesUnread > 99 ? '99+' : messagesUnread}
+                            </span>
+                          ) : null}
+                        </a>
+                      </>
                     );
                   })
                 }
-                {canSeeFinancials ? (
-                  <a
-                    href="/financials"
-                    data-portal-nav-link
-                    data-nav-href="/financials"
-                    aria-current={navIsActive('/financials') ? 'page' : undefined}
-                    class:list={[
-                      'relative z-10 inline-flex items-center rounded-full px-2.5 py-1.5 transition-colors',
-                      navIsActive('/financials')
-                        ? 'font-medium text-charcoal'
-                        : 'text-sage-dark/80 hover:text-sage-dark',
-                    ]}
-                  >
-                    Financials
-                  </a>
-                ) : null}
-                {canSeeManagement ? (
-                  <a
-                    href="/admin"
-                    data-portal-nav-link
-                    data-nav-href="/admin"
-                    aria-current={navIsActive('/admin') ? 'page' : undefined}
-                    class:list={[
-                      'relative z-10 inline-flex items-center rounded-full px-2.5 py-1.5 transition-colors',
-                      navIsActive('/admin')
-                        ? 'font-medium text-charcoal'
-                        : 'text-sage-dark/80 hover:text-sage-dark',
-                    ]}
-                  >
-                    Admin
-                  </a>
-                ) : null}
               </div>
+              <span
+                class="inline-flex shrink-0 items-center self-center text-sage-dark/35"
+                aria-hidden="true"
+                set:html={navSep}
+              />
               <a
                 href="/settings"
                 data-portal-nav-external
