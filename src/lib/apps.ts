@@ -142,4 +142,8 @@ export const appCategories: { id: PortalApp['category']; title: string }[] = [
     id: 'financial',
     title: 'Financial tools',
   },
+  {
+    id: 'internal',
+    title: 'Internal tools',
+  },
 ];
