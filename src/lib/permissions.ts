@@ -47,9 +47,10 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
   if (!profile) return null;
 
   const roles = await DB.prepare(
-    `SELECT r.key
+    `SELECT COALESCE(orole.key, r.key) AS key
      FROM user_role ur
-     JOIN role r ON r.id = ur.role_id
+     LEFT JOIN organization_role orole ON orole.id = ur.role_id
+     LEFT JOIN role r ON r.id = ur.role_id
      WHERE ur.user_id = ?`,
   )
     .bind(userId)
@@ -65,18 +66,34 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     .bind(userId)
     .all<{ name: string }>();
 
-  const permissions =
-    profile.status === 'active'
-      ? await DB.prepare(
-          `SELECT DISTINCT perm.key
-           FROM user_role ur
-           JOIN role_permission rp ON rp.role_id = ur.role_id
-           JOIN permission perm ON perm.id = rp.permission_id
-           WHERE ur.user_id = ?`,
-        )
-          .bind(userId)
-          .all<{ key: Permission }>()
-      : { results: [] as { key: Permission }[] };
+  let permissionKeys: Permission[] = [];
+  if (profile.status === 'active') {
+    try {
+      const fromOrg = await DB.prepare(
+        `SELECT DISTINCT orp.permission_key AS key
+         FROM user_role ur
+         JOIN organization_role_permission orp ON orp.role_id = ur.role_id
+         WHERE ur.user_id = ?`,
+      )
+        .bind(userId)
+        .all<{ key: Permission }>();
+      permissionKeys = (fromOrg.results ?? []).map((row) => row.key);
+    } catch {
+      permissionKeys = [];
+    }
+    if (permissionKeys.length === 0) {
+      const fromGlobal = await DB.prepare(
+        `SELECT DISTINCT perm.key
+         FROM user_role ur
+         JOIN role_permission rp ON rp.role_id = ur.role_id
+         JOIN permission perm ON perm.id = rp.permission_id
+         WHERE ur.user_id = ?`,
+      )
+        .bind(userId)
+        .all<{ key: Permission }>();
+      permissionKeys = (fromGlobal.results ?? []).map((row) => row.key);
+    }
+  }
 
   return {
     id: profile.id,
@@ -87,8 +104,8 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     teams: (teams.results ?? []).map((row) => row.name),
     hasAvatar: profile.has_avatar === 1,
     status: profile.status,
-    roles: (roles.results ?? []).map((row) => row.key),
-    permissions: (permissions.results ?? []).map((row) => row.key),
+    roles: (roles.results ?? []).map((row) => row.key).filter(Boolean),
+    permissions: permissionKeys,
   };
 }
 

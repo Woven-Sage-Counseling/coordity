@@ -125,11 +125,12 @@ export async function listEmployees(orgId = DEFAULT_ORG_ID) {
           COALESCE(p.status, 'pending') AS status,
           p.job_title AS jobTitle,
           p.phone,
-          GROUP_CONCAT(r.key) AS roles
+          GROUP_CONCAT(COALESCE(orole.key, r.key)) AS roles
        FROM user u
        INNER JOIN organization_member om ON om.user_id = u.id AND om.org_id = ?
        LEFT JOIN employee_profile p ON p.user_id = u.id
        LEFT JOIN user_role ur ON ur.user_id = u.id
+       LEFT JOIN organization_role orole ON orole.id = ur.role_id
        LEFT JOIN role r ON r.id = ur.role_id
        WHERE u.id != 'user_coordity_system'
        GROUP BY u.id
@@ -301,7 +302,18 @@ export function groupDirectoryByTeam(people: DirectoryPerson[]) {
   return { groups, unassigned };
 }
 
-export async function listRoles() {
+export async function listRoles(orgId?: string) {
+  if (orgId) {
+    const { ensureOrganizationRoles, listOrganizationRolesWithPermissions } = await import('./org-roles');
+    await ensureOrganizationRoles(orgId);
+    const roles = await listOrganizationRolesWithPermissions(orgId);
+    return roles.map((role) => ({
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      description: role.description,
+    }));
+  }
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT id, key, name, description FROM role
@@ -325,7 +337,12 @@ export async function listRoles() {
   return rows.results ?? [];
 }
 
-export async function listRolesWithPermissions() {
+export async function listRolesWithPermissions(orgId?: string) {
+  if (orgId) {
+    const { ensureOrganizationRoles, listOrganizationRolesWithPermissions } = await import('./org-roles');
+    await ensureOrganizationRoles(orgId);
+    return listOrganizationRolesWithPermissions(orgId);
+  }
   const roles = await listRoles();
   const { DB } = getEnv();
   const rows = await DB.prepare(
@@ -582,8 +599,15 @@ export async function assignRole(input: {
   userId: string;
   roleId: string;
   actorUserId: string;
+  orgId?: string;
 }): Promise<void> {
   const { DB } = getEnv();
+  if (input.orgId) {
+    const { ensureOrganizationRoles, getOrganizationRole } = await import('./org-roles');
+    await ensureOrganizationRoles(input.orgId);
+    const orgRole = await getOrganizationRole(input.orgId, input.roleId);
+    if (!orgRole) throw new Error('Role not found for this organization.');
+  }
   await DB.batch([
     DB.prepare(`DELETE FROM user_role WHERE user_id = ?`).bind(input.userId),
     DB.prepare(
@@ -591,9 +615,13 @@ export async function assignRole(input: {
     ).bind(input.userId, input.roleId, input.actorUserId, nowMs()),
   ]);
 
-  const role = await DB.prepare(`SELECT key FROM role WHERE id = ?`)
-    .bind(input.roleId)
-    .first<{ key: string }>();
+  const role =
+    (await DB.prepare(`SELECT key FROM organization_role WHERE id = ?`)
+      .bind(input.roleId)
+      .first<{ key: string }>()) ??
+    (await DB.prepare(`SELECT key FROM role WHERE id = ?`)
+      .bind(input.roleId)
+      .first<{ key: string }>());
 
   await writeAuditLog({
     actorUserId: input.actorUserId,
@@ -634,17 +662,31 @@ export function assignableRoles<T extends { id: string; key: string }>(roles: T[
 
 export async function countActiveOwners(orgId: string): Promise<number> {
   const { DB } = getEnv();
-  const row = await DB.prepare(
-    `SELECT COUNT(*) AS n
-     FROM organization_member om
-     JOIN user_role ur ON ur.user_id = om.user_id
-     JOIN role r ON r.id = ur.role_id AND r.key = 'owner'
-     JOIN employee_profile p ON p.user_id = om.user_id AND p.status = 'active'
-     WHERE om.org_id = ?`,
-  )
-    .bind(orgId)
-    .first<{ n: number }>();
-  return Number(row?.n ?? 0);
+  try {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS n
+       FROM organization_member om
+       JOIN user_role ur ON ur.user_id = om.user_id
+       JOIN organization_role r ON r.id = ur.role_id AND r.key = 'owner' AND r.org_id = om.org_id
+       JOIN employee_profile p ON p.user_id = om.user_id AND p.status = 'active'
+       WHERE om.org_id = ?`,
+    )
+      .bind(orgId)
+      .first<{ n: number }>();
+    return Number(row?.n ?? 0);
+  } catch {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS n
+       FROM organization_member om
+       JOIN user_role ur ON ur.user_id = om.user_id
+       JOIN role r ON r.id = ur.role_id AND r.key = 'owner'
+       JOIN employee_profile p ON p.user_id = om.user_id AND p.status = 'active'
+       WHERE om.org_id = ?`,
+    )
+      .bind(orgId)
+      .first<{ n: number }>();
+    return Number(row?.n ?? 0);
+  }
 }
 
 export async function userHasOwnerRole(userId: string): Promise<boolean> {
@@ -652,8 +694,9 @@ export async function userHasOwnerRole(userId: string): Promise<boolean> {
   const row = await DB.prepare(
     `SELECT 1 AS ok
      FROM user_role ur
-     JOIN role r ON r.id = ur.role_id
-     WHERE ur.user_id = ? AND r.key = 'owner'
+     LEFT JOIN organization_role orole ON orole.id = ur.role_id
+     LEFT JOIN role r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND COALESCE(orole.key, r.key) = 'owner'
      LIMIT 1`,
   )
     .bind(userId)

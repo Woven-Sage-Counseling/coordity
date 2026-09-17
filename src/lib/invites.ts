@@ -46,9 +46,12 @@ export async function getInvitationByToken(token: string) {
   const { DB } = getEnv();
   const tokenHash = await sha256Hex(token);
   const invite = await DB.prepare(
-    `SELECT i.*, r.key AS role_key, r.name AS role_name
+    `SELECT i.*,
+            COALESCE(orole.key, r.key) AS role_key,
+            COALESCE(orole.name, r.name) AS role_name
      FROM invitation i
-     JOIN role r ON r.id = i.role_id
+     LEFT JOIN organization_role orole ON orole.id = i.role_id
+     LEFT JOIN role r ON r.id = i.role_id
      WHERE i.token_hash = ?`,
   )
     .bind(tokenHash)
@@ -91,21 +94,42 @@ export async function markInvitationAccepted(id: string, userId: string) {
   });
 }
 
-export async function listPendingInvites() {
+export async function listPendingInvites(orgId?: string) {
   const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT i.id, i.email, i.name, i.expires_at, i.status, r.name AS role_name
-     FROM invitation i
-     JOIN role r ON r.id = i.role_id
-     WHERE i.status = 'pending'
-     ORDER BY i.created_at DESC`,
-  ).all<{
-    id: string;
-    email: string;
-    name: string;
-    expires_at: number;
-    status: string;
-    role_name: string;
-  }>();
+  const rows = orgId
+    ? await DB.prepare(
+        `SELECT i.id, i.email, i.name, i.expires_at, i.status,
+                COALESCE(orole.name, r.name) AS role_name
+         FROM invitation i
+         LEFT JOIN organization_role orole ON orole.id = i.role_id
+         LEFT JOIN role r ON r.id = i.role_id
+         WHERE i.status = 'pending' AND i.org_id = ?
+         ORDER BY i.created_at DESC`,
+      )
+        .bind(orgId)
+        .all<{
+          id: string;
+          email: string;
+          name: string;
+          expires_at: number;
+          status: string;
+          role_name: string;
+        }>()
+    : await DB.prepare(
+        `SELECT i.id, i.email, i.name, i.expires_at, i.status,
+                COALESCE(orole.name, r.name) AS role_name
+         FROM invitation i
+         LEFT JOIN organization_role orole ON orole.id = i.role_id
+         LEFT JOIN role r ON r.id = i.role_id
+         WHERE i.status = 'pending'
+         ORDER BY i.created_at DESC`,
+      ).all<{
+        id: string;
+        email: string;
+        name: string;
+        expires_at: number;
+        status: string;
+        role_name: string;
+      }>();
   return rows.results ?? [];
 }

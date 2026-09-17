@@ -462,6 +462,13 @@ export async function createOrganization(input: {
     console.error('training seed on org create failed', error);
   }
 
+  try {
+    const { ensureOrganizationRoles } = await import('./org-roles');
+    await ensureOrganizationRoles(orgId);
+  } catch (error) {
+    console.error('org roles seed on org create failed', error);
+  }
+
   return org;
 }
 

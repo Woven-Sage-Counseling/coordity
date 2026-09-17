@@ -74,8 +74,27 @@ function sanitizeQuickLinkRoleKeys(roleKeys: string[]): string[] {
   ];
 }
 
-export async function listRoleKeysWithPermission(permission: Permission): Promise<string[]> {
+export async function listRoleKeysWithPermission(
+  permission: Permission,
+  orgId?: string,
+): Promise<string[]> {
   const { DB } = getEnv();
+  if (orgId) {
+    const { ensureOrganizationRoles } = await import('./org-roles');
+    await ensureOrganizationRoles(orgId);
+    const rows = await DB.prepare(
+      `SELECT r.key AS role_key
+       FROM organization_role r
+       JOIN organization_role_permission orp ON orp.role_id = r.id
+       WHERE r.org_id = ? AND orp.permission_key = ?
+       ORDER BY r.key`,
+    )
+      .bind(orgId, permission)
+      .all<{ role_key: string }>();
+    return (rows.results ?? [])
+      .map((row) => row.role_key)
+      .filter((key) => !QUICK_LINK_LOCKED_ROLES.has(key));
+  }
   const rows = await DB.prepare(
     `SELECT r.key AS role_key
      FROM role r
@@ -488,7 +507,7 @@ export async function addQuickLinkFromCatalog(input: {
 
   let roleKeys = input.roleKeys;
   if (roleKeys === undefined) {
-    roleKeys = await listRoleKeysWithPermission(item.suggestedPermission);
+    roleKeys = await listRoleKeysWithPermission(item.suggestedPermission, input.orgId);
   }
 
   return createQuickLink({

@@ -82,6 +82,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.organization = await getOrganizationById(DEFAULT_ORG_ID);
   }
 
+  if (!isApex && context.locals.organization) {
+    try {
+      const { ensureOrganizationRoles } = await import('./lib/org-roles');
+      await ensureOrganizationRoles(context.locals.organization.id);
+    } catch (error) {
+      console.error('organization roles ensure failed', error);
+    }
+  }
+
   let sessionUserId: string | null = null;
   try {
     const auth = createAuth(context.request);

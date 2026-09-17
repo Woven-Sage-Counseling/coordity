@@ -82,7 +82,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return formErrorRedirect('/admin', 'Role is required.', 'peopleError');
     }
     const wasOwner = await userHasOwnerRole(userId);
-    const becomingOwner = roleId === 'role_owner';
+    const roleMeta =
+      (await import('../../../lib/org-roles').then((m) =>
+        m.getOrganizationRole(orgId, roleId),
+      )) ?? null;
+    const becomingOwner = roleMeta?.key === 'owner' || roleId === 'role_owner';
     if (wasOwner && !becomingOwner) {
       const owners = await countActiveOwners(orgId);
       if (owners <= 1) {
@@ -93,7 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
     }
-    await assignRole({ userId, roleId, actorUserId: actor!.id });
+    await assignRole({ userId, roleId, actorUserId: actor!.id, orgId });
   } else if (action === 'disable') {
     if (userId === actor!.id) {
       return formErrorRedirect('/admin', 'You cannot disable your own account.', 'peopleError');

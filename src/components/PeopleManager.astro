@@ -28,9 +28,9 @@ try {
 } catch (error) {
   console.error('people manager load failed', error);
 }
-const roles = await listRoles().catch(() => []);
+const roles = await listRoles(orgId).catch(() => []);
 const inviteRoles = assignableRoles(roles);
-const invites = canManage ? await listPendingInvites().catch(() => []) : [];
+const invites = canManage ? await listPendingInvites(orgId).catch(() => []) : [];
 
 function roleLabel(keys: string[]): string {
   const names = keys.map((key) => roles.find((role) => role.key === key)?.name ?? key);
