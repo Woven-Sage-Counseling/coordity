@@ -51,8 +51,19 @@ function isAllowedIconSrc(value: string | null | undefined): value is string {
 }
 
 function visibleToRoles(roleKeys: string[], employeeRoles: string[]): boolean {
+  // Primary owners always see every enabled quick link.
+  if (employeeRoles.includes('owner')) return true;
   if (roleKeys.length === 0) return true;
   return roleKeys.some((key) => employeeRoles.includes(key));
+}
+
+/** Roles that can be restricted in Quick links UI (never the primary owner). */
+export function quickLinkAssignableRoles<T extends { key: string }>(roles: T[]): T[] {
+  return roles.filter((role) => role.key !== 'owner');
+}
+
+function sanitizeQuickLinkRoleKeys(roleKeys: string[]): string[] {
+  return [...new Set(roleKeys.map((key) => key.trim()).filter((key) => key && key !== 'owner'))];
 }
 
 export async function listRoleKeysWithPermission(permission: Permission): Promise<string[]> {
@@ -67,7 +78,9 @@ export async function listRoleKeysWithPermission(permission: Permission): Promis
   )
     .bind(permission)
     .all<{ role_key: string }>();
-  return (rows.results ?? []).map((row) => row.role_key);
+  return (rows.results ?? [])
+    .map((row) => row.role_key)
+    .filter((key) => key !== 'owner');
 }
 
 async function listLinkRoleKeys(linkId: string): Promise<string[]> {
@@ -77,15 +90,18 @@ async function listLinkRoleKeys(linkId: string): Promise<string[]> {
   )
     .bind(linkId)
     .all<{ role_key: string }>();
-  return (rows.results ?? []).map((row) => row.role_key);
+  return (rows.results ?? [])
+    .map((row) => row.role_key)
+    .filter((key) => key !== 'owner');
 }
 
 async function setLinkRoleKeys(linkId: string, roleKeys: string[]): Promise<void> {
   const { DB } = getEnv();
+  const cleaned = sanitizeQuickLinkRoleKeys(roleKeys);
   await DB.prepare(`DELETE FROM portal_quick_link_role WHERE link_id = ?`).bind(linkId).run();
-  if (roleKeys.length === 0) return;
+  if (cleaned.length === 0) return;
   await DB.batch(
-    roleKeys.map((roleKey) =>
+    cleaned.map((roleKey) =>
       DB.prepare(`INSERT INTO portal_quick_link_role (link_id, role_key) VALUES (?, ?)`).bind(
         linkId,
         roleKey,

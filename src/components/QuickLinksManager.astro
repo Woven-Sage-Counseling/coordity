@@ -3,7 +3,11 @@ import {
   QUICK_LINK_CATALOG,
   QUICK_LINK_CATALOG_GROUPS,
 } from '../lib/apps';
-import type { QuickLinkCategoryView, QuickLinkView } from '../lib/quick-links';
+import {
+  quickLinkAssignableRoles,
+  type QuickLinkCategoryView,
+  type QuickLinkView,
+} from '../lib/quick-links';
 
 interface RoleOption {
   key: string;
@@ -22,11 +26,12 @@ interface Props {
 const {
   links,
   categories,
-  roles,
+  roles: allRoles,
   error = null,
   saved = false,
   embedded = false,
 } = Astro.props;
+const roles = quickLinkAssignableRoles(allRoles);
 const addedCatalogKeys = new Set(links.map((link) => link.catalogKey).filter(Boolean));
 const catalogByGroup = Object.fromEntries(
   QUICK_LINK_CATALOG_GROUPS.map((group) => [
@@ -190,7 +195,7 @@ const defaultCategoryId = categories[0]?.id ?? '';
             }
           </div>
           <p class="mt-2 text-[11px] text-sage-dark/55">
-            Leave all unchecked to use the suggested roles for that tool.
+            Leave all unchecked to use the suggested roles for that tool. The primary owner always sees every link.
           </p>
         </fieldset>
         <button class="btn-primary" type="submit">Add tool</button>
@@ -307,8 +312,8 @@ const defaultCategoryId = categories[0]?.id ?? '';
                     </div>
                     <p class="mt-2 text-[11px] text-sage-dark/55">
                       {link.roleKeys.length === 0
-                        ? 'Currently visible to everyone. Check roles to restrict.'
-                        : 'Leave all unchecked to show to everyone.'}
+                        ? 'Currently visible to everyone. Check roles to restrict. The primary owner always sees every link.'
+                        : 'Leave all unchecked to show to everyone. The primary owner always sees every link.'}
                     </p>
                   </fieldset>
                   <div class="flex flex-wrap justify-end gap-2">
@@ -383,7 +388,9 @@ const defaultCategoryId = categories[0]?.id ?? '';
               ))
             }
           </div>
-          <p class="mt-2 text-[11px] text-sage-dark/55">Leave all unchecked to show to everyone.</p>
+          <p class="mt-2 text-[11px] text-sage-dark/55">
+            Leave all unchecked to show to everyone. The primary owner always sees every link.
+          </p>
         </fieldset>
         <button class="btn-primary" type="submit">Add custom link</button>
       </form>
