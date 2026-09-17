@@ -259,11 +259,201 @@ const canManageQuickBooks = hasPermission(employee, 'financials:manage');
 const docusignRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/docusign/callback`;
 const quickbooksRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/quickbooks/callback`;
 
-const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="transition group-open:rotate-180"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+const adminIcons = {
+  calendar: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  clock: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4.5l3 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chart: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19h16M7 16V9M12 16V5M17 16v-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  tags: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12V5.5A1.5 1.5 0 0 1 4.5 4H12l8 8-7.5 7.5L3 12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/></svg>`,
+  people: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 18.5c.8-2.8 2.9-4.5 5.5-4.5s4.7 1.7 5.5 4.5M16 8a2.5 2.5 0 1 1 0 5M15.2 14.2c1.8.3 3.2 1.5 3.8 3.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  shield: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 7.8 7 9 4.1-1.2 7-4.5 7-9V6l-7-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 11.5 11 13.5 15.5 9M6 5h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  badge: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="9" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M7 20.5 8.5 14h7L17 20.5 12.5 18 8 20.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  megaphone: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11v2.5a1 1 0 0 0 1 1h1.2L9 18.5V5.5L5.2 9.5H4a1 1 0 0 0-1 1.5ZM15 8.5c1.4.8 2.3 2.1 2.3 3.5S16.4 14.7 15 15.5M18.2 6.2C20.5 7.6 22 9.7 22 12s-1.5 4.4-3.8 5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  board: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h4v5H8V8ZM14 8h4v3h-4V8ZM8 15h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  book: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H20v16.5H7.5A2.5 2.5 0 0 0 5 22V5.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 18.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  link: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.5 14.5 14.5 9.5M8 12H6.5a3.5 3.5 0 0 1 0-7H10a3.5 3.5 0 0 1 3.3 2.3M16 12h1.5a3.5 3.5 0 0 0 0-7H14a3.5 3.5 0 0 0-3.3 2.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  plug: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 7V3M15 7V3M8 7h8v4a4 4 0 0 1-4 4v5M8 11V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  paint: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3c4.5 0 8 3 8 6.5S17 15 14 15h-1.5a1.5 1.5 0 0 0 0 3H14c.8 0 1.5.7 1.5 1.5S14.8 21 14 21H10c-3.3 0-6-2.7-6-6 0-6 3.6-12 8-12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8.5" cy="10" r="1" fill="currentColor"/></svg>`,
+};
+
+type AdminNavItem = {
+  id?: string;
+  href?: string;
+  label: string;
+  description: string;
+  icon: string;
+  badge?: number;
+  badgeTone?: 'red' | 'amber';
+};
+
+type AdminNavGroup = {
+  id: string;
+  label: string;
+  items: AdminNavItem[];
+};
+
+type AdminNavSection = {
+  label: string;
+  groups: AdminNavGroup[];
+};
+
+const adminNav: AdminNavSection[] = [
+  {
+    label: 'Time & attendance',
+    groups: [
+      {
+        id: 'requests',
+        label: 'Requests',
+        items: [
+          {
+            id: 'time-off',
+            label: 'Time off',
+            description: 'Approve or decline leave requests',
+            icon: adminIcons.calendar,
+            badge: pendingTimeOff,
+            badgeTone: 'red',
+          },
+          {
+            id: 'timesheet',
+            label: 'Timesheet requests',
+            description: 'Backlog hours and shift edits',
+            icon: adminIcons.clock,
+            badge: pendingTimesheetRequests,
+            badgeTone: 'red',
+          },
+        ],
+      },
+      {
+        id: 'hours',
+        label: 'Hours',
+        items: [
+          {
+            id: 'hours',
+            label: 'Employee hours',
+            description: 'Review logged hours by teammate',
+            icon: adminIcons.chart,
+          },
+          {
+            id: 'work-items',
+            label: 'Work items',
+            description: 'Categories used on completed shifts',
+            icon: adminIcons.tags,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Team',
+    groups: [
+      {
+        id: 'people-access',
+        label: 'People & access',
+        items: [
+          {
+            id: 'people',
+            label: 'People',
+            description: 'Invites, titles, teams, and roles',
+            icon: adminIcons.people,
+          },
+          {
+            id: 'roles',
+            label: 'Roles and permissions',
+            description: 'What each role can do',
+            icon: adminIcons.shield,
+          },
+          {
+            id: 'tasks',
+            label: 'Tasks',
+            description: 'Assign work that shows on Home',
+            icon: adminIcons.check,
+            badge: openAssignedTasks,
+            badgeTone: 'amber',
+          },
+        ],
+      },
+      {
+        id: 'credentialing',
+        label: 'Credentialing',
+        items: [
+          {
+            id: 'credentialing',
+            label: 'Insurance coverage',
+            description: 'Networks and provider coverage',
+            icon: adminIcons.badge,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Workspace',
+    groups: [
+      {
+        id: 'content',
+        label: 'Content',
+        items: [
+          {
+            id: 'announcements',
+            label: 'Announcements',
+            description: 'Posts for every dashboard',
+            icon: adminIcons.megaphone,
+          },
+          {
+            href: '/bulletin-board',
+            label: 'Bulletin board',
+            description: 'Pins and board requests',
+            icon: adminIcons.board,
+            badge: pendingBulletinRequests,
+            badgeTone: 'amber',
+          },
+          {
+            id: 'training',
+            label: 'Training',
+            description: 'Modules, lessons, and assignments',
+            icon: adminIcons.book,
+          },
+        ],
+      },
+      {
+        id: 'tools',
+        label: 'Tools',
+        items: [
+          {
+            id: 'quick-links',
+            label: 'Quick links',
+            description: 'Practice tools your team can open',
+            icon: adminIcons.link,
+          },
+          {
+            id: 'integrations',
+            label: 'Integrations',
+            description: 'DocuSign and QuickBooks',
+            icon: adminIcons.plug,
+          },
+        ],
+      },
+      {
+        id: 'appearance',
+        label: 'Appearance',
+        items: [
+          {
+            id: 'branding',
+            label: 'Workspace branding',
+            description: 'Name, logos, and colors',
+            icon: adminIcons.paint,
+          },
+        ],
+      },
+    ],
+  },
+];
 ---
 
 <PortalLayout title="Admin" wide>
-  <div class="mx-auto max-w-6xl" data-admin-shell>
+  <div class="mx-auto max-w-6xl lg:max-w-7xl" data-admin-shell>
     <div data-admin-header>
       <p class="text-sm text-sage-dark/65">
         <a href="/" class="hover:text-sage-dark">Home</a>
@@ -271,198 +461,102 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         Admin
       </p>
       <h1 class="mt-3 font-display text-4xl text-charcoal">Admin</h1>
+      <p class="mt-2 max-w-2xl text-sage-dark/75">
+        Manage people, time, training, and workspace settings. The menu stays open while you work.
+      </p>
     </div>
 
-    <div data-admin-menu>
-      <p class="mt-3 text-sage-dark/75">Choose a category to manage.</p>
+    <div class="mt-8 grid gap-8 lg:grid-cols-[272px_minmax(0,1fr)] lg:items-start">
+      <aside
+        class="rounded-2xl border border-sage-dark/10 bg-white/90 p-3 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto"
+        data-admin-menu
+        aria-label="Admin sections"
+      >
+        {
+          adminNav.map((section) => (
+            <div class="mb-4 last:mb-0">
+              <p class="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
+                {section.label}
+              </p>
+              <div class="space-y-0.5">
+                {section.groups.map((group) => (
+                  <details class="group" data-admin-group={group.id}>
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition hover:bg-sage/10 [&::-webkit-details-marker]:hidden">
+                      <span>{group.label}</span>
+                      <span class="text-sage-dark/40" set:html={menuChevron} />
+                    </summary>
+                    <div class="mt-0.5 space-y-0.5 pb-1 pl-0.5">
+                      {group.items.map((item) => {
+                        const badge =
+                          item.badge && item.badge > 0 ? (
+                            <span
+                              class:list={[
+                                'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none text-white',
+                                item.badgeTone === 'amber' ? 'bg-amber-500' : 'bg-red-600',
+                              ]}
+                            >
+                              {item.badge > 9 ? '9+' : item.badge}
+                            </span>
+                          ) : null;
+                        const body = (
+                          <>
+                            <span
+                              class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
+                              set:html={item.icon}
+                            />
+                            <span class="min-w-0 flex-1">
+                              <span class="flex items-center gap-2">
+                                <span class="block text-sm font-semibold text-charcoal">{item.label}</span>
+                                {badge}
+                              </span>
+                              <span class="mt-0.5 block text-xs leading-snug text-sage-dark/55">
+                                {item.description}
+                              </span>
+                            </span>
+                          </>
+                        );
+                        if (item.href) {
+                          return (
+                            <a
+                              href={item.href}
+                              class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10"
+                            >
+                              {body}
+                            </a>
+                          );
+                        }
+                        return (
+                          <button
+                            type="button"
+                            class="flex w-full items-start gap-2.5 rounded-xl border-l-[3px] border-transparent px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:border-sage-dark data-[active=true]:bg-sage/20"
+                            data-admin-open={item.id}
+                            data-admin-group-id={group.id}
+                          >
+                            {body}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          ))
+        }
+      </aside>
 
-      <div class="mt-8 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="time-off"
+      <div class="min-w-0" data-admin-content>
+        <div
+          class="rounded-2xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-6 py-16 text-center"
+          data-admin-empty
         >
-          <span class="text-[15px] font-medium text-charcoal">Time off requests</span>
-          <span class="inline-flex shrink-0 items-center gap-2">
-            {
-              pendingTimeOff > 0 ? (
-                <span
-                  class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold leading-none text-white"
-                  aria-label={`${pendingTimeOff} pending time off ${pendingTimeOff === 1 ? 'request' : 'requests'}`}
-                >
-                  {pendingTimeOff > 9 ? '9+' : pendingTimeOff}
-                </span>
-              ) : null
-            }
-            <span class="text-sage-dark/40" set:html={menuChevron} />
-          </span>
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="timesheet"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Timesheet requests</span>
-          <span class="inline-flex shrink-0 items-center gap-2">
-            {
-              pendingTimesheetRequests > 0 ? (
-                <span
-                  class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold leading-none text-white"
-                  aria-label={`${pendingTimesheetRequests} pending timesheet ${pendingTimesheetRequests === 1 ? 'request' : 'requests'}`}
-                >
-                  {pendingTimesheetRequests > 9 ? '9+' : pendingTimesheetRequests}
-                </span>
-              ) : null
-            }
-            <span class="text-sage-dark/40" set:html={menuChevron} />
-          </span>
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="hours"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Employee hours</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="announcements"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Announcements</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <a
-          href="/bulletin-board"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Bulletin board</span>
-          <span class="inline-flex shrink-0 items-center gap-2">
-            {
-              pendingBulletinRequests > 0 ? (
-                <span
-                  class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold leading-none text-white"
-                  aria-label={`${pendingBulletinRequests} pending board ${pendingBulletinRequests === 1 ? 'request' : 'requests'}`}
-                >
-                  {pendingBulletinRequests > 9 ? '9+' : pendingBulletinRequests}
-                </span>
-              ) : null
-            }
-            <span class="text-sage-dark/40" set:html={menuChevron} />
-          </span>
-        </a>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="people"
-        >
-          <span class="text-[15px] font-medium text-charcoal">People</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="tasks"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Tasks</span>
-          <span class="inline-flex shrink-0 items-center gap-2">
-            {
-              openAssignedTasks > 0 ? (
-                <span
-                  class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold leading-none text-white"
-                  aria-label={`${openAssignedTasks} open assigned ${openAssignedTasks === 1 ? 'task' : 'tasks'}`}
-                >
-                  {openAssignedTasks > 9 ? '9+' : openAssignedTasks}
-                </span>
-              ) : null
-            }
-            <span class="text-sage-dark/40" set:html={menuChevron} />
-          </span>
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="credentialing"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Credentialing</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="work-items"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Work items</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="training"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Training</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="quick-links"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Quick links</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="integrations"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Integrations</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="branding"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Workspace branding</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-admin-open="roles"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Roles and permissions</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-      </div>
-    </div>
+          <p class="font-display text-2xl text-charcoal">Choose a section</p>
+          <p class="mx-auto mt-2 max-w-md text-sm text-sage-dark/65">
+            Open a category on the left, then pick an item to manage it here without leaving Admin.
+          </p>
+        </div>
 
     <section class="hidden" data-admin-panel="time-off">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Time off requests"
         description="Review pending requests. Approved requests stay here until the last requested date has passed."
@@ -471,16 +565,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="timesheet">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Timesheet requests"
         description="Review backlog hours and requested shift time changes. Clear approved requests once handled — hours stay on the employee timesheet."
@@ -490,16 +574,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="hours">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Employee hours"
         description="Pick a teammate to review their logged hours, work item chart, and completed shifts for a timeframe."
@@ -508,16 +582,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="announcements">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Announcements"
         description="Post to every dashboard, then edit, resend, or remove from the history log."
@@ -531,16 +595,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="people">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="People"
         description="Invite people, set job titles and teams, and assign roles."
@@ -555,16 +609,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="tasks">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Tasks"
         description="Assign tasks to team members. They appear in each person's Tasks widget on Home."
@@ -579,16 +623,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="credentialing">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Credentialing"
         description="Directory clinicians appear automatically. Assign insurance networks per provider and manage the catalog."
@@ -604,16 +638,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="work-items">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Work items"
         description="Customize the categories employees tag on completed shifts. Names and colors appear on the timesheet and work breakdown chart."
@@ -627,16 +651,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="training">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Training"
         description="Use the three columns: pick a module, choose what’s inside it, then edit on the right. For videos, upload an unlisted YouTube video and paste the link."
@@ -661,16 +675,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="quick-links">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Quick links"
         description="Choose tools from the catalog (EHR, banking, and more) or add a custom URL. Nothing appears for your team until you add at least one link."
@@ -686,16 +690,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="integrations">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Integrations"
         description="Connect your organization’s DocuSign and QuickBooks accounts. Employees keep Google Calendar under Settings."
@@ -1142,16 +1136,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="branding">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Workspace branding"
         description="Customize how your portal looks — name, logos, tab icon, and colors used across buttons and accents."
@@ -1447,16 +1431,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-admin-panel="roles" id="roles">
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-admin-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         id="roles-heading"
         title="Roles and permissions"
@@ -1474,16 +1448,20 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         embedded
       />
     </section>
+      </div>
+    </div>
   </div>
 </PortalLayout>
 
 <script>
   function setupAdminNav(shell: Element) {
     if (!(shell instanceof HTMLElement)) return;
-    const menu = shell.querySelector('[data-admin-menu]');
-    const header = shell.querySelector('[data-admin-header]');
+    const empty = shell.querySelector('[data-admin-empty]');
     const panels = Array.from(shell.querySelectorAll('[data-admin-panel]')).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    const openButtons = Array.from(shell.querySelectorAll('[data-admin-open]')).filter(
+      (node): node is HTMLButtonElement => node instanceof HTMLButtonElement,
     );
 
     const hashForPanel: Record<string, string> = {
@@ -1521,37 +1499,48 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       return null;
     };
 
-    const showMenu = () => {
-      if (header instanceof HTMLElement) header.classList.remove('hidden');
-      if (menu instanceof HTMLElement) menu.classList.remove('hidden');
+    const setActiveButton = (id: string | null) => {
+      openButtons.forEach((btn) => {
+        const active = Boolean(id && btn.dataset.adminOpen === id);
+        btn.dataset.active = active ? 'true' : 'false';
+        if (active) btn.setAttribute('aria-current', 'page');
+        else btn.removeAttribute('aria-current');
+        if (active) {
+          const groupId = btn.dataset.adminGroupId;
+          if (groupId) {
+            const group = shell.querySelector(`[data-admin-group="${groupId}"]`);
+            if (group instanceof HTMLDetailsElement) group.open = true;
+          }
+        }
+      });
+    };
+
+    const showEmpty = () => {
+      if (empty instanceof HTMLElement) empty.classList.remove('hidden');
       panels.forEach((panel) => panel.classList.add('hidden'));
+      setActiveButton(null);
       if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     };
 
     const showPanel = (id: string, updateHash = true) => {
-      if (header instanceof HTMLElement) header.classList.add('hidden');
-      if (menu instanceof HTMLElement) menu.classList.add('hidden');
+      if (empty instanceof HTMLElement) empty.classList.add('hidden');
       panels.forEach((panel) => {
         panel.classList.toggle('hidden', panel.dataset.adminPanel !== id);
       });
+      setActiveButton(id);
       if (updateHash) {
         const hash = hashForPanel[id] ?? `#${id}`;
         history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
       }
     };
 
-    shell.querySelectorAll('[data-admin-open]').forEach((node) => {
-      if (!(node instanceof HTMLButtonElement)) return;
+    openButtons.forEach((node) => {
       node.addEventListener('click', () => {
         const id = node.dataset.adminOpen;
         if (id) showPanel(id);
       });
-    });
-
-    shell.querySelectorAll('[data-admin-back]').forEach((node) => {
-      node.addEventListener('click', () => showMenu());
     });
 
     const params = new URLSearchParams(window.location.search);
@@ -1607,6 +1596,11 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     const hash = window.location.hash.replace(/^#/, '');
     const fromHash = panelFromHash(hash);
     if (fromHash) showPanel(fromHash, false);
+    else {
+      showEmpty();
+      const firstGroup = shell.querySelector('[data-admin-group]');
+      if (firstGroup instanceof HTMLDetailsElement) firstGroup.open = true;
+    }
   }
 
   document.querySelectorAll('[data-admin-shell]').forEach((root) => setupAdminNav(root));
