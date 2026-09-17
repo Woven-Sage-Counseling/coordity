@@ -195,7 +195,7 @@ const defaultCategoryId = categories[0]?.id ?? '';
             }
           </div>
           <p class="mt-2 text-[11px] text-sage-dark/55">
-            Leave all unchecked to use the suggested roles for that tool. The primary owner always sees every link.
+            Leave all unchecked to use the suggested roles for that tool. Owner accounts always see every link.
           </p>
         </fieldset>
         <button class="btn-primary" type="submit">Add tool</button>
@@ -312,8 +312,8 @@ const defaultCategoryId = categories[0]?.id ?? '';
                     </div>
                     <p class="mt-2 text-[11px] text-sage-dark/55">
                       {link.roleKeys.length === 0
-                        ? 'Currently visible to everyone. Check roles to restrict. The primary owner always sees every link.'
-                        : 'Leave all unchecked to show to everyone. The primary owner always sees every link.'}
+                        ? 'Currently visible to everyone. Check roles to restrict. Owner accounts always see every link.'
+                        : 'Leave all unchecked to show to everyone. Owner accounts always see every link.'}
                     </p>
                   </fieldset>
                   <div class="flex flex-wrap justify-end gap-2">
@@ -389,7 +389,7 @@ const defaultCategoryId = categories[0]?.id ?? '';
             }
           </div>
           <p class="mt-2 text-[11px] text-sage-dark/55">
-            Leave all unchecked to show to everyone. The primary owner always sees every link.
+            Leave all unchecked to show to everyone. Owner accounts always see every link.
           </p>
         </fieldset>
         <button class="btn-primary" type="submit">Add custom link</button>

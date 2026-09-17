@@ -51,19 +51,27 @@ function isAllowedIconSrc(value: string | null | undefined): value is string {
 }
 
 function visibleToRoles(roleKeys: string[], employeeRoles: string[]): boolean {
-  // Primary owners always see every enabled quick link.
-  if (employeeRoles.includes('owner')) return true;
+  // Owner and Owner (view) always see every enabled quick link.
+  if (employeeRoles.includes('owner') || employeeRoles.includes('owner_view')) return true;
   if (roleKeys.length === 0) return true;
   return roleKeys.some((key) => employeeRoles.includes(key));
 }
 
-/** Roles that can be restricted in Quick links UI (never the primary owner). */
+const QUICK_LINK_LOCKED_ROLES = new Set(['owner', 'owner_view']);
+
+/** Roles that can be restricted in Quick links UI (never owner / owner view). */
 export function quickLinkAssignableRoles<T extends { key: string }>(roles: T[]): T[] {
-  return roles.filter((role) => role.key !== 'owner');
+  return roles.filter((role) => !QUICK_LINK_LOCKED_ROLES.has(role.key));
 }
 
 function sanitizeQuickLinkRoleKeys(roleKeys: string[]): string[] {
-  return [...new Set(roleKeys.map((key) => key.trim()).filter((key) => key && key !== 'owner'))];
+  return [
+    ...new Set(
+      roleKeys
+        .map((key) => key.trim())
+        .filter((key) => key && !QUICK_LINK_LOCKED_ROLES.has(key)),
+    ),
+  ];
 }
 
 export async function listRoleKeysWithPermission(permission: Permission): Promise<string[]> {
@@ -80,7 +88,7 @@ export async function listRoleKeysWithPermission(permission: Permission): Promis
     .all<{ role_key: string }>();
   return (rows.results ?? [])
     .map((row) => row.role_key)
-    .filter((key) => key !== 'owner');
+    .filter((key) => !QUICK_LINK_LOCKED_ROLES.has(key));
 }
 
 async function listLinkRoleKeys(linkId: string): Promise<string[]> {
@@ -92,7 +100,7 @@ async function listLinkRoleKeys(linkId: string): Promise<string[]> {
     .all<{ role_key: string }>();
   return (rows.results ?? [])
     .map((row) => row.role_key)
-    .filter((key) => key !== 'owner');
+    .filter((key) => !QUICK_LINK_LOCKED_ROLES.has(key));
 }
 
 async function setLinkRoleKeys(linkId: string, roleKeys: string[]): Promise<void> {
