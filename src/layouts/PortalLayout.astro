@@ -64,6 +64,20 @@ const messagesUnread =
   employee?.status === 'active'
     ? await countUnreadMessages(employee.id, orgId).catch(() => 0)
     : 0;
+
+const currentPath = (Astro.url.pathname.replace(/\/$/, '') || '/') as string;
+function navIsActive(href: string) {
+  if (href === '/') return currentPath === '/';
+  return currentPath === href || currentPath.startsWith(`${href}/`);
+}
+const primaryNav = [
+  { href: '/', label: 'Home' },
+  { href: '/workspace', label: 'WorkHub' },
+  { href: '/apps', label: 'Quick links' },
+  { href: '/directory', label: 'Directory' },
+  { href: '/messages', label: 'Messages', badge: true },
+  { href: '/account', label: 'Account' },
+] as const;
 ---
 
 <!doctype html>
@@ -106,29 +120,82 @@ const messagesUnread =
                 Workspace
               </span>
             </a>
-            <nav class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-sm">
-              <a href="/" class="text-sage-dark/80 hover:text-sage-dark">Home</a>
-              <a href="/workspace" class="text-sage-dark/80 hover:text-sage-dark">WorkHub</a>
-              <a href="/apps" class="text-sage-dark/80 hover:text-sage-dark">Quick links</a>
-              <a href="/directory" class="text-sage-dark/80 hover:text-sage-dark">Directory</a>
-              <a href="/messages" class="inline-flex items-center gap-1.5 text-sage-dark/80 hover:text-sage-dark">
-                Messages
+            <nav class="flex flex-wrap items-center justify-end gap-x-2 gap-y-2 text-sm" aria-label="Primary">
+              <div
+                class="relative inline-flex flex-wrap items-center gap-x-0.5 gap-y-1"
+                data-portal-nav
+              >
                 <span
+                  class="pointer-events-none absolute left-0 top-0 z-0 rounded-full border border-sage-dark/35 bg-sage/15 opacity-0"
+                  data-portal-nav-pill
+                  aria-hidden="true"
+                ></span>
+                {
+                  primaryNav.map((item) => {
+                    const active = navIsActive(item.href);
+                    return (
+                      <a
+                        href={item.href}
+                        data-portal-nav-link
+                        data-nav-href={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        class:list={[
+                          'relative z-10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors',
+                          active
+                            ? 'font-medium text-charcoal'
+                            : 'text-sage-dark/80 hover:text-sage-dark',
+                        ]}
+                      >
+                        {item.label}
+                        {'badge' in item && item.badge ? (
+                          <span
+                            class:list={[
+                              'rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white',
+                              messagesUnread > 0 ? '' : 'hidden',
+                            ]}
+                            data-messages-nav-badge
+                          >
+                            {messagesUnread > 99 ? '99+' : messagesUnread}
+                          </span>
+                        ) : null}
+                      </a>
+                    );
+                  })
+                }
+                <a
+                  href="/settings"
+                  data-portal-nav-link
+                  data-nav-href="/settings"
+                  aria-current={navIsActive('/settings') ? 'page' : undefined}
+                  aria-label="Settings"
+                  title="Settings"
                   class:list={[
-                    'rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white',
-                    messagesUnread > 0 ? '' : 'hidden',
+                    'relative z-10 inline-flex items-center rounded-full px-2.5 py-1.5 transition-colors',
+                    navIsActive('/settings')
+                      ? 'font-medium text-charcoal'
+                      : 'text-sage-dark/80 hover:text-sage-dark',
                   ]}
-                  data-messages-nav-badge
                 >
-                  {messagesUnread > 99 ? '99+' : messagesUnread}
-                </span>
-              </a>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path
+                      d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.4-1.04-.71-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.5a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"
+                    />
+                  </svg>
+                </a>
+              </div>
               <div
                 class="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-sage/25 px-3 py-1 ring-1 ring-sage-dark/15"
                 aria-label="Special access"
               >
                 {canSeeFinancials ? (
-                  <a href="/financials" class="font-medium text-sage-dark hover:text-charcoal">
+                  <a
+                    href="/financials"
+                    aria-current={navIsActive('/financials') ? 'page' : undefined}
+                    class:list={[
+                      'font-medium hover:text-charcoal',
+                      navIsActive('/financials') ? 'text-charcoal' : 'text-sage-dark',
+                    ]}
+                  >
                     Financials
                   </a>
                 ) : (
@@ -141,7 +208,14 @@ const messagesUnread =
                   </span>
                 )}
                 {canSeeManagement ? (
-                  <a href="/admin" class="font-medium text-sage-dark hover:text-charcoal">
+                  <a
+                    href="/admin"
+                    aria-current={navIsActive('/admin') ? 'page' : undefined}
+                    class:list={[
+                      'font-medium hover:text-charcoal',
+                      navIsActive('/admin') ? 'text-charcoal' : 'text-sage-dark',
+                    ]}
+                  >
                     Admin
                   </a>
                 ) : (
@@ -154,19 +228,6 @@ const messagesUnread =
                   </span>
                 )}
               </div>
-              <a href="/account" class="text-sage-dark/80 hover:text-sage-dark">Account</a>
-              <a
-                href="/settings"
-                class="inline-flex items-center text-sage-dark/80 hover:text-sage-dark"
-                aria-label="Settings"
-                title="Settings"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.4-1.04-.71-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.86 14.5a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"
-                  />
-                </svg>
-              </a>
             </nav>
           </div>
         </header>
@@ -263,6 +324,102 @@ const messagesUnread =
               counts[path] = (counts[path] || 0) + 1;
               localStorage.setItem(key, JSON.stringify(counts));
             } catch (e) {}
+          })();
+        </script>
+        <script is:inline>
+          (function () {
+            var track = document.querySelector('[data-portal-nav]');
+            var pill = document.querySelector('[data-portal-nav-pill]');
+            if (!(track instanceof HTMLElement) || !(pill instanceof HTMLElement)) return;
+
+            var STORAGE_KEY = 'portal:nav-pill';
+            var reduceMotion =
+              window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function activeLink() {
+              return track.querySelector('[data-portal-nav-link][aria-current="page"]');
+            }
+
+            function placePill(link, animate) {
+              if (!(link instanceof HTMLElement)) {
+                pill.style.opacity = '0';
+                return;
+              }
+              var trackRect = track.getBoundingClientRect();
+              var linkRect = link.getBoundingClientRect();
+              var left = linkRect.left - trackRect.left + track.scrollLeft;
+              var top = linkRect.top - trackRect.top + track.scrollTop;
+              if (!animate || reduceMotion) {
+                pill.style.transition = 'none';
+              } else {
+                pill.style.transition =
+                  'transform 280ms cubic-bezier(0.22, 1, 0.36, 1), width 280ms cubic-bezier(0.22, 1, 0.36, 1), height 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease';
+              }
+              pill.style.width = linkRect.width + 'px';
+              pill.style.height = linkRect.height + 'px';
+              pill.style.transform = 'translate(' + left + 'px, ' + top + 'px)';
+              pill.style.opacity = '1';
+            }
+
+            function readStored() {
+              try {
+                var raw = sessionStorage.getItem(STORAGE_KEY);
+                if (!raw) return null;
+                sessionStorage.removeItem(STORAGE_KEY);
+                return JSON.parse(raw);
+              } catch (e) {
+                return null;
+              }
+            }
+
+            function storeFrom(link) {
+              if (!(link instanceof HTMLElement)) return;
+              var trackRect = track.getBoundingClientRect();
+              var linkRect = link.getBoundingClientRect();
+              try {
+                sessionStorage.setItem(
+                  STORAGE_KEY,
+                  JSON.stringify({
+                    left: linkRect.left - trackRect.left + track.scrollLeft,
+                    top: linkRect.top - trackRect.top + track.scrollTop,
+                    width: linkRect.width,
+                    height: linkRect.height,
+                  }),
+                );
+              } catch (e) {}
+            }
+
+            var current = activeLink();
+            var stored = readStored();
+            if (stored && current instanceof HTMLElement && !reduceMotion) {
+              pill.style.transition = 'none';
+              pill.style.width = stored.width + 'px';
+              pill.style.height = stored.height + 'px';
+              pill.style.transform = 'translate(' + stored.left + 'px, ' + stored.top + 'px)';
+              pill.style.opacity = '1';
+              requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                  placePill(current, true);
+                });
+              });
+            } else {
+              placePill(current, false);
+            }
+
+            track.addEventListener('click', function (event) {
+              var target = event.target;
+              if (!(target instanceof Element)) return;
+              var link = target.closest('[data-portal-nav-link]');
+              if (!(link instanceof HTMLElement) || !track.contains(link)) return;
+              if (link.getAttribute('aria-current') === 'page') return;
+              // Remember where the pill was so the next page can slide from there.
+              storeFrom(activeLink() || link);
+              placePill(link, true);
+            });
+
+            window.addEventListener('resize', function () {
+              placePill(activeLink(), false);
+            });
           })();
         </script>
         <script is:inline>
