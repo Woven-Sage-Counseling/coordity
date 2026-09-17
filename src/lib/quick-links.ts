@@ -2,20 +2,22 @@ import {
   appCategories,
   getCatalogItem,
   type PortalApp,
-  type PortalAppCategory,
 } from './apps';
 import { nowMs, randomToken } from './crypto';
 import { getEnv } from './env';
 import type { Permission } from './permissions';
 
-export const QUICK_LINK_CATEGORIES = appCategories.map((c) => c.id);
-
-export type QuickLinkCategory = PortalAppCategory;
+export interface QuickLinkCategoryView {
+  id: string;
+  title: string;
+  sortOrder: number;
+}
 
 export interface QuickLinkView {
   id: string;
   name: string;
-  category: QuickLinkCategory;
+  /** Org category id (e.g. clinical, or a custom id). */
+  categoryId: string;
   description: string;
   href: string;
   external: boolean;
@@ -26,6 +28,12 @@ export interface QuickLinkView {
   roleKeys: string[];
   sortOrder: number;
 }
+
+const DEFAULT_CATEGORIES = appCategories.map((category, index) => ({
+  id: category.id,
+  title: category.title,
+  sortOrder: index,
+}));
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -40,19 +48,6 @@ function isAllowedIconSrc(value: string | null | undefined): value is string {
   if (!value) return false;
   if (value.startsWith('/app-icons/')) return true;
   return isHttpUrl(value);
-}
-
-function normalizeCategory(raw: string): QuickLinkCategory {
-  if (
-    raw === 'clinical' ||
-    raw === 'billing' ||
-    raw === 'business' ||
-    raw === 'financial' ||
-    raw === 'internal'
-  ) {
-    return raw;
-  }
-  return 'business';
 }
 
 function visibleToRoles(roleKeys: string[], employeeRoles: string[]): boolean {
@@ -99,6 +94,186 @@ async function setLinkRoleKeys(linkId: string, roleKeys: string[]): Promise<void
   );
 }
 
+export async function ensureQuickLinkCategories(orgId: string): Promise<QuickLinkCategoryView[]> {
+  const { DB } = getEnv();
+  try {
+    const existing = await DB.prepare(
+      `SELECT id, title, sort_order
+       FROM portal_quick_link_category
+       WHERE org_id = ?
+       ORDER BY sort_order ASC, title ASC`,
+    )
+      .bind(orgId)
+      .all<{ id: string; title: string; sort_order: number }>();
+
+    if ((existing.results ?? []).length > 0) {
+      return (existing.results ?? []).map((row) => ({
+        id: row.id,
+        title: row.title,
+        sortOrder: row.sort_order,
+      }));
+    }
+
+    const ts = nowMs();
+    await DB.batch(
+      DEFAULT_CATEGORIES.map((category) =>
+        DB.prepare(
+          `INSERT INTO portal_quick_link_category
+             (id, org_id, title, sort_order, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        ).bind(category.id, orgId, category.title, category.sortOrder, ts, ts),
+      ),
+    );
+
+    return DEFAULT_CATEGORIES.map((category) => ({
+      id: category.id,
+      title: category.title,
+      sortOrder: category.sortOrder,
+    }));
+  } catch {
+    // Table missing before migration — fall back to defaults in memory.
+    return DEFAULT_CATEGORIES.map((category) => ({
+      id: category.id,
+      title: category.title,
+      sortOrder: category.sortOrder,
+    }));
+  }
+}
+
+export async function listQuickLinkCategories(orgId: string): Promise<QuickLinkCategoryView[]> {
+  return ensureQuickLinkCategories(orgId);
+}
+
+async function assertCategoryBelongsToOrg(orgId: string, categoryId: string): Promise<void> {
+  const categories = await ensureQuickLinkCategories(orgId);
+  if (!categories.some((category) => category.id === categoryId)) {
+    throw new Error('Choose a valid category.');
+  }
+}
+
+export async function createQuickLinkCategory(input: {
+  orgId: string;
+  title: string;
+}): Promise<QuickLinkCategoryView> {
+  await ensureQuickLinkCategories(input.orgId);
+  const title = input.title.trim();
+  if (!title) throw new Error('Enter a category title.');
+  if (title.length > 80) throw new Error('Category title is too long.');
+
+  const { DB } = getEnv();
+  const maxSort = await DB.prepare(
+    `SELECT COALESCE(MAX(sort_order), -1) AS n FROM portal_quick_link_category WHERE org_id = ?`,
+  )
+    .bind(input.orgId)
+    .first<{ n: number }>();
+  const sortOrder = Number(maxSort?.n ?? -1) + 1;
+  const id = randomToken(12);
+  const ts = nowMs();
+  await DB.prepare(
+    `INSERT INTO portal_quick_link_category
+       (id, org_id, title, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(id, input.orgId, title, sortOrder, ts, ts)
+    .run();
+
+  return { id, title, sortOrder };
+}
+
+export async function updateQuickLinkCategory(input: {
+  orgId: string;
+  categoryId: string;
+  title?: string;
+  sortOrder?: number;
+}): Promise<void> {
+  const { DB } = getEnv();
+  const existing = await DB.prepare(
+    `SELECT id, title, sort_order FROM portal_quick_link_category WHERE org_id = ? AND id = ?`,
+  )
+    .bind(input.orgId, input.categoryId)
+    .first<{ id: string; title: string; sort_order: number }>();
+  if (!existing) throw new Error('Category not found.');
+
+  const title = input.title !== undefined ? input.title.trim() : existing.title;
+  if (!title) throw new Error('Enter a category title.');
+  if (title.length > 80) throw new Error('Category title is too long.');
+
+  await DB.prepare(
+    `UPDATE portal_quick_link_category
+     SET title = ?, sort_order = ?, updated_at = ?
+     WHERE org_id = ? AND id = ?`,
+  )
+    .bind(
+      title,
+      input.sortOrder ?? existing.sort_order,
+      nowMs(),
+      input.orgId,
+      input.categoryId,
+    )
+    .run();
+}
+
+export async function moveQuickLinkCategory(input: {
+  orgId: string;
+  categoryId: string;
+  direction: 'up' | 'down';
+}): Promise<void> {
+  const categories = await ensureQuickLinkCategories(input.orgId);
+  const index = categories.findIndex((category) => category.id === input.categoryId);
+  if (index < 0) throw new Error('Category not found.');
+  const swapWith = input.direction === 'up' ? index - 1 : index + 1;
+  if (swapWith < 0 || swapWith >= categories.length) return;
+
+  const current = categories[index]!;
+  const other = categories[swapWith]!;
+  await updateQuickLinkCategory({
+    orgId: input.orgId,
+    categoryId: current.id,
+    sortOrder: other.sortOrder,
+  });
+  await updateQuickLinkCategory({
+    orgId: input.orgId,
+    categoryId: other.id,
+    sortOrder: current.sortOrder,
+  });
+}
+
+export async function deleteQuickLinkCategory(input: {
+  orgId: string;
+  categoryId: string;
+  moveLinksToCategoryId?: string;
+}): Promise<void> {
+  const categories = await ensureQuickLinkCategories(input.orgId);
+  if (categories.length <= 1) throw new Error('Keep at least one category.');
+  if (!categories.some((category) => category.id === input.categoryId)) {
+    throw new Error('Category not found.');
+  }
+
+  const { DB } = getEnv();
+  const linkCount = await DB.prepare(
+    `SELECT COUNT(*) AS n FROM portal_quick_link WHERE org_id = ? AND category = ?`,
+  )
+    .bind(input.orgId, input.categoryId)
+    .first<{ n: number }>();
+
+  if (Number(linkCount?.n ?? 0) > 0) {
+    const fallback =
+      input.moveLinksToCategoryId ??
+      categories.find((category) => category.id !== input.categoryId)?.id;
+    if (!fallback) throw new Error('Move links to another category first.');
+    await assertCategoryBelongsToOrg(input.orgId, fallback);
+    await DB.prepare(
+      `UPDATE portal_quick_link SET category = ?, updated_at = ? WHERE org_id = ? AND category = ?`,
+    )
+      .bind(fallback, nowMs(), input.orgId, input.categoryId)
+      .run();
+  }
+
+  await DB.prepare(`DELETE FROM portal_quick_link_category WHERE org_id = ? AND id = ?`)
+    .bind(input.orgId, input.categoryId)
+    .run();
+}
+
 type QuickLinkRow = {
   id: string;
   name: string;
@@ -115,7 +290,7 @@ function mapRow(row: QuickLinkRow, roleKeys: string[]): QuickLinkView {
   return {
     id: row.id,
     name: row.name,
-    category: normalizeCategory(row.category),
+    categoryId: row.category,
     description: row.description,
     href: row.href,
     external: isHttpUrl(row.href),
@@ -140,7 +315,6 @@ async function selectLinkRows(orgId: string): Promise<QuickLinkRow[]> {
       .all<QuickLinkRow>();
     return rows.results ?? [];
   } catch {
-    // Before migration 0057 (catalog_key column).
     const rows = await DB.prepare(
       `SELECT id, name, href, description, category, icon_src, sort_order, enabled
        FROM portal_quick_link
@@ -154,6 +328,7 @@ async function selectLinkRows(orgId: string): Promise<QuickLinkRow[]> {
 }
 
 export async function listQuickLinksForAdmin(orgId: string): Promise<QuickLinkView[]> {
+  await ensureQuickLinkCategories(orgId);
   const rows = await selectLinkRows(orgId);
   const out: QuickLinkView[] = [];
   for (const row of rows) {
@@ -175,7 +350,7 @@ export async function createQuickLink(input: {
   name: string;
   href: string;
   description?: string;
-  category: QuickLinkCategory;
+  categoryId: string;
   iconSrc?: string | null;
   catalogKey?: string | null;
   roleKeys?: string[];
@@ -185,6 +360,7 @@ export async function createQuickLink(input: {
   const href = input.href.trim();
   if (!name) throw new Error('Enter a name.');
   if (!href || !isHttpUrl(href)) throw new Error('Enter a valid http(s) URL.');
+  await assertCategoryBelongsToOrg(input.orgId, input.categoryId);
   const iconSrc = input.iconSrc?.trim() || null;
   if (iconSrc && !isAllowedIconSrc(iconSrc)) {
     throw new Error('Icon must be an https URL or an /app-icons/ path.');
@@ -222,7 +398,7 @@ export async function createQuickLink(input: {
         name,
         href,
         (input.description ?? '').trim(),
-        input.category,
+        input.categoryId,
         iconSrc,
         catalogKey,
         sortOrder,
@@ -243,7 +419,7 @@ export async function createQuickLink(input: {
         name,
         href,
         (input.description ?? '').trim(),
-        input.category,
+        input.categoryId,
         iconSrc,
         sortOrder,
         input.enabled === false ? 0 : 1,
@@ -258,7 +434,7 @@ export async function createQuickLink(input: {
   return {
     id,
     name,
-    category: input.category,
+    categoryId: input.categoryId,
     description: (input.description ?? '').trim(),
     href,
     external: true,
@@ -273,10 +449,18 @@ export async function createQuickLink(input: {
 export async function addQuickLinkFromCatalog(input: {
   orgId: string;
   catalogKey: string;
+  categoryId?: string;
   roleKeys?: string[];
 }): Promise<QuickLinkView> {
   const item = getCatalogItem(input.catalogKey);
   if (!item) throw new Error('Unknown catalog tool.');
+
+  const categories = await ensureQuickLinkCategories(input.orgId);
+  const categoryId =
+    input.categoryId && categories.some((category) => category.id === input.categoryId)
+      ? input.categoryId
+      : categories.find((category) => category.id === item.category)?.id ?? categories[0]?.id;
+  if (!categoryId) throw new Error('Create a category first.');
 
   let roleKeys = input.roleKeys;
   if (roleKeys === undefined) {
@@ -288,7 +472,7 @@ export async function addQuickLinkFromCatalog(input: {
     name: item.name,
     href: item.href,
     description: item.description,
-    category: item.category,
+    categoryId,
     iconSrc: item.iconSrc ?? null,
     catalogKey: item.key,
     roleKeys,
@@ -302,7 +486,7 @@ export async function updateQuickLink(input: {
   name?: string;
   href?: string;
   description?: string;
-  category?: QuickLinkCategory;
+  categoryId?: string;
   iconSrc?: string | null;
   roleKeys?: string[];
   enabled?: boolean;
@@ -331,6 +515,9 @@ export async function updateQuickLink(input: {
   if (!name) throw new Error('Enter a name.');
   if (!href || !isHttpUrl(href)) throw new Error('Enter a valid http(s) URL.');
 
+  const categoryId = input.categoryId ?? existing.category;
+  if (input.categoryId) await assertCategoryBelongsToOrg(input.orgId, categoryId);
+
   let iconSrc = existing.icon_src;
   if (input.iconSrc !== undefined) {
     const next = input.iconSrc?.trim() || null;
@@ -350,7 +537,7 @@ export async function updateQuickLink(input: {
       name,
       href,
       input.description !== undefined ? input.description.trim() : existing.description,
-      input.category ?? normalizeCategory(existing.category),
+      categoryId,
       iconSrc,
       input.sortOrder ?? existing.sort_order,
       input.enabled !== undefined ? (input.enabled ? 1 : 0) : existing.enabled,
@@ -377,7 +564,7 @@ export function toPortalApp(link: QuickLinkView): PortalApp {
   return {
     id: link.id,
     name: link.name,
-    category: link.category,
+    category: link.categoryId as PortalApp['category'],
     description: link.description,
     href: link.href,
     external: link.external,

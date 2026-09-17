@@ -1,20 +1,23 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AppCard from '../components/AppCard.astro';
-import { appCategories } from '../lib/apps';
 import { canAccessManagement } from '../lib/permissions';
 import { orgIdFromLocals } from '../lib/organization';
-import { listVisibleQuickLinks, toPortalApp } from '../lib/quick-links';
+import {
+  listQuickLinkCategories,
+  listVisibleQuickLinks,
+  toPortalApp,
+} from '../lib/quick-links';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const orgId = orgIdFromLocals(Astro.locals.organization);
 const canManage = canAccessManagement(employee);
-const visibleLinks = await listVisibleQuickLinks({
-  orgId,
-  roleKeys: employee.roles,
-});
+const [categories, visibleLinks] = await Promise.all([
+  listQuickLinkCategories(orgId),
+  listVisibleQuickLinks({ orgId, roleKeys: employee.roles }),
+]);
 const visibleApps = visibleLinks.map(toPortalApp);
 ---
 
@@ -31,10 +34,7 @@ const visibleApps = visibleLinks.map(toPortalApp);
             : 'Your practice hasn’t added any quick link buttons yet. Check back after an admin sets them up.'}
         </p>
         {canManage ? (
-          <a
-            href="/admin#quick-links"
-            class="btn-primary mt-6 inline-flex"
-          >
+          <a href="/admin#quick-links" class="btn-primary mt-6 inline-flex">
             Open Quick links admin
           </a>
         ) : null}
@@ -48,7 +48,7 @@ const visibleApps = visibleLinks.map(toPortalApp);
         </div>
       </section>
     ) : (
-      appCategories.map((category) => {
+      categories.map((category) => {
         const apps = visibleApps.filter((app) => app.category === category.id);
         if (apps.length === 0) return null;
         return (

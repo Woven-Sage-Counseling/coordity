@@ -6,7 +6,7 @@ export type PortalAppCategory = 'clinical' | 'billing' | 'business' | 'financial
 export interface PortalApp {
   id: string;
   name: string;
-  category: PortalAppCategory;
+  category: string;
   description: string;
   href: string;
   external: boolean;

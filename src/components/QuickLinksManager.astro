@@ -2,9 +2,8 @@
 import {
   QUICK_LINK_CATALOG,
   QUICK_LINK_CATALOG_GROUPS,
-  appCategories,
 } from '../lib/apps';
-import type { QuickLinkView } from '../lib/quick-links';
+import type { QuickLinkCategoryView, QuickLinkView } from '../lib/quick-links';
 
 interface RoleOption {
   key: string;
@@ -13,13 +12,21 @@ interface RoleOption {
 
 interface Props {
   links: QuickLinkView[];
+  categories: QuickLinkCategoryView[];
   roles: RoleOption[];
   error?: string | null;
   saved?: boolean;
   embedded?: boolean;
 }
 
-const { links, roles, error = null, saved = false, embedded = false } = Astro.props;
+const {
+  links,
+  categories,
+  roles,
+  error = null,
+  saved = false,
+  embedded = false,
+} = Astro.props;
 const addedCatalogKeys = new Set(links.map((link) => link.catalogKey).filter(Boolean));
 const catalogByGroup = Object.fromEntries(
   QUICK_LINK_CATALOG_GROUPS.map((group) => [
@@ -27,6 +34,7 @@ const catalogByGroup = Object.fromEntries(
     QUICK_LINK_CATALOG.filter((item) => item.group === group.id),
   ]),
 ) as Record<string, typeof QUICK_LINK_CATALOG>;
+const defaultCategoryId = categories[0]?.id ?? '';
 ---
 
 <section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} id="quick-links" aria-labelledby="quick-links-heading">
@@ -47,9 +55,89 @@ const catalogByGroup = Object.fromEntries(
 
   <div class="mt-6 space-y-8">
     <div class="rounded-2xl border border-sage-dark/15 bg-white p-4 sm:p-5">
+      <h3 class="text-sm font-semibold text-charcoal">Sections</h3>
+      <p class="mt-1 text-sm text-sage-dark/70">
+        Rename section titles and change the order they appear on Quick links and Home.
+      </p>
+      <div class="mt-4 space-y-3">
+        {
+          categories.map((category, index) => (
+            <div class="flex flex-wrap items-end gap-2 rounded-xl border border-sage-dark/10 bg-[#fafbfc] p-3">
+              <form method="post" action="/api/admin/quick-links" class="flex min-w-0 flex-1 flex-wrap items-end gap-2">
+                <input type="hidden" name="action" value="update-category" />
+                <input type="hidden" name="categoryId" value={category.id} />
+                <label class="min-w-[12rem] flex-1 text-sm font-medium text-charcoal">
+                  Title
+                  <input class="field mt-1" type="text" name="title" required value={category.title} />
+                </label>
+                <button class="rounded-full bg-charcoal px-3 py-1.5 text-xs font-semibold text-white" type="submit">
+                  Save
+                </button>
+              </form>
+              <form method="post" action="/api/admin/quick-links">
+                <input type="hidden" name="action" value="move-category" />
+                <input type="hidden" name="categoryId" value={category.id} />
+                <input type="hidden" name="direction" value="up" />
+                <button
+                  class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
+                  type="submit"
+                  disabled={index === 0}
+                  aria-label="Move section up"
+                >
+                  ↑
+                </button>
+              </form>
+              <form method="post" action="/api/admin/quick-links">
+                <input type="hidden" name="action" value="move-category" />
+                <input type="hidden" name="categoryId" value={category.id} />
+                <input type="hidden" name="direction" value="down" />
+                <button
+                  class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
+                  type="submit"
+                  disabled={index === categories.length - 1}
+                  aria-label="Move section down"
+                >
+                  ↓
+                </button>
+              </form>
+              {
+                categories.length > 1 ? (
+                  <form method="post" action="/api/admin/quick-links">
+                    <input type="hidden" name="action" value="delete-category" />
+                    <input type="hidden" name="categoryId" value={category.id} />
+                    <input
+                      type="hidden"
+                      name="moveLinksToCategoryId"
+                      value={categories.find((item) => item.id !== category.id)?.id ?? ''}
+                    />
+                    <button
+                      class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+                      type="submit"
+                      onclick="return confirm('Delete this section? Links in it move to another section.')"
+                    >
+                      Delete
+                    </button>
+                  </form>
+                ) : null
+              }
+            </div>
+          ))
+        }
+      </div>
+      <form method="post" action="/api/admin/quick-links" class="mt-4 flex flex-wrap items-end gap-2">
+        <input type="hidden" name="action" value="create-category" />
+        <label class="min-w-[12rem] flex-1 text-sm font-medium text-charcoal">
+          New section title
+          <input class="field mt-1" type="text" name="title" required placeholder="e.g. Credentialing tools" />
+        </label>
+        <button class="btn-primary !py-2 text-sm" type="submit">Add section</button>
+      </form>
+    </div>
+
+    <div class="rounded-2xl border border-sage-dark/15 bg-white p-4 sm:p-5">
       <h3 class="text-sm font-semibold text-charcoal">Add from catalog</h3>
       <p class="mt-1 text-sm text-sage-dark/70">
-        Pick a type of tool, then a specific product. Nothing is shown to your team until you add it here.
+        Pick a type of tool, then a specific product. Choose which section it should appear under.
       </p>
       <form
         method="post"
@@ -58,11 +146,11 @@ const catalogByGroup = Object.fromEntries(
         data-catalog-add
       >
         <input type="hidden" name="action" value="add-from-catalog" />
-        <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid gap-3 sm:grid-cols-3">
           <label class="block text-sm font-medium text-charcoal">
-            Category
+            Catalog type
             <select class="field mt-1" name="catalogGroup" data-catalog-group required>
-              <option value="">Select a category…</option>
+              <option value="">Select a type…</option>
               {
                 QUICK_LINK_CATALOG_GROUPS.map((group) => (
                   <option value={group.id}>{group.title}</option>
@@ -74,6 +162,18 @@ const catalogByGroup = Object.fromEntries(
             Tool
             <select class="field mt-1" name="catalogKey" data-catalog-tool required disabled>
               <option value="">Select a tool…</option>
+            </select>
+          </label>
+          <label class="block text-sm font-medium text-charcoal">
+            Show under section
+            <select class="field mt-1" name="categoryId" required>
+              {
+                categories.map((category) => (
+                  <option value={category.id} selected={category.id === defaultCategoryId}>
+                    {category.title}
+                  </option>
+                ))
+              }
             </select>
           </label>
         </div>
@@ -90,7 +190,7 @@ const catalogByGroup = Object.fromEntries(
             }
           </div>
           <p class="mt-2 text-[11px] text-sage-dark/55">
-            Leave all unchecked to use the suggested roles for that tool (or everyone, if none apply).
+            Leave all unchecked to use the suggested roles for that tool.
           </p>
         </fieldset>
         <button class="btn-primary" type="submit">Add tool</button>
@@ -116,7 +216,7 @@ const catalogByGroup = Object.fromEntries(
             toolSelect.innerHTML = '';
             var placeholder = document.createElement('option');
             placeholder.value = '';
-            placeholder.textContent = items.length ? 'Select a tool…' : 'No tools in this category';
+            placeholder.textContent = items.length ? 'Select a tool…' : 'No tools in this type';
             toolSelect.appendChild(placeholder);
             items.forEach(function (item) {
               var opt = document.createElement('option');
@@ -137,7 +237,7 @@ const catalogByGroup = Object.fromEntries(
     <div class="rounded-2xl border border-sage-dark/15 bg-white p-4 sm:p-5">
       <h3 class="text-sm font-semibold text-charcoal">Your quick links</h3>
       <p class="mt-1 text-sm text-sage-dark/70">
-        These buttons appear on Quick links and Home for people in the selected roles.
+        Edit each button, including which section it belongs under.
       </p>
 
       {
@@ -162,10 +262,10 @@ const catalogByGroup = Object.fromEntries(
                       <input class="field mt-1" type="url" name="href" required value={link.href} />
                     </label>
                     <label class="block text-sm font-medium text-charcoal">
-                      Category
-                      <select class="field mt-1" name="category">
-                        {appCategories.map((category) => (
-                          <option value={category.id} selected={category.id === link.category}>
+                      Section
+                      <select class="field mt-1" name="categoryId" required>
+                        {categories.map((category) => (
+                          <option value={category.id} selected={category.id === link.categoryId}>
                             {category.title}
                           </option>
                         ))}
@@ -253,11 +353,13 @@ const catalogByGroup = Object.fromEntries(
             <input class="field mt-1" type="url" name="href" required placeholder="https://…" />
           </label>
           <label class="block text-sm font-medium text-charcoal">
-            Category
-            <select class="field mt-1" name="category">
-              {appCategories.map((category) => (
-                <option value={category.id}>{category.title}</option>
-              ))}
+            Section
+            <select class="field mt-1" name="categoryId" required>
+              {
+                categories.map((category) => (
+                  <option value={category.id}>{category.title}</option>
+                ))
+              }
             </select>
           </label>
           <label class="block text-sm font-medium text-charcoal">

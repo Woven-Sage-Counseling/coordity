@@ -37,7 +37,7 @@ import {
   listTrainingModules,
   listTrainingRoster,
 } from '../lib/training';
-import { listQuickLinksForAdmin } from '../lib/quick-links';
+import { listQuickLinksForAdmin, listQuickLinkCategories } from '../lib/quick-links';
 import {
   getDocuSignConnectionStatus,
   listDocuSignStatusesForLesson,
@@ -97,6 +97,11 @@ const pendingBoardRequests = await safeLoad(
 );
 const roles = await safeLoad('roles', () => listRolesWithPermissions(), []);
 const quickLinks = await safeLoad('quick-links', () => listQuickLinksForAdmin(orgId), []);
+const quickLinkCategories = await safeLoad(
+  'quick-link-categories',
+  () => listQuickLinkCategories(orgId),
+  [],
+);
 const credentialingProviders = await safeLoad('credentialing-providers', () => listProvidersForLookup(), []);
 const insuranceCatalog = await safeLoad('insurance-catalog', () => listInsuranceCatalog(), []);
 const coverageMap = await safeLoad('coverage-matrix', () => listCoverageMatrix(), {});
@@ -664,6 +669,7 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       />
       <QuickLinksManager
         links={quickLinks}
+        categories={quickLinkCategories}
         roles={roles.map((role) => ({ key: role.key, name: role.name }))}
         error={quickLinksError}
         saved={quickLinksSaved}

@@ -7,7 +7,6 @@ import HomeBulletinBoard from '../components/HomeBulletinBoard.astro';
 import HomeShortcuts from '../components/HomeShortcuts.astro';
 import HomeWidgetCarousel from '../components/HomeWidgetCarousel.astro';
 import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
-import { appCategories } from '../lib/apps';
 import { listAnnouncementsForUser, countUnreadAnnouncements } from '../lib/announcements';
 import { listNotificationsForUser, countUnreadNotifications } from '../lib/notifications';
 import { canAccessManagement, hasPermission } from '../lib/permissions';
@@ -20,16 +19,20 @@ import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import { COMPANY_WORDMARK_SRC } from '../lib/home-layout';
 import { resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
 import { orgIdFromLocals } from '../lib/organization';
-import { listVisibleQuickLinks, toPortalApp } from '../lib/quick-links';
+import {
+  listQuickLinkCategories,
+  listVisibleQuickLinks,
+  toPortalApp,
+} from '../lib/quick-links';
 
 export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const orgId = orgIdFromLocals(Astro.locals.organization);
-const visibleLinks = await listVisibleQuickLinks({
-  orgId,
-  roleKeys: employee.roles,
-});
+const [quickLinkCategories, visibleLinks] = await Promise.all([
+  listQuickLinkCategories(orgId),
+  listVisibleQuickLinks({ orgId, roleKeys: employee.roles }),
+]);
 const visibleApps = visibleLinks.map(toPortalApp);
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
@@ -173,7 +176,7 @@ const widgetProps = {
             </div>
           </section>
         ) : (
-          appCategories.map((category) => {
+          quickLinkCategories.map((category) => {
             const apps = visibleApps.filter((app) => app.category === category.id);
             if (apps.length === 0) return null;
             return (

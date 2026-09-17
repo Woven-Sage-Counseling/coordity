@@ -5,9 +5,12 @@ import { orgIdFromLocals } from '../../../lib/organization';
 import {
   addQuickLinkFromCatalog,
   createQuickLink,
+  createQuickLinkCategory,
   deleteQuickLink,
+  deleteQuickLinkCategory,
+  moveQuickLinkCategory,
   updateQuickLink,
-  type QuickLinkCategory,
+  updateQuickLinkCategory,
 } from '../../../lib/quick-links';
 
 export const prerender = false;
@@ -17,19 +20,6 @@ function redirectOk(): Response {
     status: 303,
     headers: { Location: '/admin?quickLinksSaved=1#quick-links', 'Cache-Control': 'no-store' },
   });
-}
-
-function parseCategory(raw: string): QuickLinkCategory {
-  if (
-    raw === 'clinical' ||
-    raw === 'billing' ||
-    raw === 'business' ||
-    raw === 'financial' ||
-    raw === 'internal'
-  ) {
-    return raw;
-  }
-  return 'business';
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -49,6 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await addQuickLinkFromCatalog({
         orgId,
         catalogKey: String(form.get('catalogKey') ?? '').trim(),
+        categoryId: String(form.get('categoryId') ?? '').trim() || undefined,
         roleKeys: roleKeys.length > 0 ? roleKeys : undefined,
       });
       return redirectOk();
@@ -60,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         name: String(form.get('name') ?? ''),
         href: String(form.get('href') ?? ''),
         description: String(form.get('description') ?? ''),
-        category: parseCategory(String(form.get('category') ?? 'business')),
+        categoryId: String(form.get('categoryId') ?? '').trim(),
         iconSrc: String(form.get('iconSrc') ?? '').trim() || null,
         roleKeys,
         enabled: String(form.get('enabled') ?? '1') === '1',
@@ -69,14 +60,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (action === 'update-custom') {
-      const linkId = String(form.get('linkId') ?? '').trim();
       await updateQuickLink({
         orgId,
-        linkId,
+        linkId: String(form.get('linkId') ?? '').trim(),
         name: String(form.get('name') ?? ''),
         href: String(form.get('href') ?? ''),
         description: String(form.get('description') ?? ''),
-        category: parseCategory(String(form.get('category') ?? 'business')),
+        categoryId: String(form.get('categoryId') ?? '').trim(),
         iconSrc: String(form.get('iconSrc') ?? '').trim() || null,
         roleKeys,
         enabled: String(form.get('enabled') ?? '') === '1',
@@ -86,6 +76,43 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'delete-custom') {
       await deleteQuickLink(orgId, String(form.get('linkId') ?? '').trim());
+      return redirectOk();
+    }
+
+    if (action === 'create-category') {
+      await createQuickLinkCategory({
+        orgId,
+        title: String(form.get('title') ?? ''),
+      });
+      return redirectOk();
+    }
+
+    if (action === 'update-category') {
+      await updateQuickLinkCategory({
+        orgId,
+        categoryId: String(form.get('categoryId') ?? '').trim(),
+        title: String(form.get('title') ?? ''),
+      });
+      return redirectOk();
+    }
+
+    if (action === 'move-category') {
+      const direction = String(form.get('direction') ?? '').trim();
+      if (direction !== 'up' && direction !== 'down') throw new Error('Invalid move direction.');
+      await moveQuickLinkCategory({
+        orgId,
+        categoryId: String(form.get('categoryId') ?? '').trim(),
+        direction,
+      });
+      return redirectOk();
+    }
+
+    if (action === 'delete-category') {
+      await deleteQuickLinkCategory({
+        orgId,
+        categoryId: String(form.get('categoryId') ?? '').trim(),
+        moveLinksToCategoryId: String(form.get('moveLinksToCategoryId') ?? '').trim() || undefined,
+      });
       return redirectOk();
     }
 
