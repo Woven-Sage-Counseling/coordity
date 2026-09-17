@@ -124,6 +124,7 @@ const primaryNav = [
               <div
                 class="relative inline-flex flex-wrap items-center gap-x-0.5 gap-y-1"
                 data-portal-nav
+                data-portal-nav-key="primary"
               >
                 <span
                   class="pointer-events-none absolute left-0 top-0 z-0 rounded-full border border-sage-dark/35 bg-sage/15 opacity-0"
@@ -164,24 +165,34 @@ const primaryNav = [
                 }
               </div>
               <div
-                class="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-sage/25 px-3 py-1 ring-1 ring-sage-dark/15"
+                class="relative inline-flex flex-wrap items-center gap-x-0.5 gap-y-1 rounded-full bg-sage/20 p-0.5 ring-1 ring-sage-dark/12"
                 aria-label="Special access"
+                data-portal-nav
+                data-portal-nav-key="access"
               >
+                <span
+                  class="pointer-events-none absolute left-0 top-0 z-0 rounded-full border border-sage-dark/35 bg-sage/20 opacity-0"
+                  data-portal-nav-pill
+                  aria-hidden="true"
+                ></span>
                 {canSeeFinancials ? (
                   <a
                     href="/financials"
-                    data-portal-nav-external
+                    data-portal-nav-link
+                    data-nav-href="/financials"
                     aria-current={navIsActive('/financials') ? 'page' : undefined}
                     class:list={[
-                      'font-medium hover:text-charcoal',
-                      navIsActive('/financials') ? 'text-charcoal' : 'text-sage-dark',
+                      'relative z-10 inline-flex items-center rounded-full px-2.5 py-1.5 transition-colors',
+                      navIsActive('/financials')
+                        ? 'font-medium text-charcoal'
+                        : 'text-sage-dark/80 hover:text-sage-dark',
                     ]}
                   >
                     Financials
                   </a>
                 ) : (
                   <span
-                    class="cursor-not-allowed font-medium text-sage-dark/40"
+                    class="relative z-10 cursor-not-allowed rounded-full px-2.5 py-1.5 font-medium text-sage-dark/40"
                     title="Requires financial access"
                     aria-disabled="true"
                   >
@@ -191,18 +202,21 @@ const primaryNav = [
                 {canSeeManagement ? (
                   <a
                     href="/admin"
-                    data-portal-nav-external
+                    data-portal-nav-link
+                    data-nav-href="/admin"
                     aria-current={navIsActive('/admin') ? 'page' : undefined}
                     class:list={[
-                      'font-medium hover:text-charcoal',
-                      navIsActive('/admin') ? 'text-charcoal' : 'text-sage-dark',
+                      'relative z-10 inline-flex items-center rounded-full px-2.5 py-1.5 transition-colors',
+                      navIsActive('/admin')
+                        ? 'font-medium text-charcoal'
+                        : 'text-sage-dark/80 hover:text-sage-dark',
                     ]}
                   >
                     Admin
                   </a>
                 ) : (
                   <span
-                    class="cursor-not-allowed font-medium text-sage-dark/40"
+                    class="relative z-10 cursor-not-allowed rounded-full px-2.5 py-1.5 font-medium text-sage-dark/40"
                     title="Requires admin access"
                     aria-disabled="true"
                   >
@@ -327,115 +341,127 @@ const primaryNav = [
         </script>
         <script is:inline>
           (function () {
-            var track = document.querySelector('[data-portal-nav]');
-            var pill = document.querySelector('[data-portal-nav-pill]');
-            if (!(track instanceof HTMLElement) || !(pill instanceof HTMLElement)) return;
-
-            var STORAGE_KEY = 'portal:nav-pill';
             var reduceMotion =
               window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var tracks = Array.prototype.slice.call(document.querySelectorAll('[data-portal-nav]'));
+            if (!tracks.length) return;
 
-            function activeLink() {
-              return track.querySelector('[data-portal-nav-link][aria-current="page"]');
+            function storageKey(track) {
+              return 'portal:nav-pill:' + (track.getAttribute('data-portal-nav-key') || 'default');
             }
 
-            function placePill(link, animate) {
-              if (!(link instanceof HTMLElement)) {
-                pill.style.transition = animate && !reduceMotion ? 'opacity 160ms ease' : 'none';
-                pill.style.opacity = '0';
-                return;
-              }
-              var trackRect = track.getBoundingClientRect();
-              var linkRect = link.getBoundingClientRect();
-              var left = linkRect.left - trackRect.left + track.scrollLeft;
-              var top = linkRect.top - trackRect.top + track.scrollTop;
-              if (!animate || reduceMotion) {
-                pill.style.transition = 'none';
-              } else {
-                pill.style.transition =
-                  'transform 320ms cubic-bezier(0.22, 1, 0.36, 1), width 320ms cubic-bezier(0.22, 1, 0.36, 1), height 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease';
-              }
-              pill.style.width = linkRect.width + 'px';
-              pill.style.height = linkRect.height + 'px';
-              pill.style.transform = 'translate(' + left + 'px, ' + top + 'px)';
-              pill.style.opacity = '1';
-            }
-
-            function readStored() {
-              try {
-                var raw = sessionStorage.getItem(STORAGE_KEY);
-                if (!raw) return null;
-                sessionStorage.removeItem(STORAGE_KEY);
-                return JSON.parse(raw);
-              } catch (e) {
-                return null;
-              }
-            }
-
-            function storeFrom(link) {
-              if (!(link instanceof HTMLElement)) return;
-              var trackRect = track.getBoundingClientRect();
-              var linkRect = link.getBoundingClientRect();
-              try {
-                sessionStorage.setItem(
-                  STORAGE_KEY,
-                  JSON.stringify({
-                    left: linkRect.left - trackRect.left + track.scrollLeft,
-                    top: linkRect.top - trackRect.top + track.scrollTop,
-                    width: linkRect.width,
-                    height: linkRect.height,
-                  }),
-                );
-              } catch (e) {}
-            }
-
-            function clearStored() {
-              try {
-                sessionStorage.removeItem(STORAGE_KEY);
-              } catch (e) {}
-            }
-
-            // One slide only: land at the previous page's pill, then ease to the new active link.
-            // Do not animate on click — that caused the double-slide with the post-navigation replay.
-            var current = activeLink();
-            var stored = readStored();
-            if (stored && current instanceof HTMLElement && !reduceMotion) {
-              pill.style.transition = 'none';
-              pill.style.width = stored.width + 'px';
-              pill.style.height = stored.height + 'px';
-              pill.style.transform = 'translate(' + stored.left + 'px, ' + stored.top + 'px)';
-              pill.style.opacity = '1';
-              requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                  placePill(current, true);
-                });
+            function clearAllStored() {
+              tracks.forEach(function (track) {
+                try {
+                  sessionStorage.removeItem(storageKey(track));
+                } catch (e) {}
               });
-            } else {
-              placePill(current, false);
             }
 
-            track.addEventListener('click', function (event) {
-              var target = event.target;
-              if (!(target instanceof Element)) return;
-              var link = target.closest('[data-portal-nav-link]');
-              if (!(link instanceof HTMLElement) || !track.contains(link)) return;
-              if (link.getAttribute('aria-current') === 'page') {
-                clearStored();
-                return;
+            function setupTrack(track) {
+              if (!(track instanceof HTMLElement)) return;
+              var pill = track.querySelector('[data-portal-nav-pill]');
+              if (!(pill instanceof HTMLElement)) return;
+              var key = storageKey(track);
+
+              function activeLink() {
+                return track.querySelector('[data-portal-nav-link][aria-current="page"]');
               }
-              var from = activeLink();
-              if (from instanceof HTMLElement) storeFrom(from);
-              else clearStored();
-            });
+
+              function placePill(link, animate) {
+                if (!(link instanceof HTMLElement)) {
+                  pill.style.transition = animate && !reduceMotion ? 'opacity 160ms ease' : 'none';
+                  pill.style.opacity = '0';
+                  return;
+                }
+                var trackRect = track.getBoundingClientRect();
+                var linkRect = link.getBoundingClientRect();
+                var left = linkRect.left - trackRect.left + track.scrollLeft;
+                var top = linkRect.top - trackRect.top + track.scrollTop;
+                if (!animate || reduceMotion) {
+                  pill.style.transition = 'none';
+                } else {
+                  pill.style.transition =
+                    'transform 320ms cubic-bezier(0.22, 1, 0.36, 1), width 320ms cubic-bezier(0.22, 1, 0.36, 1), height 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease';
+                }
+                pill.style.width = linkRect.width + 'px';
+                pill.style.height = linkRect.height + 'px';
+                pill.style.transform = 'translate(' + left + 'px, ' + top + 'px)';
+                pill.style.opacity = '1';
+              }
+
+              function readStored() {
+                try {
+                  var raw = sessionStorage.getItem(key);
+                  if (!raw) return null;
+                  sessionStorage.removeItem(key);
+                  return JSON.parse(raw);
+                } catch (e) {
+                  return null;
+                }
+              }
+
+              function storeFrom(link) {
+                if (!(link instanceof HTMLElement)) return;
+                var trackRect = track.getBoundingClientRect();
+                var linkRect = link.getBoundingClientRect();
+                try {
+                  // Only keep this track's from-position so the other track doesn't also try to slide.
+                  clearAllStored();
+                  sessionStorage.setItem(
+                    key,
+                    JSON.stringify({
+                      left: linkRect.left - trackRect.left + track.scrollLeft,
+                      top: linkRect.top - trackRect.top + track.scrollTop,
+                      width: linkRect.width,
+                      height: linkRect.height,
+                    }),
+                  );
+                } catch (e) {}
+              }
+
+              var current = activeLink();
+              var stored = readStored();
+              if (stored && current instanceof HTMLElement && !reduceMotion) {
+                pill.style.transition = 'none';
+                pill.style.width = stored.width + 'px';
+                pill.style.height = stored.height + 'px';
+                pill.style.transform = 'translate(' + stored.left + 'px, ' + stored.top + 'px)';
+                pill.style.opacity = '1';
+                requestAnimationFrame(function () {
+                  requestAnimationFrame(function () {
+                    placePill(current, true);
+                  });
+                });
+              } else {
+                placePill(current, false);
+              }
+
+              track.addEventListener('click', function (event) {
+                var target = event.target;
+                if (!(target instanceof Element)) return;
+                var link = target.closest('[data-portal-nav-link]');
+                if (!(link instanceof HTMLElement) || !track.contains(link)) return;
+                if (link.getAttribute('aria-current') === 'page') {
+                  clearAllStored();
+                  return;
+                }
+                var from = activeLink();
+                if (from instanceof HTMLElement) storeFrom(from);
+                else clearAllStored();
+              });
+
+              window.addEventListener('resize', function () {
+                placePill(activeLink(), false);
+              });
+            }
+
+            tracks.forEach(setupTrack);
 
             document.querySelectorAll('[data-portal-nav-external]').forEach(function (node) {
               node.addEventListener('click', function () {
-                clearStored();
+                clearAllStored();
               });
-            });
-
-            window.addEventListener('resize', function () {
-              placePill(activeLink(), false);
             });
           })();
         </script>
