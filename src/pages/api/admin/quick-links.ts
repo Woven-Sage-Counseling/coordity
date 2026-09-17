@@ -3,9 +3,9 @@ import { formErrorRedirect } from '../../../lib/http';
 import { requireManagementAccess } from '../../../lib/management-access';
 import { orgIdFromLocals } from '../../../lib/organization';
 import {
+  addQuickLinkFromCatalog,
   createQuickLink,
   deleteQuickLink,
-  updateBuiltinAppSetting,
   updateQuickLink,
   type QuickLinkCategory,
 } from '../../../lib/quick-links';
@@ -39,8 +39,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const orgId = orgIdFromLocals(locals.organization);
   const form = await request.formData();
   const action = String(form.get('action') ?? '').trim();
+  const roleKeys = form
+    .getAll('roleKeys')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
 
   try {
+    if (action === 'add-from-catalog') {
+      await addQuickLinkFromCatalog({
+        orgId,
+        catalogKey: String(form.get('catalogKey') ?? '').trim(),
+        roleKeys: roleKeys.length > 0 ? roleKeys : undefined,
+      });
+      return redirectOk();
+    }
+
     if (action === 'create-custom') {
       await createQuickLink({
         orgId,
@@ -49,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description: String(form.get('description') ?? ''),
         category: parseCategory(String(form.get('category') ?? 'business')),
         iconSrc: String(form.get('iconSrc') ?? '').trim() || null,
-        roleKeys: form.getAll('roleKeys').map((value) => String(value).trim()).filter(Boolean),
+        roleKeys,
         enabled: String(form.get('enabled') ?? '1') === '1',
       });
       return redirectOk();
@@ -65,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description: String(form.get('description') ?? ''),
         category: parseCategory(String(form.get('category') ?? 'business')),
         iconSrc: String(form.get('iconSrc') ?? '').trim() || null,
-        roleKeys: form.getAll('roleKeys').map((value) => String(value).trim()).filter(Boolean),
+        roleKeys,
         enabled: String(form.get('enabled') ?? '') === '1',
       });
       return redirectOk();
@@ -73,17 +86,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'delete-custom') {
       await deleteQuickLink(orgId, String(form.get('linkId') ?? '').trim());
-      return redirectOk();
-    }
-
-    if (action === 'update-builtin') {
-      const appId = String(form.get('appId') ?? '').trim();
-      await updateBuiltinAppSetting({
-        orgId,
-        appId,
-        enabled: String(form.get('enabled') ?? '') === '1',
-        roleKeys: form.getAll('roleKeys').map((value) => String(value).trim()).filter(Boolean),
-      });
       return redirectOk();
     }
 

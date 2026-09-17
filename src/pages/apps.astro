@@ -2,7 +2,7 @@
 import PortalLayout from '../layouts/PortalLayout.astro';
 import AppCard from '../components/AppCard.astro';
 import { appCategories } from '../lib/apps';
-import { hasPermission } from '../lib/permissions';
+import { canAccessManagement } from '../lib/permissions';
 import { orgIdFromLocals } from '../lib/organization';
 import { listVisibleQuickLinks, toPortalApp } from '../lib/quick-links';
 
@@ -10,10 +10,10 @@ export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const orgId = orgIdFromLocals(Astro.locals.organization);
+const canManage = canAccessManagement(employee);
 const visibleLinks = await listVisibleQuickLinks({
   orgId,
   roleKeys: employee.roles,
-  hasPermission: (permission) => hasPermission(employee, permission),
 });
 const visibleApps = visibleLinks.map(toPortalApp);
 ---
@@ -22,19 +22,46 @@ const visibleApps = visibleLinks.map(toPortalApp);
   <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Quick links</h1>
 
   {
-    appCategories.map((category) => {
-      const apps = visibleApps.filter((app) => app.category === category.id);
-      if (apps.length === 0) return null;
-      return (
-        <section class="mt-12">
-          <h2 class="font-display text-3xl text-charcoal">{category.title}</h2>
-          <div class="mt-5 flex flex-wrap gap-x-4 gap-y-6">
-            {apps.map((app) => (
-              <AppCard app={app} />
-            ))}
-          </div>
-        </section>
-      );
-    })
+    visibleApps.length === 0 ? (
+      <section class="mt-10 rounded-2xl border border-dashed border-sage-dark/25 bg-white/70 px-6 py-12 text-center">
+        <p class="font-display text-2xl text-charcoal">No quick links yet</p>
+        <p class="mx-auto mt-3 max-w-md text-sm leading-relaxed text-sage-dark/70">
+          {canManage
+            ? 'Add tools for your team from Admin → Quick links. Choose from common EHRs, banks, and more, or paste a custom URL.'
+            : 'Your practice hasn’t added any quick link buttons yet. Check back after an admin sets them up.'}
+        </p>
+        {canManage ? (
+          <a
+            href="/admin#quick-links"
+            class="btn-primary mt-6 inline-flex"
+          >
+            Open Quick links admin
+          </a>
+        ) : null}
+        <div class="mx-auto mt-10 flex max-w-lg flex-wrap justify-center gap-4 opacity-40" aria-hidden="true">
+          {[1, 2, 3].map(() => (
+            <div class="flex w-[7.5rem] flex-col items-center">
+              <div class="h-[6.4rem] w-[6.4rem] rounded-[1.48rem] bg-sage/25 ring-1 ring-sage-dark/10" />
+              <div class="mt-2.5 h-3 w-16 rounded-full bg-sage/30" />
+            </div>
+          ))}
+        </div>
+      </section>
+    ) : (
+      appCategories.map((category) => {
+        const apps = visibleApps.filter((app) => app.category === category.id);
+        if (apps.length === 0) return null;
+        return (
+          <section class="mt-12">
+            <h2 class="font-display text-3xl text-charcoal">{category.title}</h2>
+            <div class="mt-5 flex flex-wrap gap-x-4 gap-y-6">
+              {apps.map((app) => (
+                <AppCard app={app} />
+              ))}
+            </div>
+          </section>
+        );
+      })
+    )
   }
 </PortalLayout>

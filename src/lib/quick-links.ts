@@ -1,11 +1,16 @@
-import { appCategories, portalApps, type PortalApp } from './apps';
+import {
+  appCategories,
+  getCatalogItem,
+  type PortalApp,
+  type PortalAppCategory,
+} from './apps';
 import { nowMs, randomToken } from './crypto';
 import { getEnv } from './env';
 import type { Permission } from './permissions';
 
 export const QUICK_LINK_CATEGORIES = appCategories.map((c) => c.id);
 
-export type QuickLinkCategory = PortalApp['category'];
+export type QuickLinkCategory = PortalAppCategory;
 
 export interface QuickLinkView {
   id: string;
@@ -15,14 +20,11 @@ export interface QuickLinkView {
   href: string;
   external: boolean;
   iconSrc?: string;
-  source: 'builtin' | 'custom';
+  catalogKey: string | null;
   enabled: boolean;
   /** Empty = visible to every role. */
   roleKeys: string[];
-  /** When false for builtins, visibility still uses the app permission until roles are saved. */
-  rolesConfigured: boolean;
   sortOrder: number;
-  permission?: Permission;
 }
 
 function isHttpUrl(value: string): boolean {
@@ -73,7 +75,7 @@ export async function listRoleKeysWithPermission(permission: Permission): Promis
   return (rows.results ?? []).map((row) => row.role_key);
 }
 
-async function listCustomRoleKeys(linkId: string): Promise<string[]> {
+async function listLinkRoleKeys(linkId: string): Promise<string[]> {
   const { DB } = getEnv();
   const rows = await DB.prepare(
     `SELECT role_key FROM portal_quick_link_role WHERE link_id = ? ORDER BY role_key`,
@@ -83,7 +85,7 @@ async function listCustomRoleKeys(linkId: string): Promise<string[]> {
   return (rows.results ?? []).map((row) => row.role_key);
 }
 
-async function setCustomRoleKeys(linkId: string, roleKeys: string[]): Promise<void> {
+async function setLinkRoleKeys(linkId: string, roleKeys: string[]): Promise<void> {
   const { DB } = getEnv();
   await DB.prepare(`DELETE FROM portal_quick_link_role WHERE link_id = ?`).bind(linkId).run();
   if (roleKeys.length === 0) return;
@@ -97,133 +99,75 @@ async function setCustomRoleKeys(linkId: string, roleKeys: string[]): Promise<vo
   );
 }
 
-async function listBuiltinRoleKeys(orgId: string, appId: string): Promise<string[]> {
-  const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT role_key FROM portal_builtin_app_role
-     WHERE org_id = ? AND app_id = ?
-     ORDER BY role_key`,
-  )
-    .bind(orgId, appId)
-    .all<{ role_key: string }>();
-  return (rows.results ?? []).map((row) => row.role_key);
+type QuickLinkRow = {
+  id: string;
+  name: string;
+  href: string;
+  description: string;
+  category: string;
+  icon_src: string | null;
+  catalog_key: string | null;
+  sort_order: number;
+  enabled: number;
+};
+
+function mapRow(row: QuickLinkRow, roleKeys: string[]): QuickLinkView {
+  return {
+    id: row.id,
+    name: row.name,
+    category: normalizeCategory(row.category),
+    description: row.description,
+    href: row.href,
+    external: isHttpUrl(row.href),
+    iconSrc: row.icon_src ?? undefined,
+    catalogKey: row.catalog_key,
+    enabled: row.enabled === 1,
+    roleKeys,
+    sortOrder: row.sort_order,
+  };
 }
 
-async function ensureBuiltinSetting(orgId: string, appId: string): Promise<void> {
+async function selectLinkRows(orgId: string): Promise<QuickLinkRow[]> {
   const { DB } = getEnv();
-  await DB.prepare(
-    `INSERT INTO portal_builtin_app_setting (org_id, app_id, enabled, roles_configured, sort_order, updated_at)
-     VALUES (?, ?, 1, 0, NULL, ?)
-     ON CONFLICT(org_id, app_id) DO NOTHING`,
-  )
-    .bind(orgId, appId, nowMs())
-    .run();
+  try {
+    const rows = await DB.prepare(
+      `SELECT id, name, href, description, category, icon_src, catalog_key, sort_order, enabled
+       FROM portal_quick_link
+       WHERE org_id = ?
+       ORDER BY sort_order ASC, name ASC`,
+    )
+      .bind(orgId)
+      .all<QuickLinkRow>();
+    return rows.results ?? [];
+  } catch {
+    // Before migration 0057 (catalog_key column).
+    const rows = await DB.prepare(
+      `SELECT id, name, href, description, category, icon_src, sort_order, enabled
+       FROM portal_quick_link
+       WHERE org_id = ?
+       ORDER BY sort_order ASC, name ASC`,
+    )
+      .bind(orgId)
+      .all<Omit<QuickLinkRow, 'catalog_key'>>();
+    return (rows.results ?? []).map((row) => ({ ...row, catalog_key: null }));
+  }
 }
 
 export async function listQuickLinksForAdmin(orgId: string): Promise<QuickLinkView[]> {
-  const { DB } = getEnv();
-  const builtinSettings = await DB.prepare(
-    `SELECT app_id, enabled, roles_configured, sort_order
-     FROM portal_builtin_app_setting
-     WHERE org_id = ?`,
-  )
-    .bind(orgId)
-    .all<{
-      app_id: string;
-      enabled: number;
-      roles_configured: number;
-      sort_order: number | null;
-    }>();
-  const settingByApp = new Map(
-    (builtinSettings.results ?? []).map((row) => [
-      row.app_id,
-      {
-        enabled: row.enabled === 1,
-        rolesConfigured: row.roles_configured === 1,
-        sortOrder: row.sort_order,
-      },
-    ]),
-  );
-
-  const builtins: QuickLinkView[] = [];
-  for (let index = 0; index < portalApps.length; index += 1) {
-    const app = portalApps[index]!;
-    const setting = settingByApp.get(app.id);
-    const rolesConfigured = setting?.rolesConfigured ?? false;
-    const roleKeys = rolesConfigured
-      ? await listBuiltinRoleKeys(orgId, app.id)
-      : await listRoleKeysWithPermission(app.permission);
-    builtins.push({
-      id: app.id,
-      name: app.name,
-      category: app.category,
-      description: app.description,
-      href: app.href,
-      external: app.external,
-      iconSrc: app.iconSrc,
-      source: 'builtin',
-      enabled: setting?.enabled ?? true,
-      roleKeys,
-      rolesConfigured,
-      sortOrder: setting?.sortOrder ?? index,
-      permission: app.permission,
-    });
+  const rows = await selectLinkRows(orgId);
+  const out: QuickLinkView[] = [];
+  for (const row of rows) {
+    out.push(mapRow(row, await listLinkRoleKeys(row.id)));
   }
-
-  const customRows = await DB.prepare(
-    `SELECT id, name, href, description, category, icon_src, sort_order, enabled
-     FROM portal_quick_link
-     WHERE org_id = ?
-     ORDER BY sort_order ASC, name ASC`,
-  )
-    .bind(orgId)
-    .all<{
-      id: string;
-      name: string;
-      href: string;
-      description: string;
-      category: string;
-      icon_src: string | null;
-      sort_order: number;
-      enabled: number;
-    }>();
-
-  const customs: QuickLinkView[] = [];
-  for (const row of customRows.results ?? []) {
-    customs.push({
-      id: row.id,
-      name: row.name,
-      category: normalizeCategory(row.category),
-      description: row.description,
-      href: row.href,
-      external: isHttpUrl(row.href),
-      iconSrc: row.icon_src ?? undefined,
-      source: 'custom',
-      enabled: row.enabled === 1,
-      roleKeys: await listCustomRoleKeys(row.id),
-      rolesConfigured: true,
-      sortOrder: row.sort_order,
-    });
-  }
-
-  return [...builtins, ...customs].sort(
-    (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
-  );
+  return out;
 }
 
 export async function listVisibleQuickLinks(input: {
   orgId: string;
   roleKeys: string[];
-  hasPermission: (permission: Permission) => boolean;
 }): Promise<QuickLinkView[]> {
   const all = await listQuickLinksForAdmin(input.orgId);
-  return all.filter((link) => {
-    if (!link.enabled) return false;
-    if (link.source === 'builtin' && !link.rolesConfigured) {
-      return link.permission ? input.hasPermission(link.permission) : true;
-    }
-    return visibleToRoles(link.roleKeys, input.roleKeys);
-  });
+  return all.filter((link) => link.enabled && visibleToRoles(link.roleKeys, input.roleKeys));
 }
 
 export async function createQuickLink(input: {
@@ -233,6 +177,7 @@ export async function createQuickLink(input: {
   description?: string;
   category: QuickLinkCategory;
   iconSrc?: string | null;
+  catalogKey?: string | null;
   roleKeys?: string[];
   enabled?: boolean;
 }): Promise<QuickLinkView> {
@@ -244,8 +189,18 @@ export async function createQuickLink(input: {
   if (iconSrc && !isAllowedIconSrc(iconSrc)) {
     throw new Error('Icon must be an https URL or an /app-icons/ path.');
   }
+  const catalogKey = input.catalogKey?.trim() || null;
 
   const { DB } = getEnv();
+  if (catalogKey) {
+    const existing = await DB.prepare(
+      `SELECT id FROM portal_quick_link WHERE org_id = ? AND catalog_key = ?`,
+    )
+      .bind(input.orgId, catalogKey)
+      .first<{ id: string }>();
+    if (existing) throw new Error('That tool is already on your Quick links.');
+  }
+
   const ts = nowMs();
   const id = randomToken(16);
   const maxSort = await DB.prepare(
@@ -255,27 +210,50 @@ export async function createQuickLink(input: {
     .first<{ n: number }>();
   const sortOrder = Number(maxSort?.n ?? -1) + 1;
 
-  await DB.prepare(
-    `INSERT INTO portal_quick_link
-       (id, org_id, name, href, description, category, icon_src, sort_order, enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(
-      id,
-      input.orgId,
-      name,
-      href,
-      (input.description ?? '').trim(),
-      input.category,
-      iconSrc,
-      sortOrder,
-      input.enabled === false ? 0 : 1,
-      ts,
-      ts,
+  try {
+    await DB.prepare(
+      `INSERT INTO portal_quick_link
+         (id, org_id, name, href, description, category, icon_src, catalog_key, sort_order, enabled, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run();
+      .bind(
+        id,
+        input.orgId,
+        name,
+        href,
+        (input.description ?? '').trim(),
+        input.category,
+        iconSrc,
+        catalogKey,
+        sortOrder,
+        input.enabled === false ? 0 : 1,
+        ts,
+        ts,
+      )
+      .run();
+  } catch {
+    await DB.prepare(
+      `INSERT INTO portal_quick_link
+         (id, org_id, name, href, description, category, icon_src, sort_order, enabled, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        id,
+        input.orgId,
+        name,
+        href,
+        (input.description ?? '').trim(),
+        input.category,
+        iconSrc,
+        sortOrder,
+        input.enabled === false ? 0 : 1,
+        ts,
+        ts,
+      )
+      .run();
+  }
 
-  await setCustomRoleKeys(id, input.roleKeys ?? []);
+  await setLinkRoleKeys(id, input.roleKeys ?? []);
 
   return {
     id,
@@ -285,12 +263,37 @@ export async function createQuickLink(input: {
     href,
     external: true,
     iconSrc: iconSrc ?? undefined,
-    source: 'custom',
+    catalogKey,
     enabled: input.enabled !== false,
     roleKeys: input.roleKeys ?? [],
-    rolesConfigured: true,
     sortOrder,
   };
+}
+
+export async function addQuickLinkFromCatalog(input: {
+  orgId: string;
+  catalogKey: string;
+  roleKeys?: string[];
+}): Promise<QuickLinkView> {
+  const item = getCatalogItem(input.catalogKey);
+  if (!item) throw new Error('Unknown catalog tool.');
+
+  let roleKeys = input.roleKeys;
+  if (roleKeys === undefined) {
+    roleKeys = await listRoleKeysWithPermission(item.suggestedPermission);
+  }
+
+  return createQuickLink({
+    orgId: input.orgId,
+    name: item.name,
+    href: item.href,
+    description: item.description,
+    category: item.category,
+    iconSrc: item.iconSrc ?? null,
+    catalogKey: item.key,
+    roleKeys,
+    enabled: true,
+  });
 }
 
 export async function updateQuickLink(input: {
@@ -358,7 +361,7 @@ export async function updateQuickLink(input: {
     .run();
 
   if (input.roleKeys !== undefined) {
-    await setCustomRoleKeys(input.linkId, input.roleKeys);
+    await setLinkRoleKeys(input.linkId, input.roleKeys);
   }
 }
 
@@ -370,60 +373,6 @@ export async function deleteQuickLink(orgId: string, linkId: string): Promise<vo
   if (!Number(result.meta.changes ?? 0)) throw new Error('Quick link not found.');
 }
 
-export async function updateBuiltinAppSetting(input: {
-  orgId: string;
-  appId: string;
-  enabled?: boolean;
-  roleKeys?: string[];
-  sortOrder?: number | null;
-}): Promise<void> {
-  const app = portalApps.find((item) => item.id === input.appId);
-  if (!app) throw new Error('Built-in app not found.');
-
-  await ensureBuiltinSetting(input.orgId, input.appId);
-  const { DB } = getEnv();
-  const existing = await DB.prepare(
-    `SELECT enabled, roles_configured, sort_order
-     FROM portal_builtin_app_setting
-     WHERE org_id = ? AND app_id = ?`,
-  )
-    .bind(input.orgId, input.appId)
-    .first<{ enabled: number; roles_configured: number; sort_order: number | null }>();
-
-  const rolesConfigured =
-    input.roleKeys !== undefined ? 1 : (existing?.roles_configured ?? 0);
-
-  await DB.prepare(
-    `UPDATE portal_builtin_app_setting
-     SET enabled = ?, roles_configured = ?, sort_order = ?, updated_at = ?
-     WHERE org_id = ? AND app_id = ?`,
-  )
-    .bind(
-      input.enabled !== undefined ? (input.enabled ? 1 : 0) : (existing?.enabled ?? 1),
-      rolesConfigured,
-      input.sortOrder !== undefined ? input.sortOrder : (existing?.sort_order ?? null),
-      nowMs(),
-      input.orgId,
-      input.appId,
-    )
-    .run();
-
-  if (input.roleKeys !== undefined) {
-    await DB.prepare(`DELETE FROM portal_builtin_app_role WHERE org_id = ? AND app_id = ?`)
-      .bind(input.orgId, input.appId)
-      .run();
-    if (input.roleKeys.length > 0) {
-      await DB.batch(
-        input.roleKeys.map((roleKey) =>
-          DB.prepare(
-            `INSERT INTO portal_builtin_app_role (org_id, app_id, role_key) VALUES (?, ?, ?)`,
-          ).bind(input.orgId, input.appId, roleKey),
-        ),
-      );
-    }
-  }
-}
-
 export function toPortalApp(link: QuickLinkView): PortalApp {
   return {
     id: link.id,
@@ -432,7 +381,7 @@ export function toPortalApp(link: QuickLinkView): PortalApp {
     description: link.description,
     href: link.href,
     external: link.external,
-    permission: link.permission ?? 'portal:access',
+    permission: 'portal:access',
     iconSrc: link.iconSrc,
   };
 }
