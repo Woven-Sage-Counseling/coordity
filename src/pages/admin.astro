@@ -452,88 +452,88 @@ const adminNav: AdminNavSection[] = [
 ];
 ---
 
-<PortalLayout title="Admin" wide>
-  <div class="mx-auto max-w-6xl lg:max-w-7xl" data-admin-shell>
-    <div class="grid gap-8 lg:grid-cols-[272px_minmax(0,1fr)] lg:items-start">
-      <aside
-        class="rounded-2xl border border-sage-dark/10 bg-white/90 p-3 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto"
-        data-admin-menu
-        aria-label="Admin sections"
-      >
-        {
-          adminNav.map((section) => (
-            <div class="mb-4 last:mb-0">
-              <p class="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
-                {section.label}
-              </p>
-              <div class="space-y-0.5">
-                {section.groups.map((group) => (
-                  <details class="group" data-admin-group={group.id}>
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition hover:bg-sage/10 [&::-webkit-details-marker]:hidden">
-                      <span>{group.label}</span>
-                      <span class="text-sage-dark/40" set:html={menuChevron} />
-                    </summary>
-                    <div class="mt-0.5 space-y-0.5 pb-1 pl-0.5">
-                      {group.items.map((item) => {
-                        const badge =
-                          item.badge && item.badge > 0 ? (
-                            <span
-                              class:list={[
-                                'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none text-white',
-                                item.badgeTone === 'amber' ? 'bg-amber-500' : 'bg-red-600',
-                              ]}
-                            >
-                              {item.badge > 9 ? '9+' : item.badge}
+<PortalLayout title="Admin" flush>
+  <div class="flex min-h-0 flex-1" data-admin-shell>
+    <aside
+      class="flex w-[min(100%,288px)] shrink-0 flex-col overflow-y-auto border-r border-sage-dark/10 bg-white/95 px-2 py-3 sm:w-72"
+      data-admin-menu
+      aria-label="Admin sections"
+    >
+      {
+        adminNav.map((section) => (
+          <div class="mb-4 last:mb-1">
+            <p class="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
+              {section.label}
+            </p>
+            <div class="space-y-0.5">
+              {section.groups.map((group) => (
+                <details class="group" data-admin-group={group.id}>
+                  <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition hover:bg-sage/10 [&::-webkit-details-marker]:hidden">
+                    <span>{group.label}</span>
+                    <span class="text-sage-dark/40" set:html={menuChevron} />
+                  </summary>
+                  <div class="mt-0.5 space-y-0.5 pb-1 pl-0.5">
+                    {group.items.map((item) => {
+                      const badge =
+                        item.badge && item.badge > 0 ? (
+                          <span
+                            class:list={[
+                              'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none text-white',
+                              item.badgeTone === 'amber' ? 'bg-amber-500' : 'bg-red-600',
+                            ]}
+                          >
+                            {item.badge > 9 ? '9+' : item.badge}
+                          </span>
+                        ) : null;
+                      const body = (
+                        <>
+                          <span
+                            class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
+                            set:html={item.icon}
+                          />
+                          <span class="min-w-0 flex-1">
+                            <span class="flex items-center gap-2">
+                              <span class="block text-sm font-semibold text-charcoal">{item.label}</span>
+                              {badge}
                             </span>
-                          ) : null;
-                        const body = (
-                          <>
-                            <span
-                              class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
-                              set:html={item.icon}
-                            />
-                            <span class="min-w-0 flex-1">
-                              <span class="flex items-center gap-2">
-                                <span class="block text-sm font-semibold text-charcoal">{item.label}</span>
-                                {badge}
-                              </span>
-                              <span class="mt-0.5 block text-xs leading-snug text-sage-dark/55">
-                                {item.description}
-                              </span>
+                            <span class="mt-0.5 block text-xs leading-snug text-sage-dark/55">
+                              {item.description}
                             </span>
-                          </>
-                        );
-                        if (item.href) {
-                          return (
-                            <a
-                              href={item.href}
-                              class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10"
-                            >
-                              {body}
-                            </a>
-                          );
-                        }
+                          </span>
+                        </>
+                      );
+                      if (item.href) {
                         return (
-                          <button
-                            type="button"
-                            class="flex w-full items-start gap-2.5 rounded-xl border-l-[3px] border-transparent px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:border-sage-dark data-[active=true]:bg-sage/20"
-                            data-admin-open={item.id}
-                            data-admin-group-id={group.id}
+                          <a
+                            href={item.href}
+                            class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10"
                           >
                             {body}
-                          </button>
+                          </a>
                         );
-                      })}
-                    </div>
-                  </details>
-                ))}
-              </div>
+                      }
+                      return (
+                        <button
+                          type="button"
+                          class="flex w-full items-start gap-2.5 rounded-xl border-l-[3px] border-transparent px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:border-sage-dark data-[active=true]:bg-sage/20"
+                          data-admin-open={item.id}
+                          data-admin-group-id={group.id}
+                        >
+                          {body}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </details>
+              ))}
             </div>
-          ))
-        }
-      </aside>
+          </div>
+        ))
+      }
+    </aside>
 
-      <div class="min-w-0" data-admin-content>
+    <div class="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8" data-admin-content>
+      <div class="mx-auto max-w-5xl">
         <div
           class="rounded-2xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-6 py-16 text-center"
           data-admin-empty

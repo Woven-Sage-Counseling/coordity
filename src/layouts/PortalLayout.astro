@@ -13,9 +13,11 @@ import { canAccessManagement, hasPermission } from '../lib/permissions';
 interface Props {
   title: string;
   wide?: boolean;
+  /** Full-bleed content (no max-width padding); fills viewport under the header. */
+  flush?: boolean;
 }
 
-const { title, wide = false } = Astro.props;
+const { title, wide = false, flush = false } = Astro.props;
 const employee = Astro.locals.employee;
 const organization = Astro.locals.organization;
 const orgName = organization?.displayName ?? organization?.name ?? 'Employee portal';
@@ -57,7 +59,7 @@ const brandStyle = [
 ].join(' ');
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
-const showFooter = employee?.status === 'active';
+const showFooter = employee?.status === 'active' && !flush;
 const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
 const orgId = organization?.id;
 const messagesUnread =
@@ -106,11 +108,11 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
       })();
     </script>
   </head>
-  <body class="flex min-h-screen flex-col">
+  <body class:list={['flex flex-col', flush ? 'h-dvh overflow-hidden' : 'min-h-screen']}>
     <PreviewBanner />
     {
       employee?.status === 'active' && (
-        <header class="relative z-20 border-b border-sage-dark/10 bg-cream/90">
+        <header class="relative z-20 shrink-0 border-b border-sage-dark/10 bg-cream/90">
           <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
             <a href="/" class="flex items-center gap-3">
               <img
@@ -198,8 +200,13 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
         </header>
       )
     }
-    <main class="relative z-10 flex-1">
-      <div class:list={['mx-auto px-5 py-10 sm:px-8', wide ? 'max-w-6xl' : 'max-w-3xl']}>
+    <main class="relative z-10 flex min-h-0 flex-1 flex-col">
+      <div
+        class:list={[
+          flush ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto px-5 py-10 sm:px-8',
+          !flush && (wide ? 'max-w-6xl' : 'max-w-3xl'),
+        ]}
+      >
         <slot />
       </div>
     </main>
