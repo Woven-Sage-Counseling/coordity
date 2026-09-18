@@ -124,35 +124,33 @@ const settingsNav = [
 ---
 
 <PortalLayout title="Settings" flush>
-  <div class="flex min-h-0 flex-1" data-settings-shell>
+  <div class="flex min-h-0 flex-1 gap-6 overflow-hidden px-5 py-6 sm:gap-8 sm:px-8 sm:py-8" data-settings-shell>
     <aside
-      class="flex w-[min(100%,260px)] shrink-0 flex-col overflow-hidden border-r border-sage-dark/10 bg-white/95 sm:w-64"
+      class="flex w-[min(100%,240px)] shrink-0 flex-col self-start overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm sm:w-60"
       data-settings-menu
       aria-label="Settings sections"
     >
-      <div class="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-        <p class="px-2.5 pb-2 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
-          Settings
-        </p>
-        <nav class="space-y-0.5">
-          {
-            settingsNav.map((item) => (
-              <button
-                type="button"
-                class="flex w-full flex-col rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/20"
-                data-settings-open={item.id}
-              >
-                <span class="text-sm font-semibold text-charcoal">{item.label}</span>
-                <span class="mt-0.5 text-xs leading-snug text-sage-dark/55">{item.description}</span>
-              </button>
-            ))
-          }
-        </nav>
-      </div>
+      <nav>
+        {
+          settingsNav.map((item, index) => (
+            <button
+              type="button"
+              class:list={[
+                'flex w-full flex-col px-4 py-3.5 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/15',
+                index > 0 ? 'border-t border-sage-dark/10' : null,
+              ]}
+              data-settings-open={item.id}
+            >
+              <span class="text-[15px] font-medium text-charcoal">{item.label}</span>
+              <span class="mt-0.5 text-xs leading-snug text-sage-dark/55">{item.description}</span>
+            </button>
+          ))
+        }
+      </nav>
 
-      <form method="post" action="/api/session/sign-out" class="shrink-0 border-t border-sage-dark/10 p-2">
+      <form method="post" action="/api/session/sign-out" class="border-t border-sage-dark/10">
         <button
-          class="w-full rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50"
+          class="w-full px-4 py-3.5 text-left text-[15px] font-medium text-red-700 transition hover:bg-red-50"
           type="submit"
         >
           Sign out
@@ -160,8 +158,8 @@ const settingsNav = [
       </form>
     </aside>
 
-    <div class="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8" data-settings-content>
-      <div class="mx-auto w-full max-w-xl">
+    <div class="min-h-0 min-w-0 flex-1 overflow-y-auto" data-settings-content>
+      <div class="mx-auto w-full max-w-xl pb-8">
         <div
           class="rounded-2xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-6 py-16 text-center"
           data-settings-empty
