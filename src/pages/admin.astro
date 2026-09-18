@@ -13,6 +13,7 @@ import WorkItemsManager from '../components/WorkItemsManager.astro';
 import TrainingManager from '../components/TrainingManager.astro';
 import QuickLinksManager from '../components/QuickLinksManager.astro';
 import RolesManager from '../components/RolesManager.astro';
+import BulletinBoardManager from '../components/BulletinBoardManager.astro';
 import { listActiveAnnouncements } from '../lib/announcements';
 import {
   listProvidersForLookup,
@@ -27,7 +28,20 @@ import { listTimesheetBacklogForAdmin } from '../lib/timesheet-backlog';
 import { listTimesheetShiftEditsForAdmin } from '../lib/timesheet-shift-edits';
 import { listAssignedTasksForAdmin } from '../lib/tasks';
 import { listWorkCategoriesForAdmin } from '../lib/timesheet-work-categories';
-import { listBulletinBoardRequests } from '../lib/bulletin-board';
+import {
+  BULLETIN_AUTHOR_COLORS,
+  BULLETIN_IMAGE_MAX_EDGE,
+  BULLETIN_MAX_IMAGE_BYTES,
+  BULLETIN_MAX_PDF_BYTES,
+  ensureDuplicatePinTwins,
+  getBulletinBoardSettings,
+  listBulletinBoardPins,
+  listBulletinBoardRequests,
+  serializePin,
+  serializeRequest,
+  writingModeForSurface,
+} from '../lib/bulletin-board';
+import { getHomeLayoutSettings, serializeHomeLayout } from '../lib/home-layout';
 import { orgCanonicalOrigin, orgIdFromLocals } from '../lib/organization';
 import {
   getTrainingUserReview,
@@ -95,6 +109,45 @@ const pendingBoardRequests = await safeLoad(
   () => listBulletinBoardRequests({ status: 'pending' }),
   [],
 );
+const bulletinSettings = await safeLoad(
+  'bulletin-settings',
+  () => getBulletinBoardSettings(orgId),
+  null,
+);
+if (bulletinSettings?.boardMode === 'duplicate') {
+  await ensureDuplicatePinTwins(orgId).catch((error) =>
+    console.error('ensureDuplicatePinTwins failed', error),
+  );
+}
+const bulletinHomeLayout = await safeLoad('bulletin-home-layout', () => getHomeLayoutSettings(orgId), null);
+const bulletinDraftPins = await safeLoad(
+  'bulletin-draft-pins',
+  () => listBulletinBoardPins({ channel: 'draft' }),
+  [],
+);
+const bulletinPayload =
+  bulletinSettings && bulletinHomeLayout
+    ? {
+        surface: bulletinSettings.draftSurface,
+        liveSurface: bulletinSettings.surface,
+        boardMode: bulletinSettings.boardMode,
+        writingMode: writingModeForSurface(bulletinSettings.draftSurface),
+        colors: BULLETIN_AUTHOR_COLORS,
+        pins: bulletinDraftPins.map((pin) => serializePin(pin, bulletinSettings.draftSurface)),
+        requests: pendingBoardRequests.map(serializeRequest),
+        maxImageBytes: BULLETIN_MAX_IMAGE_BYTES,
+        maxPdfBytes: BULLETIN_MAX_PDF_BYTES,
+        imageMaxEdge: BULLETIN_IMAGE_MAX_EDGE,
+        draftUpdatedAt: bulletinSettings.draftUpdatedAt,
+        publishedAt: bulletinSettings.publishedAt,
+        hasUnpublishedChanges:
+          bulletinSettings.draftUpdatedAt > (bulletinSettings.publishedAt ?? 0) ||
+          bulletinSettings.draftSurface !== bulletinSettings.surface,
+        boardVariant: 'portrait' as const,
+        layout: serializeHomeLayout(bulletinHomeLayout),
+      }
+    : null;
+const bulletinHasUnpublishedChanges = Boolean(bulletinPayload?.hasUnpublishedChanges);
 const roles = await safeLoad('roles', () => listRolesWithPermissions(orgId), []);
 const quickLinks = await safeLoad('quick-links', () => listQuickLinksForAdmin(orgId), []);
 const quickLinkCategories = await safeLoad(
@@ -402,7 +455,7 @@ const adminNav: AdminNavSection[] = [
             icon: adminIcons.megaphone,
           },
           {
-            href: '/bulletin-board',
+            id: 'bulletin-board',
             label: 'Bulletin board',
             description: 'Pins and board requests',
             icon: adminIcons.board,
@@ -533,7 +586,7 @@ const adminNav: AdminNavSection[] = [
     </aside>
 
     <div class="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8" data-admin-content>
-      <div class="mx-auto max-w-5xl">
+      <div class="mx-auto w-full max-w-6xl">
         <div
           class="rounded-2xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-6 py-16 text-center"
           data-admin-empty
@@ -580,6 +633,24 @@ const adminNav: AdminNavSection[] = [
         savedId={announcementSaved}
         embedded
       />
+    </section>
+
+    <section class="hidden" data-admin-panel="bulletin-board">
+      {
+        bulletinPayload && bulletinSettings ? (
+          <BulletinBoardManager
+            payload={bulletinPayload}
+            pendingCount={pendingBulletinRequests}
+            hasUnpublishedChanges={bulletinHasUnpublishedChanges}
+            draftSurface={bulletinSettings.draftSurface}
+            embedded
+          />
+        ) : (
+          <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Bulletin board is temporarily unavailable.
+          </p>
+        )
+      }
     </section>
 
     <section class="hidden" data-admin-panel="people">
@@ -1457,6 +1528,7 @@ const adminNav: AdminNavSection[] = [
       timesheet: '#timesheet-backlog',
       hours: '#hours',
       announcements: '#announcement-history',
+      'bulletin-board': '#bulletin-board',
       people: '#people',
       tasks: '#tasks',
       'work-items': '#work-items',
@@ -1475,6 +1547,7 @@ const adminNav: AdminNavSection[] = [
       if (hash === 'announcement-history' || hash === 'post-announcement' || hash === 'announcements') {
         return 'announcements';
       }
+      if (hash === 'bulletin-board' || hash === 'bulletin' || hash === 'board') return 'bulletin-board';
       if (hash === 'people') return 'people';
       if (hash === 'tasks') return 'tasks';
       if (hash === 'work-items' || hash === 'work-items-admin') return 'work-items';
