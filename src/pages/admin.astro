@@ -508,10 +508,39 @@ const adminNav: AdminNavSection[] = [
 <PortalLayout title="Admin" flush>
   <div class="flex min-h-0 flex-1" data-admin-shell>
     <aside
-      class="flex w-[min(100%,288px)] shrink-0 flex-col overflow-y-auto border-r border-sage-dark/10 bg-white/95 px-2 py-3 sm:w-72"
+      class="flex w-[min(100%,288px)] shrink-0 flex-col overflow-hidden border-r border-sage-dark/10 bg-white/95 transition-[width] duration-200 ease-out sm:w-72 data-[collapsed=true]:w-12"
       data-admin-menu
       aria-label="Admin sections"
     >
+      <div class="flex shrink-0 items-center justify-center border-b border-sage-dark/10 px-1.5 py-1.5 data-[collapsed=false]:justify-end">
+        <button
+          type="button"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sage-dark/70 transition hover:bg-sage/15 hover:text-charcoal"
+          data-admin-menu-toggle
+          aria-expanded="true"
+          aria-controls="admin-menu-nav"
+          title="Collapse menu"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+            data-admin-menu-toggle-icon
+          >
+            <path
+              d="M10 3 5 8l5 5"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span class="sr-only" data-admin-menu-toggle-label>Collapse menu</span>
+        </button>
+      </div>
+      <div class="min-h-0 flex-1 overflow-y-auto px-2 py-3 data-[collapsed=true]:pointer-events-none data-[collapsed=true]:opacity-0" id="admin-menu-nav" data-admin-menu-body>
       {
         adminNav.map((section) => (
           <div class="mb-4 last:mb-1">
@@ -583,6 +612,7 @@ const adminNav: AdminNavSection[] = [
           </div>
         ))
       }
+      </div>
     </aside>
 
     <div class="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8" data-admin-content>
@@ -1516,12 +1546,58 @@ const adminNav: AdminNavSection[] = [
   function setupAdminNav(shell: Element) {
     if (!(shell instanceof HTMLElement)) return;
     const empty = shell.querySelector('[data-admin-empty]');
+    const menu = shell.querySelector('[data-admin-menu]');
+    const menuBody = shell.querySelector('[data-admin-menu-body]');
+    const menuToggle = shell.querySelector('[data-admin-menu-toggle]');
+    const menuToggleIcon = shell.querySelector('[data-admin-menu-toggle-icon]');
+    const menuToggleLabel = shell.querySelector('[data-admin-menu-toggle-label]');
     const panels = Array.from(shell.querySelectorAll('[data-admin-panel]')).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     );
     const openButtons = Array.from(shell.querySelectorAll('[data-admin-open]')).filter(
       (node): node is HTMLButtonElement => node instanceof HTMLButtonElement,
     );
+
+    const MENU_COLLAPSE_KEY = 'portal:admin-menu-collapsed';
+    const menuToggleRow = menu instanceof HTMLElement ? menu.querySelector(':scope > div') : null;
+    const setMenuCollapsed = (collapsed: boolean) => {
+      if (!(menu instanceof HTMLElement)) return;
+      menu.dataset.collapsed = collapsed ? 'true' : 'false';
+      if (menuToggleRow instanceof HTMLElement) {
+        menuToggleRow.dataset.collapsed = collapsed ? 'true' : 'false';
+      }
+      if (menuBody instanceof HTMLElement) {
+        menuBody.dataset.collapsed = collapsed ? 'true' : 'false';
+        menuBody.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+      }
+      if (menuToggle instanceof HTMLButtonElement) {
+        menuToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        menuToggle.title = collapsed ? 'Expand menu' : 'Collapse menu';
+      }
+      if (menuToggleLabel instanceof HTMLElement) {
+        menuToggleLabel.textContent = collapsed ? 'Expand menu' : 'Collapse menu';
+      }
+      if (menuToggleIcon instanceof SVGElement) {
+        menuToggleIcon.style.transform = collapsed ? 'rotate(180deg)' : '';
+        menuToggleIcon.style.transition = 'transform 200ms ease';
+      }
+      try {
+        localStorage.setItem(MENU_COLLAPSE_KEY, collapsed ? '1' : '0');
+      } catch (e) {}
+    };
+
+    let menuCollapsed = false;
+    try {
+      menuCollapsed = localStorage.getItem(MENU_COLLAPSE_KEY) === '1';
+    } catch (e) {}
+    setMenuCollapsed(menuCollapsed);
+
+    if (menuToggle instanceof HTMLButtonElement) {
+      menuToggle.addEventListener('click', () => {
+        menuCollapsed = !menuCollapsed;
+        setMenuCollapsed(menuCollapsed);
+      });
+    }
 
     const hashForPanel: Record<string, string> = {
       'time-off': '#time-off-requests',
