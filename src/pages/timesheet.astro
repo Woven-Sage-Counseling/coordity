@@ -299,15 +299,15 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
       </div>
     </section>
 
-    <section class="mt-10 rounded-2xl border border-sage-dark/10 bg-white/80 p-5 shadow-sm">
+    <section class="mt-8 max-w-3xl rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
         <h2 class="text-sm font-semibold text-charcoal">Request backlog hours</h2>
-        <p class="mt-2 text-sm text-sage-dark/70">
-          Forgot to clock in? Submit the date, start time, and end time for admin approval. Approved backlog hours appear in your shift log.
+        <p class="mt-1 text-sm text-sage-dark/65">
+          Forgot to clock in? Submit the date, start time, and end time for admin approval.
         </p>
 
-        <form method="post" action="/api/timesheet/backlog" class="mt-5" data-timesheet-backlog-form>
+        <form method="post" action="/api/timesheet/backlog" class="mt-4" data-timesheet-backlog-form>
           <input type="hidden" name="returnTo" value="/timesheet" />
-          <div class="flex max-w-lg flex-col gap-4">
+          <div class="flex max-w-lg flex-col gap-3">
             <label class="block text-sm">
               <span class="font-medium text-charcoal">Date</span>
               <input class="field mt-1.5 max-w-xs" name="workDate" type="date" required />
@@ -328,17 +328,17 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
           </div>
         </form>
 
-        <div class="mt-6 border-t border-sage-dark/10 pt-5" data-timesheet-backlog-section>
+        <div class="mt-5 border-t border-sage-dark/10 pt-4" data-timesheet-backlog-section>
           <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Pending requests</h3>
           <p
-            class="mt-3 text-sm text-sage-dark/65"
+            class="mt-2 text-sm text-sage-dark/65"
             data-timesheet-backlog-empty
             hidden={pendingBacklogRequests.length > 0}
           >
             No pending requests.
           </p>
           <div
-            class="mt-3 max-h-64 overflow-y-auto overscroll-auto rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-2"
+            class="mt-2 max-h-64 overflow-y-auto overscroll-auto rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-2"
             data-timesheet-backlog-scroll
             hidden={pendingBacklogRequests.length === 0}
           >
@@ -362,17 +362,17 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
           </div>
         </div>
 
-        <div class="mt-6 border-t border-sage-dark/10 pt-5" data-timesheet-shift-edit-section>
+        <div class="mt-5 border-t border-sage-dark/10 pt-4" data-timesheet-shift-edit-section>
           <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-sage-dark/55">Pending time changes</h3>
           <p
-            class="mt-3 text-sm text-sage-dark/65"
+            class="mt-2 text-sm text-sage-dark/65"
             data-timesheet-shift-edit-empty
             hidden={pendingShiftEditRequests.length > 0}
           >
             No pending time change requests.
           </p>
           <div
-            class="mt-3 max-h-64 overflow-y-auto overscroll-auto rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-2"
+            class="mt-2 max-h-64 overflow-y-auto overscroll-auto rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-2"
             data-timesheet-shift-edit-scroll
             hidden={pendingShiftEditRequests.length === 0}
           >
