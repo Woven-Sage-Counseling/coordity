@@ -223,8 +223,8 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
                     <div class="flex flex-wrap items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-semibold text-charcoal">{serializedEntry.dateLabel}</p>
-                        <div class="mt-1 grid w-full grid-cols-[auto_auto] items-center justify-items-start gap-x-2 gap-y-3">
-                          <p class="col-start-1 row-start-1 text-sm text-sage-dark/75">{serializedEntry.timeLabel}</p>
+                        <div class="mt-1 flex flex-wrap items-center gap-2">
+                          <p class="text-sm text-sage-dark/75">{serializedEntry.timeLabel}</p>
                           {
                             serializedEntry.canRequestEdit &&
                             entry.startedAt != null &&
@@ -615,7 +615,27 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       badgeHost.appendChild(badge);
     }
 
-    item.querySelector('[data-timesheet-shift-edit-form]')?.closest('details')?.remove();
+    const editForm = item.querySelector('[data-timesheet-shift-edit-form]');
+    if (editForm instanceof HTMLElement) {
+      const panel = editForm.parentElement;
+      const toggle = item.querySelector(`#shift-edit-toggle-${shiftId}`);
+      const label =
+        toggle instanceof HTMLInputElement
+          ? item.querySelector(`label[for="${toggle.id}"]`)
+          : null;
+      editForm.remove();
+      panel?.remove();
+      label?.remove();
+      toggle?.remove();
+    }
+
+    const timesRow = item.querySelector('.mt-1.flex');
+    if (timesRow instanceof HTMLElement && !timesRow.querySelector('.text-amber-800')) {
+      const pending = document.createElement('span');
+      pending.className = 'text-xs font-semibold uppercase tracking-wide text-amber-800';
+      pending.textContent = 'Edit pending';
+      timesRow.appendChild(pending);
+    }
   }
 
   function showShiftEditSuccess(form: HTMLFormElement): void {

@@ -13,70 +13,75 @@ interface Props {
 const { shiftId, workDate, startedAt, endedAt, hasPendingEdit = false } = Astro.props;
 const startParts = easternClockParts(startedAt);
 const endParts = easternClockParts(endedAt);
+const toggleId = `shift-edit-toggle-${shiftId}`;
 ---
 
 {
   hasPendingEdit ? (
-    <span class="col-start-2 row-start-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
-      Edit pending
-    </span>
+    <span class="text-xs font-semibold uppercase tracking-wide text-amber-800">Edit pending</span>
   ) : (
-    <details class="contents">
-      <summary class="col-start-2 row-start-1 inline-flex cursor-pointer list-none items-center justify-self-start rounded-lg border border-sage-dark/15 bg-white px-2.5 py-1 text-xs font-medium text-sage-dark transition hover:border-sage-dark/30 hover:bg-sage/10 hover:text-charcoal [&::-webkit-details-marker]:hidden">
-        Edit times
-      </summary>
-      <form
-        method="post"
-        action="/api/timesheet/shift-edit"
-        class="col-span-2 col-start-1 row-start-2 w-full max-w-lg rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4"
-        data-timesheet-shift-edit-form
+    <>
+      <input type="checkbox" id={toggleId} class="peer sr-only" />
+      <label
+        for={toggleId}
+        class="inline-flex cursor-pointer items-center rounded-lg border border-sage-dark/15 bg-white px-2.5 py-1 text-xs font-medium text-sage-dark transition hover:border-sage-dark/30 hover:bg-sage/10 hover:text-charcoal peer-checked:border-sage-dark/30 peer-checked:bg-sage/15 peer-checked:text-charcoal"
       >
-        <input type="hidden" name="returnTo" value="/timesheet" />
-        <input type="hidden" name="shiftId" value={shiftId} />
-        <p class="mb-4 text-sm text-sage-dark/70">
-          Change clock-in or clock-out. The update is sent for the same approval as backlog hours.
-        </p>
-        <div class="flex flex-col gap-4">
-          <label class="block text-sm">
-            <span class="font-medium text-charcoal">Date</span>
-            <input class="field mt-1.5 max-w-xs" name="workDate" type="date" value={workDate} required />
-          </label>
-          <BacklogTimePicker
-            name="timeStarted"
-            label="Clock in"
-            initialHour={startParts.hour}
-            initialMinute={startParts.minute}
-            initialPeriod={startParts.period}
-          />
-          <BacklogTimePicker
-            name="timeEnded"
-            label="Clock out"
-            initialHour={endParts.hour}
-            initialMinute={endParts.minute}
-            initialPeriod={endParts.period}
-          />
-          <label class="block text-sm">
-            <span class="font-medium text-charcoal">Reason (optional)</span>
-            <textarea
-              class="field mt-1.5 min-h-[4.5rem]"
-              name="notes"
-              rows={2}
-              placeholder="e.g. Forgot to clock in for the first 30 minutes"
+        Edit times
+      </label>
+      <div class="hidden w-full basis-full peer-checked:block">
+        <form
+          method="post"
+          action="/api/timesheet/shift-edit"
+          class="rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4"
+          data-timesheet-shift-edit-form
+        >
+          <input type="hidden" name="returnTo" value="/timesheet" />
+          <input type="hidden" name="shiftId" value={shiftId} />
+          <p class="mb-4 text-sm text-sage-dark/70">
+            Change clock-in or clock-out. The update is sent for the same approval as backlog hours.
+          </p>
+          <div class="flex max-w-lg flex-col gap-4">
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Date</span>
+              <input class="field mt-1.5 max-w-xs" name="workDate" type="date" value={workDate} required />
+            </label>
+            <BacklogTimePicker
+              name="timeStarted"
+              label="Clock in"
+              initialHour={startParts.hour}
+              initialMinute={startParts.minute}
+              initialPeriod={startParts.period}
             />
-          </label>
-          <div class="flex flex-wrap items-center gap-3">
-            <button class="btn-secondary !px-4 !py-2" type="submit">Submit for approval</button>
-            <p
-              class="hidden text-sm font-medium text-emerald-800"
-              data-timesheet-shift-edit-success
-              role="status"
-              aria-live="polite"
-            >
-              Time change submitted.
-            </p>
+            <BacklogTimePicker
+              name="timeEnded"
+              label="Clock out"
+              initialHour={endParts.hour}
+              initialMinute={endParts.minute}
+              initialPeriod={endParts.period}
+            />
+            <label class="block text-sm">
+              <span class="font-medium text-charcoal">Reason (optional)</span>
+              <textarea
+                class="field mt-1.5 min-h-[4.5rem]"
+                name="notes"
+                rows={2}
+                placeholder="e.g. Forgot to clock in for the first 30 minutes"
+              />
+            </label>
+            <div class="flex flex-wrap items-center gap-3">
+              <button class="btn-secondary !px-4 !py-2" type="submit">Submit for approval</button>
+              <p
+                class="hidden text-sm font-medium text-emerald-800"
+                data-timesheet-shift-edit-success
+                role="status"
+                aria-live="polite"
+              >
+                Time change submitted.
+              </p>
+            </div>
           </div>
-        </div>
-      </form>
-    </details>
+        </form>
+      </div>
+    </>
   )
 }
