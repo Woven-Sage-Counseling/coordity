@@ -67,12 +67,7 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
 ---
 
 <PortalLayout title="Timesheet" wide>
-  <div class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Timesheet</h1>
-    </div>
-    <a href="/timesheet/work" class="btn-secondary !px-4 !py-2 text-sm">Work breakdown</a>
-  </div>
+  <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Timesheet</h1>
 
   <div
     data-timesheet-page
@@ -204,10 +199,13 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
       </div>
 
       <div class="mt-8" id="shift-log">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
-          <TimesheetPeriodPicker period={logPeriod} action="/timesheet#shift-log" compact />
-          <span class="text-xs text-sage-dark/50" data-timesheet-log-period>{logPeriodLabel}</span>
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
+            <TimesheetPeriodPicker period={logPeriod} action="/timesheet#shift-log" compact />
+            <span class="text-xs text-sage-dark/50" data-timesheet-log-period>{logPeriodLabel}</span>
+          </div>
+          <a href="/timesheet/work" class="btn-secondary !px-4 !py-2 text-sm">Work breakdown</a>
         </div>
         <div class="mt-3 max-h-[28rem] overflow-y-auto overscroll-auto rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
           <p class="hidden px-2 py-6 text-center text-sm text-sage-dark/65" data-timesheet-empty>
