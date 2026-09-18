@@ -17,18 +17,16 @@ const endParts = easternClockParts(endedAt);
 
 {
   hasPendingEdit ? (
-    <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-amber-800">
-      Time change pending approval
-    </p>
+    <span class="text-xs font-semibold uppercase tracking-wide text-amber-800">Edit pending</span>
   ) : (
-    <details class="mt-3 group">
-      <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-sage-dark/15 bg-white px-3 py-1.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/30 hover:bg-sage/10 hover:text-charcoal [&::-webkit-details-marker]:hidden">
+    <details class="group relative inline-block">
+      <summary class="inline-flex cursor-pointer list-none items-center rounded-lg border border-sage-dark/15 bg-white px-2.5 py-1 text-xs font-medium text-sage-dark transition hover:border-sage-dark/30 hover:bg-sage/10 hover:text-charcoal [&::-webkit-details-marker]:hidden">
         Edit times
       </summary>
       <form
         method="post"
         action="/api/timesheet/shift-edit"
-        class="mt-3 rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4"
+        class="absolute left-0 top-[calc(100%+0.5rem)] z-20 w-[min(22rem,calc(100vw-3rem))] rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4 shadow-lg sm:left-auto sm:right-0"
         data-timesheet-shift-edit-form
       >
         <input type="hidden" name="returnTo" value="/timesheet" />
@@ -36,7 +34,7 @@ const endParts = easternClockParts(endedAt);
         <p class="mb-4 text-sm text-sage-dark/70">
           Change clock-in or clock-out. The update is sent for the same approval as backlog hours.
         </p>
-        <div class="flex max-w-lg flex-col gap-4">
+        <div class="flex flex-col gap-4">
           <label class="block text-sm">
             <span class="font-medium text-charcoal">Date</span>
             <input class="field mt-1.5 max-w-xs" name="workDate" type="date" value={workDate} required />
@@ -57,7 +55,12 @@ const endParts = easternClockParts(endedAt);
           />
           <label class="block text-sm">
             <span class="font-medium text-charcoal">Reason (optional)</span>
-            <textarea class="field mt-1.5 min-h-[4.5rem]" name="notes" rows={2} placeholder="e.g. Forgot to clock in for the first 30 minutes" />
+            <textarea
+              class="field mt-1.5 min-h-[4.5rem]"
+              name="notes"
+              rows={2}
+              placeholder="e.g. Forgot to clock in for the first 30 minutes"
+            />
           </label>
           <div class="flex flex-wrap items-center gap-3">
             <button class="btn-secondary !px-4 !py-2" type="submit">Submit for approval</button>
