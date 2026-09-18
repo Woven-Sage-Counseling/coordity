@@ -515,7 +515,7 @@ const adminNav: AdminNavSection[] = [
                       return (
                         <button
                           type="button"
-                          class="flex w-full items-start gap-2.5 rounded-xl border-l-[3px] border-transparent px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:border-sage-dark data-[active=true]:bg-sage/20"
+                          class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/20"
                           data-admin-open={item.id}
                           data-admin-group-id={group.id}
                         >
@@ -1487,6 +1487,22 @@ const adminNav: AdminNavSection[] = [
       return null;
     };
 
+    const groups = Array.from(shell.querySelectorAll('[data-admin-group]')).filter(
+      (node): node is HTMLDetailsElement => node instanceof HTMLDetailsElement,
+    );
+
+    const openExclusiveGroup = (target: HTMLDetailsElement | null) => {
+      groups.forEach((group) => {
+        group.open = target != null && group === target;
+      });
+    };
+
+    groups.forEach((group) => {
+      group.addEventListener('toggle', () => {
+        if (group.open) openExclusiveGroup(group);
+      });
+    });
+
     const setActiveButton = (id: string | null) => {
       openButtons.forEach((btn) => {
         const active = Boolean(id && btn.dataset.adminOpen === id);
@@ -1497,7 +1513,7 @@ const adminNav: AdminNavSection[] = [
           const groupId = btn.dataset.adminGroupId;
           if (groupId) {
             const group = shell.querySelector(`[data-admin-group="${groupId}"]`);
-            if (group instanceof HTMLDetailsElement) group.open = true;
+            if (group instanceof HTMLDetailsElement) openExclusiveGroup(group);
           }
         }
       });
@@ -1587,7 +1603,7 @@ const adminNav: AdminNavSection[] = [
     else {
       showEmpty();
       const firstGroup = shell.querySelector('[data-admin-group]');
-      if (firstGroup instanceof HTMLDetailsElement) firstGroup.open = true;
+      if (firstGroup instanceof HTMLDetailsElement) openExclusiveGroup(firstGroup);
     }
   }
 
