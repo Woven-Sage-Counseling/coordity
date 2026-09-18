@@ -215,9 +215,6 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
       <div class="mt-8" id="shift-log">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
-          <p class="text-sm text-sage-dark/65">
-            On a finished shift, use Edit times to correct clock-in or clock-out for approval.
-          </p>
           <TimesheetPeriodPicker period={logPeriod} action="/timesheet#shift-log" compact />
           <span class="text-xs text-sage-dark/50" data-timesheet-log-period>{logPeriodLabel}</span>
         </div>
