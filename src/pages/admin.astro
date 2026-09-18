@@ -315,20 +315,20 @@ const quickbooksRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="transition group-open:rotate-180"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 const adminIcons = {
-  calendar: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  clock: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4.5l3 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  chart: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19h16M7 16V9M12 16V5M17 16v-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  tags: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12V5.5A1.5 1.5 0 0 1 4.5 4H12l8 8-7.5 7.5L3 12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/></svg>`,
-  people: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.25" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 19.5c1.1-3.2 3.5-5 6.5-5s5.4 1.8 6.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  shield: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 7.8 7 9 4.1-1.2 7-4.5 7-9V6l-7-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
-  check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 11.5 11 13.5 15.5 9M6 5h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  badge: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  megaphone: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10.5h2.8L12 6v12l-6.2-4.5H3a1.5 1.5 0 0 1-1.5-1.5v-1.5A1.5 1.5 0 0 1 3 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14.8 9.2a3.2 3.2 0 0 1 0 5.6M17.5 7a6 6 0 0 1 0 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  board: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  book: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10.5 12 5l9 5.5-9 5.5L3 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.2 12.4v4.2c0 .9 2.6 2.4 5.8 2.4s5.8-1.5 5.8-2.4v-4.2M21 10.5v5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  link: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M14.5 16.5h5M17 14v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-  plug: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 7V3M15 7V3M8 7h8v4a4 4 0 0 1-4 4v5M8 11V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  paint: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 12.5 19 6a2.5 2.5 0 0 0-3.5-3.5L9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.2 10.2 5 19l8.8-3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.2 8.8 15.2 12.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  calendar: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  clock: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v4.5l3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chart: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19h16M7 16V9M12 16V5M17 16v-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  tags: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12V5.5A1.5 1.5 0 0 1 4.5 4H12l8 8-7.5 7.5L3 12Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/></svg>`,
+  people: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.25" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 19.5c1.1-3.2 3.5-5 6.5-5s5.4 1.8 6.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  shield: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 7.8 7 9 4.1-1.2 7-4.5 7-9V6l-7-3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  check: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 11.5 11 13.5 15.5 9M6 5h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  badge: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="9" r="5.25" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="9" r="2.1" stroke="currentColor" stroke-width="1.5"/><path d="M8.2 13.4 6.5 20.5 12 17.8l5.5 2.7-1.7-7.1" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  megaphone: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h1.5l5.5 3.5V6.5L5.5 10H4a1 1 0 0 0-1 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 8.2c1.5.9 2.5 2.2 2.5 3.8s-1 2.9-2.5 3.8M14.2 6.2C16.6 7.7 18.2 9.7 18.2 12s-1.6 4.3-4 5.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.8 14v3.2c0 .7.6 1.3 1.3 1.3.4 0 .8-.2 1-.5l1.4-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  board: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  book: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10.5 12 5l9 5.5-9 5.5L3 10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.2 12.4v4.2c0 .9 2.6 2.4 5.8 2.4s5.8-1.5 5.8-2.4v-4.2M21 10.5v5.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  link: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M14.5 16.5h5M17 14v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  plug: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 7V3M15 7V3M8 7h8v4a4 4 0 0 1-4 4v5M8 11V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  paint: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 19.5 11 13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M10.2 13.8c.8-.7 2.2-2.1 3.5-3.5l5.8-5.2c.6-.5 1.5-.1 1.4.7l-.6 6.2c-.1.8-.7 1.4-1.5 1.6l-5.4 1.2c-.9.2-1.8-.3-2.2-1.1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.2 9.6c.9.3 2.1 1.2 2.9 2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
 };
 
 type AdminNavItem = {
@@ -433,7 +433,7 @@ const adminNav: AdminNavSection[] = [
         items: [
           {
             id: 'credentialing',
-            label: 'Insurance coverage',
+            label: 'Credentialing',
             description: 'Networks and provider coverage',
             icon: adminIcons.badge,
           },
@@ -546,7 +546,7 @@ const adminNav: AdminNavSection[] = [
                         const body = (
                           <>
                             <span
-                              class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
+                              class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
                               set:html={item.icon}
                             />
                             <span class="min-w-0 flex-1">
@@ -613,7 +613,7 @@ const adminNav: AdminNavSection[] = [
                   return (
                     <a
                       href={item.href}
-                      class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15"
+                      class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15"
                       aria-label={item.label}
                       data-admin-tip={item.label}
                     >
@@ -625,7 +625,7 @@ const adminNav: AdminNavSection[] = [
                 return (
                   <button
                     type="button"
-                    class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15 data-[active=true]:bg-sage/25 data-[active=true]:text-charcoal"
+                    class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15 data-[active=true]:bg-sage/25 data-[active=true]:text-charcoal"
                     aria-label={item.label}
                     data-admin-tip={item.label}
                     data-admin-open={item.id}
