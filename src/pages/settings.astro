@@ -115,88 +115,67 @@ const calendarNotice = Astro.url.searchParams.get('calendar') === 'connected'
   ? 'Google Calendar connected.'
   : Astro.url.searchParams.get('error');
 
-const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const settingsNav = [
+  { id: 'appearance', label: 'Appearance', description: 'Light or dark theme' },
+  { id: 'widgets', label: 'Home widgets', description: 'Carousel and widget prefs' },
+  { id: 'home-layout', label: 'Home board & layout', description: 'Board style and placement' },
+  { id: 'google-calendar', label: 'Google Calendar', description: 'Connect calendars' },
+] as const;
 ---
 
-<PortalLayout title="Settings">
-  <div class="mx-auto max-w-xl" data-settings-shell>
-    <div data-settings-header>
-      <p class="text-sm text-sage-dark/65">
-        <a href="/" class="hover:text-sage-dark">Home</a>
-        <span class="mx-1.5 text-sage-dark/35">/</span>
-        Settings
-      </p>
-      <h1 class="mt-3 font-display text-4xl text-charcoal">Settings</h1>
-      <p class="mt-3 max-w-2xl text-sage-dark/75">
-        Personal preferences for your home board and connected accounts.
-        <a href="/embed" class="ml-1 font-medium text-coordity-blue underline-offset-2 hover:underline">
-          Embed sign-in on your practice site
-        </a>
-      </p>
-    </div>
-
-    <div data-settings-menu>
-      <p class="mt-3 text-sage-dark/75">Choose a category to manage.</p>
-
-      <div class="mt-8 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-settings-open="appearance"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Appearance</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-settings-open="widgets"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Home widgets</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-settings-open="home-layout"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Home board &amp; layout</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
-        <div class="mx-4 border-t border-sage-dark/10"></div>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-sage/10"
-          data-settings-open="google-calendar"
-        >
-          <span class="text-[15px] font-medium text-charcoal">Google Calendar</span>
-          <span class="text-sage-dark/40" set:html={menuChevron} />
-        </button>
+<PortalLayout title="Settings" flush>
+  <div class="flex min-h-0 flex-1" data-settings-shell>
+    <aside
+      class="flex w-[min(100%,260px)] shrink-0 flex-col overflow-hidden border-r border-sage-dark/10 bg-white/95 sm:w-64"
+      data-settings-menu
+      aria-label="Settings sections"
+    >
+      <div class="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        <p class="px-2.5 pb-2 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
+          Settings
+        </p>
+        <nav class="space-y-0.5">
+          {
+            settingsNav.map((item) => (
+              <button
+                type="button"
+                class="flex w-full flex-col rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/20"
+                data-settings-open={item.id}
+              >
+                <span class="text-sm font-semibold text-charcoal">{item.label}</span>
+                <span class="mt-0.5 text-xs leading-snug text-sage-dark/55">{item.description}</span>
+              </button>
+            ))
+          }
+        </nav>
       </div>
 
-      <form method="post" action="/api/session/sign-out" class="mt-6">
+      <form method="post" action="/api/session/sign-out" class="shrink-0 border-t border-sage-dark/10 p-2">
         <button
-          class="w-full rounded-2xl border border-sage-dark/10 bg-white/90 px-4 py-3.5 text-[15px] font-medium text-red-700 shadow-sm transition hover:bg-red-50"
+          class="w-full rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50"
           type="submit"
         >
           Sign out
         </button>
       </form>
-    </div>
+    </aside>
+
+    <div class="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8" data-settings-content>
+      <div class="mx-auto w-full max-w-xl">
+        <div
+          class="rounded-2xl border border-dashed border-sage-dark/20 bg-[#fafbfc] px-6 py-16 text-center"
+          data-settings-empty
+        >
+          <p class="font-display text-2xl text-charcoal">Choose a section</p>
+          <p class="mx-auto mt-2 max-w-md text-sm text-sage-dark/65">
+            Pick a category on the left to manage personal preferences.
+            <a href="/embed" class="font-medium text-coordity-blue underline-offset-2 hover:underline">
+              Embed sign-in on your practice site
+            </a>
+          </p>
+        </div>
 
     <section class="hidden" data-settings-panel="appearance" data-theme-settings data-user-id={employee.id}>
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-settings-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading title="Appearance" description="Light or dark portal theme." />
 
       <div class="mt-6 overflow-hidden rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" role="radiogroup" aria-label="Color theme">
@@ -236,16 +215,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       data-max={HOME_WIDGET_MAX}
       data-catalog={JSON.stringify(widgets)}
     >
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-settings-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Home widgets"
         description={`Enable widgets, set carousel order (up to ${HOME_WIDGET_MAX}), and customize header colors and icons.`}
@@ -277,16 +246,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       data-home-layout-settings
       data-home-prefs={JSON.stringify(homePrefsPayload)}
     >
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-settings-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Home board & layout"
         description="Personalize your Home page. Leave an option on Company default to follow what admins set. Bulletin board and widgets can each appear in only one place."
@@ -437,16 +396,6 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
     </section>
 
     <section class="hidden" data-settings-panel="google-calendar" id="google-calendar" data-calendar-settings>
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-sage-dark/20 px-3 py-1.5 text-sm font-semibold text-sage-dark transition hover:border-sage-dark/35 hover:bg-sage/10"
-        data-settings-back
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Back
-      </button>
       <PanelHeading
         title="Google Calendar"
         description="Connect your Google account for the Calendar widget. Read-only access only."
@@ -589,6 +538,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
         )
       }
     </section>
+      </div>
+    </div>
   </div>
 </PortalLayout>
 
@@ -665,43 +616,39 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
 
   function setupSettingsNav(shell: Element) {
     if (!(shell instanceof HTMLElement)) return;
-    const menu = shell.querySelector('[data-settings-menu]');
-    const header = shell.querySelector('[data-settings-header]');
+    const empty = shell.querySelector('[data-settings-empty]');
     const panels = Array.from(shell.querySelectorAll('[data-settings-panel]')).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     );
+    const openButtons = Array.from(shell.querySelectorAll('[data-settings-open]')).filter(
+      (node): node is HTMLButtonElement => node instanceof HTMLButtonElement,
+    );
 
-    const showMenu = () => {
-      if (header instanceof HTMLElement) header.classList.remove('hidden');
-      if (menu instanceof HTMLElement) menu.classList.remove('hidden');
-      panels.forEach((panel) => panel.classList.add('hidden'));
-      if (window.location.hash) {
-        history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
-    };
-
-    const showPanel = (id: string, updateHash = true) => {
-      if (header instanceof HTMLElement) header.classList.add('hidden');
-      if (menu instanceof HTMLElement) menu.classList.add('hidden');
+    const showPanel = (id: string | null, updateHash = true) => {
+      const activeId = id && panels.some((panel) => panel.dataset.settingsPanel === id) ? id : null;
+      if (empty instanceof HTMLElement) empty.classList.toggle('hidden', Boolean(activeId));
       panels.forEach((panel) => {
-        panel.classList.toggle('hidden', panel.dataset.settingsPanel !== id);
+        panel.classList.toggle('hidden', panel.dataset.settingsPanel !== activeId);
+      });
+      openButtons.forEach((button) => {
+        button.dataset.active = button.dataset.settingsOpen === activeId ? 'true' : 'false';
       });
       if (updateHash) {
-        const hash = id === 'google-calendar' ? '#google-calendar' : `#${id}`;
-        history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+        const next =
+          activeId === 'google-calendar'
+            ? '#google-calendar'
+            : activeId
+              ? `#${activeId}`
+              : '';
+        history.replaceState(null, '', `${window.location.pathname}${window.location.search}${next}`);
       }
     };
 
-    shell.querySelectorAll('[data-settings-open]').forEach((node) => {
-      if (!(node instanceof HTMLButtonElement)) return;
-      node.addEventListener('click', () => {
-        const id = node.dataset.settingsOpen;
+    openButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.settingsOpen;
         if (id) showPanel(id);
       });
-    });
-
-    shell.querySelectorAll('[data-settings-back]').forEach((node) => {
-      node.addEventListener('click', () => showMenu());
     });
 
     const hash = window.location.hash.replace(/^#/, '');
@@ -712,6 +659,8 @@ const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"
       hash === 'home-layout'
     ) {
       showPanel(hash, false);
+    } else {
+      showPanel(null, false);
     }
   }
 
