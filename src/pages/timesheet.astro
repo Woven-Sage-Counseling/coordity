@@ -213,15 +213,16 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
       </div>
 
       <div class="mt-8" id="shift-log">
-        <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
-        <p class="mt-1 text-sm text-sage-dark/65">
-          Filter by timeframe, then use Edit times on a finished shift to correct clock-in or clock-out for approval.
-        </p>
-        <TimesheetPeriodPicker period={logPeriod} action="/timesheet#shift-log" class="mt-3" />
-        <p class="mt-2 text-sm text-sage-dark/65" data-timesheet-log-period>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
+          <TimesheetPeriodPicker period={logPeriod} action="/timesheet#shift-log" compact />
+        </div>
+        <p class="mt-1 text-xs text-sage-dark/55" data-timesheet-log-period>
           {logPeriodLabel}
+          <span class="text-sage-dark/35"> Â· </span>
+          Edit times on a finished shift to correct clock-in or clock-out for approval.
         </p>
-        <div class="mt-4 max-h-[28rem] overflow-y-auto overscroll-auto rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
+        <div class="mt-3 max-h-[28rem] overflow-y-auto overscroll-auto rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
           <p class="hidden px-2 py-6 text-center text-sm text-sage-dark/65" data-timesheet-empty>
             No shifts in this period.
           </p>
