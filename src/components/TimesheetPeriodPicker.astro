@@ -4,14 +4,16 @@ import { timesheetPeriodOptions, type TimesheetResolvedPeriod } from '../lib/tim
 interface Props {
   period: TimesheetResolvedPeriod;
   action: string;
+  class?: string;
 }
 
 const { period, action } = Astro.props;
+const formClass = Astro.props.class ?? 'mt-4';
 const options = timesheetPeriodOptions();
 const showDates = period.id === 'custom';
 ---
 
-<form method="get" action={action} class="mt-4 flex flex-wrap items-end gap-3">
+<form method="get" action={action} class:list={['flex flex-wrap items-end gap-3', formClass]}>
   <slot />
   <label class="block">
     <span class="text-sm text-sage-dark/70">Timeframe</span>

@@ -3,6 +3,7 @@ import PortalLayout from '../layouts/PortalLayout.astro';
 import BacklogTimePicker from '../components/BacklogTimePicker.astro';
 import ShiftStatusIndicator from '../components/ShiftStatusIndicator.astro';
 import TimesheetShiftEditForm from '../components/TimesheetShiftEditForm.astro';
+import TimesheetPeriodPicker from '../components/TimesheetPeriodPicker.astro';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import TimesheetShiftWorkItems from '../components/TimesheetShiftWorkItems.astro';
 import {
@@ -17,10 +18,11 @@ import {
   serializeShiftEditRequest,
 } from '../lib/timesheet-shift-edits';
 import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
-import { formatWeekLabel } from '../lib/timesheet';
+import { formatWeekLabel, formatWorkDate } from '../lib/timesheet';
 import { pauseButtonClasses, shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { canUseTimesheet } from '../lib/timesheet-access';
 import { isOnBreak } from '../lib/timesheet-breaks';
+import { resolveTimesheetPeriod } from '../lib/timesheet-periods';
 
 export const prerender = false;
 
@@ -36,7 +38,16 @@ const resumed = Astro.url.searchParams.get('resumed') === '1';
 const backlogSent = Astro.url.searchParams.get('backlog') === '1';
 const shiftEditSent = Astro.url.searchParams.get('shiftEdit') === '1';
 
-const summary = await getTimesheetSummary(employee.id);
+const logPeriodParams = Astro.url.searchParams.has('period')
+  ? Astro.url.searchParams
+  : new URLSearchParams('period=this_month');
+const logPeriod = resolveTimesheetPeriod(logPeriodParams);
+
+const summary = await getTimesheetSummary(employee.id, {
+  logStart: logPeriod.start,
+  logEnd: logPeriod.end,
+  logLimit: 200,
+});
 const categoryLookup = await getWorkCategoryLookup();
 const workCategories = categoryLookup.list();
 const pendingEditShiftIds = await listPendingShiftEditShiftIds(employee.id);
@@ -52,6 +63,7 @@ const serialized = serializeTimesheetSummary(summary, { pendingEditShiftIds, cat
 const activeShift = summary.activeShift;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
+const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} – ${formatWorkDate(logPeriod.end, { weekday: false })}`;
 ---
 
 <PortalLayout title="Timesheet" wide>
@@ -77,6 +89,8 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
     data-work-categories={JSON.stringify(workCategories)}
     data-backlog-requests={JSON.stringify(pendingBacklogRequests)}
     data-shift-edit-requests={JSON.stringify(pendingShiftEditRequests)}
+    data-log-start={logPeriod.start}
+    data-log-end={logPeriod.end}
   >
     {
       error ? (
@@ -198,14 +212,18 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
         </div>
       </div>
 
-      <div class="mt-8">
+      <div class="mt-8" id="shift-log">
         <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
         <p class="mt-1 text-sm text-sage-dark/65">
-          Recent shifts and approved backlog. On a finished shift, use Edit times to correct clock-in or clock-out for approval.
+          Filter by timeframe, then use Edit times on a finished shift to correct clock-in or clock-out for approval.
+        </p>
+        <TimesheetPeriodPicker period={logPeriod} action="/timesheet#shift-log" class="mt-3" />
+        <p class="mt-2 text-sm text-sage-dark/65" data-timesheet-log-period>
+          {logPeriodLabel}
         </p>
         <div class="mt-4 max-h-[28rem] overflow-y-auto overscroll-auto rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
           <p class="hidden px-2 py-6 text-center text-sm text-sage-dark/65" data-timesheet-empty>
-            No shifts logged yet.
+            No shifts in this period.
           </p>
           <ul class="space-y-3" data-timesheet-list>
             {
@@ -421,7 +439,14 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
       onBreak?: boolean;
       breaks?: Array<{ startedAt: number; endedAt: number | null }>;
     } | null;
-    const entries = (summary.entries as Array<Record<string, unknown>>) ?? [];
+    const logStart = root.dataset.logStart || '';
+    const logEnd = root.dataset.logEnd || '';
+    const entries = ((summary.entries as Array<Record<string, unknown>>) ?? []).filter((entry) => {
+      const workDate = String(entry.workDate ?? '');
+      if (logStart && workDate && workDate < logStart) return false;
+      if (logEnd && workDate && workDate > logEnd) return false;
+      return true;
+    });
 
     if (weekTotal && week.totalLabel) weekTotal.textContent = week.totalLabel;
     if (averageTotal && summary.weeklyAverageLabel) {

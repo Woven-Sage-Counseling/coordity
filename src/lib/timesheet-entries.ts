@@ -340,12 +340,19 @@ export async function getTimesheetPeriodStats(
   };
 }
 
-export async function getTimesheetSummary(userId: string): Promise<TimesheetSummary> {
+export async function getTimesheetSummary(
+  userId: string,
+  options: { logStart?: string; logEnd?: string; logLimit?: number } = {},
+): Promise<TimesheetSummary> {
   const [activeShiftRaw, weekRaw, weeklyAverageMinutes, entriesRaw] = await Promise.all([
     getActiveShift(userId),
     getWeekSummary(userId),
     getWeeklyAverageMinutes(userId),
-    listTimesheetShiftsForUser(userId, { limit: 100 }),
+    listTimesheetShiftsForUser(userId, {
+      start: options.logStart,
+      end: options.logEnd,
+      limit: options.logLimit ?? 100,
+    }),
   ]);
 
   const unique = new Map<string, TimesheetShift>();
