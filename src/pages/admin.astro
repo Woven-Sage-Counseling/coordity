@@ -508,11 +508,140 @@ const adminNav: AdminNavSection[] = [
 <PortalLayout title="Admin" flush>
   <div class="flex min-h-0 flex-1" data-admin-shell>
     <aside
-      class="flex w-[min(100%,288px)] shrink-0 flex-col overflow-hidden border-r border-sage-dark/10 bg-white/95 transition-[width] duration-200 ease-out sm:w-72 data-[collapsed=true]:w-12"
+      class="flex w-[min(100%,288px)] shrink-0 flex-col overflow-hidden border-r border-sage-dark/10 bg-white/95 transition-[width] duration-200 ease-out sm:w-72 data-[collapsed=true]:w-14"
       data-admin-menu
       aria-label="Admin sections"
     >
-      <div class="flex shrink-0 items-center justify-center border-b border-sage-dark/10 px-1.5 py-1.5 data-[collapsed=false]:justify-end">
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-2 py-3"
+        id="admin-menu-nav"
+        data-admin-menu-body
+      >
+        {
+          adminNav.map((section) => (
+            <div class="mb-4 last:mb-1">
+              <p class="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
+                {section.label}
+              </p>
+              <div class="space-y-0.5">
+                {section.groups.map((group) => (
+                  <details class="group" data-admin-group={group.id}>
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition hover:bg-sage/10 [&::-webkit-details-marker]:hidden">
+                      <span>{group.label}</span>
+                      <span class="text-sage-dark/40" set:html={menuChevron} />
+                    </summary>
+                    <div class="mt-0.5 space-y-0.5 pb-1 pl-0.5">
+                      {group.items.map((item) => {
+                        const badge =
+                          item.badge && item.badge > 0 ? (
+                            <span
+                              class:list={[
+                                'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none text-white',
+                                item.badgeTone === 'amber' ? 'bg-amber-500' : 'bg-red-600',
+                              ]}
+                            >
+                              {item.badge > 9 ? '9+' : item.badge}
+                            </span>
+                          ) : null;
+                        const body = (
+                          <>
+                            <span
+                              class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
+                              set:html={item.icon}
+                            />
+                            <span class="min-w-0 flex-1">
+                              <span class="flex items-center gap-2">
+                                <span class="block text-sm font-semibold text-charcoal">{item.label}</span>
+                                {badge}
+                              </span>
+                              <span class="mt-0.5 block text-xs leading-snug text-sage-dark/55">
+                                {item.description}
+                              </span>
+                            </span>
+                          </>
+                        );
+                        if (item.href) {
+                          return (
+                            <a
+                              href={item.href}
+                              class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10"
+                            >
+                              {body}
+                            </a>
+                          );
+                        }
+                        return (
+                          <button
+                            type="button"
+                            class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/20"
+                            data-admin-open={item.id}
+                            data-admin-group-id={group.id}
+                          >
+                            {body}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      <div
+        class="hidden min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto px-1.5 py-3"
+        data-admin-menu-icons
+        aria-label="Admin shortcuts"
+        aria-hidden="true"
+      >
+        {
+          adminNav.flatMap((section) =>
+            section.groups.flatMap((group) =>
+              group.items.map((item) => {
+                const badgeDot =
+                  item.badge && item.badge > 0 ? (
+                    <span
+                      class:list={[
+                        'absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ring-2 ring-white',
+                        item.badgeTone === 'amber' ? 'bg-amber-500' : 'bg-red-600',
+                      ]}
+                    />
+                  ) : null;
+                if (item.href) {
+                  return (
+                    <a
+                      href={item.href}
+                      class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15"
+                      title={item.label}
+                      aria-label={item.label}
+                    >
+                      <span class="inline-flex" set:html={item.icon} />
+                      {badgeDot}
+                    </a>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15 data-[active=true]:bg-sage/25 data-[active=true]:text-charcoal"
+                    title={item.label}
+                    aria-label={item.label}
+                    data-admin-open={item.id}
+                    data-admin-group-id={group.id}
+                  >
+                    <span class="inline-flex" set:html={item.icon} />
+                    {badgeDot}
+                  </button>
+                );
+              }),
+            ),
+          )
+        }
+      </div>
+
+      <div class="mt-auto flex shrink-0 items-center justify-end border-t border-sage-dark/10 px-1.5 py-1.5">
         <button
           type="button"
           class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sage-dark/70 transition hover:bg-sage/15 hover:text-charcoal"
@@ -539,79 +668,6 @@ const adminNav: AdminNavSection[] = [
           </svg>
           <span class="sr-only" data-admin-menu-toggle-label>Collapse menu</span>
         </button>
-      </div>
-      <div class="min-h-0 flex-1 overflow-y-auto px-2 py-3 data-[collapsed=true]:pointer-events-none data-[collapsed=true]:opacity-0" id="admin-menu-nav" data-admin-menu-body>
-      {
-        adminNav.map((section) => (
-          <div class="mb-4 last:mb-1">
-            <p class="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-dark/45">
-              {section.label}
-            </p>
-            <div class="space-y-0.5">
-              {section.groups.map((group) => (
-                <details class="group" data-admin-group={group.id}>
-                  <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition hover:bg-sage/10 [&::-webkit-details-marker]:hidden">
-                    <span>{group.label}</span>
-                    <span class="text-sage-dark/40" set:html={menuChevron} />
-                  </summary>
-                  <div class="mt-0.5 space-y-0.5 pb-1 pl-0.5">
-                    {group.items.map((item) => {
-                      const badge =
-                        item.badge && item.badge > 0 ? (
-                          <span
-                            class:list={[
-                              'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none text-white',
-                              item.badgeTone === 'amber' ? 'bg-amber-500' : 'bg-red-600',
-                            ]}
-                          >
-                            {item.badge > 9 ? '9+' : item.badge}
-                          </span>
-                        ) : null;
-                      const body = (
-                        <>
-                          <span
-                            class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
-                            set:html={item.icon}
-                          />
-                          <span class="min-w-0 flex-1">
-                            <span class="flex items-center gap-2">
-                              <span class="block text-sm font-semibold text-charcoal">{item.label}</span>
-                              {badge}
-                            </span>
-                            <span class="mt-0.5 block text-xs leading-snug text-sage-dark/55">
-                              {item.description}
-                            </span>
-                          </span>
-                        </>
-                      );
-                      if (item.href) {
-                        return (
-                          <a
-                            href={item.href}
-                            class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10"
-                          >
-                            {body}
-                          </a>
-                        );
-                      }
-                      return (
-                        <button
-                          type="button"
-                          class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/20"
-                          data-admin-open={item.id}
-                          data-admin-group-id={group.id}
-                        >
-                          {body}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        ))
-      }
       </div>
     </aside>
 
@@ -1548,9 +1604,11 @@ const adminNav: AdminNavSection[] = [
     const empty = shell.querySelector('[data-admin-empty]');
     const menu = shell.querySelector('[data-admin-menu]');
     const menuBody = shell.querySelector('[data-admin-menu-body]');
+    const menuIcons = shell.querySelector('[data-admin-menu-icons]');
     const menuToggle = shell.querySelector('[data-admin-menu-toggle]');
     const menuToggleIcon = shell.querySelector('[data-admin-menu-toggle-icon]');
     const menuToggleLabel = shell.querySelector('[data-admin-menu-toggle-label]');
+    const menuToggleRow = menuToggle?.parentElement ?? null;
     const panels = Array.from(shell.querySelectorAll('[data-admin-panel]')).filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     );
@@ -1559,16 +1617,24 @@ const adminNav: AdminNavSection[] = [
     );
 
     const MENU_COLLAPSE_KEY = 'portal:admin-menu-collapsed';
-    const menuToggleRow = menu instanceof HTMLElement ? menu.querySelector(':scope > div') : null;
     const setMenuCollapsed = (collapsed: boolean) => {
       if (!(menu instanceof HTMLElement)) return;
       menu.dataset.collapsed = collapsed ? 'true' : 'false';
-      if (menuToggleRow instanceof HTMLElement) {
-        menuToggleRow.dataset.collapsed = collapsed ? 'true' : 'false';
-      }
       if (menuBody instanceof HTMLElement) {
         menuBody.dataset.collapsed = collapsed ? 'true' : 'false';
+        menuBody.classList.toggle('hidden', collapsed);
         menuBody.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+      }
+      if (menuIcons instanceof HTMLElement) {
+        menuIcons.dataset.collapsed = collapsed ? 'true' : 'false';
+        menuIcons.classList.toggle('hidden', !collapsed);
+        menuIcons.classList.toggle('flex', collapsed);
+        menuIcons.setAttribute('aria-hidden', collapsed ? 'false' : 'true');
+      }
+      if (menuToggleRow instanceof HTMLElement) {
+        menuToggleRow.dataset.collapsed = collapsed ? 'true' : 'false';
+        menuToggleRow.classList.toggle('justify-center', collapsed);
+        menuToggleRow.classList.toggle('justify-end', !collapsed);
       }
       if (menuToggle instanceof HTMLButtonElement) {
         menuToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
