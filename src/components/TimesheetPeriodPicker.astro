@@ -29,7 +29,7 @@ const showDates = period.id === 'custom';
       <select
         name="period"
         aria-label="Timeframe"
-        class="field !mt-0 !py-1.5 !text-sm max-w-[11rem]"
+        class="field !mt-0 !h-8 !min-h-0 !w-auto !max-w-[9.5rem] !py-0 !pl-2 !pr-7 !text-xs"
         onchange="const custom = this.value === 'custom'; const start = this.form.elements.namedItem('start'); const end = this.form.elements.namedItem('end'); const dates = this.form.querySelector('[data-custom-dates]'); if (start) start.disabled = !custom; if (end) end.disabled = !custom; if (dates) dates.classList.toggle('hidden', !custom); if (!custom) this.form.submit();"
       >
         {
@@ -78,23 +78,21 @@ const showDates = period.id === 'custom';
       compact ? (
         <>
           <input
-            class="field !mt-0 !py-1.5 !text-sm"
-            type="date"
-            name="start"
+            class="field !mt-0 !h-8 !min-h-0 !py-0 !px-2 !text-xs"
             aria-label="From"
             value={period.start}
             disabled={!showDates}
           />
           <span class="text-xs text-sage-dark/45">to</span>
           <input
-            class="field !mt-0 !py-1.5 !text-sm"
+            class="field !mt-0 !h-8 !min-h-0 !py-0 !px-2 !text-xs"
             type="date"
             name="end"
             aria-label="To"
             value={period.end}
             disabled={!showDates}
           />
-          <button class="btn-secondary !px-3 !py-1.5 !text-sm" type="submit">
+          <button class="btn-secondary !h-8 !px-2.5 !py-0 !text-xs" type="submit">
             Apply
           </button>
         </>
