@@ -19,14 +19,14 @@ const endParts = easternClockParts(endedAt);
   hasPendingEdit ? (
     <span class="text-xs font-semibold uppercase tracking-wide text-amber-800">Edit pending</span>
   ) : (
-    <details class="group relative inline-block">
+    <details class="contents">
       <summary class="inline-flex cursor-pointer list-none items-center rounded-lg border border-sage-dark/15 bg-white px-2.5 py-1 text-xs font-medium text-sage-dark transition hover:border-sage-dark/30 hover:bg-sage/10 hover:text-charcoal [&::-webkit-details-marker]:hidden">
         Edit times
       </summary>
       <form
         method="post"
         action="/api/timesheet/shift-edit"
-        class="absolute left-0 top-[calc(100%+0.5rem)] z-20 w-[min(22rem,calc(100vw-3rem))] rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4 shadow-lg sm:left-auto sm:right-0"
+        class="col-span-2 w-full max-w-lg rounded-xl border border-sage-dark/10 bg-[#fafbf9] p-4"
         data-timesheet-shift-edit-form
       >
         <input type="hidden" name="returnTo" value="/timesheet" />
