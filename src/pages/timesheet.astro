@@ -200,7 +200,9 @@ const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
 
       <div class="mt-8">
         <h2 class="text-sm font-semibold text-charcoal">Shift log</h2>
-        <p class="mt-1 text-sm text-sage-dark/65">Scroll through your recent shifts and approved backlog entries.</p>
+        <p class="mt-1 text-sm text-sage-dark/65">
+          Recent shifts and approved backlog. On a finished shift, use Edit times to correct clock-in or clock-out for approval.
+        </p>
         <div class="mt-4 max-h-[28rem] overflow-y-auto overscroll-auto rounded-2xl border border-sage-dark/10 bg-white/80 p-3 shadow-sm">
           <p class="hidden px-2 py-6 text-center text-sm text-sage-dark/65" data-timesheet-empty>
             No shifts logged yet.
