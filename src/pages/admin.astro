@@ -97,6 +97,15 @@ const brandAccentDark = organization?.accentColorDark ?? '#8A9E86';
 const brandAccentTextDark = organization?.accentTextColorDark ?? brandAccentDark;
 const brandWidgetHeaderDark = organization?.widgetHeaderColorDark ?? '#535F51';
 const brandWidgetBgDark = organization?.widgetBgColorDark ?? '#252925';
+
+function brandColorParts(value: string): { opaque: string; alpha: number; full: string } {
+  const match = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(value.trim());
+  if (!match) return { opaque: '#000000', alpha: 100, full: '#000000' };
+  const opaque = `#${match[1].toUpperCase()}`;
+  if (!match[2] || match[2].toUpperCase() === 'FF') return { opaque, alpha: 100, full: opaque };
+  const alpha = Math.round((Number.parseInt(match[2], 16) / 255) * 100);
+  return { opaque, alpha, full: `${opaque}${match[2].toUpperCase()}` };
+}
 const brandInvertLogoDark = Boolean(organization?.invertLogoDark);
 
 async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
@@ -1446,50 +1455,68 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">{swatch.title}</h4>
                   <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
                     <div class="grid gap-4 sm:grid-cols-2">
-                      {fields.map(([key, label, value]) => (
-                        <label class="block text-sm font-medium text-charcoal">
-                          {label}
-                          <span class="mt-1.5 flex items-center gap-2">
-                            <input
-                              class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
-                              type="color"
-                              name={`${key}${suffix}`}
-                              value={value}
-                              data-brand-color={`${key}${suffix}`}
-                            />
-                            <input
-                              class="field mt-0"
-                              type="text"
-                              value={value}
-                              maxlength="7"
-                              data-brand-hex={`${key}${suffix}`}
-                              aria-label={`${swatch.title} ${label} hex`}
-                            />
-                          </span>
-                        </label>
-                      ))}
+                      {fields.map(([key, label, value]) => {
+                        const color = brandColorParts(value);
+                        const id = `${key}${suffix}`;
+                        return (
+                          <label class="block text-sm font-medium text-charcoal">
+                            {label}
+                            <span class="mt-1.5 flex items-center gap-2">
+                              <input
+                                class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                                type="color"
+                                value={color.opaque}
+                                data-brand-color={id}
+                              />
+                              <input
+                                class="field mt-0"
+                                type="text"
+                                value={color.opaque}
+                                maxlength="7"
+                                data-brand-hex={id}
+                                aria-label={`${swatch.title} ${label} hex`}
+                              />
+                              <input type="hidden" name={id} value={color.full} data-brand-value={id} />
+                            </span>
+                            <span class="mt-1.5 flex items-center gap-2">
+                              <input
+                                class="h-1.5 w-full cursor-pointer accent-sage-dark"
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={color.alpha}
+                                data-brand-alpha={id}
+                                aria-label={`${swatch.title} ${label} transparency`}
+                              />
+                              <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>
+                                {color.alpha}%
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
                     </div>
                     <div
                       class:list={[
-                        'rounded-xl border px-3 py-3',
+                        'brand-alpha-swatch rounded-xl border px-3 py-3',
                         swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
                       ]}
                       data-brand-preview={swatch.mode}
-                      style={`background:${swatch.bg}`}
+                      style={`background-color:${swatch.bg}`}
                     >
                       <p class="font-display text-lg leading-tight" data-brand-preview-heading={swatch.mode} style={`color:${swatch.text}`}>Welcome back</p>
                       <p class="mt-1 text-sm leading-snug" data-brand-preview-body={swatch.mode} style={`color:${swatch.text}`}>Your workspace, in your colors.</p>
                       <div
-                        class="mt-3 rounded-lg border border-black/10 px-3 py-2.5"
+                        class="brand-alpha-swatch mt-3 rounded-lg border border-black/10 px-3 py-2.5"
                         data-brand-preview-card={swatch.mode}
-                        style={`background:${swatch.surface}`}
+                        style={`background-color:${swatch.surface}`}
                       >
                         <p class="text-sm font-semibold" data-brand-preview-card-title={swatch.mode} style={`color:${swatch.text}`}>Today</p>
                         <p class="mt-0.5 text-xs" data-brand-preview-muted={swatch.mode} style={`color:${swatch.text};opacity:.65`}>On a card</p>
                         <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background:${swatch.primary};color:${swatch.primaryText}`}>Save</span>
+                          <span class="brand-alpha-swatch inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText}`}>Save</span>
                           <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText}`}>Details</span>
-                          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip={swatch.mode} style={`background:color-mix(in srgb, ${swatch.accent} ${swatch.chipMix}%, transparent);color:${swatch.accentText}`}>Tag</span>
+                          <span class="brand-alpha-swatch inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip={swatch.mode} style={`background-color:color-mix(in srgb, ${swatch.accent} ${swatch.chipMix}%, transparent);color:${swatch.accentText}`}>Tag</span>
                         </div>
                       </div>
                     </div>
@@ -1529,33 +1556,51 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     <div>
                       <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-sage-dark/45">{swatch.title}</p>
                       <div class="grid gap-4 sm:grid-cols-2">
-                        {fields.map(([key, label, value]) => (
-                          <label class="block text-sm font-medium text-charcoal">
-                            {label}
-                            <span class="mt-1.5 flex items-center gap-2">
-                              <input
-                                class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
-                                type="color"
-                                name={`${key}${suffix}`}
-                                value={value}
-                                data-brand-color={`${key}${suffix}`}
-                              />
-                              <input
-                                class="field mt-0"
-                                type="text"
-                                value={value}
-                                maxlength="7"
-                                data-brand-hex={`${key}${suffix}`}
-                                aria-label={`${swatch.title} widget ${label} hex`}
-                              />
-                            </span>
-                          </label>
-                        ))}
+                        {fields.map(([key, label, value]) => {
+                          const color = brandColorParts(value);
+                          const id = `${key}${suffix}`;
+                          return (
+                            <label class="block text-sm font-medium text-charcoal">
+                              {label}
+                              <span class="mt-1.5 flex items-center gap-2">
+                                <input
+                                  class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                                  type="color"
+                                  value={color.opaque}
+                                  data-brand-color={id}
+                                />
+                                <input
+                                  class="field mt-0"
+                                  type="text"
+                                  value={color.opaque}
+                                  maxlength="7"
+                                  data-brand-hex={id}
+                                  aria-label={`${swatch.title} widget ${label} hex`}
+                                />
+                                <input type="hidden" name={id} value={color.full} data-brand-value={id} />
+                              </span>
+                              <span class="mt-1.5 flex items-center gap-2">
+                                <input
+                                  class="h-1.5 w-full cursor-pointer accent-sage-dark"
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={color.alpha}
+                                  data-brand-alpha={id}
+                                  aria-label={`${swatch.title} widget ${label} transparency`}
+                                />
+                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>
+                                  {color.alpha}%
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
-                      <div class="px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background:${swatch.header};color:#F7F4EE`}>Calendar</div>
-                      <div class="px-3 py-3 text-xs" data-brand-preview-widget-body={swatch.mode} style={`background:${swatch.background};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>Thursday · 2:00</div>
+                    <div class="brand-alpha-swatch overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
+                      <div class="px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>Calendar</div>
+                      <div class="px-3 py-3 text-xs" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>Thursday · 2:00</div>
                     </div>
                   </div>
                 );
@@ -1898,6 +1943,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
     ];
 
     const readColor = (key: string) => {
+      const stored = brandingForm.querySelector(`[data-brand-value="${key}"]`);
+      if (stored instanceof HTMLInputElement && stored.value) return stored.value;
       const input = brandingForm.querySelector(`[data-brand-color="${key}"]`);
       return input instanceof HTMLInputElement ? input.value : '';
     };
@@ -1914,7 +1961,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const widgetHeader = readColor(`widgetHeaderColor${suffix}`);
       const widgetBg = readColor(`widgetBgColor${suffix}`);
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
-      if (preview instanceof HTMLElement) preview.style.background = bg;
+      if (preview instanceof HTMLElement) preview.style.backgroundColor = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
         const el = brandingForm.querySelector(`[data-brand-preview-${role}="${mode}"]`);
         if (el instanceof HTMLElement) apply(el);
@@ -1929,7 +1976,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.color = text;
       });
       paint('primary', (el) => {
-        el.style.background = primary;
+        el.style.backgroundColor = primary;
         el.style.color = primaryText;
       });
       paint('accent', (el) => {
@@ -1937,17 +1984,17 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.color = accentText;
       });
       paint('chip', (el) => {
-        el.style.background = `color-mix(in srgb, ${accent} ${mode === 'dark' ? 22 : 18}%, transparent)`;
+        el.style.backgroundColor = `color-mix(in srgb, ${accent} ${mode === 'dark' ? 22 : 18}%, transparent)`;
         el.style.color = accentText;
       });
       paint('card', (el) => {
-        el.style.background = surface;
+        el.style.backgroundColor = surface;
       });
       paint('card-title', (el) => {
         el.style.color = text;
       });
       const headerFg = (() => {
-        const match = /^#?([0-9a-fA-F]{6})$/.exec(widgetHeader.trim());
+        const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec(widgetHeader.trim());
         if (!match) return '#F7F4EE';
         const hex = match[1];
         const r = parseInt(hex.slice(0, 2), 16);
@@ -1956,17 +2003,20 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.58 ? '#393A3D' : '#F7F4EE';
       })();
       paint('widget-header', (el) => {
-        el.style.background = widgetHeader;
+        el.style.backgroundColor = widgetHeader;
         el.style.color = headerFg;
       });
       paint('widget-body', (el) => {
-        el.style.background = widgetBg;
+        el.style.backgroundColor = widgetBg;
       });
     };
 
     const syncPair = (key: string, fromColor: boolean) => {
       const colorInput = brandingForm.querySelector(`[data-brand-color="${key}"]`);
       const hexInput = brandingForm.querySelector(`[data-brand-hex="${key}"]`);
+      const alphaInput = brandingForm.querySelector(`[data-brand-alpha="${key}"]`);
+      const stored = brandingForm.querySelector(`[data-brand-value="${key}"]`);
+      const alphaLabel = brandingForm.querySelector(`[data-brand-alpha-label="${key}"]`);
       if (!(colorInput instanceof HTMLInputElement) || !(hexInput instanceof HTMLInputElement)) return;
       if (fromColor) {
         hexInput.value = colorInput.value.toUpperCase();
@@ -1978,21 +2028,35 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           hexInput.value = next.toUpperCase();
         }
       }
+      const percent = alphaInput instanceof HTMLInputElement ? Number(alphaInput.value) : 100;
+      const clamped = Number.isFinite(percent) ? Math.max(0, Math.min(100, Math.round(percent))) : 100;
+      if (alphaLabel instanceof HTMLElement) alphaLabel.textContent = `${clamped}%`;
+      const opaque = /^#[0-9A-Fa-f]{6}$/.test(colorInput.value) ? colorInput.value.toUpperCase() : hexInput.value.toUpperCase();
+      const alphaByte = Math.round((clamped / 100) * 255).toString(16).padStart(2, '0').toUpperCase();
+      const full = clamped >= 100 ? opaque : `${opaque}${alphaByte}`;
+      if (stored instanceof HTMLInputElement) stored.value = full;
       paintPreview(key.endsWith('Dark') ? 'dark' : 'light');
     };
 
     colorKeys.forEach((key) => {
       const colorInput = brandingForm.querySelector(`[data-brand-color="${key}"]`);
       const hexInput = brandingForm.querySelector(`[data-brand-hex="${key}"]`);
+      const alphaInput = brandingForm.querySelector(`[data-brand-alpha="${key}"]`);
       colorInput?.addEventListener('input', () => syncPair(key, true));
       hexInput?.addEventListener('change', () => syncPair(key, false));
+      alphaInput?.addEventListener('input', () => syncPair(key, true));
     });
 
     const hexChannels = (value: string | null | undefined) => {
-      const match = /^#?([0-9a-fA-F]{6})$/.exec((value ?? '').trim());
+      const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((value ?? '').trim());
       if (!match) return null;
       const hex = match[1];
       return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+    };
+    const hexAlpha = (value: string | null | undefined) => {
+      const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((value ?? '').trim());
+      if (!match?.[2] || match[2].toUpperCase() === 'FF') return '1';
+      return String(Math.round((parseInt(match[2], 16) / 255) * 1000) / 1000);
     };
     const applySavedBrandColors = (branding: {
       bgColorLight?: string | null;
@@ -2015,12 +2079,13 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       widgetBgColorDark?: string | null;
     }) => {
       const onHeader = (hex: string | null | undefined, fallback: string) => {
-        const match = /^#?([0-9a-fA-F]{6})$/.exec((hex ?? '').trim());
-        const value = match ? `#${match[1].toUpperCase()}` : fallback;
-        const channels = match ? match[1] : fallback.slice(1);
-        const r = parseInt(channels.slice(0, 2), 16);
-        const g = parseInt(channels.slice(2, 4), 16);
-        const b = parseInt(channels.slice(4, 6), 16);
+        const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((hex ?? '').trim());
+        const rgb = (match ? match[1] : fallback.slice(1, 7)).toUpperCase();
+        const aa = match?.[2]?.toUpperCase();
+        const value = !aa || aa === 'FF' ? `#${rgb}` : `#${rgb}${aa}`;
+        const r = parseInt(rgb.slice(0, 2), 16);
+        const g = parseInt(rgb.slice(2, 4), 16);
+        const b = parseInt(rgb.slice(4, 6), 16);
         const fg = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.58 ? '#393A3D' : '#F7F4EE';
         return { value, fg };
       };
@@ -2036,8 +2101,18 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         widgetHeader: string,
         widgetHeaderFg: string,
         widgetBg: string,
+        alphas: {
+          bg: string;
+          surface: string;
+          text: string;
+          primary: string;
+          primaryText: string;
+          accent: string;
+          accentText: string;
+          widgetBg: string;
+        },
       ) =>
-        `${selector}{--portal-cream:${bg} !important;--portal-surface:${surface} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-on-primary:${primaryText} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;--portal-on-accent:${accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;}`;
+        `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;}`;
       const lightBg = hexChannels(branding.bgColorLight) ?? '247 244 238';
       const lightSurface = hexChannels(branding.surfaceColorLight) ?? '255 255 255';
       const lightText = hexChannels(branding.textColorLight) ?? hexChannels(branding.primaryColorLight) ?? '83 95 81';
@@ -2063,8 +2138,26 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         document.head.appendChild(style);
       }
       style.textContent =
-        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg) +
-        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg);
+        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg, {
+          bg: hexAlpha(branding.bgColorLight),
+          surface: hexAlpha(branding.surfaceColorLight),
+          text: hexAlpha(branding.textColorLight),
+          primary: hexAlpha(branding.primaryColorLight),
+          primaryText: hexAlpha(branding.primaryTextColorLight),
+          accent: hexAlpha(branding.accentColorLight),
+          accentText: hexAlpha(branding.accentTextColorLight),
+          widgetBg: hexAlpha(branding.widgetBgColorLight),
+        }) +
+        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg, {
+          bg: hexAlpha(branding.bgColorDark),
+          surface: hexAlpha(branding.surfaceColorDark),
+          text: hexAlpha(branding.textColorDark),
+          primary: hexAlpha(branding.primaryColorDark),
+          primaryText: hexAlpha(branding.primaryTextColorDark),
+          accent: hexAlpha(branding.accentColorDark),
+          accentText: hexAlpha(branding.accentTextColorDark),
+          widgetBg: hexAlpha(branding.widgetBgColorDark),
+        });
     };
 
     brandingForm.addEventListener('submit', async (event) => {

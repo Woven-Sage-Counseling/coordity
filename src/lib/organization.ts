@@ -353,19 +353,31 @@ export function normalizeHexColor(input: string | null | undefined): string | nu
   if (!input) return null;
   const raw = input.trim();
   const withHash = raw.startsWith('#') ? raw : `#${raw}`;
-  if (!/^#[0-9A-Fa-f]{6}$/.test(withHash)) return null;
-  return withHash.toUpperCase();
+  const match = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(withHash);
+  if (!match) return null;
+  const rgb = match[1].toUpperCase();
+  const alpha = match[2]?.toUpperCase();
+  if (!alpha || alpha === 'FF') return `#${rgb}`;
+  return `#${rgb}${alpha}`;
 }
 
-/** Convert #RRGGBB to space-separated RGB channels for CSS `rgb(var(--token))`. */
+/** Convert #RRGGBB or #RRGGBBAA to space-separated RGB channels for CSS `rgb(var(--token))`. */
 export function hexToRgbChannels(hex: string): string | null {
   const normalized = normalizeHexColor(hex);
   if (!normalized) return null;
-  const value = normalized.slice(1);
+  const value = normalized.slice(1, 7);
   const r = Number.parseInt(value.slice(0, 2), 16);
   const g = Number.parseInt(value.slice(2, 4), 16);
   const b = Number.parseInt(value.slice(4, 6), 16);
   return `${r} ${g} ${b}`;
+}
+
+/** Alpha channel as a 0–1 CSS number. Opaque colors are `1`. */
+export function hexToAlpha(hex: string): string {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized || normalized.length < 9) return '1';
+  const byte = Number.parseInt(normalized.slice(7, 9), 16);
+  return String(Math.round((byte / 255) * 1000) / 1000);
 }
 
 async function fileToBase64(file: File): Promise<string> {

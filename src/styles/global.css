@@ -251,61 +251,75 @@ html.dark {
 
 /* Card panels use the brand surface in both themes. Dark mode keeps its own opacities below. */
 html .bg-white {
-  background-color: rgb(var(--portal-surface) / 1);
+  background-color: rgb(var(--portal-surface) / var(--portal-surface-a, 1));
 }
 html .bg-white\/95 {
-  background-color: rgb(var(--portal-surface) / 0.95);
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.95));
 }
 html .bg-white\/90 {
-  background-color: rgb(var(--portal-surface) / 0.9);
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.9));
 }
 html .bg-white\/80 {
-  background-color: rgb(var(--portal-surface) / 0.8);
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.8));
 }
 html .bg-white\/70 {
-  background-color: rgb(var(--portal-surface) / 0.7);
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.7));
 }
 html .bg-white\/60 {
-  background-color: rgb(var(--portal-surface) / 0.6);
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.6));
 }
 html .bg-white\/40 {
-  background-color: rgb(var(--portal-surface) / 0.4);
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.4));
 }
 html .hover\:bg-white:hover {
-  background-color: rgb(var(--portal-surface) / 1);
+  background-color: rgb(var(--portal-surface) / var(--portal-surface-a, 1));
 }
 
 .text-sage {
-  color: rgb(var(--portal-on-accent) / 1);
+  color: rgb(var(--portal-on-accent) / var(--portal-on-accent-a, 1));
+}
+
+.brand-alpha-swatch {
+  background-image:
+    linear-gradient(45deg, rgb(0 0 0 / 0.07) 25%, transparent 25%),
+    linear-gradient(-45deg, rgb(0 0 0 / 0.07) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgb(0 0 0 / 0.07) 75%),
+    linear-gradient(-45deg, transparent 75%, rgb(0 0 0 / 0.07) 75%);
+  background-size: 12px 12px;
+  background-position:
+    0 0,
+    0 6px,
+    6px -6px,
+    -6px 0;
 }
 
 /* Remap common light-only utilities used across portal pages */
 html.dark .bg-white {
-  background-color: rgb(var(--portal-surface) / 1) !important;
+  background-color: rgb(var(--portal-surface) / var(--portal-surface-a, 1)) !important;
 }
 html.dark .bg-white\/95 {
-  background-color: rgb(var(--portal-surface) / 0.96) !important;
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.96)) !important;
 }
 html.dark .bg-white\/90 {
-  background-color: rgb(var(--portal-surface) / 0.92) !important;
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.92)) !important;
 }
 html.dark .bg-white\/80 {
-  background-color: rgb(var(--portal-surface) / 0.88) !important;
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.88)) !important;
 }
 html.dark .bg-white\/70 {
-  background-color: rgb(var(--portal-surface) / 0.78) !important;
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.78)) !important;
 }
 html.dark .bg-white\/60 {
-  background-color: rgb(var(--portal-surface) / 0.68) !important;
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.68)) !important;
 }
 html.dark .bg-white\/40 {
-  background-color: rgb(var(--portal-surface) / 0.45) !important;
+  background-color: rgb(var(--portal-surface) / calc(var(--portal-surface-a, 1) * 0.45)) !important;
 }
 html.dark .bg-white\/15 {
   background-color: rgb(255 255 255 / 0.1) !important;
 }
 html.dark .hover\:bg-white:hover {
-  background-color: rgb(var(--portal-surface) / 1) !important;
+  background-color: rgb(var(--portal-surface) / var(--portal-surface-a, 1)) !important;
 }
 html.dark .hover\:bg-red-50:hover {
   background-color: rgb(127 29 29 / 0.18) !important;
@@ -484,7 +498,7 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   color: rgb(var(--portal-charcoal) / 1) !important;
-  background-color: rgb(var(--portal-widget-bg, var(--portal-muted)) / 1) !important;
+  background-color: rgb(var(--portal-widget-bg, var(--portal-muted)) / var(--portal-widget-bg-a, 1)) !important;
   opacity: 1 !important;
   visibility: visible !important;
 }

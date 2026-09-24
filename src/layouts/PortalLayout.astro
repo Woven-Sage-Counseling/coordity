@@ -7,6 +7,7 @@ import { getEnv } from '../lib/env';
 import { countUnreadMessages } from '../lib/messages';
 import {
   DEFAULT_ORG_COLORS,
+  hexToAlpha,
   hexToRgbChannels,
 } from '../lib/organization';
 import { widgetHeaderForeground } from '../lib/home-widget-header';
@@ -77,14 +78,68 @@ function brandBlock(
   widgetHeader: string,
   widgetHeaderFg: string,
   widgetBg: string,
+  alphas: {
+    bg: string;
+    surface: string;
+    text: string;
+    primary: string;
+    primaryText: string;
+    accent: string;
+    accentText: string;
+    widgetBg: string;
+  },
 ) {
-  return `${selector}{--portal-cream:${bg} !important;--portal-surface:${surface} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-on-primary:${primaryText} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;--portal-on-accent:${accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;}`;
+  return `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;}`;
 }
 // !important so these beat the default palette in global.css no matter which
 // stylesheet Astro injects last.
 const brandStyle =
-  brandBlock('html', lightBgRgb, lightSurfaceRgb, lightTextRgb, lightPrimaryRgb, lightPrimaryTextRgb, lightAccentRgb, lightAccentTextRgb, lightWidgetHeader, widgetHeaderForeground(lightWidgetHeader), lightWidgetBgRgb) +
-  brandBlock('html.dark', darkBgRgb, darkSurfaceRgb, darkTextRgb, darkPrimaryRgb, darkPrimaryTextRgb, darkAccentRgb, darkAccentTextRgb, darkWidgetHeader, widgetHeaderForeground(darkWidgetHeader), darkWidgetBgRgb);
+  brandBlock(
+    'html',
+    lightBgRgb,
+    lightSurfaceRgb,
+    lightTextRgb,
+    lightPrimaryRgb,
+    lightPrimaryTextRgb,
+    lightAccentRgb,
+    lightAccentTextRgb,
+    lightWidgetHeader,
+    widgetHeaderForeground(lightWidgetHeader),
+    lightWidgetBgRgb,
+    {
+      bg: hexToAlpha(lightBg),
+      surface: hexToAlpha(lightSurface),
+      text: hexToAlpha(lightText),
+      primary: hexToAlpha(lightPrimary),
+      primaryText: hexToAlpha(lightPrimaryText),
+      accent: hexToAlpha(lightAccent),
+      accentText: hexToAlpha(lightAccentText),
+      widgetBg: hexToAlpha(lightWidgetBg),
+    },
+  ) +
+  brandBlock(
+    'html.dark',
+    darkBgRgb,
+    darkSurfaceRgb,
+    darkTextRgb,
+    darkPrimaryRgb,
+    darkPrimaryTextRgb,
+    darkAccentRgb,
+    darkAccentTextRgb,
+    darkWidgetHeader,
+    widgetHeaderForeground(darkWidgetHeader),
+    darkWidgetBgRgb,
+    {
+      bg: hexToAlpha(darkBg),
+      surface: hexToAlpha(darkSurface),
+      text: hexToAlpha(darkText),
+      primary: hexToAlpha(darkPrimary),
+      primaryText: hexToAlpha(darkPrimaryText),
+      accent: hexToAlpha(darkAccent),
+      accentText: hexToAlpha(darkAccentText),
+      widgetBg: hexToAlpha(darkWidgetBg),
+    },
+  );
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active' && !flush;
