@@ -1429,10 +1429,33 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
 
         <div class="space-y-4 border-t border-sage-dark/10 pt-6">
           <h3 class="text-sm font-semibold text-charcoal">Colors</h3>
-          <p class="text-sm text-sage-dark/65">
-            Page background, cards, body text, filled buttons, and outline pills each have their own
-            color. Filled, outlined, and shadowed bubbles each have a bubble color, text color, and hover color. The sample sits a card on the page background.
-          </p>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-sage-dark/65">
+              Page, filled, outlined, and shadowed colors. Hover a bubble in the sample to see its hover color.
+            </p>
+            <div class="relative inline-grid grid-cols-2 rounded-full bg-sage-dark/10 p-1" data-brand-mode-switch>
+              <span
+                class="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-white shadow-[0_6px_16px_rgba(26,28,30,0.14)] ring-1 ring-black/5 transition-transform duration-200 ease-out"
+                data-brand-mode-bubble
+              ></span>
+              <button
+                type="button"
+                class="relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold text-charcoal"
+                data-brand-mode="light"
+                aria-pressed="true"
+              >
+                Light mode
+              </button>
+              <button
+                type="button"
+                class="relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold text-sage-dark/55"
+                data-brand-mode="dark"
+                aria-pressed="false"
+              >
+                Dark mode
+              </button>
+            </div>
+          </div>
 
           {
             [
@@ -1470,88 +1493,110 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               },
             ].map((swatch) => {
               const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
-              const fields = [
-                ['bgColor', 'Background', swatch.bg],
-                ['surfaceColor', 'Cards', swatch.surface],
-                ['textColor', 'Text', swatch.text],
-                ['primaryColor', 'Filled', swatch.primary],
-                ['primaryTextColor', 'Filled text', swatch.primaryText],
-                ['primaryHoverColor', 'Filled hover', swatch.primaryHover],
-                ['accentColor', 'Outlined', swatch.accent],
-                ['accentTextColor', 'Outlined text', swatch.accentText],
-                ['accentHoverColor', 'Outlined hover', swatch.accentHover],
-                ['shadowColor', 'Shadowed', swatch.shadow],
-                ['shadowTextColor', 'Shadowed text', swatch.shadowText],
-                ['shadowHoverColor', 'Shadowed hover', swatch.shadowHover],
+              const columns = [
+                {
+                  title: 'Page',
+                  fields: [
+                    ['bgColor', 'Background', swatch.bg],
+                    ['surfaceColor', 'Cards', swatch.surface],
+                    ['textColor', 'Text', swatch.text],
+                  ],
+                },
+                {
+                  title: 'Filled Buttons',
+                  fields: [
+                    ['primaryColor', 'Button', swatch.primary],
+                    ['primaryTextColor', 'Text', swatch.primaryText],
+                    ['primaryHoverColor', 'Hover', swatch.primaryHover],
+                  ],
+                },
+                {
+                  title: 'Outlined Buttons',
+                  fields: [
+                    ['accentColor', 'Button', swatch.accent],
+                    ['accentTextColor', 'Text', swatch.accentText],
+                    ['accentHoverColor', 'Hover', swatch.accentHover],
+                  ],
+                },
+                {
+                  title: 'Shadowed Buttons',
+                  fields: [
+                    ['shadowColor', 'Button', swatch.shadow],
+                    ['shadowTextColor', 'Text', swatch.shadowText],
+                    ['shadowHoverColor', 'Hover', swatch.shadowHover],
+                  ],
+                },
               ] as const;
               return (
-                <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
-                  <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">{swatch.title}</h4>
-                  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                      {fields.map(([key, label, value]) => {
-                        const color = brandColorParts(value);
-                        const id = `${key}${suffix}`;
-                        return (
-                          <label class="block text-sm font-medium text-charcoal">
-                            {label}
-                            <span class="mt-1.5 flex items-center gap-2">
-                              <input
-                                class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
-                                type="color"
-                                value={color.opaque}
-                                data-brand-color={id}
-                              />
-                              <input
-                                class="field mt-0"
-                                type="text"
-                                value={color.opaque}
-                                maxlength="7"
-                                data-brand-hex={id}
-                                aria-label={`${swatch.title} ${label} hex`}
-                              />
-                              <input type="hidden" name={id} value={color.full} data-brand-value={id} />
-                            </span>
-                            <span class="mt-1.5 flex items-center gap-2">
-                              <input
-                                class="h-1.5 w-full cursor-pointer accent-sage-dark"
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={color.alpha}
-                                data-brand-alpha={id}
-                                aria-label={`${swatch.title} ${label} transparency`}
-                              />
-                              <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>
-                                {color.alpha}%
+                <div class="space-y-4" data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
+                  <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                    {columns.map((column) => (
+                      <div class="space-y-4">
+                        <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
+                        {column.fields.map(([key, label, value]) => {
+                          const color = brandColorParts(value);
+                          const id = `${key}${suffix}`;
+                          return (
+                            <label class="block text-sm font-medium text-charcoal">
+                              {label}
+                              <span class="mt-1.5 flex items-center gap-2">
+                                <input
+                                  class="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                                  type="color"
+                                  value={color.opaque}
+                                  data-brand-color={id}
+                                />
+                                <input
+                                  class="field mt-0 min-w-0"
+                                  type="text"
+                                  value={color.opaque}
+                                  maxlength="7"
+                                  data-brand-hex={id}
+                                  aria-label={`${swatch.title} ${column.title} ${label} hex`}
+                                />
+                                <input type="hidden" name={id} value={color.full} data-brand-value={id} />
                               </span>
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                              <span class="mt-1.5 flex items-center gap-2">
+                                <input
+                                  class="h-1.5 w-full cursor-pointer accent-sage-dark"
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={color.alpha}
+                                  data-brand-alpha={id}
+                                  aria-label={`${swatch.title} ${column.title} ${label} transparency`}
+                                />
+                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>
+                                  {color.alpha}%
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                  <div
+                    class:list={[
+                      'max-w-sm rounded-xl border px-3 py-3',
+                      swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
+                    ]}
+                    data-brand-preview={swatch.mode}
+                    style={`background-color:${swatch.bg}`}
+                  >
+                    <p class="font-display text-lg leading-tight" data-brand-preview-heading={swatch.mode} style={`color:${swatch.text}`}>Welcome back</p>
+                    <p class="mt-1 text-sm leading-snug" data-brand-preview-body={swatch.mode} style={`color:${swatch.text}`}>Your workspace, in your colors.</p>
                     <div
-                      class:list={[
-                        'rounded-xl border px-3 py-3',
-                        swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
-                      ]}
-                      data-brand-preview={swatch.mode}
-                      style={`background-color:${swatch.bg}`}
+                      class="mt-3 rounded-lg border border-black/10 px-3 py-2.5"
+                      data-brand-preview-card={swatch.mode}
+                      style={`background-color:${swatch.surface}`}
                     >
-                      <p class="font-display text-lg leading-tight" data-brand-preview-heading={swatch.mode} style={`color:${swatch.text}`}>Welcome back</p>
-                      <p class="mt-1 text-sm leading-snug" data-brand-preview-body={swatch.mode} style={`color:${swatch.text}`}>Your workspace, in your colors.</p>
-                      <div
-                        class="mt-3 rounded-lg border border-black/10 px-3 py-2.5"
-                        data-brand-preview-card={swatch.mode}
-                        style={`background-color:${swatch.surface}`}
-                      >
-                        <p class="text-sm font-semibold" data-brand-preview-card-title={swatch.mode} style={`color:${swatch.text}`}>Today</p>
-                        <p class="mt-0.5 text-xs" data-brand-preview-muted={swatch.mode} style={`color:${swatch.text};opacity:.65`}>On a card</p>
-                        <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText};--brand-preview-hover:${swatch.primaryHover}`}>Filled</span>
-                          <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText};--brand-preview-hover:${swatch.accentHover}`}>Outlined</span>
-                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium shadow-sm" data-brand-preview-chip={swatch.mode} style={`background-color:${swatch.shadow};color:${swatch.shadowText};--brand-preview-hover:${swatch.shadowHover}`}>Shadowed</span>
-                        </div>
+                      <p class="text-sm font-semibold" data-brand-preview-card-title={swatch.mode} style={`color:${swatch.text}`}>Today</p>
+                      <p class="mt-0.5 text-xs" data-brand-preview-muted={swatch.mode} style={`color:${swatch.text};opacity:.65`}>On a card</p>
+                      <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText};--brand-preview-hover:${swatch.primaryHover}`}>Filled</span>
+                        <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText};--brand-preview-hover:${swatch.accentHover}`}>Outlined</span>
+                        <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium shadow-sm" data-brand-preview-chip={swatch.mode} style={`background-color:${swatch.shadow};color:${swatch.shadowText};--brand-preview-hover:${swatch.shadowHover}`}>Shadowed</span>
                       </div>
                     </div>
                   </div>
@@ -1973,6 +2018,46 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
 
   const brandingForm = document.getElementById('org-branding-form');
   if (brandingForm instanceof HTMLFormElement) {
+    const modeSwitch = brandingForm.querySelector('[data-brand-mode-switch]');
+    const modeBubble = brandingForm.querySelector('[data-brand-mode-bubble]');
+    const modeButtons = Array.from(brandingForm.querySelectorAll('[data-brand-mode]'));
+    const placeModeBubble = (mode: 'light' | 'dark') => {
+      const button = modeButtons.find((entry) => entry.getAttribute('data-brand-mode') === mode);
+      if (!(modeBubble instanceof HTMLElement) || !(button instanceof HTMLElement)) return;
+      modeBubble.style.width = `${button.offsetWidth}px`;
+      modeBubble.style.transform = `translateX(${button.offsetLeft}px)`;
+    };
+    const showPageMode = (mode: 'light' | 'dark') => {
+      brandingForm.querySelectorAll('[data-brand-page-panel]').forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) return;
+        panel.hidden = panel.getAttribute('data-brand-page-panel') !== mode;
+      });
+      modeButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        const active = button.getAttribute('data-brand-mode') === mode;
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        button.classList.toggle('text-charcoal', active);
+        button.classList.toggle('text-sage-dark/55', !active);
+      });
+      placeModeBubble(mode);
+    };
+    modeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.getAttribute('data-brand-mode');
+        if (mode === 'light' || mode === 'dark') showPageMode(mode);
+      });
+    });
+    showPageMode('light');
+    if (modeSwitch instanceof HTMLElement && typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        if (modeSwitch.offsetWidth === 0) return;
+        const active = modeButtons.find((button) => button.getAttribute('aria-pressed') === 'true');
+        const mode = active?.getAttribute('data-brand-mode');
+        if (mode === 'light' || mode === 'dark') placeModeBubble(mode);
+      });
+      observer.observe(modeSwitch);
+    }
+
     const statusEl = brandingForm.querySelector('[data-brand-status]');
     const errorEl = brandingForm.querySelector('[data-brand-error]');
     const colorKeys = [
