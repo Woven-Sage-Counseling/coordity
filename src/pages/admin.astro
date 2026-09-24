@@ -1980,8 +1980,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 ] as const;
                 return (
                   <div class="space-y-4" data-brand-training-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
-                    {rows.map((columns, rowIndex) => (
-                      <div class:list={['grid items-start gap-4', rowIndex === 0 ? 'grid-cols-4' : 'grid-cols-3']}>
+                    {rows.map((columns) => (
+                      <div class="grid grid-cols-4 items-start gap-4">
                         {columns.map((column) => (
                           <div class="min-w-0 space-y-4">
                             <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
@@ -2005,30 +2005,64 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                             })}
                           </div>
                         ))}
-                        {rowIndex === 1 ? (
-                          <div class="min-w-0 space-y-4">
-                            <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
-                            <div class="overflow-hidden rounded-xl border border-sage-dark/10 bg-white" data-brand-preview-training={swatch.mode}>
-                              <div class="flex items-center justify-between gap-2 px-2.5 py-2" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header};color:${swatch.headerText}`}>
-                                <div class="min-w-0">
-                                  <p class="text-[9px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>In this module</p>
-                                  <p class="text-xs font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>Getting Started</p>
-                                </div>
-                                <span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold" data-brand-preview-training-outline={swatch.mode} style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}>Preview</span>
+                      </div>
+                    ))}
+                    <div class="space-y-4">
+                      <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
+                      <div
+                        class:list={[
+                          'overflow-hidden rounded-xl border',
+                          swatch.mode === 'dark' ? 'border-white/10 bg-[#171917]' : 'border-sage-dark/10 bg-white',
+                        ]}
+                        data-brand-preview-training={swatch.mode}
+                      >
+                        <div class="grid grid-cols-[0.85fr_1fr_1.35fr]">
+                          <div class:list={['min-w-0 border-r', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
+                            <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
+                              <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>Modules</p>
+                              <p class="text-[10px]" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>Topics</p>
+                            </div>
+                            <div class="space-y-0.5 p-1.5">
+                              <div class="rounded-md px-1.5 py-1 text-[10px] font-semibold" data-brand-preview-training-module={swatch.mode} style={`background-color:${swatch.module};color:${swatch.moduleText}`}>Onboarding</div>
+                              <div class="rounded-md px-1.5 py-1 text-[10px]" style={`color:${swatch.headerText}`}>Using Coordity</div>
+                            </div>
+                            <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
+                              <p class="text-[10px] font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>+ New module</p>
+                            </div>
+                          </div>
+                          <div class:list={['min-w-0 border-r', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
+                            <div class="flex items-start justify-between gap-1 px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
+                              <div class="min-w-0">
+                                <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>In this module</p>
+                                <p class="text-[10px] font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>Onboarding</p>
                               </div>
-                              <div class="space-y-1.5 p-2">
-                                <div class="rounded-md px-2 py-1 text-xs font-semibold" data-brand-preview-training-module={swatch.mode} style={`background-color:${swatch.module};color:${swatch.moduleText}`}>Onboarding</div>
-                                <div class="rounded-md px-2 py-1 text-xs font-semibold" data-brand-preview-training-lesson={swatch.mode} style={`background-color:${swatch.lesson};color:${swatch.lessonText}`}>Getting Started</div>
-                                <div class="rounded-lg px-2 py-2" data-brand-preview-training-block={swatch.mode} style={`background-color:${swatch.block}`}>
-                                  <div class="rounded px-2 py-1 text-[11px] text-charcoal" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field}`}>Written content</div>
-                                  <span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>Save</span>
-                                </div>
+                              <div class="flex shrink-0 flex-col items-end gap-px">
+                                <span class="inline-flex rounded-full border px-1.5 py-px text-[8px] font-semibold leading-none" data-brand-preview-training-outline={swatch.mode} style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}>Settings</span>
+                                <span class="inline-flex rounded-full border px-1.5 py-px text-[8px] font-semibold leading-none" data-brand-preview-training-outline={swatch.mode} style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}>Preview</span>
+                              </div>
+                            </div>
+                            <div class="space-y-0.5 p-1.5">
+                              <span class="inline-flex rounded-full px-1.5 py-px text-[8px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>+ Add</span>
+                              <div class="rounded-md px-1.5 py-1 text-[10px] font-semibold" data-brand-preview-training-lesson={swatch.mode} style={`background-color:${swatch.lesson};color:${swatch.lessonText}`}>Getting Started</div>
+                              <div class="rounded-md px-1.5 py-1 text-[10px]" style={`color:${swatch.headerText}`}>Welcome</div>
+                            </div>
+                          </div>
+                          <div class="min-w-0">
+                            <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
+                              <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>In this lesson</p>
+                              <p class="text-[10px] font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>Getting Started</p>
+                            </div>
+                            <div class="p-1.5">
+                              <div class="rounded-lg px-2 py-1.5" data-brand-preview-training-block={swatch.mode} style={`background-color:${swatch.block}`}>
+                                <p class="text-[9px] font-semibold" style={`color:${swatch.headerText}`}>1. Written</p>
+                                <div class="mt-1 rounded px-1.5 py-2 text-[9px]" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field};color:${swatch.headerText}`}>Written content</div>
+                                <span class="mt-1.5 inline-flex rounded-full px-2 py-px text-[8px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>Save block</span>
                               </div>
                             </div>
                           </div>
-                        ) : null}
+                        </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 );
               })
@@ -2498,8 +2532,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
       if (preview instanceof HTMLElement) preview.style.backgroundColor = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
-        const el = brandingForm.querySelector(`[data-brand-preview-${role}="${mode}"]`);
-        if (el instanceof HTMLElement) apply(el);
+        brandingForm.querySelectorAll(`[data-brand-preview-${role}="${mode}"]`).forEach((el) => {
+          if (el instanceof HTMLElement) apply(el);
+        });
       };
       paint('heading', (el) => {
         el.style.color = text;
