@@ -1528,8 +1528,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 },
               ] as const;
               return (
-                <div class="space-y-4" data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
-                  <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-5 items-start gap-4" data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
                     {columns.map((column) => (
                       <div class="min-w-0 space-y-4">
                         <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
@@ -1575,15 +1574,16 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         })}
                       </div>
                     ))}
-                  </div>
-                  <div
-                    class:list={[
-                      'max-w-sm rounded-xl border px-3 py-3',
-                      swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
-                    ]}
-                    data-brand-preview={swatch.mode}
-                    style={`background-color:${swatch.bg}`}
-                  >
+                  <div class="min-w-0 space-y-4">
+                    <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
+                    <div
+                      class:list={[
+                        'rounded-xl border px-3 py-3',
+                        swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
+                      ]}
+                      data-brand-preview={swatch.mode}
+                      style={`background-color:${swatch.bg}`}
+                    >
                     <p class="font-display text-lg leading-tight" data-brand-preview-heading={swatch.mode} style={`color:${swatch.text}`}>Welcome back</p>
                     <p class="mt-1 text-sm leading-snug" data-brand-preview-body={swatch.mode} style={`color:${swatch.text}`}>Your workspace, in your colors.</p>
                     <div
@@ -1599,6 +1599,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium shadow-sm" data-brand-preview-chip={swatch.mode} style={`background-color:${swatch.shadow};color:${swatch.shadowText};--brand-preview-hover:${swatch.shadowHover}`}>Shadowed</span>
                       </div>
                     </div>
+                  </div>
                   </div>
                 </div>
               );
