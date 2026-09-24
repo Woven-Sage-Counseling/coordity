@@ -44,6 +44,7 @@
   --portal-training-block: 247 248 250;
   --portal-training-block-text: 83 95 81;
   --portal-training-field: 255 255 255;
+  --portal-training-field-text: 83 95 81;
   --portal-training-filled: 83 95 81;
   --portal-training-filled-text: 247 244 238;
   --portal-training-filled-hover: 120 143 117;
@@ -113,6 +114,7 @@ html.dark {
   --portal-training-block: 37 41 37;
   --portal-training-block-text: 186 198 182;
   --portal-training-field: 30 33 30;
+  --portal-training-field-text: 186 198 182;
   --portal-training-filled: 186 198 182;
   --portal-training-filled-text: 17 19 17;
   --portal-training-filled-hover: 138 158 134;
@@ -834,6 +836,17 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
 
 #training input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='range']) {
   background-color: rgb(var(--portal-training-field, 255 255 255) / var(--portal-training-field-a, 1));
+}
+
+#training :is(.field, textarea, select),
+#training .bg-\[\#f7f8fa\] :is(.field, textarea, select),
+#training input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='range']) {
+  color: rgb(var(--portal-training-field-text, 83 95 81) / var(--portal-training-field-text-a, 1)) !important;
+}
+
+#training :is(.field, textarea)::placeholder,
+#training input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='range'])::placeholder {
+  color: rgb(var(--portal-training-field-text, 83 95 81) / calc(var(--portal-training-field-text-a, 1) * 0.55)) !important;
 }
 
 #training input[type='checkbox'] {

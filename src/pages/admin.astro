@@ -139,6 +139,7 @@ const brandTrainingLessonTextLight = organization?.trainingLessonTextColorLight 
 const brandTrainingBlockLight = organization?.trainingBlockColorLight ?? '#F7F8FA';
 const brandTrainingBlockTextLight = organization?.trainingBlockTextColorLight ?? brandTextLight;
 const brandTrainingFieldLight = organization?.trainingFieldColorLight ?? brandSurfaceLight;
+const brandTrainingFieldTextLight = organization?.trainingFieldTextColorLight ?? brandTextLight;
 const brandTrainingFilledLight = organization?.trainingFilledColorLight ?? brandPrimaryLight;
 const brandTrainingFilledTextLight = organization?.trainingFilledTextColorLight ?? brandPrimaryTextLight;
 const brandTrainingFilledHoverLight = organization?.trainingFilledHoverColorLight ?? brandPrimaryHoverLight;
@@ -158,6 +159,7 @@ const brandTrainingLessonTextDark = organization?.trainingLessonTextColorDark ??
 const brandTrainingBlockDark = organization?.trainingBlockColorDark ?? '#252925';
 const brandTrainingBlockTextDark = organization?.trainingBlockTextColorDark ?? brandTextDark;
 const brandTrainingFieldDark = organization?.trainingFieldColorDark ?? brandSurfaceDark;
+const brandTrainingFieldTextDark = organization?.trainingFieldTextColorDark ?? brandTextDark;
 const brandTrainingFilledDark = organization?.trainingFilledColorDark ?? brandPrimaryDark;
 const brandTrainingFilledTextDark = organization?.trainingFilledTextColorDark ?? brandPrimaryTextDark;
 const brandTrainingFilledHoverDark = organization?.trainingFilledHoverColorDark ?? brandPrimaryHoverDark;
@@ -1912,6 +1914,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   block: brandTrainingBlockLight,
                   blockText: brandTrainingBlockTextLight,
                   field: brandTrainingFieldLight,
+                  fieldText: brandTrainingFieldTextLight,
                   filled: brandTrainingFilledLight,
                   filledText: brandTrainingFilledTextLight,
                   filledHover: brandTrainingFilledHoverLight,
@@ -1935,6 +1938,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   block: brandTrainingBlockDark,
                   blockText: brandTrainingBlockTextDark,
                   field: brandTrainingFieldDark,
+                  fieldText: brandTrainingFieldTextDark,
                   filled: brandTrainingFilledDark,
                   filledText: brandTrainingFilledTextDark,
                   filledHover: brandTrainingFilledHoverDark,
@@ -1978,6 +1982,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         ['trainingBlockColor', 'Card', swatch.block],
                         ['trainingBlockTextColor', 'Text', swatch.blockText],
                         ['trainingFieldColor', 'Field', swatch.field],
+                        ['trainingFieldTextColor', 'Field text', swatch.fieldText],
                       ],
                     },
                   ],
@@ -2089,7 +2094,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                             <div class="p-1.5">
                               <div class="rounded-lg px-2 py-1.5" data-brand-preview-training-block={swatch.mode} style={`background-color:${swatch.block}`}>
                                 <p class="text-[9px] font-semibold" data-brand-preview-training-block-text={swatch.mode} style={`color:${swatch.blockText}`}>1. Written</p>
-                                <div class="mt-1 rounded px-1.5 py-2 text-[9px]" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field};color:${swatch.headerText}`}>Written content</div>
+                                <div class="mt-1 rounded px-1.5 py-2 text-[9px]" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field};color:${swatch.fieldText}`}>Written content</div>
                                 <span class="mt-1.5 inline-flex rounded-full px-2 py-px text-[8px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>Save block</span>
                               </div>
                             </div>
@@ -2512,6 +2517,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'trainingBlockColorLight',
       'trainingBlockTextColorLight',
       'trainingFieldColorLight',
+      'trainingFieldTextColorLight',
       'trainingFilledColorLight',
       'trainingFilledTextColorLight',
       'trainingFilledHoverColorLight',
@@ -2531,6 +2537,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'trainingBlockColorDark',
       'trainingBlockTextColorDark',
       'trainingFieldColorDark',
+      'trainingFieldTextColorDark',
       'trainingFilledColorDark',
       'trainingFilledTextColorDark',
       'trainingFilledHoverColorDark',
@@ -2657,6 +2664,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const trainingBlock = readColor(`trainingBlockColor${suffix}`);
       const trainingBlockText = readColor(`trainingBlockTextColor${suffix}`);
       const trainingField = readColor(`trainingFieldColor${suffix}`);
+      const trainingFieldText = readColor(`trainingFieldTextColor${suffix}`);
       const trainingFilled = readColor(`trainingFilledColor${suffix}`);
       const trainingFilledText = readColor(`trainingFilledTextColor${suffix}`);
       const trainingFilledHover = readColor(`trainingFilledHoverColor${suffix}`);
@@ -2690,6 +2698,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       paint('training-field', (el) => {
         el.style.backgroundColor = trainingField;
+        el.style.color = trainingFieldText;
       });
       paint('training-filled', (el) => {
         el.style.backgroundColor = trainingFilled;
@@ -2820,6 +2829,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       trainingBlockColorLight?: string | null;
       trainingBlockTextColorLight?: string | null;
       trainingFieldColorLight?: string | null;
+      trainingFieldTextColorLight?: string | null;
       trainingFilledColorLight?: string | null;
       trainingFilledTextColorLight?: string | null;
       trainingFilledHoverColorLight?: string | null;
@@ -2839,6 +2849,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       trainingBlockColorDark?: string | null;
       trainingBlockTextColorDark?: string | null;
       trainingFieldColorDark?: string | null;
+      trainingFieldTextColorDark?: string | null;
       trainingFilledColorDark?: string | null;
       trainingFilledTextColorDark?: string | null;
       trainingFilledHoverColorDark?: string | null;
@@ -2982,6 +2993,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               block: '#F7F8FA',
               'block-text': branding.textColorLight || '#535F51',
               field: branding.surfaceColorLight || '#FFFFFF',
+              'field-text': branding.textColorLight || '#535F51',
               filled: branding.primaryColorLight || '#535F51',
               'filled-text': branding.primaryTextColorLight || '#F7F4EE',
               'filled-hover': branding.primaryHoverColorLight || branding.accentColorLight || '#788F75',
@@ -3003,6 +3015,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               block: '#252925',
               'block-text': branding.textColorDark || '#BAC6B6',
               field: branding.surfaceColorDark || '#1E211E',
+              'field-text': branding.textColorDark || '#BAC6B6',
               filled: branding.primaryColorDark || '#BAC6B6',
               'filled-text': branding.primaryTextColorDark || '#111311',
               'filled-hover': branding.primaryHoverColorDark || branding.accentColorDark || '#8A9E86',
@@ -3024,6 +3037,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           block: 'trainingBlockColor',
           'block-text': 'trainingBlockTextColor',
           field: 'trainingFieldColor',
+          'field-text': 'trainingFieldTextColor',
           filled: 'trainingFilledColor',
           'filled-text': 'trainingFilledTextColor',
           'filled-hover': 'trainingFilledHoverColor',

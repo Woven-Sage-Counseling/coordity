@@ -113,6 +113,7 @@ export interface PortalOrganization {
   trainingBlockColorLight: string | null;
   trainingBlockTextColorLight: string | null;
   trainingFieldColorLight: string | null;
+  trainingFieldTextColorLight: string | null;
   trainingFilledColorLight: string | null;
   trainingFilledTextColorLight: string | null;
   trainingFilledHoverColorLight: string | null;
@@ -157,6 +158,7 @@ export interface PortalOrganization {
   trainingBlockColorDark: string | null;
   trainingBlockTextColorDark: string | null;
   trainingFieldColorDark: string | null;
+  trainingFieldTextColorDark: string | null;
   trainingFilledColorDark: string | null;
   trainingFilledTextColorDark: string | null;
   trainingFilledHoverColorDark: string | null;
@@ -207,6 +209,7 @@ export const DEFAULT_ORG_COLORS = {
     trainingBlock: '#F7F8FA',
     trainingBlockText: '#535F51',
     trainingField: '#FFFFFF',
+    trainingFieldText: '#535F51',
     trainingFilled: '#535F51',
     trainingFilledText: '#F7F4EE',
     trainingFilledHover: '#788F75',
@@ -252,6 +255,7 @@ export const DEFAULT_ORG_COLORS = {
     trainingBlock: '#252925',
     trainingBlockText: '#BAC6B6',
     trainingField: '#1E211E',
+    trainingFieldText: '#BAC6B6',
     trainingFilled: '#BAC6B6',
     trainingFilledText: '#111311',
     trainingFilledHover: '#8A9E86',
@@ -373,6 +377,8 @@ function mapOrg(row: OrgRow): PortalOrganization {
   const slug = (row.slug || DEFAULT_ORG_SLUG).toLowerCase();
   const cardOutlineLight = unpackTrainingCardOutline(row.training_card_outline_color_light);
   const cardOutlineDark = unpackTrainingCardOutline(row.training_card_outline_color_dark);
+  const fieldLight = unpackTrainingField(row.training_field_color_light);
+  const fieldDark = unpackTrainingField(row.training_field_color_dark);
   const displayName = row.display_name || row.name;
   const hasLogo = Boolean(row.has_logo);
   const legacyPrimary = normalizeHexColor(row.primary_color);
@@ -420,7 +426,8 @@ function mapOrg(row: OrgRow): PortalOrganization {
     trainingLessonTextColorLight: normalizeHexColor(row.training_lesson_text_color_light) ?? null,
     trainingBlockColorLight: normalizeHexColor(row.training_block_color_light) ?? null,
     trainingBlockTextColorLight: normalizeHexColor(row.training_block_text_color_light) ?? null,
-    trainingFieldColorLight: normalizeHexColor(row.training_field_color_light) ?? null,
+    trainingFieldColorLight: fieldLight.color,
+    trainingFieldTextColorLight: fieldLight.text,
     trainingFilledColorLight: normalizeHexColor(row.training_filled_color_light) ?? null,
     trainingFilledTextColorLight: normalizeHexColor(row.training_filled_text_color_light) ?? null,
     trainingFilledHoverColorLight: normalizeHexColor(row.training_filled_hover_color_light) ?? null,
@@ -463,7 +470,8 @@ function mapOrg(row: OrgRow): PortalOrganization {
     trainingLessonTextColorDark: normalizeHexColor(row.training_lesson_text_color_dark) ?? null,
     trainingBlockColorDark: normalizeHexColor(row.training_block_color_dark) ?? null,
     trainingBlockTextColorDark: normalizeHexColor(row.training_block_text_color_dark) ?? null,
-    trainingFieldColorDark: normalizeHexColor(row.training_field_color_dark) ?? null,
+    trainingFieldColorDark: fieldDark.color,
+    trainingFieldTextColorDark: fieldDark.text,
     trainingFilledColorDark: normalizeHexColor(row.training_filled_color_dark) ?? null,
     trainingFilledTextColorDark: normalizeHexColor(row.training_filled_text_color_dark) ?? null,
     trainingFilledHoverColorDark: normalizeHexColor(row.training_filled_hover_color_dark) ?? null,
@@ -524,6 +532,7 @@ function wovenSageFallback(): PortalOrganization {
     trainingBlockColorLight: null,
     trainingBlockTextColorLight: null,
     trainingFieldColorLight: null,
+    trainingFieldTextColorLight: null,
     trainingFilledColorLight: null,
     trainingFilledTextColorLight: null,
     trainingFilledHoverColorLight: null,
@@ -567,6 +576,7 @@ function wovenSageFallback(): PortalOrganization {
     trainingBlockColorDark: null,
     trainingBlockTextColorDark: null,
     trainingFieldColorDark: null,
+    trainingFieldTextColorDark: null,
     trainingFilledColorDark: null,
     trainingFilledTextColorDark: null,
     trainingFilledHoverColorDark: null,
@@ -791,6 +801,21 @@ function packTrainingCardOutline(
   if (!color && !text && !hover) return null;
   if (!text && !hover) return color;
   return `${color ?? ''}|${text ?? ''}|${hover ?? ''}`;
+}
+
+/** Field background and text share one column: `#BACKGROUND|#TEXT`. */
+function packTrainingField(color: string | null, text: string | null): string | null {
+  if (!color && !text) return null;
+  if (!text) return color;
+  return `${color ?? ''}|${text}`;
+}
+
+function unpackTrainingField(raw: string | null | undefined): { color: string | null; text: string | null } {
+  const parts = (raw ?? '').split('|');
+  return {
+    color: normalizeHexColor(parts[0]),
+    text: parts.length > 1 ? normalizeHexColor(parts[1]) : null,
+  };
 }
 
 function unpackTrainingCardOutline(raw: string | null | undefined): {
@@ -1213,6 +1238,7 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     trainingBlockColorLight: org.trainingBlockColorLight,
     trainingBlockTextColorLight: org.trainingBlockTextColorLight,
     trainingFieldColorLight: org.trainingFieldColorLight,
+    trainingFieldTextColorLight: org.trainingFieldTextColorLight,
     trainingFilledColorLight: org.trainingFilledColorLight,
     trainingFilledTextColorLight: org.trainingFilledTextColorLight,
     trainingFilledHoverColorLight: org.trainingFilledHoverColorLight,
@@ -1256,6 +1282,7 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     trainingBlockColorDark: org.trainingBlockColorDark,
     trainingBlockTextColorDark: org.trainingBlockTextColorDark,
     trainingFieldColorDark: org.trainingFieldColorDark,
+    trainingFieldTextColorDark: org.trainingFieldTextColorDark,
     trainingFilledColorDark: org.trainingFilledColorDark,
     trainingFilledTextColorDark: org.trainingFilledTextColorDark,
     trainingFilledHoverColorDark: org.trainingFilledHoverColorDark,
@@ -1307,6 +1334,7 @@ export async function updateOrganizationBranding(input: {
   trainingBlockColorLight?: string | null;
   trainingBlockTextColorLight?: string | null;
   trainingFieldColorLight?: string | null;
+  trainingFieldTextColorLight?: string | null;
   trainingFilledColorLight?: string | null;
   trainingFilledTextColorLight?: string | null;
   trainingFilledHoverColorLight?: string | null;
@@ -1350,6 +1378,7 @@ export async function updateOrganizationBranding(input: {
   trainingBlockColorDark?: string | null;
   trainingBlockTextColorDark?: string | null;
   trainingFieldColorDark?: string | null;
+  trainingFieldTextColorDark?: string | null;
   trainingFilledColorDark?: string | null;
   trainingFilledTextColorDark?: string | null;
   trainingFilledHoverColorDark?: string | null;
@@ -1524,6 +1553,10 @@ export async function updateOrganizationBranding(input: {
     input.trainingFieldColorLight !== undefined
       ? (resolveOptionalHex(input.trainingFieldColorLight, 'Light training field color') ?? null)
       : existing.trainingFieldColorLight;
+  const trainingFieldTextColorLight =
+    input.trainingFieldTextColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingFieldTextColorLight, 'Light training field text color') ?? null)
+      : existing.trainingFieldTextColorLight;
   const trainingFilledColorLight =
     input.trainingFilledColorLight !== undefined
       ? (resolveOptionalHex(input.trainingFilledColorLight, 'Light training filled button color') ?? null)
@@ -1696,6 +1729,10 @@ export async function updateOrganizationBranding(input: {
     input.trainingFieldColorDark !== undefined
       ? (resolveOptionalHex(input.trainingFieldColorDark, 'Dark training field color') ?? null)
       : existing.trainingFieldColorDark;
+  const trainingFieldTextColorDark =
+    input.trainingFieldTextColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingFieldTextColorDark, 'Dark training field text color') ?? null)
+      : existing.trainingFieldTextColorDark;
   const trainingFilledColorDark =
     input.trainingFilledColorDark !== undefined
       ? (resolveOptionalHex(input.trainingFilledColorDark, 'Dark training filled button color') ?? null)
@@ -1905,8 +1942,8 @@ export async function updateOrganizationBranding(input: {
       trainingBlockColorDark,
       trainingBlockTextColorLight,
       trainingBlockTextColorDark,
-      trainingFieldColorLight,
-      trainingFieldColorDark,
+      packTrainingField(trainingFieldColorLight, trainingFieldTextColorLight),
+      packTrainingField(trainingFieldColorDark, trainingFieldTextColorDark),
       trainingFilledColorLight,
       trainingFilledColorDark,
       trainingFilledTextColorLight,
