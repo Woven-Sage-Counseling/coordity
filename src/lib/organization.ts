@@ -335,7 +335,7 @@ function wovenSageFallback(): PortalOrganization {
     slug: DEFAULT_ORG_SLUG,
     name: 'Woven Sage Counseling',
     displayName: 'Woven Sage Counseling',
-    logoUrl: 'https://wovensage.com/images/logo-text-header-transparent.png',
+    logoUrl: null,
     websiteUrl: 'https://wovensage.com',
     hasLogo: false,
     logoUpdatedAt: null,
