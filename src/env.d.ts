@@ -70,6 +70,7 @@ interface PortalOrganization {
   trainingLessonColorLight: string | null;
   trainingLessonTextColorLight: string | null;
   trainingBlockColorLight: string | null;
+  trainingBlockTextColorLight: string | null;
   trainingFieldColorLight: string | null;
   trainingFilledColorLight: string | null;
   trainingFilledTextColorLight: string | null;
@@ -108,6 +109,7 @@ interface PortalOrganization {
   trainingLessonColorDark: string | null;
   trainingLessonTextColorDark: string | null;
   trainingBlockColorDark: string | null;
+  trainingBlockTextColorDark: string | null;
   trainingFieldColorDark: string | null;
   trainingFilledColorDark: string | null;
   trainingFilledTextColorDark: string | null;

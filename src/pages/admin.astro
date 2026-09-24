@@ -137,6 +137,7 @@ const brandTrainingModuleTextLight = organization?.trainingModuleTextColorLight 
 const brandTrainingLessonLight = organization?.trainingLessonColorLight ?? withAlpha(brandAccentLight, 25);
 const brandTrainingLessonTextLight = organization?.trainingLessonTextColorLight ?? brandTextLight;
 const brandTrainingBlockLight = organization?.trainingBlockColorLight ?? '#F7F8FA';
+const brandTrainingBlockTextLight = organization?.trainingBlockTextColorLight ?? brandTextLight;
 const brandTrainingFieldLight = organization?.trainingFieldColorLight ?? brandSurfaceLight;
 const brandTrainingFilledLight = organization?.trainingFilledColorLight ?? brandPrimaryLight;
 const brandTrainingFilledTextLight = organization?.trainingFilledTextColorLight ?? brandPrimaryTextLight;
@@ -151,6 +152,7 @@ const brandTrainingModuleTextDark = organization?.trainingModuleTextColorDark ??
 const brandTrainingLessonDark = organization?.trainingLessonColorDark ?? withAlpha(brandAccentDark, 25);
 const brandTrainingLessonTextDark = organization?.trainingLessonTextColorDark ?? brandTextDark;
 const brandTrainingBlockDark = organization?.trainingBlockColorDark ?? '#252925';
+const brandTrainingBlockTextDark = organization?.trainingBlockTextColorDark ?? brandTextDark;
 const brandTrainingFieldDark = organization?.trainingFieldColorDark ?? brandSurfaceDark;
 const brandTrainingFilledDark = organization?.trainingFilledColorDark ?? brandPrimaryDark;
 const brandTrainingFilledTextDark = organization?.trainingFilledTextColorDark ?? brandPrimaryTextDark;
@@ -1900,6 +1902,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   lesson: brandTrainingLessonLight,
                   lessonText: brandTrainingLessonTextLight,
                   block: brandTrainingBlockLight,
+                  blockText: brandTrainingBlockTextLight,
                   field: brandTrainingFieldLight,
                   filled: brandTrainingFilledLight,
                   filledText: brandTrainingFilledTextLight,
@@ -1918,6 +1921,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   lesson: brandTrainingLessonDark,
                   lessonText: brandTrainingLessonTextDark,
                   block: brandTrainingBlockDark,
+                  blockText: brandTrainingBlockTextDark,
                   field: brandTrainingFieldDark,
                   filled: brandTrainingFilledDark,
                   filledText: brandTrainingFilledTextDark,
@@ -1955,6 +1959,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       title: 'Blocks',
                       fields: [
                         ['trainingBlockColor', 'Card', swatch.block],
+                        ['trainingBlockTextColor', 'Text', swatch.blockText],
                         ['trainingFieldColor', 'Field', swatch.field],
                       ],
                     },
@@ -2053,7 +2058,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                             </div>
                             <div class="p-1.5">
                               <div class="rounded-lg px-2 py-1.5" data-brand-preview-training-block={swatch.mode} style={`background-color:${swatch.block}`}>
-                                <p class="text-[9px] font-semibold" style={`color:${swatch.headerText}`}>1. Written</p>
+                                <p class="text-[9px] font-semibold" data-brand-preview-training-block-text={swatch.mode} style={`color:${swatch.blockText}`}>1. Written</p>
                                 <div class="mt-1 rounded px-1.5 py-2 text-[9px]" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field};color:${swatch.headerText}`}>Written content</div>
                                 <span class="mt-1.5 inline-flex rounded-full px-2 py-px text-[8px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>Save block</span>
                               </div>
@@ -2475,6 +2480,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'trainingLessonColorLight',
       'trainingLessonTextColorLight',
       'trainingBlockColorLight',
+      'trainingBlockTextColorLight',
       'trainingFieldColorLight',
       'trainingFilledColorLight',
       'trainingFilledTextColorLight',
@@ -2489,6 +2495,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'trainingLessonColorDark',
       'trainingLessonTextColorDark',
       'trainingBlockColorDark',
+      'trainingBlockTextColorDark',
       'trainingFieldColorDark',
       'trainingFilledColorDark',
       'trainingFilledTextColorDark',
@@ -2610,6 +2617,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const trainingLesson = readColor(`trainingLessonColor${suffix}`);
       const trainingLessonText = readColor(`trainingLessonTextColor${suffix}`);
       const trainingBlock = readColor(`trainingBlockColor${suffix}`);
+      const trainingBlockText = readColor(`trainingBlockTextColor${suffix}`);
       const trainingField = readColor(`trainingFieldColor${suffix}`);
       const trainingFilled = readColor(`trainingFilledColor${suffix}`);
       const trainingFilledText = readColor(`trainingFilledTextColor${suffix}`);
@@ -2637,6 +2645,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       paint('training-block', (el) => {
         el.style.backgroundColor = trainingBlock;
+        el.style.color = trainingBlockText;
+      });
+      paint('training-block-text', (el) => {
+        el.style.color = trainingBlockText;
       });
       paint('training-field', (el) => {
         el.style.backgroundColor = trainingField;
@@ -2756,6 +2768,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       trainingLessonColorLight?: string | null;
       trainingLessonTextColorLight?: string | null;
       trainingBlockColorLight?: string | null;
+      trainingBlockTextColorLight?: string | null;
       trainingFieldColorLight?: string | null;
       trainingFilledColorLight?: string | null;
       trainingFilledTextColorLight?: string | null;
@@ -2770,6 +2783,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       trainingLessonColorDark?: string | null;
       trainingLessonTextColorDark?: string | null;
       trainingBlockColorDark?: string | null;
+      trainingBlockTextColorDark?: string | null;
       trainingFieldColorDark?: string | null;
       trainingFilledColorDark?: string | null;
       trainingFilledTextColorDark?: string | null;
@@ -2908,6 +2922,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               lesson: `${accentBase}40`,
               'lesson-text': branding.textColorLight || '#535F51',
               block: '#F7F8FA',
+              'block-text': branding.textColorLight || '#535F51',
               field: branding.surfaceColorLight || '#FFFFFF',
               filled: branding.primaryColorLight || '#535F51',
               'filled-text': branding.primaryTextColorLight || '#F7F4EE',
@@ -2924,6 +2939,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               lesson: `${accentBase}40`,
               'lesson-text': branding.textColorDark || '#BAC6B6',
               block: '#252925',
+              'block-text': branding.textColorDark || '#BAC6B6',
               field: branding.surfaceColorDark || '#1E211E',
               filled: branding.primaryColorDark || '#BAC6B6',
               'filled-text': branding.primaryTextColorDark || '#111311',
@@ -2940,6 +2956,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           lesson: 'trainingLessonColor',
           'lesson-text': 'trainingLessonTextColor',
           block: 'trainingBlockColor',
+          'block-text': 'trainingBlockTextColor',
           field: 'trainingFieldColor',
           filled: 'trainingFilledColor',
           'filled-text': 'trainingFilledTextColor',

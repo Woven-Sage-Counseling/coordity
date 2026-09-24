@@ -64,6 +64,7 @@ const lightTrainingModuleText = organization?.trainingModuleTextColorLight ?? li
 const lightTrainingLesson = organization?.trainingLessonColorLight ?? withAlpha(lightAccent, 25);
 const lightTrainingLessonText = organization?.trainingLessonTextColorLight ?? lightText;
 const lightTrainingBlock = organization?.trainingBlockColorLight ?? '#F7F8FA';
+const lightTrainingBlockText = organization?.trainingBlockTextColorLight ?? lightText;
 const lightTrainingField = organization?.trainingFieldColorLight ?? lightSurface;
 const lightTrainingFilled = organization?.trainingFilledColorLight ?? lightPrimary;
 const lightTrainingFilledText = organization?.trainingFilledTextColorLight ?? lightPrimaryText;
@@ -102,6 +103,7 @@ const darkTrainingModuleText = organization?.trainingModuleTextColorDark ?? dark
 const darkTrainingLesson = organization?.trainingLessonColorDark ?? withAlpha(darkAccent, 25);
 const darkTrainingLessonText = organization?.trainingLessonTextColorDark ?? darkText;
 const darkTrainingBlock = organization?.trainingBlockColorDark ?? '#252925';
+const darkTrainingBlockText = organization?.trainingBlockTextColorDark ?? darkText;
 const darkTrainingField = organization?.trainingFieldColorDark ?? darkSurface;
 const darkTrainingFilled = organization?.trainingFilledColorDark ?? darkPrimary;
 const darkTrainingFilledText = organization?.trainingFilledTextColorDark ?? darkPrimaryText;
@@ -260,6 +262,7 @@ const brandStyle =
     lesson: lightTrainingLesson,
     'lesson-text': lightTrainingLessonText,
     block: lightTrainingBlock,
+    'block-text': lightTrainingBlockText,
     field: lightTrainingField,
     filled: lightTrainingFilled,
     'filled-text': lightTrainingFilledText,
@@ -319,6 +322,7 @@ const brandStyle =
     lesson: darkTrainingLesson,
     'lesson-text': darkTrainingLessonText,
     block: darkTrainingBlock,
+    'block-text': darkTrainingBlockText,
     field: darkTrainingField,
     filled: darkTrainingFilled,
     'filled-text': darkTrainingFilledText,

@@ -42,6 +42,7 @@
   --portal-training-lesson-a: 0.25;
   --portal-training-lesson-text: 83 95 81;
   --portal-training-block: 247 248 250;
+  --portal-training-block-text: 83 95 81;
   --portal-training-field: 255 255 255;
   --portal-training-filled: 83 95 81;
   --portal-training-filled-text: 247 244 238;
@@ -105,6 +106,7 @@ html.dark {
   --portal-training-lesson-a: 0.25;
   --portal-training-lesson-text: 186 198 182;
   --portal-training-block: 37 41 37;
+  --portal-training-block-text: 186 198 182;
   --portal-training-field: 30 33 30;
   --portal-training-filled: 186 198 182;
   --portal-training-filled-text: 17 19 17;
@@ -804,6 +806,15 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
 
 #training .bg-\[\#f7f8fa\] {
   background-color: rgb(var(--portal-training-block, 247 248 250) / var(--portal-training-block-a, 1)) !important;
+  color: rgb(var(--portal-training-block-text, 83 95 81) / var(--portal-training-block-text-a, 1));
+}
+
+#training .bg-\[\#f7f8fa\] :is(.text-charcoal, .text-sage-dark) {
+  color: inherit !important;
+}
+
+#training .bg-\[\#f7f8fa\] :is(.text-sage-dark\/45, .text-sage-dark\/50, .text-sage-dark\/55, .text-sage-dark\/60, .text-sage-dark\/65, .text-sage-dark\/80) {
+  color: rgb(var(--portal-training-block-text, 83 95 81) / calc(var(--portal-training-block-text-a, 1) * 0.55)) !important;
 }
 
 #training :is(.field, textarea, select) {
