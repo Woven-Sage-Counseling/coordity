@@ -1655,73 +1655,93 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 },
               ].map((swatch) => {
                 const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
-                const fields = [
-                  ['widgetHeaderColor', 'Top', swatch.header],
-                  ['widgetButtonColor', 'Button', swatch.button],
-                  ['widgetButtonTextColor', 'Button text', swatch.buttonText],
-                  ['widgetButtonHoverColor', 'Button hover', swatch.buttonHover],
-                  ['widgetBgColor', 'Background', swatch.background],
-                  ['widgetCardColor', 'Cards', swatch.card],
+                const columns = [
+                  {
+                    title: 'Widget',
+                    fields: [
+                      ['widgetHeaderColor', 'Top', swatch.header],
+                      ['widgetBgColor', 'Background', swatch.background],
+                      ['widgetCardColor', 'Cards', swatch.card],
+                    ],
+                  },
+                  {
+                    title: 'Buttons',
+                    fields: [
+                      ['widgetButtonColor', 'Button', swatch.button],
+                      ['widgetButtonHoverColor', 'Hover', swatch.buttonHover],
+                      ['widgetButtonTextColor', 'Text', swatch.buttonText],
+                    ],
+                  },
                 ] as const;
                 return (
                   <div data-brand-widget-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
-                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-                    <div>
-                      <div class="grid gap-4 sm:grid-cols-2">
-                        {fields.map(([key, label, value]) => {
-                          const color = brandColorParts(value);
-                          const id = `${key}${suffix}`;
-                          return (
-                            <label class="block text-sm font-medium text-charcoal">
-                              {label}
-                              <span class="mt-1.5 flex items-center gap-2">
-                                <input
-                                  class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
-                                  type="color"
-                                  value={color.opaque}
-                                  data-brand-color={id}
-                                />
-                                <input
-                                  class="field mt-0"
-                                  type="text"
-                                  value={color.opaque}
-                                  maxlength="7"
-                                  data-brand-hex={id}
-                                  aria-label={`${swatch.title} widget ${label} hex`}
-                                />
-                                <input type="hidden" name={id} value={color.full} data-brand-value={id} />
-                              </span>
-                              <span class="mt-1.5 flex items-center gap-2">
-                                <input
-                                  class="h-1.5 w-full cursor-pointer accent-sage-dark"
-                                  type="range"
-                                  min="0"
-                                  max="100"
-                                  value={color.alpha}
-                                  data-brand-alpha={id}
-                                  aria-label={`${swatch.title} widget ${label} transparency`}
-                                />
-                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>
-                                  {color.alpha}%
+                    <div class="grid grid-cols-3 items-start gap-4">
+                      {columns.map((column) => (
+                        <div class="min-w-0 space-y-4">
+                          <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
+                          {column.fields.map(([key, label, value]) => {
+                            const color = brandColorParts(value);
+                            const id = `${key}${suffix}`;
+                            return (
+                              <label class="block text-sm font-medium text-charcoal">
+                                {label}
+                                <span class="mt-1.5 flex items-center gap-2">
+                                  <input
+                                    class="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                                    type="color"
+                                    value={color.opaque}
+                                    data-brand-color={id}
+                                  />
+                                  <input
+                                    class="field mt-0 min-w-0"
+                                    type="text"
+                                    value={color.opaque}
+                                    maxlength="7"
+                                    data-brand-hex={id}
+                                    aria-label={`${swatch.title} ${column.title} ${label} hex`}
+                                  />
+                                  <input type="hidden" name={id} value={color.full} data-brand-value={id} />
                                 </span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
-                      <div class="flex items-center justify-between gap-2 px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>
-                        <span>Calendar</span>
-                        <span class="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" data-brand-preview-widget-button={swatch.mode} style={`background-color:${swatch.button};color:${swatch.buttonText};--brand-preview-hover:${swatch.buttonHover}`}>Open</span>
-                      </div>
-                      <div class="px-3 py-3" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background}`}>
-                        <div class="rounded-lg px-2.5 py-2 shadow-sm ring-1 ring-black/5" data-brand-preview-widget-card={swatch.mode} style={`background-color:${swatch.card};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>
-                          <p class="text-xs font-semibold">Thursday</p>
-                          <p class="mt-0.5 text-[11px] opacity-70">2:00 · Team meeting</p>
+                                <span class="mt-1.5 flex items-center gap-2">
+                                  <input
+                                    class="h-1.5 w-full cursor-pointer accent-sage-dark"
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={color.alpha}
+                                    data-brand-alpha={id}
+                                    aria-label={`${swatch.title} ${column.title} ${label} transparency`}
+                                  />
+                                  <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>
+                                    {color.alpha}%
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ))}
+                      <div class="min-w-0 space-y-4">
+                        <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
+                        <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
+                          <div class="flex items-center justify-between gap-2 px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>
+                            <span>Calendar</span>
+                            <span
+                              class="inline-flex cursor-pointer rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                              data-brand-preview-widget-button={swatch.mode}
+                              style={`background-color:${swatch.button};color:${swatch.buttonText};box-shadow:inset 0 0 0 1px color-mix(in srgb, currentColor 28%, transparent);--brand-preview-hover:${swatch.buttonHover}`}
+                            >
+                              Button
+                            </span>
+                          </div>
+                          <div class="px-3 py-3" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background}`}>
+                            <div class="rounded-lg px-2.5 py-2 shadow-sm ring-1 ring-black/5" data-brand-preview-widget-card={swatch.mode} style={`background-color:${swatch.card};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>
+                              <p class="text-xs font-semibold">Thursday</p>
+                              <p class="mt-0.5 text-[11px] opacity-70">2:00 · Team meeting</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
                     </div>
                   </div>
                 );
