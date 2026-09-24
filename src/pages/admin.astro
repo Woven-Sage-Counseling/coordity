@@ -1528,7 +1528,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 },
               ] as const;
               return (
-                <div class="grid grid-cols-5 items-start gap-4" data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
+                <div data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
+                  <div class="grid grid-cols-5 items-start gap-4">
                     {columns.map((column) => (
                       <div class="min-w-0 space-y-4">
                         <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
@@ -1598,6 +1599,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText};--brand-preview-hover:${swatch.accentHover}`}>Outlined</span>
                         <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium shadow-sm" data-brand-preview-chip={swatch.mode} style={`background-color:${swatch.shadow};color:${swatch.shadowText};--brand-preview-hover:${swatch.shadowHover}`}>Shadowed</span>
                       </div>
+                    </div>
                     </div>
                   </div>
                   </div>
