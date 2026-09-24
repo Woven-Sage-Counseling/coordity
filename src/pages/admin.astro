@@ -99,6 +99,9 @@ const brandWidgetButtonLight = organization?.widgetButtonColorLight ?? brandWidg
 const brandWidgetButtonTextLight =
   organization?.widgetButtonTextColorLight ?? widgetHeaderForeground(brandWidgetButtonLight);
 const brandWidgetButtonHoverLight = organization?.widgetButtonHoverColorLight ?? darkenHex(brandWidgetButtonLight);
+const brandWidgetOutlineLight = organization?.widgetOutlineColorLight ?? '#535F5140';
+const brandWidgetOutlineTextLight = organization?.widgetOutlineTextColorLight ?? '#535F51CC';
+const brandWidgetOutlineHoverLight = organization?.widgetOutlineHoverColorLight ?? '#535F511A';
 const brandBgDark = organization?.bgColorDark ?? '#111311';
 const brandSurfaceDark = organization?.surfaceColorDark ?? '#1E211E';
 const brandTextDark = organization?.textColorDark ?? '#BAC6B6';
@@ -118,6 +121,9 @@ const brandWidgetButtonDark = organization?.widgetButtonColorDark ?? brandWidget
 const brandWidgetButtonTextDark =
   organization?.widgetButtonTextColorDark ?? widgetHeaderForeground(brandWidgetButtonDark);
 const brandWidgetButtonHoverDark = organization?.widgetButtonHoverColorDark ?? darkenHex(brandWidgetButtonDark);
+const brandWidgetOutlineDark = organization?.widgetOutlineColorDark ?? '#BAC6B666';
+const brandWidgetOutlineTextDark = organization?.widgetOutlineTextColorDark ?? '#BAC6B6';
+const brandWidgetOutlineHoverDark = organization?.widgetOutlineHoverColorDark ?? '#BAC6B61A';
 
 function brandColorParts(value: string): { opaque: string; alpha: number; full: string } {
   const match = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(value.trim());
@@ -1642,6 +1648,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   button: brandWidgetButtonLight,
                   buttonText: brandWidgetButtonTextLight,
                   buttonHover: brandWidgetButtonHoverLight,
+                  outline: brandWidgetOutlineLight,
+                  outlineText: brandWidgetOutlineTextLight,
+                  outlineHover: brandWidgetOutlineHoverLight,
                 },
                 {
                   mode: 'dark',
@@ -1652,6 +1661,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   button: brandWidgetButtonDark,
                   buttonText: brandWidgetButtonTextDark,
                   buttonHover: brandWidgetButtonHoverDark,
+                  outline: brandWidgetOutlineDark,
+                  outlineText: brandWidgetOutlineTextDark,
+                  outlineHover: brandWidgetOutlineHoverDark,
                 },
               ].map((swatch) => {
                 const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
@@ -1665,17 +1677,25 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     ],
                   },
                   {
-                    title: 'Buttons',
+                    title: 'Filled Buttons',
                     fields: [
                       ['widgetButtonColor', 'Button', swatch.button],
                       ['widgetButtonHoverColor', 'Hover', swatch.buttonHover],
                       ['widgetButtonTextColor', 'Text', swatch.buttonText],
                     ],
                   },
+                  {
+                    title: 'Outlined Buttons',
+                    fields: [
+                      ['widgetOutlineColor', 'Button', swatch.outline],
+                      ['widgetOutlineHoverColor', 'Hover', swatch.outlineHover],
+                      ['widgetOutlineTextColor', 'Text', swatch.outlineText],
+                    ],
+                  },
                 ] as const;
                 return (
                   <div data-brand-widget-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
-                    <div class="grid grid-cols-3 items-start gap-4">
+                    <div class="grid grid-cols-4 items-start gap-4">
                       {columns.map((column) => (
                         <div class="min-w-0 space-y-4">
                           <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
@@ -1731,13 +1751,20 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                               data-brand-preview-widget-button={swatch.mode}
                               style={`background-color:${swatch.button};color:${swatch.buttonText};box-shadow:inset 0 0 0 1px color-mix(in srgb, currentColor 28%, transparent);--brand-preview-hover:${swatch.buttonHover}`}
                             >
-                              Button
+                              Filled
                             </span>
                           </div>
                           <div class="px-3 py-3" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background}`}>
                             <div class="rounded-lg px-2.5 py-2 shadow-sm ring-1 ring-black/5" data-brand-preview-widget-card={swatch.mode} style={`background-color:${swatch.card};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>
                               <p class="text-xs font-semibold">Thursday</p>
                               <p class="mt-0.5 text-[11px] opacity-70">2:00 · Team meeting</p>
+                              <span
+                                class="mt-2 inline-flex cursor-pointer rounded-full border px-2.5 py-1 text-[10px] font-semibold"
+                                data-brand-preview-widget-outline={swatch.mode}
+                                style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}
+                              >
+                                Outlined
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -2137,12 +2164,18 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'widgetButtonColorLight',
       'widgetButtonTextColorLight',
       'widgetButtonHoverColorLight',
+      'widgetOutlineColorLight',
+      'widgetOutlineTextColorLight',
+      'widgetOutlineHoverColorLight',
       'widgetHeaderColorDark',
       'widgetBgColorDark',
       'widgetCardColorDark',
       'widgetButtonColorDark',
       'widgetButtonTextColorDark',
       'widgetButtonHoverColorDark',
+      'widgetOutlineColorDark',
+      'widgetOutlineTextColorDark',
+      'widgetOutlineHoverColorDark',
     ];
 
     const readColor = (key: string) => {
@@ -2172,6 +2205,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const widgetButton = readColor(`widgetButtonColor${suffix}`);
       const widgetButtonText = readColor(`widgetButtonTextColor${suffix}`);
       const widgetButtonHover = readColor(`widgetButtonHoverColor${suffix}`);
+      const widgetOutline = readColor(`widgetOutlineColor${suffix}`);
+      const widgetOutlineText = readColor(`widgetOutlineTextColor${suffix}`);
+      const widgetOutlineHover = readColor(`widgetOutlineHoverColor${suffix}`);
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
       if (preview instanceof HTMLElement) preview.style.backgroundColor = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
@@ -2231,6 +2267,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.backgroundColor = widgetButton;
         el.style.color = widgetButtonText;
         el.style.setProperty('--brand-preview-hover', widgetButtonHover);
+      });
+      paint('widget-outline', (el) => {
+        el.style.borderColor = widgetOutline;
+        el.style.color = widgetOutlineText;
+        el.style.setProperty('--brand-preview-hover', widgetOutlineHover);
       });
     };
 
@@ -2318,6 +2359,12 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       widgetButtonColorDark?: string | null;
       widgetButtonTextColorDark?: string | null;
       widgetButtonHoverColorDark?: string | null;
+      widgetOutlineColorLight?: string | null;
+      widgetOutlineTextColorLight?: string | null;
+      widgetOutlineHoverColorLight?: string | null;
+      widgetOutlineColorDark?: string | null;
+      widgetOutlineTextColorDark?: string | null;
+      widgetOutlineHoverColorDark?: string | null;
     }) => {
       const onHeader = (hex: string | null | undefined, fallback: string) => {
         const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((hex ?? '').trim());
@@ -2408,6 +2455,20 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const darkWidgetButton = hexChannels(branding.widgetButtonColorDark) ?? '83 95 81';
       const darkWidgetButtonText = hexChannels(branding.widgetButtonTextColorDark) ?? '247 244 238';
       const darkWidgetButtonHover = hexChannels(branding.widgetButtonHoverColorDark) ?? darkWidgetButton.split(' ').map((channel) => String(Math.round(Number(channel) * 0.92))).join(' ');
+      const widgetOutlineRule = (
+        selector: string,
+        color: string | null | undefined,
+        colorFallback: string,
+        text: string | null | undefined,
+        textFallback: string,
+        hover: string | null | undefined,
+        hoverFallback: string,
+      ) => {
+        const channels = (value: string | null | undefined, fallback: string) =>
+          hexChannels(value) ?? hexChannels(fallback) ?? '83 95 81';
+        const alpha = (value: string | null | undefined, fallback: string) => hexAlpha(value || fallback);
+        return `${selector}{--portal-widget-outline:${channels(color, colorFallback)} !important;--portal-widget-outline-a:${alpha(color, colorFallback)} !important;--portal-widget-outline-text:${channels(text, textFallback)} !important;--portal-widget-outline-text-a:${alpha(text, textFallback)} !important;--portal-widget-outline-hover:${channels(hover, hoverFallback)} !important;--portal-widget-outline-hover-a:${alpha(hover, hoverFallback)} !important;}`;
+      };
       let style = document.getElementById('org-brand');
       if (!(style instanceof HTMLStyleElement)) {
         style = document.createElement('style');
@@ -2452,7 +2513,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           shadow: branding.shadowColorDark ? hexAlpha(branding.shadowColorDark) : '0.22',
           shadowText: hexAlpha(branding.shadowTextColorDark),
           shadowHover: branding.shadowHoverColorDark ? hexAlpha(branding.shadowHoverColorDark) : '0.32',
-        });
+        }) +
+        widgetOutlineRule('html', branding.widgetOutlineColorLight, '#535F5140', branding.widgetOutlineTextColorLight, '#535F51CC', branding.widgetOutlineHoverColorLight, '#535F511A') +
+        widgetOutlineRule('html.dark', branding.widgetOutlineColorDark, '#BAC6B666', branding.widgetOutlineTextColorDark, '#BAC6B6', branding.widgetOutlineHoverColorDark, '#BAC6B61A');
     };
 
     brandingForm.addEventListener('submit', async (event) => {

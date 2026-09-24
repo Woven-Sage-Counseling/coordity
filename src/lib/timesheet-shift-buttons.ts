@@ -4,8 +4,8 @@ const PAGE_PAUSE = 'btn-secondary';
 const WIDGET_BASE =
   'inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-semibold leading-none';
 const WIDGET_PROMINENT = `widget-accent-btn ${WIDGET_BASE}`;
-const WIDGET_MUTED = `${WIDGET_BASE} border border-sage-dark/20 bg-white text-charcoal/55 cursor-not-allowed`;
-const WIDGET_PAUSE = `${WIDGET_BASE} border border-sage-dark/25 bg-white text-charcoal/80`;
+const WIDGET_MUTED = `widget-outline-btn ${WIDGET_BASE} cursor-not-allowed opacity-60`;
+const WIDGET_PAUSE = `widget-outline-btn ${WIDGET_BASE}`;
 
 type ActiveShiftLike = { onBreak?: boolean } | null | undefined;
 

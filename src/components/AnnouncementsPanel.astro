@@ -183,7 +183,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                             isConflict ? (
                               <button
                                 type="button"
-                                class="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/20 transition hover:bg-sage/10 hover:text-charcoal"
+                                class="widget-outline-btn shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold"
                                 data-notification-toggle
                                 data-unread={item.unread ? '1' : '0'}
                               >
@@ -192,7 +192,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
                             ) : (
                               <button
                                 type="button"
-                                class="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/20 transition hover:bg-sage/10 hover:text-charcoal"
+                                class="widget-outline-btn shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold"
                                 data-notification-clear
                               >
                                 Clear
@@ -252,7 +252,7 @@ const hasNotificationUnread = notificationUnreadCount > 0;
       <div class="mt-2 flex justify-center">
         <a
           href="/admin#post-announcement"
-          class="rounded-full border border-sage-dark/20 bg-transparent px-2.5 py-1 text-[11px] font-semibold text-sage-dark/75 transition hover:border-sage-dark/35 hover:bg-sage/10 hover:text-sage-dark"
+          class="widget-outline-btn rounded-full px-2.5 py-1 text-[11px] font-semibold"
         >
           Create new announcement
         </a>

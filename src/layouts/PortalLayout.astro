@@ -50,6 +50,9 @@ const lightWidgetCard = organization?.widgetCardColorLight ?? lightSurface;
 const lightWidgetButton = organization?.widgetButtonColorLight ?? lightWidgetHeader;
 const lightWidgetButtonText = organization?.widgetButtonTextColorLight ?? widgetHeaderForeground(lightWidgetButton);
 const lightWidgetButtonHover = organization?.widgetButtonHoverColorLight ?? darkenHex(lightWidgetButton);
+const lightWidgetOutline = organization?.widgetOutlineColorLight ?? DEFAULT_ORG_COLORS.light.widgetOutline;
+const lightWidgetOutlineText = organization?.widgetOutlineTextColorLight ?? DEFAULT_ORG_COLORS.light.widgetOutlineText;
+const lightWidgetOutlineHover = organization?.widgetOutlineHoverColorLight ?? DEFAULT_ORG_COLORS.light.widgetOutlineHover;
 const darkBg = organization?.bgColorDark ?? DEFAULT_ORG_COLORS.dark.background;
 const darkSurface = organization?.surfaceColorDark ?? DEFAULT_ORG_COLORS.dark.surface;
 const darkText = organization?.textColorDark ?? DEFAULT_ORG_COLORS.dark.text;
@@ -68,6 +71,9 @@ const darkWidgetCard = organization?.widgetCardColorDark ?? darkSurface;
 const darkWidgetButton = organization?.widgetButtonColorDark ?? darkWidgetHeader;
 const darkWidgetButtonText = organization?.widgetButtonTextColorDark ?? widgetHeaderForeground(darkWidgetButton);
 const darkWidgetButtonHover = organization?.widgetButtonHoverColorDark ?? darkenHex(darkWidgetButton);
+const darkWidgetOutline = organization?.widgetOutlineColorDark ?? DEFAULT_ORG_COLORS.dark.widgetOutline;
+const darkWidgetOutlineText = organization?.widgetOutlineTextColorDark ?? DEFAULT_ORG_COLORS.dark.widgetOutlineText;
+const darkWidgetOutlineHover = organization?.widgetOutlineHoverColorDark ?? DEFAULT_ORG_COLORS.dark.widgetOutlineHover;
 
 const lightBgRgb = hexToRgbChannels(lightBg) ?? '247 244 238';
 const lightSurfaceRgb = hexToRgbChannels(lightSurface) ?? '255 255 255';
@@ -103,6 +109,10 @@ const darkWidgetCardRgb = hexToRgbChannels(darkWidgetCard) ?? darkSurfaceRgb;
 const darkWidgetButtonRgb = hexToRgbChannels(darkWidgetButton) ?? '83 95 81';
 const darkWidgetButtonTextRgb = hexToRgbChannels(darkWidgetButtonText) ?? '247 244 238';
 const darkWidgetButtonHoverRgb = hexToRgbChannels(darkWidgetButtonHover) ?? darkWidgetButtonRgb;
+
+function widgetOutlineRule(selector: string, color: string, text: string, hover: string) {
+  return `${selector}{--portal-widget-outline:${hexToRgbChannels(color) ?? '83 95 81'} !important;--portal-widget-outline-a:${hexToAlpha(color)} !important;--portal-widget-outline-text:${hexToRgbChannels(text) ?? '83 95 81'} !important;--portal-widget-outline-text-a:${hexToAlpha(text)} !important;--portal-widget-outline-hover:${hexToRgbChannels(hover) ?? '83 95 81'} !important;--portal-widget-outline-hover-a:${hexToAlpha(hover)} !important;}`;
+}
 
 function brandBlock(
   selector: string,
@@ -191,6 +201,7 @@ const brandStyle =
       shadowHover: hexToAlpha(lightShadowHover),
     },
   ) +
+  widgetOutlineRule('html', lightWidgetOutline, lightWidgetOutlineText, lightWidgetOutlineHover) +
   brandBlock(
     'html.dark',
     darkBgRgb,
@@ -231,7 +242,8 @@ const brandStyle =
       shadowText: hexToAlpha(darkShadowText),
       shadowHover: hexToAlpha(darkShadowHover),
     },
-  );
+  ) +
+  widgetOutlineRule('html.dark', darkWidgetOutline, darkWidgetOutlineText, darkWidgetOutlineHover);
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active' && !flush;

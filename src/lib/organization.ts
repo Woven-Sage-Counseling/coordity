@@ -98,6 +98,9 @@ export interface PortalOrganization {
   widgetButtonColorLight: string | null;
   widgetButtonTextColorLight: string | null;
   widgetButtonHoverColorLight: string | null;
+  widgetOutlineColorLight: string | null;
+  widgetOutlineTextColorLight: string | null;
+  widgetOutlineHoverColorLight: string | null;
   /** Dark-mode colors (#RRGGBB), or null for portal defaults. */
   bgColorDark: string | null;
   surfaceColorDark: string | null;
@@ -117,6 +120,9 @@ export interface PortalOrganization {
   widgetButtonColorDark: string | null;
   widgetButtonTextColorDark: string | null;
   widgetButtonHoverColorDark: string | null;
+  widgetOutlineColorDark: string | null;
+  widgetOutlineTextColorDark: string | null;
+  widgetOutlineHoverColorDark: string | null;
   invertLogoDark: boolean;
   /** Soft-delete timestamp; archived orgs are hidden from tenants. */
   archivedAt: number | null;
@@ -142,6 +148,9 @@ export const DEFAULT_ORG_COLORS = {
     widgetButton: '#535F51',
     widgetButtonText: '#F7F4EE',
     widgetButtonHover: '#4C574B',
+    widgetOutline: '#535F5140',
+    widgetOutlineText: '#535F51CC',
+    widgetOutlineHover: '#535F511A',
   },
   dark: {
     background: '#111311',
@@ -162,6 +171,9 @@ export const DEFAULT_ORG_COLORS = {
     widgetButton: '#535F51',
     widgetButtonText: '#F7F4EE',
     widgetButtonHover: '#4C574B',
+    widgetOutline: '#BAC6B666',
+    widgetOutlineText: '#BAC6B6',
+    widgetOutlineHover: '#BAC6B61A',
   },
 } as const;
 
@@ -219,6 +231,12 @@ type OrgRow = {
   widget_button_text_color_dark?: string | null;
   widget_button_hover_color_light?: string | null;
   widget_button_hover_color_dark?: string | null;
+  widget_outline_color_light?: string | null;
+  widget_outline_color_dark?: string | null;
+  widget_outline_text_color_light?: string | null;
+  widget_outline_text_color_dark?: string | null;
+  widget_outline_hover_color_light?: string | null;
+  widget_outline_hover_color_dark?: string | null;
   invert_logo_dark?: number | null;
   archived_at?: number | null;
 };
@@ -258,6 +276,9 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetButtonColorLight: normalizeHexColor(row.widget_button_color_light) ?? null,
     widgetButtonTextColorLight: normalizeHexColor(row.widget_button_text_color_light) ?? null,
     widgetButtonHoverColorLight: normalizeHexColor(row.widget_button_hover_color_light) ?? null,
+    widgetOutlineColorLight: normalizeHexColor(row.widget_outline_color_light) ?? null,
+    widgetOutlineTextColorLight: normalizeHexColor(row.widget_outline_text_color_light) ?? null,
+    widgetOutlineHoverColorLight: normalizeHexColor(row.widget_outline_hover_color_light) ?? null,
     bgColorDark: normalizeHexColor(row.bg_color_dark) ?? null,
     surfaceColorDark: normalizeHexColor(row.surface_color_dark) ?? null,
     textColorDark: normalizeHexColor(row.text_color_dark) ?? normalizeHexColor(row.primary_color_dark),
@@ -276,6 +297,9 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetButtonColorDark: normalizeHexColor(row.widget_button_color_dark) ?? null,
     widgetButtonTextColorDark: normalizeHexColor(row.widget_button_text_color_dark) ?? null,
     widgetButtonHoverColorDark: normalizeHexColor(row.widget_button_hover_color_dark) ?? null,
+    widgetOutlineColorDark: normalizeHexColor(row.widget_outline_color_dark) ?? null,
+    widgetOutlineTextColorDark: normalizeHexColor(row.widget_outline_text_color_dark) ?? null,
+    widgetOutlineHoverColorDark: normalizeHexColor(row.widget_outline_hover_color_dark) ?? null,
     invertLogoDark: Boolean(row.invert_logo_dark),
     archivedAt: row.archived_at ?? null,
   };
@@ -311,6 +335,9 @@ function wovenSageFallback(): PortalOrganization {
     widgetButtonColorLight: null,
     widgetButtonTextColorLight: null,
     widgetButtonHoverColorLight: null,
+    widgetOutlineColorLight: null,
+    widgetOutlineTextColorLight: null,
+    widgetOutlineHoverColorLight: null,
     bgColorDark: null,
     surfaceColorDark: null,
     textColorDark: null,
@@ -329,12 +356,15 @@ function wovenSageFallback(): PortalOrganization {
     widgetButtonColorDark: null,
     widgetButtonTextColorDark: null,
     widgetButtonHoverColorDark: null,
+    widgetOutlineColorDark: null,
+    widgetOutlineTextColorDark: null,
+    widgetOutlineHoverColorDark: null,
     invertLogoDark: true,
     archivedAt: null,
   };
 }
 
-const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
+const ORG_SELECT_FILLED = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
   logo_updated_at,
   CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
@@ -359,6 +389,14 @@ const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
   shadow_text_color_light, shadow_text_color_dark,
   shadow_hover_color_light, shadow_hover_color_dark,
   invert_logo_dark, archived_at`;
+
+const ORG_SELECT = ORG_SELECT_FILLED.replace(
+  'invert_logo_dark, archived_at',
+  `widget_outline_color_light, widget_outline_color_dark,
+  widget_outline_text_color_light, widget_outline_text_color_dark,
+  widget_outline_hover_color_light, widget_outline_hover_color_dark,
+  invert_logo_dark, archived_at`,
+);
 
 const ORG_SELECT_BUTTON = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
@@ -473,7 +511,7 @@ async function queryOrganization(
   sqlWithSelect: (select: string) => { sql: string; binds: unknown[] },
 ): Promise<OrgRow | null> {
   const { DB } = getEnv();
-  for (const select of [ORG_SELECT, ORG_SELECT_BUTTON, ORG_SELECT_CARD, ORG_SELECT_WIDGET, ORG_SELECT_SURFACE, ORG_SELECT_TEXT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
+  for (const select of [ORG_SELECT, ORG_SELECT_FILLED, ORG_SELECT_BUTTON, ORG_SELECT_CARD, ORG_SELECT_WIDGET, ORG_SELECT_SURFACE, ORG_SELECT_TEXT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
     try {
       const { sql, binds } = sqlWithSelect(select);
       const row = await DB.prepare(sql).bind(...binds).first<OrgRow>();
@@ -898,6 +936,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetButtonColorLight: org.widgetButtonColorLight,
     widgetButtonTextColorLight: org.widgetButtonTextColorLight,
     widgetButtonHoverColorLight: org.widgetButtonHoverColorLight,
+    widgetOutlineColorLight: org.widgetOutlineColorLight,
+    widgetOutlineTextColorLight: org.widgetOutlineTextColorLight,
+    widgetOutlineHoverColorLight: org.widgetOutlineHoverColorLight,
     bgColorDark: org.bgColorDark,
     surfaceColorDark: org.surfaceColorDark,
     textColorDark: org.textColorDark,
@@ -916,6 +957,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetButtonColorDark: org.widgetButtonColorDark,
     widgetButtonTextColorDark: org.widgetButtonTextColorDark,
     widgetButtonHoverColorDark: org.widgetButtonHoverColorDark,
+    widgetOutlineColorDark: org.widgetOutlineColorDark,
+    widgetOutlineTextColorDark: org.widgetOutlineTextColorDark,
+    widgetOutlineHoverColorDark: org.widgetOutlineHoverColorDark,
     invertLogoDark: org.invertLogoDark,
   };
 }
@@ -942,6 +986,9 @@ export async function updateOrganizationBranding(input: {
   widgetButtonColorLight?: string | null;
   widgetButtonTextColorLight?: string | null;
   widgetButtonHoverColorLight?: string | null;
+  widgetOutlineColorLight?: string | null;
+  widgetOutlineTextColorLight?: string | null;
+  widgetOutlineHoverColorLight?: string | null;
   bgColorDark?: string | null;
   surfaceColorDark?: string | null;
   textColorDark?: string | null;
@@ -960,6 +1007,9 @@ export async function updateOrganizationBranding(input: {
   widgetButtonColorDark?: string | null;
   widgetButtonTextColorDark?: string | null;
   widgetButtonHoverColorDark?: string | null;
+  widgetOutlineColorDark?: string | null;
+  widgetOutlineTextColorDark?: string | null;
+  widgetOutlineHoverColorDark?: string | null;
   invertLogoDark?: boolean;
   logoFile?: File | null;
   clearLogo?: boolean;
@@ -1064,6 +1114,18 @@ export async function updateOrganizationBranding(input: {
     input.widgetButtonHoverColorLight !== undefined
       ? (resolveOptionalHex(input.widgetButtonHoverColorLight, 'Light widget button hover color') ?? null)
       : existing.widgetButtonHoverColorLight;
+  const widgetOutlineColorLight =
+    input.widgetOutlineColorLight !== undefined
+      ? (resolveOptionalHex(input.widgetOutlineColorLight, 'Light widget outline color') ?? null)
+      : existing.widgetOutlineColorLight;
+  const widgetOutlineTextColorLight =
+    input.widgetOutlineTextColorLight !== undefined
+      ? (resolveOptionalHex(input.widgetOutlineTextColorLight, 'Light widget outline text color') ?? null)
+      : existing.widgetOutlineTextColorLight;
+  const widgetOutlineHoverColorLight =
+    input.widgetOutlineHoverColorLight !== undefined
+      ? (resolveOptionalHex(input.widgetOutlineHoverColorLight, 'Light widget outline hover color') ?? null)
+      : existing.widgetOutlineHoverColorLight;
   const bgColorDark =
     input.bgColorDark !== undefined
       ? (resolveOptionalHex(input.bgColorDark, 'Dark background color') ?? null)
@@ -1136,6 +1198,18 @@ export async function updateOrganizationBranding(input: {
     input.widgetButtonHoverColorDark !== undefined
       ? (resolveOptionalHex(input.widgetButtonHoverColorDark, 'Dark widget button hover color') ?? null)
       : existing.widgetButtonHoverColorDark;
+  const widgetOutlineColorDark =
+    input.widgetOutlineColorDark !== undefined
+      ? (resolveOptionalHex(input.widgetOutlineColorDark, 'Dark widget outline color') ?? null)
+      : existing.widgetOutlineColorDark;
+  const widgetOutlineTextColorDark =
+    input.widgetOutlineTextColorDark !== undefined
+      ? (resolveOptionalHex(input.widgetOutlineTextColorDark, 'Dark widget outline text color') ?? null)
+      : existing.widgetOutlineTextColorDark;
+  const widgetOutlineHoverColorDark =
+    input.widgetOutlineHoverColorDark !== undefined
+      ? (resolveOptionalHex(input.widgetOutlineHoverColorDark, 'Dark widget outline hover color') ?? null)
+      : existing.widgetOutlineHoverColorDark;
 
   // Keep legacy columns in sync with light-mode primary/accent for older readers.
   const legacyPrimary = primaryColorLight;
@@ -1186,6 +1260,12 @@ export async function updateOrganizationBranding(input: {
          widget_button_text_color_dark = ?,
          widget_button_hover_color_light = ?,
          widget_button_hover_color_dark = ?,
+         widget_outline_color_light = ?,
+         widget_outline_color_dark = ?,
+         widget_outline_text_color_light = ?,
+         widget_outline_text_color_dark = ?,
+         widget_outline_hover_color_light = ?,
+         widget_outline_hover_color_dark = ?,
          invert_logo_dark = ?,
          updated_at = ?
      WHERE id = ?`,
@@ -1231,6 +1311,12 @@ export async function updateOrganizationBranding(input: {
       widgetButtonTextColorDark,
       widgetButtonHoverColorLight,
       widgetButtonHoverColorDark,
+      widgetOutlineColorLight,
+      widgetOutlineColorDark,
+      widgetOutlineTextColorLight,
+      widgetOutlineTextColorDark,
+      widgetOutlineHoverColorLight,
+      widgetOutlineHoverColorDark,
       invertLogoDark ? 1 : 0,
       ts,
       input.orgId,

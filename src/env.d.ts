@@ -57,6 +57,9 @@ interface PortalOrganization {
   widgetButtonColorLight: string | null;
   widgetButtonTextColorLight: string | null;
   widgetButtonHoverColorLight: string | null;
+  widgetOutlineColorLight: string | null;
+  widgetOutlineTextColorLight: string | null;
+  widgetOutlineHoverColorLight: string | null;
   bgColorDark: string | null;
   surfaceColorDark: string | null;
   textColorDark: string | null;
@@ -75,6 +78,9 @@ interface PortalOrganization {
   widgetButtonColorDark: string | null;
   widgetButtonTextColorDark: string | null;
   widgetButtonHoverColorDark: string | null;
+  widgetOutlineColorDark: string | null;
+  widgetOutlineTextColorDark: string | null;
+  widgetOutlineHoverColorDark: string | null;
   invertLogoDark: boolean;
   archivedAt: number | null;
 }

@@ -32,6 +32,12 @@
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
+  --portal-widget-outline: 83 95 81;
+  --portal-widget-outline-a: 0.25;
+  --portal-widget-outline-text: 83 95 81;
+  --portal-widget-outline-text-a: 0.8;
+  --portal-widget-outline-hover: 83 95 81;
+  --portal-widget-outline-hover-a: 0.1;
   --coordity-blue: 0 82 132;
   --coordity-blue-bright: 59 130 246;
   --coordity-yellow: 254 203 0;
@@ -68,6 +74,12 @@ html.dark {
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
+  --portal-widget-outline: 186 198 182;
+  --portal-widget-outline-a: 0.4;
+  --portal-widget-outline-text: 186 198 182;
+  --portal-widget-outline-text-a: 1;
+  --portal-widget-outline-hover: 186 198 182;
+  --portal-widget-outline-hover-a: 0.1;
 }
 
 @layer base {
@@ -110,6 +122,19 @@ html.dark {
 
   .btn-secondary:hover:not(:disabled) {
     background-color: rgb(var(--portal-accent-hover, var(--portal-sage)) / var(--portal-accent-hover-a, 0.1)) !important;
+  }
+
+  .widget-outline-btn {
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(var(--portal-widget-outline, 83 95 81) / var(--portal-widget-outline-a, 0.25));
+    background-color: transparent;
+    color: rgb(var(--portal-widget-outline-text, 83 95 81) / var(--portal-widget-outline-text-a, 0.8));
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+
+  .widget-outline-btn:hover:not(:disabled) {
+    background-color: rgb(var(--portal-widget-outline-hover, 83 95 81) / var(--portal-widget-outline-hover-a, 0.1)) !important;
   }
 
   .bubble-shadow {
@@ -358,7 +383,8 @@ html :is([data-widget-body], [data-schedule-dialog]) .hover\:bg-white:hover {
 [data-brand-preview-primary]:hover,
 [data-brand-preview-accent]:hover,
 [data-brand-preview-chip]:hover,
-[data-brand-preview-widget-button]:hover {
+[data-brand-preview-widget-button]:hover,
+[data-brand-preview-widget-outline]:hover {
   background-color: var(--brand-preview-hover) !important;
   border-color: var(--brand-preview-hover);
 }
