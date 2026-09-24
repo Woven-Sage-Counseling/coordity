@@ -241,16 +241,14 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                       data-training-nav="settings"
                       class:list={[
                         'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
-                        selectedView === 'settings'
-                          ? 'bg-brand text-onbrand'
-                          : 'bg-white text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]',
+                        selectedView === 'settings' ? 'bg-brand text-onbrand' : 'outline-btn',
                       ]}
                     >
                       Settings
                     </a>
                     <button
                       type="button"
-                      class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
+                      class="outline-btn rounded-full px-2.5 py-1 text-[11px] font-semibold"
                       data-training-preview-open="module"
                     >
                       Preview
