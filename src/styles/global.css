@@ -8,6 +8,7 @@
   --portal-sage: 120 143 117;
   --portal-sage-light: 150 166 147;
   --portal-sage-dark: 83 95 81;
+  --portal-primary: 83 95 81;
   --portal-accent: 185 181 174;
   --portal-charcoal: 58 58 56;
   --portal-surface: 255 255 255;
@@ -26,6 +27,7 @@ html.dark {
   --portal-sage: 138 158 134;
   --portal-sage-light: 158 174 154;
   --portal-sage-dark: 186 198 182;
+  --portal-primary: 186 198 182;
   --portal-accent: 120 118 112;
   --portal-charcoal: 232 230 224;
   --portal-surface: 30 33 30;
@@ -56,15 +58,15 @@ html.dark {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-full bg-sage-dark px-5 py-2.5 text-sm font-semibold text-cream transition hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-dark disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-cream transition hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   html.dark .btn-primary {
-    @apply text-[#111311] hover:bg-sage-light;
+    @apply text-cream hover:bg-sage-light;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-full border border-sage-dark/25 bg-surface/70 px-5 py-2.5 text-sm font-medium text-sage-dark transition hover:border-sage-dark/40 hover:bg-surface;
+    @apply inline-flex items-center justify-center rounded-full border border-sage/40 bg-surface/70 px-5 py-2.5 text-sm font-medium text-sage transition hover:border-sage hover:bg-sage/10;
   }
 
   .field {

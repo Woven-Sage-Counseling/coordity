@@ -190,7 +190,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   class:list={[
                     'block rounded-lg px-2.5 py-2 text-sm transition',
                     selected?.id === module.id
-                      ? 'bg-charcoal text-white'
+                      ? 'bg-brand text-cream'
                       : 'text-charcoal hover:bg-[#f4f5f8]',
                   ]}
                 >
@@ -242,7 +242,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                       class:list={[
                         'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
                         selectedView === 'settings'
-                          ? 'bg-charcoal text-white'
+                          ? 'bg-brand text-cream'
                           : 'bg-white text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]',
                       ]}
                     >
@@ -306,7 +306,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   To complete
                 </p>
                 <details class="relative" data-training-add>
-                  <summary class="cursor-pointer list-none rounded-full bg-charcoal px-2.5 py-1 text-[11px] font-semibold text-white [&::-webkit-details-marker]:hidden">
+                  <summary class="cursor-pointer list-none rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold text-cream [&::-webkit-details-marker]:hidden">
                     + Add
                   </summary>
                   <form
@@ -442,7 +442,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   )}
                   <p class="mt-4 text-sm font-semibold text-sage-dark/80">0% complete</p>
                   <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#e3e5e8]">
-                    <div class="h-full w-0 rounded-full bg-sage-dark" />
+                    <div class="h-full w-0 rounded-full bg-brand" />
                   </div>
                 </div>
 

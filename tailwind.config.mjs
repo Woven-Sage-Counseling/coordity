@@ -12,6 +12,7 @@ export default {
           dark: 'rgb(var(--portal-sage-dark) / <alpha-value>)',
         },
         accent: { DEFAULT: 'rgb(var(--portal-accent) / <alpha-value>)' },
+        brand: { DEFAULT: 'rgb(var(--portal-primary) / <alpha-value>)' },
         charcoal: { DEFAULT: 'rgb(var(--portal-charcoal) / <alpha-value>)' },
         surface: { DEFAULT: 'rgb(var(--portal-surface) / <alpha-value>)' },
         muted: { DEFAULT: 'rgb(var(--portal-muted) / <alpha-value>)' },

@@ -45,7 +45,7 @@ const hasLessons = progress.lessons.length > 0;
     <p class="mt-4 text-sm font-semibold text-sage-dark/80">{progress.percent}% complete</p>
     <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#e3e5e8]">
       <div
-        class:list={['h-full rounded-full', progress.complete ? 'bg-emerald-600' : 'bg-sage-dark']}
+        class:list={['h-full rounded-full', progress.complete ? 'bg-emerald-600' : 'bg-brand']}
         style={`width: ${progress.percent}%`}
       />
     </div>

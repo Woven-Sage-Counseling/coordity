@@ -29,27 +29,31 @@ const orgFaviconHref = organization?.hasFavicon
 const invertLogoDark = organization?.invertLogoDark ?? false;
 
 const lightBg = organization?.bgColorLight ?? DEFAULT_ORG_COLORS.light.background;
+const lightText = organization?.textColorLight ?? DEFAULT_ORG_COLORS.light.text;
 const lightPrimary = organization?.primaryColorLight ?? DEFAULT_ORG_COLORS.light.primary;
 const lightAccent = organization?.accentColorLight ?? DEFAULT_ORG_COLORS.light.accent;
 const darkBg = organization?.bgColorDark ?? DEFAULT_ORG_COLORS.dark.background;
+const darkText = organization?.textColorDark ?? DEFAULT_ORG_COLORS.dark.text;
 const darkPrimary = organization?.primaryColorDark ?? DEFAULT_ORG_COLORS.dark.primary;
 const darkAccent = organization?.accentColorDark ?? DEFAULT_ORG_COLORS.dark.accent;
 
 const lightBgRgb = hexToRgbChannels(lightBg) ?? '247 244 238';
+const lightTextRgb = hexToRgbChannels(lightText) ?? '83 95 81';
 const lightPrimaryRgb = hexToRgbChannels(lightPrimary) ?? '83 95 81';
 const lightAccentRgb = hexToRgbChannels(lightAccent) ?? '120 143 117';
 const darkBgRgb = hexToRgbChannels(darkBg) ?? '17 19 17';
+const darkTextRgb = hexToRgbChannels(darkText) ?? '186 198 182';
 const darkPrimaryRgb = hexToRgbChannels(darkPrimary) ?? '186 198 182';
 const darkAccentRgb = hexToRgbChannels(darkAccent) ?? '138 158 134';
 
-function brandBlock(selector: string, bg: string, primary: string, accent: string) {
-  return `${selector}{--portal-cream:${bg} !important;--portal-sage-dark:${primary} !important;--portal-charcoal:${primary} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;}`;
+function brandBlock(selector: string, bg: string, text: string, primary: string, accent: string) {
+  return `${selector}{--portal-cream:${bg} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;}`;
 }
 // !important so these beat the default palette in global.css no matter which
 // stylesheet Astro injects last.
 const brandStyle =
-  brandBlock('html', lightBgRgb, lightPrimaryRgb, lightAccentRgb) +
-  brandBlock('html.dark', darkBgRgb, darkPrimaryRgb, darkAccentRgb);
+  brandBlock('html', lightBgRgb, lightTextRgb, lightPrimaryRgb, lightAccentRgb) +
+  brandBlock('html.dark', darkBgRgb, darkTextRgb, darkPrimaryRgb, darkAccentRgb);
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active' && !flush;

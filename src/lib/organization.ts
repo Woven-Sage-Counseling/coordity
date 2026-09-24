@@ -81,10 +81,12 @@ export interface PortalOrganization {
   faviconUpdatedAt: number | null;
   /** Light-mode colors (#RRGGBB), or null for portal defaults. */
   bgColorLight: string | null;
+  textColorLight: string | null;
   primaryColorLight: string | null;
   accentColorLight: string | null;
   /** Dark-mode colors (#RRGGBB), or null for portal defaults. */
   bgColorDark: string | null;
+  textColorDark: string | null;
   primaryColorDark: string | null;
   accentColorDark: string | null;
   invertLogoDark: boolean;
@@ -95,11 +97,13 @@ export interface PortalOrganization {
 export const DEFAULT_ORG_COLORS = {
   light: {
     background: '#F7F4EE',
+    text: '#535F51',
     primary: '#535F51',
     accent: '#788F75',
   },
   dark: {
     background: '#111311',
+    text: '#BAC6B6',
     primary: '#BAC6B6',
     accent: '#8A9E86',
   },
@@ -125,6 +129,8 @@ type OrgRow = {
   accent_color?: string | null;
   bg_color_light?: string | null;
   bg_color_dark?: string | null;
+  text_color_light?: string | null;
+  text_color_dark?: string | null;
   primary_color_light?: string | null;
   primary_color_dark?: string | null;
   accent_color_light?: string | null;
@@ -151,9 +157,11 @@ function mapOrg(row: OrgRow): PortalOrganization {
     hasFavicon: Boolean(row.has_favicon),
     faviconUpdatedAt: row.favicon_updated_at ?? null,
     bgColorLight: normalizeHexColor(row.bg_color_light) ?? null,
+    textColorLight: normalizeHexColor(row.text_color_light) ?? normalizeHexColor(row.primary_color_light) ?? legacyPrimary,
     primaryColorLight: normalizeHexColor(row.primary_color_light) ?? legacyPrimary,
     accentColorLight: normalizeHexColor(row.accent_color_light) ?? legacyAccent,
     bgColorDark: normalizeHexColor(row.bg_color_dark) ?? null,
+    textColorDark: normalizeHexColor(row.text_color_dark) ?? normalizeHexColor(row.primary_color_dark),
     primaryColorDark: normalizeHexColor(row.primary_color_dark) ?? null,
     accentColorDark: normalizeHexColor(row.accent_color_dark) ?? null,
     invertLogoDark: Boolean(row.invert_logo_dark),
@@ -174,9 +182,11 @@ function wovenSageFallback(): PortalOrganization {
     hasFavicon: false,
     faviconUpdatedAt: null,
     bgColorLight: null,
+    textColorLight: null,
     primaryColorLight: null,
     accentColorLight: null,
     bgColorDark: null,
+    textColorDark: null,
     primaryColorDark: null,
     accentColorDark: null,
     invertLogoDark: true,
@@ -185,6 +195,18 @@ function wovenSageFallback(): PortalOrganization {
 }
 
 const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
+  CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
+  logo_updated_at,
+  CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
+  favicon_updated_at,
+  primary_color, accent_color,
+  bg_color_light, bg_color_dark,
+  text_color_light, text_color_dark,
+  primary_color_light, primary_color_dark,
+  accent_color_light, accent_color_dark,
+  invert_logo_dark, archived_at`;
+
+const ORG_SELECT_COLORS = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
   logo_updated_at,
   CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
@@ -212,7 +234,7 @@ async function queryOrganization(
   sqlWithSelect: (select: string) => { sql: string; binds: unknown[] },
 ): Promise<OrgRow | null> {
   const { DB } = getEnv();
-  for (const select of [ORG_SELECT, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
+  for (const select of [ORG_SELECT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
     try {
       const { sql, binds } = sqlWithSelect(select);
       const row = await DB.prepare(sql).bind(...binds).first<OrgRow>();
@@ -584,9 +606,11 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     faviconUrl: org.hasFavicon ? `/api/org/favicon?v=${org.faviconUpdatedAt ?? 0}` : null,
     faviconUpdatedAt: org.faviconUpdatedAt,
     bgColorLight: org.bgColorLight,
+    textColorLight: org.textColorLight,
     primaryColorLight: org.primaryColorLight,
     accentColorLight: org.accentColorLight,
     bgColorDark: org.bgColorDark,
+    textColorDark: org.textColorDark,
     primaryColorDark: org.primaryColorDark,
     accentColorDark: org.accentColorDark,
     invertLogoDark: org.invertLogoDark,
@@ -598,9 +622,11 @@ export async function updateOrganizationBranding(input: {
   displayName?: string;
   websiteUrl?: string | null;
   bgColorLight?: string | null;
+  textColorLight?: string | null;
   primaryColorLight?: string | null;
   accentColorLight?: string | null;
   bgColorDark?: string | null;
+  textColorDark?: string | null;
   primaryColorDark?: string | null;
   accentColorDark?: string | null;
   invertLogoDark?: boolean;
@@ -639,6 +665,10 @@ export async function updateOrganizationBranding(input: {
     input.bgColorLight !== undefined
       ? (resolveOptionalHex(input.bgColorLight, 'Light background color') ?? null)
       : existing.bgColorLight;
+  const textColorLight =
+    input.textColorLight !== undefined
+      ? (resolveOptionalHex(input.textColorLight, 'Light text color') ?? null)
+      : existing.textColorLight;
   const primaryColorLight =
     input.primaryColorLight !== undefined
       ? (resolveOptionalHex(input.primaryColorLight, 'Light primary color') ?? null)
@@ -651,6 +681,10 @@ export async function updateOrganizationBranding(input: {
     input.bgColorDark !== undefined
       ? (resolveOptionalHex(input.bgColorDark, 'Dark background color') ?? null)
       : existing.bgColorDark;
+  const textColorDark =
+    input.textColorDark !== undefined
+      ? (resolveOptionalHex(input.textColorDark, 'Dark text color') ?? null)
+      : existing.textColorDark;
   const primaryColorDark =
     input.primaryColorDark !== undefined
       ? (resolveOptionalHex(input.primaryColorDark, 'Dark primary color') ?? null)
@@ -675,6 +709,8 @@ export async function updateOrganizationBranding(input: {
          accent_color = ?,
          bg_color_light = ?,
          bg_color_dark = ?,
+         text_color_light = ?,
+         text_color_dark = ?,
          primary_color_light = ?,
          primary_color_dark = ?,
          accent_color_light = ?,
@@ -690,6 +726,8 @@ export async function updateOrganizationBranding(input: {
       legacyAccent,
       bgColorLight,
       bgColorDark,
+      textColorLight,
+      textColorDark,
       primaryColorLight,
       primaryColorDark,
       accentColorLight,

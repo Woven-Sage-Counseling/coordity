@@ -56,7 +56,7 @@ const overall = overallProgress(tracks);
         aria-valuenow={overall.percent}
         aria-label="Overall progress"
       >
-        <div class="h-full rounded-full bg-sage-dark transition-[width]" style={`width: ${overall.percent}%`}></div>
+        <div class="h-full rounded-full bg-brand transition-[width]" style={`width: ${overall.percent}%`}></div>
       </div>
     </div>
 
@@ -83,7 +83,7 @@ const overall = overallProgress(tracks);
               <div
                 class:list={[
                   'h-full rounded-full transition-[width]',
-                  track.percent === 100 ? 'bg-emerald-600' : 'bg-sage-dark',
+                  track.percent === 100 ? 'bg-emerald-600' : 'bg-brand',
                 ]}
                 style={`width: ${track.percent}%`}
               ></div>

@@ -565,7 +565,7 @@ const arrowClass =
         const selected = i >= index && i < index + count;
         btn.setAttribute('aria-selected', selected ? 'true' : 'false');
         btn.className = selected
-          ? 'h-2.5 w-2.5 rounded-full bg-charcoal'
+          ? 'h-2.5 w-2.5 rounded-full bg-brand'
           : 'h-2.5 w-2.5 rounded-full bg-sage-dark/25 hover:bg-sage-dark/45';
         btn.addEventListener('click', () => show(i));
         dots.appendChild(btn);
