@@ -197,6 +197,10 @@ html.dark {
     background-color: rgb(var(--portal-selected-hover, var(--portal-sage)) / var(--portal-selected-hover-a, 0.1)) !important;
   }
 
+  .item-selected-choice:has(:checked) {
+    background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
+  }
+
   .field {
     @apply mt-1 w-full rounded-xl border border-sage-dark/15 bg-surface px-3.5 py-2.5 text-sm text-charcoal outline-none ring-sage-dark/30 focus:ring-2;
   }
