@@ -2080,8 +2080,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                               <div class="rounded-md px-1.5 py-1 text-[10px] font-semibold" data-brand-preview-training-module={swatch.mode} style={`background-color:${swatch.module};color:${swatch.moduleText}`}>Onboarding</div>
                               <div class="rounded-md px-1.5 py-1 text-[10px]" data-brand-preview-training-list={swatch.mode} style={`color:${swatch.listText}`}>Using Coordity</div>
                             </div>
-                            <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
-                              <p class="text-[10px] font-semibold" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerLabel}`}>+ New module</p>
+                            <div class:list={['border-t px-1.5 py-1.5', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
+                              <span class="inline-flex w-full justify-center rounded-full px-1.5 py-1 text-[10px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>+ New module</span>
                             </div>
                           </div>
                           <div class:list={['min-w-0 border-r', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
