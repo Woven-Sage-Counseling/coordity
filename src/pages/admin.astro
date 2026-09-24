@@ -131,6 +131,7 @@ const brandWidgetOutlineDark = organization?.widgetOutlineColorDark ?? '#BAC6B66
 const brandWidgetOutlineTextDark = organization?.widgetOutlineTextColorDark ?? '#BAC6B6';
 const brandWidgetOutlineHoverDark = organization?.widgetOutlineHoverColorDark ?? '#BAC6B61A';
 const brandTrainingHeaderLight = organization?.trainingHeaderColorLight ?? brandSelectedLight;
+const brandTrainingHeaderTextLight = organization?.trainingHeaderTextColorLight ?? brandTextLight;
 const brandTrainingModuleLight = organization?.trainingModuleColorLight ?? brandPrimaryLight;
 const brandTrainingModuleTextLight = organization?.trainingModuleTextColorLight ?? brandPrimaryTextLight;
 const brandTrainingLessonLight = organization?.trainingLessonColorLight ?? withAlpha(brandAccentLight, 25);
@@ -144,6 +145,7 @@ const brandTrainingOutlineLight = organization?.trainingOutlineColorLight ?? bra
 const brandTrainingOutlineTextLight = organization?.trainingOutlineTextColorLight ?? brandAccentTextLight;
 const brandTrainingOutlineHoverLight = organization?.trainingOutlineHoverColorLight ?? brandAccentHoverLight;
 const brandTrainingHeaderDark = organization?.trainingHeaderColorDark ?? brandSelectedDark;
+const brandTrainingHeaderTextDark = organization?.trainingHeaderTextColorDark ?? brandTextDark;
 const brandTrainingModuleDark = organization?.trainingModuleColorDark ?? brandPrimaryDark;
 const brandTrainingModuleTextDark = organization?.trainingModuleTextColorDark ?? brandPrimaryTextDark;
 const brandTrainingLessonDark = organization?.trainingLessonColorDark ?? withAlpha(brandAccentDark, 25);
@@ -1892,6 +1894,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   mode: 'light',
                   title: 'Light mode',
                   header: brandTrainingHeaderLight,
+                  headerText: brandTrainingHeaderTextLight,
                   module: brandTrainingModuleLight,
                   moduleText: brandTrainingModuleTextLight,
                   lesson: brandTrainingLessonLight,
@@ -1909,6 +1912,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   mode: 'dark',
                   title: 'Dark mode',
                   header: brandTrainingHeaderDark,
+                  headerText: brandTrainingHeaderTextDark,
                   module: brandTrainingModuleDark,
                   moduleText: brandTrainingModuleTextDark,
                   lesson: brandTrainingLessonDark,
@@ -1928,7 +1932,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   [
                     {
                       title: 'Headers',
-                      fields: [['trainingHeaderColor', 'Background', swatch.header]],
+                      fields: [
+                        ['trainingHeaderColor', 'Background', swatch.header],
+                        ['trainingHeaderTextColor', 'Text', swatch.headerText],
+                      ],
                     },
                     {
                       title: 'Selected module',
@@ -2002,10 +2009,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           <div class="min-w-0 space-y-4">
                             <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
                             <div class="overflow-hidden rounded-xl border border-sage-dark/10 bg-white" data-brand-preview-training={swatch.mode}>
-                              <div class="flex items-center justify-between gap-2 px-2.5 py-2" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
+                              <div class="flex items-center justify-between gap-2 px-2.5 py-2" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header};color:${swatch.headerText}`}>
                                 <div class="min-w-0">
-                                  <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-sage-dark/55">In this module</p>
-                                  <p class="text-xs font-semibold text-charcoal">Getting Started</p>
+                                  <p class="text-[9px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>In this module</p>
+                                  <p class="text-xs font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>Getting Started</p>
                                 </div>
                                 <span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold" data-brand-preview-training-outline={swatch.mode} style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}>Preview</span>
                               </div>
@@ -2426,6 +2433,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'widgetOutlineTextColorDark',
       'widgetOutlineHoverColorDark',
       'trainingHeaderColorLight',
+      'trainingHeaderTextColorLight',
       'trainingModuleColorLight',
       'trainingModuleTextColorLight',
       'trainingLessonColorLight',
@@ -2439,6 +2447,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'trainingOutlineTextColorLight',
       'trainingOutlineHoverColorLight',
       'trainingHeaderColorDark',
+      'trainingHeaderTextColorDark',
       'trainingModuleColorDark',
       'trainingModuleTextColorDark',
       'trainingLessonColorDark',
@@ -2558,6 +2567,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.setProperty('--brand-preview-hover', widgetOutlineHover);
       });
       const trainingHeader = readColor(`trainingHeaderColor${suffix}`);
+      const trainingHeaderText = readColor(`trainingHeaderTextColor${suffix}`);
       const trainingModule = readColor(`trainingModuleColor${suffix}`);
       const trainingModuleText = readColor(`trainingModuleTextColor${suffix}`);
       const trainingLesson = readColor(`trainingLessonColor${suffix}`);
@@ -2572,6 +2582,13 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const trainingOutlineHover = readColor(`trainingOutlineHoverColor${suffix}`);
       paint('training-header', (el) => {
         el.style.backgroundColor = trainingHeader;
+        el.style.color = trainingHeaderText;
+      });
+      paint('training-header-label', (el) => {
+        el.style.color = trainingHeaderText;
+      });
+      paint('training-header-title', (el) => {
+        el.style.color = trainingHeaderText;
       });
       paint('training-module', (el) => {
         el.style.backgroundColor = trainingModule;
@@ -2696,6 +2713,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       widgetOutlineTextColorDark?: string | null;
       widgetOutlineHoverColorDark?: string | null;
       trainingHeaderColorLight?: string | null;
+      trainingHeaderTextColorLight?: string | null;
       trainingModuleColorLight?: string | null;
       trainingModuleTextColorLight?: string | null;
       trainingLessonColorLight?: string | null;
@@ -2709,6 +2727,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       trainingOutlineTextColorLight?: string | null;
       trainingOutlineHoverColorLight?: string | null;
       trainingHeaderColorDark?: string | null;
+      trainingHeaderTextColorDark?: string | null;
       trainingModuleColorDark?: string | null;
       trainingModuleTextColorDark?: string | null;
       trainingLessonColorDark?: string | null;
@@ -2846,6 +2865,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         const fallbacks: Record<string, string> = mode === 'Light'
           ? {
               header: branding.selectedColorLight || '#F7F8FA',
+              'header-text': branding.textColorLight || '#535F51',
               module: branding.primaryColorLight || '#535F51',
               'module-text': branding.primaryTextColorLight || '#F7F4EE',
               lesson: `${accentBase}40`,
@@ -2861,6 +2881,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             }
           : {
               header: branding.selectedColorDark || '#2A2E2A',
+              'header-text': branding.textColorDark || '#BAC6B6',
               module: branding.primaryColorDark || '#BAC6B6',
               'module-text': branding.primaryTextColorDark || '#111311',
               lesson: `${accentBase}40`,
@@ -2876,6 +2897,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             };
         const keys: Record<string, string> = {
           header: 'trainingHeaderColor',
+          'header-text': 'trainingHeaderTextColor',
           module: 'trainingModuleColor',
           'module-text': 'trainingModuleTextColor',
           lesson: 'trainingLessonColor',

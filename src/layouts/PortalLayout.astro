@@ -58,6 +58,7 @@ const lightWidgetOutline = organization?.widgetOutlineColorLight ?? DEFAULT_ORG_
 const lightWidgetOutlineText = organization?.widgetOutlineTextColorLight ?? DEFAULT_ORG_COLORS.light.widgetOutlineText;
 const lightWidgetOutlineHover = organization?.widgetOutlineHoverColorLight ?? DEFAULT_ORG_COLORS.light.widgetOutlineHover;
 const lightTrainingHeader = organization?.trainingHeaderColorLight ?? lightSelected;
+const lightTrainingHeaderText = organization?.trainingHeaderTextColorLight ?? lightText;
 const lightTrainingModule = organization?.trainingModuleColorLight ?? lightPrimary;
 const lightTrainingModuleText = organization?.trainingModuleTextColorLight ?? lightPrimaryText;
 const lightTrainingLesson = organization?.trainingLessonColorLight ?? withAlpha(lightAccent, 25);
@@ -95,6 +96,7 @@ const darkWidgetOutline = organization?.widgetOutlineColorDark ?? DEFAULT_ORG_CO
 const darkWidgetOutlineText = organization?.widgetOutlineTextColorDark ?? DEFAULT_ORG_COLORS.dark.widgetOutlineText;
 const darkWidgetOutlineHover = organization?.widgetOutlineHoverColorDark ?? DEFAULT_ORG_COLORS.dark.widgetOutlineHover;
 const darkTrainingHeader = organization?.trainingHeaderColorDark ?? darkSelected;
+const darkTrainingHeaderText = organization?.trainingHeaderTextColorDark ?? darkText;
 const darkTrainingModule = organization?.trainingModuleColorDark ?? darkPrimary;
 const darkTrainingModuleText = organization?.trainingModuleTextColorDark ?? darkPrimaryText;
 const darkTrainingLesson = organization?.trainingLessonColorDark ?? withAlpha(darkAccent, 25);
@@ -252,6 +254,7 @@ const brandStyle =
   selectedItemRule('html', lightSelected, lightSelectedText, lightSelectedHover) +
   trainingRule('html', {
     header: lightTrainingHeader,
+    'header-text': lightTrainingHeaderText,
     module: lightTrainingModule,
     'module-text': lightTrainingModuleText,
     lesson: lightTrainingLesson,
@@ -310,6 +313,7 @@ const brandStyle =
   selectedItemRule('html.dark', darkSelected, darkSelectedText, darkSelectedHover) +
   trainingRule('html.dark', {
     header: darkTrainingHeader,
+    'header-text': darkTrainingHeaderText,
     module: darkTrainingModule,
     'module-text': darkTrainingModuleText,
     lesson: darkTrainingLesson,

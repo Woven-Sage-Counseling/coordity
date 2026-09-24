@@ -228,14 +228,14 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
           {
             selected ? (
               <>
-                <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+                    <p class="text-xs font-semibold uppercase leading-none tracking-[0.12em] text-sage-dark/55">
                       In this module:
                     </p>
-                    <p class="mt-0.5 break-words text-sm font-semibold leading-snug text-charcoal">{selected.title}</p>
+                    <p class="mt-0.5 break-words text-[13px] font-semibold leading-tight text-charcoal">{selected.title}</p>
                   </div>
-                  <div class="flex shrink-0 flex-col items-end gap-0.5">
+                  <div class="flex shrink-0 flex-col items-end gap-px">
                     <a
                       href={moduleHref(selected.id, { view: 'settings' })}
                       data-training-nav="settings"

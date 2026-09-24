@@ -35,6 +35,7 @@
   --portal-selected-hover: 120 143 117;
   --portal-selected-hover-a: 0.1;
   --portal-training-header: 247 248 250;
+  --portal-training-header-text: 83 95 81;
   --portal-training-module: 83 95 81;
   --portal-training-module-text: 247 244 238;
   --portal-training-lesson: 120 143 117;
@@ -97,6 +98,7 @@ html.dark {
   --portal-selected-hover: 138 158 134;
   --portal-selected-hover-a: 0.1;
   --portal-training-header: 42 46 42;
+  --portal-training-header-text: 186 198 182;
   --portal-training-module: 186 198 182;
   --portal-training-module-text: 17 19 17;
   --portal-training-lesson: 138 158 134;
@@ -237,6 +239,15 @@ html.dark {
 
   .training-header {
     background-color: rgb(var(--portal-training-header, 247 248 250) / var(--portal-training-header-a, 1));
+    color: rgb(var(--portal-training-header-text, 83 95 81) / var(--portal-training-header-text-a, 1));
+  }
+
+  .training-header .text-charcoal {
+    color: inherit !important;
+  }
+
+  .training-header :is(.text-sage-dark\/45, .text-sage-dark\/55, .text-sage-dark\/60, .text-sage-dark\/65) {
+    color: rgb(var(--portal-training-header-text, 83 95 81) / calc(var(--portal-training-header-text-a, 1) * 0.55)) !important;
   }
 
   .training-module-selected {

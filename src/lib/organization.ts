@@ -105,6 +105,7 @@ export interface PortalOrganization {
   widgetOutlineTextColorLight: string | null;
   widgetOutlineHoverColorLight: string | null;
   trainingHeaderColorLight: string | null;
+  trainingHeaderTextColorLight: string | null;
   trainingModuleColorLight: string | null;
   trainingModuleTextColorLight: string | null;
   trainingLessonColorLight: string | null;
@@ -143,6 +144,7 @@ export interface PortalOrganization {
   widgetOutlineTextColorDark: string | null;
   widgetOutlineHoverColorDark: string | null;
   trainingHeaderColorDark: string | null;
+  trainingHeaderTextColorDark: string | null;
   trainingModuleColorDark: string | null;
   trainingModuleTextColorDark: string | null;
   trainingLessonColorDark: string | null;
@@ -187,6 +189,7 @@ export const DEFAULT_ORG_COLORS = {
     widgetOutlineText: '#535F51CC',
     widgetOutlineHover: '#535F511A',
     trainingHeader: '#F7F8FA',
+    trainingHeaderText: '#535F51',
     trainingModule: '#535F51',
     trainingModuleText: '#F7F4EE',
     trainingLesson: '#788F7540',
@@ -226,6 +229,7 @@ export const DEFAULT_ORG_COLORS = {
     widgetOutlineText: '#BAC6B6',
     widgetOutlineHover: '#BAC6B61A',
     trainingHeader: '#2A2E2A',
+    trainingHeaderText: '#BAC6B6',
     trainingModule: '#BAC6B6',
     trainingModuleText: '#111311',
     trainingLesson: '#8A9E8640',
@@ -309,6 +313,8 @@ type OrgRow = {
   widget_outline_hover_color_dark?: string | null;
   training_header_color_light?: string | null;
   training_header_color_dark?: string | null;
+  training_header_text_color_light?: string | null;
+  training_header_text_color_dark?: string | null;
   training_module_color_light?: string | null;
   training_module_color_dark?: string | null;
   training_module_text_color_light?: string | null;
@@ -379,6 +385,7 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetOutlineTextColorLight: normalizeHexColor(row.widget_outline_text_color_light) ?? null,
     widgetOutlineHoverColorLight: normalizeHexColor(row.widget_outline_hover_color_light) ?? null,
     trainingHeaderColorLight: normalizeHexColor(row.training_header_color_light) ?? null,
+    trainingHeaderTextColorLight: normalizeHexColor(row.training_header_text_color_light) ?? null,
     trainingModuleColorLight: normalizeHexColor(row.training_module_color_light) ?? null,
     trainingModuleTextColorLight: normalizeHexColor(row.training_module_text_color_light) ?? null,
     trainingLessonColorLight: normalizeHexColor(row.training_lesson_color_light) ?? null,
@@ -416,6 +423,7 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetOutlineTextColorDark: normalizeHexColor(row.widget_outline_text_color_dark) ?? null,
     widgetOutlineHoverColorDark: normalizeHexColor(row.widget_outline_hover_color_dark) ?? null,
     trainingHeaderColorDark: normalizeHexColor(row.training_header_color_dark) ?? null,
+    trainingHeaderTextColorDark: normalizeHexColor(row.training_header_text_color_dark) ?? null,
     trainingModuleColorDark: normalizeHexColor(row.training_module_color_dark) ?? null,
     trainingModuleTextColorDark: normalizeHexColor(row.training_module_text_color_dark) ?? null,
     trainingLessonColorDark: normalizeHexColor(row.training_lesson_color_dark) ?? null,
@@ -470,6 +478,7 @@ function wovenSageFallback(): PortalOrganization {
     widgetOutlineTextColorLight: null,
     widgetOutlineHoverColorLight: null,
     trainingHeaderColorLight: null,
+    trainingHeaderTextColorLight: null,
     trainingModuleColorLight: null,
     trainingModuleTextColorLight: null,
     trainingLessonColorLight: null,
@@ -507,6 +516,7 @@ function wovenSageFallback(): PortalOrganization {
     widgetOutlineTextColorDark: null,
     widgetOutlineHoverColorDark: null,
     trainingHeaderColorDark: null,
+    trainingHeaderTextColorDark: null,
     trainingModuleColorDark: null,
     trainingModuleTextColorDark: null,
     trainingLessonColorDark: null,
@@ -559,6 +569,7 @@ const ORG_SELECT = ORG_SELECT_FILLED.replace(
   selected_text_color_light, selected_text_color_dark,
   selected_hover_color_light, selected_hover_color_dark,
   training_header_color_light, training_header_color_dark,
+  training_header_text_color_light, training_header_text_color_dark,
   training_module_color_light, training_module_color_dark,
   training_module_text_color_light, training_module_text_color_dark,
   training_lesson_color_light, training_lesson_color_dark,
@@ -1119,6 +1130,7 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetOutlineTextColorLight: org.widgetOutlineTextColorLight,
     widgetOutlineHoverColorLight: org.widgetOutlineHoverColorLight,
     trainingHeaderColorLight: org.trainingHeaderColorLight,
+    trainingHeaderTextColorLight: org.trainingHeaderTextColorLight,
     trainingModuleColorLight: org.trainingModuleColorLight,
     trainingModuleTextColorLight: org.trainingModuleTextColorLight,
     trainingLessonColorLight: org.trainingLessonColorLight,
@@ -1156,6 +1168,7 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetOutlineTextColorDark: org.widgetOutlineTextColorDark,
     widgetOutlineHoverColorDark: org.widgetOutlineHoverColorDark,
     trainingHeaderColorDark: org.trainingHeaderColorDark,
+    trainingHeaderTextColorDark: org.trainingHeaderTextColorDark,
     trainingModuleColorDark: org.trainingModuleColorDark,
     trainingModuleTextColorDark: org.trainingModuleTextColorDark,
     trainingLessonColorDark: org.trainingLessonColorDark,
@@ -1201,6 +1214,7 @@ export async function updateOrganizationBranding(input: {
   widgetOutlineTextColorLight?: string | null;
   widgetOutlineHoverColorLight?: string | null;
   trainingHeaderColorLight?: string | null;
+  trainingHeaderTextColorLight?: string | null;
   trainingModuleColorLight?: string | null;
   trainingModuleTextColorLight?: string | null;
   trainingLessonColorLight?: string | null;
@@ -1238,6 +1252,7 @@ export async function updateOrganizationBranding(input: {
   widgetOutlineTextColorDark?: string | null;
   widgetOutlineHoverColorDark?: string | null;
   trainingHeaderColorDark?: string | null;
+  trainingHeaderTextColorDark?: string | null;
   trainingModuleColorDark?: string | null;
   trainingModuleTextColorDark?: string | null;
   trainingLessonColorDark?: string | null;
@@ -1382,6 +1397,10 @@ export async function updateOrganizationBranding(input: {
     input.trainingHeaderColorLight !== undefined
       ? (resolveOptionalHex(input.trainingHeaderColorLight, 'Light training header color') ?? null)
       : existing.trainingHeaderColorLight;
+  const trainingHeaderTextColorLight =
+    input.trainingHeaderTextColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingHeaderTextColorLight, 'Light training header text color') ?? null)
+      : existing.trainingHeaderTextColorLight;
   const trainingModuleColorLight =
     input.trainingModuleColorLight !== undefined
       ? (resolveOptionalHex(input.trainingModuleColorLight, 'Light training module color') ?? null)
@@ -1530,6 +1549,10 @@ export async function updateOrganizationBranding(input: {
     input.trainingHeaderColorDark !== undefined
       ? (resolveOptionalHex(input.trainingHeaderColorDark, 'Dark training header color') ?? null)
       : existing.trainingHeaderColorDark;
+  const trainingHeaderTextColorDark =
+    input.trainingHeaderTextColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingHeaderTextColorDark, 'Dark training header text color') ?? null)
+      : existing.trainingHeaderTextColorDark;
   const trainingModuleColorDark =
     input.trainingModuleColorDark !== undefined
       ? (resolveOptionalHex(input.trainingModuleColorDark, 'Dark training module color') ?? null)
@@ -1642,6 +1665,8 @@ export async function updateOrganizationBranding(input: {
          widget_outline_hover_color_dark = ?,
          training_header_color_light = ?,
          training_header_color_dark = ?,
+         training_header_text_color_light = ?,
+         training_header_text_color_dark = ?,
          training_module_color_light = ?,
          training_module_color_dark = ?,
          training_module_text_color_light = ?,
@@ -1725,6 +1750,8 @@ export async function updateOrganizationBranding(input: {
       widgetOutlineHoverColorDark,
       trainingHeaderColorLight,
       trainingHeaderColorDark,
+      trainingHeaderTextColorLight,
+      trainingHeaderTextColorDark,
       trainingModuleColorLight,
       trainingModuleColorDark,
       trainingModuleTextColorLight,
