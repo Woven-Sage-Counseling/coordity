@@ -1338,11 +1338,15 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       />
       <form
         id="org-branding-form"
-        class="mt-6 space-y-8 rounded-2xl border border-sage-dark/10 bg-white/90 p-5 shadow-sm"
+        class="mt-6 space-y-3"
         enctype="multipart/form-data"
       >
-        <div class="space-y-4">
-          <h3 class="text-sm font-semibold text-charcoal">Workspace identity</h3>
+        <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" data-brand-section>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            <span>Workspace identity</span>
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </summary>
+          <div class="space-y-4 border-t border-sage-dark/10 px-5 pb-5 pt-4">
           <label class="block text-sm font-medium text-charcoal">
             Display name
             <input class="field" type="text" name="displayName" required maxlength="80" value={brandDisplayName} />
@@ -1357,10 +1361,18 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               value={brandWebsiteUrl}
             />
           </label>
-        </div>
+          <button type="submit" class="btn-primary !px-4 !py-2">Save</button>
+          <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
+          <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
+          </div>
+        </details>
 
-        <div class="space-y-4 border-t border-sage-dark/10 pt-6">
-          <h3 class="text-sm font-semibold text-charcoal">Header &amp; sign-in logo</h3>
+        <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" data-brand-section>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            <span>Header &amp; Sign-in logo</span>
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </summary>
+          <div class="space-y-4 border-t border-sage-dark/10 px-5 pb-5 pt-4">
           <p class="text-sm text-sage-dark/65">
             Used in the portal header, sign-in page, and workspace finder. Transparent PNG works best. Max about 1.2MB.
           </p>
@@ -1396,10 +1408,18 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             <input type="checkbox" name="invertLogoDark" value="1" checked={brandInvertLogoDark} />
             Invert logo in dark mode
           </label>
-        </div>
+          <button type="submit" class="btn-primary !px-4 !py-2">Save</button>
+          <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
+          <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
+          </div>
+        </details>
 
-        <div class="space-y-4 border-t border-sage-dark/10 pt-6">
-          <h3 class="text-sm font-semibold text-charcoal">Favicon</h3>
+        <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" data-brand-section>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            <span>Favicon</span>
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </summary>
+          <div class="space-y-4 border-t border-sage-dark/10 px-5 pb-5 pt-4">
           <p class="text-sm text-sage-dark/65">
             Browser tab icon. Square PNG or ICO works best. Max about 1.2MB.
           </p>
@@ -1431,11 +1451,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               </label>
             ) : null
           }
-        </div>
+          <button type="submit" class="btn-primary !px-4 !py-2">Save</button>
+          <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
+          <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
+          </div>
+        </details>
 
-        <div class="space-y-4 border-t border-sage-dark/10 pt-6">
+        <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" data-brand-section>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            <span>Main colors</span>
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </summary>
+          <div class="space-y-4 border-t border-sage-dark/10 px-5 pb-5 pt-4">
           <div class="flex flex-wrap items-center gap-3">
-            <h3 class="text-sm font-semibold text-charcoal">Main Colors</h3>
             <div class="relative inline-grid grid-cols-2 rounded-full bg-sage-dark/10 p-1" data-brand-mode-switch>
               <span
                 class="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-white shadow-[0_6px_16px_rgba(26,28,30,0.14)] ring-1 ring-black/5 transition-transform duration-200 ease-out"
@@ -1611,9 +1639,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             })
           }
 
-          <div class="space-y-4 border-t border-sage-dark/10 pt-6">
+          <button type="submit" class="btn-primary !px-4 !py-2">Save</button>
+          <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
+          <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
+          </div>
+        </details>
+
+        <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" data-brand-section>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            <span>Widget colors</span>
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </summary>
+          <div class="space-y-4 border-t border-sage-dark/10 px-5 pb-5 pt-4">
             <div class="flex flex-wrap items-center gap-3">
-              <h3 class="text-sm font-semibold text-charcoal">Widgets colors</h3>
               <div class="relative inline-grid grid-cols-2 rounded-full bg-sage-dark/10 p-1" data-brand-widget-mode-switch>
                 <span
                   class="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-white shadow-[0_6px_16px_rgba(26,28,30,0.14)] ring-1 ring-black/5 transition-transform duration-200 ease-out"
@@ -1775,18 +1813,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               })
             }
           </div>
-        </div>
-
-        <div class="border-t border-sage-dark/10 pt-6">
-          <button
-            type="submit"
-            class="btn-primary !px-4 !py-2"
-          >
-            Save branding
-          </button>
+          <button type="submit" class="btn-primary !px-4 !py-2">Save</button>
           <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
           <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
-        </div>
+          </div>
+        </details>
       </form>
     </section>
 
@@ -2131,8 +2162,6 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
     bindBrandModeSwitch(brandingForm.querySelector('[data-brand-mode-switch]'), '[data-brand-page-panel]');
     bindBrandModeSwitch(brandingForm.querySelector('[data-brand-widget-mode-switch]'), '[data-brand-widget-panel]');
 
-    const statusEl = brandingForm.querySelector('[data-brand-status]');
-    const errorEl = brandingForm.querySelector('[data-brand-error]');
     const colorKeys = [
       'bgColorLight',
       'surfaceColorLight',
@@ -2518,16 +2547,28 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         widgetOutlineRule('html.dark', branding.widgetOutlineColorDark, '#BAC6B666', branding.widgetOutlineTextColorDark, '#BAC6B6', branding.widgetOutlineHoverColorDark, '#BAC6B61A');
     };
 
+    brandingForm.addEventListener(
+      'invalid',
+      (event) => {
+        const field = event.target;
+        if (!(field instanceof HTMLElement)) return;
+        const details = field.closest('details');
+        if (details instanceof HTMLDetailsElement) details.open = true;
+      },
+      true,
+    );
+
     brandingForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (statusEl instanceof HTMLElement) {
-        statusEl.classList.add('hidden');
-        statusEl.textContent = '';
-      }
-      if (errorEl instanceof HTMLElement) {
-        errorEl.classList.add('hidden');
-        errorEl.textContent = '';
-      }
+      const submitter = event.submitter instanceof HTMLElement ? event.submitter : null;
+      const section = submitter?.closest('[data-brand-section]') ?? brandingForm;
+      brandingForm.querySelectorAll('[data-brand-status], [data-brand-error]').forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        node.classList.add('hidden');
+        node.textContent = '';
+      });
+      const statusEl = section.querySelector('[data-brand-status]');
+      const errorEl = section.querySelector('[data-brand-error]');
       colorKeys.forEach((key) => syncPair(key, false));
       try {
         const res = await fetch('/api/org/branding', {
