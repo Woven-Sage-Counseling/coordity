@@ -1,5 +1,5 @@
 ---
-import type { HomeWidgetId } from '../lib/home-widgets';
+import { HOME_WIDGET_CATALOG, type HomeWidgetId } from '../lib/home-widgets';
 import WidgetHeaderIcon from './WidgetHeaderIcon.astro';
 
 interface Props {
@@ -11,10 +11,11 @@ interface Props {
 }
 
 const { widgetId, title, headingId, openHref, openLabel = 'Open' } = Astro.props;
+const branded = HOME_WIDGET_CATALOG.some((widget) => widget.id === widgetId && widget.brandHeaderColor);
 ---
 
 <div
-  class="widget-header-bar px-3 py-2.5"
+  class:list={['widget-header-bar px-3 py-2.5', branded && 'widget-header-brand']}
   data-widget-header
   data-widget-id={widgetId}
 >
@@ -79,8 +80,23 @@ const { widgetId, title, headingId, openHref, openLabel = 'Open' } = Astro.props
     transition: background-color 150ms ease;
   }
 
-  .widget-header-action:hover {
+  .widget-header-action:hover,
+  .widget-header-action:active {
     background-color: rgb(var(--portal-widget-button-hover, var(--portal-widget-button, 76 87 75)) / var(--portal-widget-button-hover-a, var(--portal-widget-button-a, 1)));
+    color: rgb(var(--portal-widget-button-text, 247 244 238) / var(--portal-widget-button-text-a, 1));
+  }
+
+  .widget-header-brand .widget-header-action,
+  .widget-header-brand .widget-header-action:hover,
+  .widget-header-brand .widget-header-action:active {
+    color: var(--widget-accent-fg, #f7f4ee);
+    background-color: var(--widget-accent-bg, #2ca01c);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--widget-accent-fg, #f7f4ee) 28%, transparent);
+  }
+
+  .widget-header-brand .widget-header-action:hover,
+  .widget-header-brand .widget-header-action:active {
+    background-color: color-mix(in srgb, var(--widget-accent-bg, #2ca01c) 88%, #000);
   }
 
   .widget-header-icon-btn {
@@ -97,13 +113,17 @@ const { widgetId, title, headingId, openHref, openLabel = 'Open' } = Astro.props
   }
 
   .widget-accent-btn {
+    -webkit-appearance: none;
+    appearance: none;
     background-color: rgb(var(--portal-widget-button, 83 95 81) / var(--portal-widget-button-a, 1));
     color: rgb(var(--portal-widget-button-text, 247 244 238) / var(--portal-widget-button-text-a, 1));
     transition: background-color 150ms ease;
   }
 
-  .widget-accent-btn:hover:not(:disabled) {
+  .widget-accent-btn:hover:not(:disabled),
+  .widget-accent-btn:active:not(:disabled) {
     background-color: rgb(var(--portal-widget-button-hover, var(--portal-widget-button, 76 87 75)) / var(--portal-widget-button-hover-a, var(--portal-widget-button-a, 1)));
+    color: rgb(var(--portal-widget-button-text, 247 244 238) / var(--portal-widget-button-text-a, 1));
   }
 
   .widget-accent-btn:disabled {

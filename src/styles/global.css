@@ -171,9 +171,18 @@ html.dark {
     @apply inline-flex items-center justify-center rounded-full border border-sage/40 bg-surface/70 px-5 py-2.5 text-sm font-medium text-onaccent transition hover:border-sage hover:bg-sage/10;
   }
 
+  .btn-primary,
+  .training-filled {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
   .btn-primary:hover:not(:disabled),
-  html.dark .btn-primary:hover:not(:disabled) {
+  .btn-primary:active:not(:disabled),
+  html.dark .btn-primary:hover:not(:disabled),
+  html.dark .btn-primary:active:not(:disabled) {
     background-color: rgb(var(--portal-primary-hover, var(--portal-sage)) / var(--portal-primary-hover-a, var(--portal-sage-a, 1))) !important;
+    color: rgb(var(--portal-on-primary) / var(--portal-on-primary-a, 1));
   }
 
   .btn-secondary:hover:not(:disabled) {
@@ -300,8 +309,10 @@ html.dark {
     transition: background-color 150ms ease, color 150ms ease;
   }
 
-  .training-filled:hover:not(:disabled) {
+  .training-filled:hover:not(:disabled),
+  .training-filled:active:not(:disabled) {
     background-color: rgb(var(--portal-training-filled-hover, 120 143 117) / var(--portal-training-filled-hover-a, 1)) !important;
+    color: rgb(var(--portal-training-filled-text, 247 244 238) / var(--portal-training-filled-text-a, 1));
   }
 
   .training-filled:disabled {
