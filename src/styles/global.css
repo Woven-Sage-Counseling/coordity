@@ -134,6 +134,19 @@ html.dark {
     background-color: rgb(var(--portal-accent-hover, var(--portal-sage)) / var(--portal-accent-hover-a, 0.1)) !important;
   }
 
+  .outline-btn {
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(var(--portal-accent, var(--portal-sage)) / var(--portal-accent-a, var(--portal-sage-a, 1)));
+    background-color: transparent;
+    color: rgb(var(--portal-on-accent) / var(--portal-on-accent-a, 1));
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+
+  .outline-btn:hover:not(:disabled) {
+    background-color: rgb(var(--portal-accent-hover, var(--portal-sage)) / var(--portal-accent-hover-a, 0.1)) !important;
+  }
+
   .widget-outline-btn {
     border-width: 1px;
     border-style: solid;
