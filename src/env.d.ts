@@ -65,6 +65,9 @@ interface PortalOrganization {
   widgetOutlineHoverColorLight: string | null;
   trainingHeaderColorLight: string | null;
   trainingHeaderTextColorLight: string | null;
+  trainingHeaderLabelColorLight: string | null;
+  trainingCheckboxColorLight: string | null;
+  trainingCheckboxBorderColorLight: string | null;
   trainingModuleColorLight: string | null;
   trainingModuleTextColorLight: string | null;
   trainingLessonColorLight: string | null;
@@ -109,6 +112,9 @@ interface PortalOrganization {
   widgetOutlineHoverColorDark: string | null;
   trainingHeaderColorDark: string | null;
   trainingHeaderTextColorDark: string | null;
+  trainingHeaderLabelColorDark: string | null;
+  trainingCheckboxColorDark: string | null;
+  trainingCheckboxBorderColorDark: string | null;
   trainingModuleColorDark: string | null;
   trainingModuleTextColorDark: string | null;
   trainingLessonColorDark: string | null;

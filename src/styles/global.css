@@ -253,15 +253,17 @@ html.dark {
 
   .training-header {
     background-color: rgb(var(--portal-training-header, 247 248 250) / var(--portal-training-header-a, 1));
-    color: rgb(var(--portal-training-header-text, 83 95 81) / var(--portal-training-header-text-a, 1));
+    color: rgb(var(--portal-training-header-title, var(--portal-training-header-text, 83 95 81)) / var(--portal-training-header-title-a, var(--portal-training-header-text-a, 1)));
   }
 
+  .training-header .training-header-title,
   .training-header .text-charcoal {
-    color: inherit !important;
+    color: rgb(var(--portal-training-header-title, var(--portal-training-header-text, 83 95 81)) / var(--portal-training-header-title-a, var(--portal-training-header-text-a, 1))) !important;
   }
 
+  .training-header .training-header-label,
   .training-header :is(.text-sage-dark\/45, .text-sage-dark\/55, .text-sage-dark\/60, .text-sage-dark\/65) {
-    color: rgb(var(--portal-training-header-text, 83 95 81) / calc(var(--portal-training-header-text-a, 1) * 0.55)) !important;
+    color: rgb(var(--portal-training-header-label, var(--portal-training-header-text, 83 95 81)) / var(--portal-training-header-label-a, 0.55)) !important;
   }
 
   .training-module-selected {
@@ -850,7 +852,31 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
 }
 
 #training input[type='checkbox'] {
-  accent-color: rgb(var(--portal-training-filled, 83 95 81) / var(--portal-training-filled-a, 1));
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0.125rem 0.35rem 0 0;
+  vertical-align: middle;
+  border-radius: 0.25rem;
+  border: 1.5px solid rgb(var(--portal-training-checkbox-border, 183 190 180) / var(--portal-training-checkbox-border-a, 1));
+  background-color: transparent;
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
+}
+
+#training input[type='checkbox']:checked {
+  border-color: rgb(var(--portal-training-checkbox, var(--portal-training-filled, 83 95 81)) / var(--portal-training-checkbox-a, var(--portal-training-filled-a, 1)));
+  background-color: rgb(var(--portal-training-checkbox, var(--portal-training-filled, 83 95 81)) / var(--portal-training-checkbox-a, var(--portal-training-filled-a, 1)));
+}
+
+#training input[type='checkbox']:checked::before {
+  content: '';
+  width: 0.28rem;
+  height: 0.5rem;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 #training .training-list-text {

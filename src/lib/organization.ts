@@ -106,6 +106,9 @@ export interface PortalOrganization {
   widgetOutlineHoverColorLight: string | null;
   trainingHeaderColorLight: string | null;
   trainingHeaderTextColorLight: string | null;
+  trainingHeaderLabelColorLight: string | null;
+  trainingCheckboxColorLight: string | null;
+  trainingCheckboxBorderColorLight: string | null;
   trainingModuleColorLight: string | null;
   trainingModuleTextColorLight: string | null;
   trainingLessonColorLight: string | null;
@@ -151,6 +154,9 @@ export interface PortalOrganization {
   widgetOutlineHoverColorDark: string | null;
   trainingHeaderColorDark: string | null;
   trainingHeaderTextColorDark: string | null;
+  trainingHeaderLabelColorDark: string | null;
+  trainingCheckboxColorDark: string | null;
+  trainingCheckboxBorderColorDark: string | null;
   trainingModuleColorDark: string | null;
   trainingModuleTextColorDark: string | null;
   trainingLessonColorDark: string | null;
@@ -202,6 +208,9 @@ export const DEFAULT_ORG_COLORS = {
     widgetOutlineHover: '#535F511A',
     trainingHeader: '#F7F8FA',
     trainingHeaderText: '#535F51',
+    trainingHeaderLabel: '#535F518C',
+    trainingCheckbox: '#535F51',
+    trainingCheckboxBorder: '#B7BEB4',
     trainingModule: '#535F51',
     trainingModuleText: '#F7F4EE',
     trainingLesson: '#788F7540',
@@ -248,6 +257,9 @@ export const DEFAULT_ORG_COLORS = {
     widgetOutlineHover: '#BAC6B61A',
     trainingHeader: '#2A2E2A',
     trainingHeaderText: '#BAC6B6',
+    trainingHeaderLabel: '#BAC6B68C',
+    trainingCheckbox: '#BAC6B6',
+    trainingCheckboxBorder: '#6E786C',
     trainingModule: '#BAC6B6',
     trainingModuleText: '#111311',
     trainingLesson: '#8A9E8640',
@@ -379,6 +391,8 @@ function mapOrg(row: OrgRow): PortalOrganization {
   const cardOutlineDark = unpackTrainingCardOutline(row.training_card_outline_color_dark);
   const fieldLight = unpackTrainingField(row.training_field_color_light);
   const fieldDark = unpackTrainingField(row.training_field_color_dark);
+  const headerTextLight = unpackTrainingHeaderText(row.training_header_text_color_light);
+  const headerTextDark = unpackTrainingHeaderText(row.training_header_text_color_dark);
   const displayName = row.display_name || row.name;
   const hasLogo = Boolean(row.has_logo);
   const legacyPrimary = normalizeHexColor(row.primary_color);
@@ -419,7 +433,10 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetOutlineTextColorLight: normalizeHexColor(row.widget_outline_text_color_light) ?? null,
     widgetOutlineHoverColorLight: normalizeHexColor(row.widget_outline_hover_color_light) ?? null,
     trainingHeaderColorLight: normalizeHexColor(row.training_header_color_light) ?? null,
-    trainingHeaderTextColorLight: normalizeHexColor(row.training_header_text_color_light) ?? null,
+    trainingHeaderTextColorLight: headerTextLight.title,
+    trainingHeaderLabelColorLight: headerTextLight.label,
+    trainingCheckboxColorLight: headerTextLight.checkbox,
+    trainingCheckboxBorderColorLight: headerTextLight.border,
     trainingModuleColorLight: normalizeHexColor(row.training_module_color_light) ?? null,
     trainingModuleTextColorLight: normalizeHexColor(row.training_module_text_color_light) ?? null,
     trainingLessonColorLight: normalizeHexColor(row.training_lesson_color_light) ?? null,
@@ -463,7 +480,10 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetOutlineTextColorDark: normalizeHexColor(row.widget_outline_text_color_dark) ?? null,
     widgetOutlineHoverColorDark: normalizeHexColor(row.widget_outline_hover_color_dark) ?? null,
     trainingHeaderColorDark: normalizeHexColor(row.training_header_color_dark) ?? null,
-    trainingHeaderTextColorDark: normalizeHexColor(row.training_header_text_color_dark) ?? null,
+    trainingHeaderTextColorDark: headerTextDark.title,
+    trainingHeaderLabelColorDark: headerTextDark.label,
+    trainingCheckboxColorDark: headerTextDark.checkbox,
+    trainingCheckboxBorderColorDark: headerTextDark.border,
     trainingModuleColorDark: normalizeHexColor(row.training_module_color_dark) ?? null,
     trainingModuleTextColorDark: normalizeHexColor(row.training_module_text_color_dark) ?? null,
     trainingLessonColorDark: normalizeHexColor(row.training_lesson_color_dark) ?? null,
@@ -525,6 +545,9 @@ function wovenSageFallback(): PortalOrganization {
     widgetOutlineHoverColorLight: null,
     trainingHeaderColorLight: null,
     trainingHeaderTextColorLight: null,
+    trainingHeaderLabelColorLight: null,
+    trainingCheckboxColorLight: null,
+    trainingCheckboxBorderColorLight: null,
     trainingModuleColorLight: null,
     trainingModuleTextColorLight: null,
     trainingLessonColorLight: null,
@@ -569,6 +592,9 @@ function wovenSageFallback(): PortalOrganization {
     widgetOutlineHoverColorDark: null,
     trainingHeaderColorDark: null,
     trainingHeaderTextColorDark: null,
+    trainingHeaderLabelColorDark: null,
+    trainingCheckboxColorDark: null,
+    trainingCheckboxBorderColorDark: null,
     trainingModuleColorDark: null,
     trainingModuleTextColorDark: null,
     trainingLessonColorDark: null,
@@ -801,6 +827,33 @@ function packTrainingCardOutline(
   if (!color && !text && !hover) return null;
   if (!text && !hover) return color;
   return `${color ?? ''}|${text ?? ''}|${hover ?? ''}`;
+}
+
+/** Header title, label, checkbox, and checkbox border share one column. */
+function packTrainingHeaderText(
+  title: string | null,
+  label: string | null,
+  checkbox: string | null,
+  border: string | null,
+): string | null {
+  if (!title && !label && !checkbox && !border) return null;
+  if (!label && !checkbox && !border) return title;
+  return `${title ?? ''}|${label ?? ''}|${checkbox ?? ''}|${border ?? ''}`;
+}
+
+function unpackTrainingHeaderText(raw: string | null | undefined): {
+  title: string | null;
+  label: string | null;
+  checkbox: string | null;
+  border: string | null;
+} {
+  const parts = (raw ?? '').split('|');
+  return {
+    title: normalizeHexColor(parts[0]),
+    label: parts.length > 1 ? normalizeHexColor(parts[1]) : null,
+    checkbox: parts.length > 2 ? normalizeHexColor(parts[2]) : null,
+    border: parts.length > 3 ? normalizeHexColor(parts[3]) : null,
+  };
 }
 
 /** Field background and text share one column: `#BACKGROUND|#TEXT`. */
@@ -1231,6 +1284,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetOutlineHoverColorLight: org.widgetOutlineHoverColorLight,
     trainingHeaderColorLight: org.trainingHeaderColorLight,
     trainingHeaderTextColorLight: org.trainingHeaderTextColorLight,
+    trainingHeaderLabelColorLight: org.trainingHeaderLabelColorLight,
+    trainingCheckboxColorLight: org.trainingCheckboxColorLight,
+    trainingCheckboxBorderColorLight: org.trainingCheckboxBorderColorLight,
     trainingModuleColorLight: org.trainingModuleColorLight,
     trainingModuleTextColorLight: org.trainingModuleTextColorLight,
     trainingLessonColorLight: org.trainingLessonColorLight,
@@ -1275,6 +1331,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetOutlineHoverColorDark: org.widgetOutlineHoverColorDark,
     trainingHeaderColorDark: org.trainingHeaderColorDark,
     trainingHeaderTextColorDark: org.trainingHeaderTextColorDark,
+    trainingHeaderLabelColorDark: org.trainingHeaderLabelColorDark,
+    trainingCheckboxColorDark: org.trainingCheckboxColorDark,
+    trainingCheckboxBorderColorDark: org.trainingCheckboxBorderColorDark,
     trainingModuleColorDark: org.trainingModuleColorDark,
     trainingModuleTextColorDark: org.trainingModuleTextColorDark,
     trainingLessonColorDark: org.trainingLessonColorDark,
@@ -1327,6 +1386,9 @@ export async function updateOrganizationBranding(input: {
   widgetOutlineHoverColorLight?: string | null;
   trainingHeaderColorLight?: string | null;
   trainingHeaderTextColorLight?: string | null;
+  trainingHeaderLabelColorLight?: string | null;
+  trainingCheckboxColorLight?: string | null;
+  trainingCheckboxBorderColorLight?: string | null;
   trainingModuleColorLight?: string | null;
   trainingModuleTextColorLight?: string | null;
   trainingLessonColorLight?: string | null;
@@ -1371,6 +1433,9 @@ export async function updateOrganizationBranding(input: {
   widgetOutlineHoverColorDark?: string | null;
   trainingHeaderColorDark?: string | null;
   trainingHeaderTextColorDark?: string | null;
+  trainingHeaderLabelColorDark?: string | null;
+  trainingCheckboxColorDark?: string | null;
+  trainingCheckboxBorderColorDark?: string | null;
   trainingModuleColorDark?: string | null;
   trainingModuleTextColorDark?: string | null;
   trainingLessonColorDark?: string | null;
@@ -1525,6 +1590,18 @@ export async function updateOrganizationBranding(input: {
     input.trainingHeaderTextColorLight !== undefined
       ? (resolveOptionalHex(input.trainingHeaderTextColorLight, 'Light training header text color') ?? null)
       : existing.trainingHeaderTextColorLight;
+  const trainingHeaderLabelColorLight =
+    input.trainingHeaderLabelColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingHeaderLabelColorLight, 'Light training header label color') ?? null)
+      : existing.trainingHeaderLabelColorLight;
+  const trainingCheckboxColorLight =
+    input.trainingCheckboxColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingCheckboxColorLight, 'Light training checkbox color') ?? null)
+      : existing.trainingCheckboxColorLight;
+  const trainingCheckboxBorderColorLight =
+    input.trainingCheckboxBorderColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingCheckboxBorderColorLight, 'Light training checkbox border color') ?? null)
+      : existing.trainingCheckboxBorderColorLight;
   const trainingModuleColorLight =
     input.trainingModuleColorLight !== undefined
       ? (resolveOptionalHex(input.trainingModuleColorLight, 'Light training module color') ?? null)
@@ -1701,6 +1778,18 @@ export async function updateOrganizationBranding(input: {
     input.trainingHeaderTextColorDark !== undefined
       ? (resolveOptionalHex(input.trainingHeaderTextColorDark, 'Dark training header text color') ?? null)
       : existing.trainingHeaderTextColorDark;
+  const trainingHeaderLabelColorDark =
+    input.trainingHeaderLabelColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingHeaderLabelColorDark, 'Dark training header label color') ?? null)
+      : existing.trainingHeaderLabelColorDark;
+  const trainingCheckboxColorDark =
+    input.trainingCheckboxColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingCheckboxColorDark, 'Dark training checkbox color') ?? null)
+      : existing.trainingCheckboxColorDark;
+  const trainingCheckboxBorderColorDark =
+    input.trainingCheckboxBorderColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingCheckboxBorderColorDark, 'Dark training checkbox border color') ?? null)
+      : existing.trainingCheckboxBorderColorDark;
   const trainingModuleColorDark =
     input.trainingModuleColorDark !== undefined
       ? (resolveOptionalHex(input.trainingModuleColorDark, 'Dark training module color') ?? null)
@@ -1928,8 +2017,18 @@ export async function updateOrganizationBranding(input: {
       widgetOutlineHoverColorDark,
       trainingHeaderColorLight,
       trainingHeaderColorDark,
-      trainingHeaderTextColorLight,
-      trainingHeaderTextColorDark,
+      packTrainingHeaderText(
+        trainingHeaderTextColorLight,
+        trainingHeaderLabelColorLight,
+        trainingCheckboxColorLight,
+        trainingCheckboxBorderColorLight,
+      ),
+      packTrainingHeaderText(
+        trainingHeaderTextColorDark,
+        trainingHeaderLabelColorDark,
+        trainingCheckboxColorDark,
+        trainingCheckboxBorderColorDark,
+      ),
       trainingModuleColorLight,
       trainingModuleColorDark,
       trainingModuleTextColorLight,

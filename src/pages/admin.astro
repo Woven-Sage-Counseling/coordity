@@ -132,6 +132,7 @@ const brandWidgetOutlineTextDark = organization?.widgetOutlineTextColorDark ?? '
 const brandWidgetOutlineHoverDark = organization?.widgetOutlineHoverColorDark ?? '#BAC6B61A';
 const brandTrainingHeaderLight = organization?.trainingHeaderColorLight ?? brandSelectedLight;
 const brandTrainingHeaderTextLight = organization?.trainingHeaderTextColorLight ?? brandTextLight;
+const brandTrainingHeaderLabelLight = organization?.trainingHeaderLabelColorLight ?? withAlpha(brandTrainingHeaderTextLight, 55);
 const brandTrainingModuleLight = organization?.trainingModuleColorLight ?? brandPrimaryLight;
 const brandTrainingModuleTextLight = organization?.trainingModuleTextColorLight ?? brandPrimaryTextLight;
 const brandTrainingLessonLight = organization?.trainingLessonColorLight ?? withAlpha(brandAccentLight, 25);
@@ -141,6 +142,8 @@ const brandTrainingBlockTextLight = organization?.trainingBlockTextColorLight ??
 const brandTrainingFieldLight = organization?.trainingFieldColorLight ?? brandSurfaceLight;
 const brandTrainingFieldTextLight = organization?.trainingFieldTextColorLight ?? brandTextLight;
 const brandTrainingFilledLight = organization?.trainingFilledColorLight ?? brandPrimaryLight;
+const brandTrainingCheckboxLight = organization?.trainingCheckboxColorLight ?? brandTrainingFilledLight;
+const brandTrainingCheckboxBorderLight = organization?.trainingCheckboxBorderColorLight ?? '#B7BEB4';
 const brandTrainingFilledTextLight = organization?.trainingFilledTextColorLight ?? brandPrimaryTextLight;
 const brandTrainingFilledHoverLight = organization?.trainingFilledHoverColorLight ?? brandPrimaryHoverLight;
 const brandTrainingOutlineLight = organization?.trainingOutlineColorLight ?? brandAccentLight;
@@ -152,6 +155,7 @@ const brandTrainingCardOutlineTextLight = organization?.trainingCardOutlineTextC
 const brandTrainingCardOutlineHoverLight = organization?.trainingCardOutlineHoverColorLight ?? brandTrainingOutlineHoverLight;
 const brandTrainingHeaderDark = organization?.trainingHeaderColorDark ?? brandSelectedDark;
 const brandTrainingHeaderTextDark = organization?.trainingHeaderTextColorDark ?? brandTextDark;
+const brandTrainingHeaderLabelDark = organization?.trainingHeaderLabelColorDark ?? withAlpha(brandTrainingHeaderTextDark, 55);
 const brandTrainingModuleDark = organization?.trainingModuleColorDark ?? brandPrimaryDark;
 const brandTrainingModuleTextDark = organization?.trainingModuleTextColorDark ?? brandPrimaryTextDark;
 const brandTrainingLessonDark = organization?.trainingLessonColorDark ?? withAlpha(brandAccentDark, 25);
@@ -161,6 +165,8 @@ const brandTrainingBlockTextDark = organization?.trainingBlockTextColorDark ?? b
 const brandTrainingFieldDark = organization?.trainingFieldColorDark ?? brandSurfaceDark;
 const brandTrainingFieldTextDark = organization?.trainingFieldTextColorDark ?? brandTextDark;
 const brandTrainingFilledDark = organization?.trainingFilledColorDark ?? brandPrimaryDark;
+const brandTrainingCheckboxDark = organization?.trainingCheckboxColorDark ?? brandTrainingFilledDark;
+const brandTrainingCheckboxBorderDark = organization?.trainingCheckboxBorderColorDark ?? '#6E786C';
 const brandTrainingFilledTextDark = organization?.trainingFilledTextColorDark ?? brandPrimaryTextDark;
 const brandTrainingFilledHoverDark = organization?.trainingFilledHoverColorDark ?? brandPrimaryHoverDark;
 const brandTrainingOutlineDark = organization?.trainingOutlineColorDark ?? brandAccentDark;
@@ -1907,6 +1913,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   title: 'Light mode',
                   header: brandTrainingHeaderLight,
                   headerText: brandTrainingHeaderTextLight,
+                  headerLabel: brandTrainingHeaderLabelLight,
+                  checkbox: brandTrainingCheckboxLight,
+                  checkboxBorder: brandTrainingCheckboxBorderLight,
                   module: brandTrainingModuleLight,
                   moduleText: brandTrainingModuleTextLight,
                   lesson: brandTrainingLessonLight,
@@ -1931,6 +1940,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   title: 'Dark mode',
                   header: brandTrainingHeaderDark,
                   headerText: brandTrainingHeaderTextDark,
+                  headerLabel: brandTrainingHeaderLabelDark,
+                  checkbox: brandTrainingCheckboxDark,
+                  checkboxBorder: brandTrainingCheckboxBorderDark,
                   module: brandTrainingModuleDark,
                   moduleText: brandTrainingModuleTextDark,
                   lesson: brandTrainingLessonDark,
@@ -2001,7 +2013,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       title: 'Headers',
                       fields: [
                         ['trainingHeaderColor', 'Background', swatch.header],
-                        ['trainingHeaderTextColor', 'Text', swatch.headerText],
+                        ['trainingHeaderLabelColor', 'Label', swatch.headerLabel],
+                        ['trainingHeaderTextColor', 'Title', swatch.headerText],
                       ],
                     },
                     {
@@ -2011,12 +2024,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         ['trainingLessonTextColor', 'Text', swatch.lessonText],
                       ],
                     },
+                    {
+                      title: 'Checkboxes',
+                      fields: [
+                        ['trainingCheckboxColor', 'Check', swatch.checkbox],
+                        ['trainingCheckboxBorderColor', 'Border', swatch.checkboxBorder],
+                      ],
+                    },
                   ],
                 ] as const;
                 return (
                   <div class="space-y-4" data-brand-training-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
                     {rows.map((columns, rowIndex) => (
-                      <div class:list={['grid items-start gap-4', rowIndex === 0 ? 'grid-cols-5' : 'grid-cols-4']}>
+                      <div class="grid grid-cols-5 items-start gap-4">
                         {columns.map((column) => (
                           <div class="min-w-0 space-y-4">
                             <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
@@ -2053,21 +2073,21 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         <div class="grid grid-cols-[0.85fr_1fr_1.35fr]">
                           <div class:list={['min-w-0 border-r', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
                             <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
-                              <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>Modules</p>
-                              <p class="text-[10px]" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>Topics</p>
+                              <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerLabel}`}>Modules</p>
+                              <p class="text-[10px]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerLabel}`}>Topics</p>
                             </div>
                             <div class="space-y-0.5 p-1.5">
                               <div class="rounded-md px-1.5 py-1 text-[10px] font-semibold" data-brand-preview-training-module={swatch.mode} style={`background-color:${swatch.module};color:${swatch.moduleText}`}>Onboarding</div>
                               <div class="rounded-md px-1.5 py-1 text-[10px]" data-brand-preview-training-list={swatch.mode} style={`color:${swatch.listText}`}>Using Coordity</div>
                             </div>
                             <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
-                              <p class="text-[10px] font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>+ New module</p>
+                              <p class="text-[10px] font-semibold" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerLabel}`}>+ New module</p>
                             </div>
                           </div>
                           <div class:list={['min-w-0 border-r', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
                             <div class="flex items-start justify-between gap-1 px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
                               <div class="min-w-0">
-                                <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>In this module</p>
+                                <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerLabel}`}>In this module</p>
                                 <p class="text-[10px] font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>Onboarding</p>
                               </div>
                               <div class="flex shrink-0 flex-col items-end gap-px">
@@ -2086,7 +2106,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           </div>
                           <div class="min-w-0">
                             <div class="px-2 py-1.5" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
-                              <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerText};opacity:.55`}>In this lesson</p>
+                              <p class="text-[8px] font-semibold uppercase tracking-[0.12em]" data-brand-preview-training-header-label={swatch.mode} style={`color:${swatch.headerLabel}`}>In this lesson</p>
                               <p class="text-[10px] font-semibold" data-brand-preview-training-header-title={swatch.mode} style={`color:${swatch.headerText}`}>Getting Started</p>
                             </div>
                             <div class:list={['flex items-start justify-between gap-1 border-b px-2 py-1.5', swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10']}>
@@ -2103,6 +2123,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                               <div class="rounded-lg px-2 py-1.5" data-brand-preview-training-block={swatch.mode} style={`background-color:${swatch.block}`}>
                                 <p class="text-[9px] font-semibold" data-brand-preview-training-block-text={swatch.mode} style={`color:${swatch.blockText}`}>1. Written</p>
                                 <div class="mt-1 rounded px-1.5 py-2 text-[9px]" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field};color:${swatch.fieldText}`}>Written content</div>
+                                <span class="mt-1.5 inline-flex items-center gap-1 text-[8px]" data-brand-preview-training-block-text={swatch.mode} style={`color:${swatch.blockText}`}>
+                                  <span class="inline-block h-2.5 w-2.5 rounded-sm border" data-brand-preview-training-checkbox-border={swatch.mode} style={`border-color:${swatch.checkboxBorder}`}></span>
+                                  <span class="inline-grid h-2.5 w-2.5 place-items-center rounded-sm border text-[7px] leading-none text-white" data-brand-preview-training-checkbox={swatch.mode} style={`border-color:${swatch.checkbox};background-color:${swatch.checkbox}`}>✓</span>
+                                </span>
                                 <span class="mt-1.5 inline-flex rounded-full px-2 py-px text-[8px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>Save block</span>
                                 <span class="ml-1 mt-1.5 inline-flex rounded-full border px-2 py-px text-[8px] font-semibold" data-brand-preview-training-outline={swatch.mode} style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}>Delete block</span>
                               </div>
@@ -2519,6 +2543,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'widgetOutlineHoverColorDark',
       'trainingHeaderColorLight',
       'trainingHeaderTextColorLight',
+      'trainingHeaderLabelColorLight',
+      'trainingCheckboxColorLight',
+      'trainingCheckboxBorderColorLight',
       'trainingModuleColorLight',
       'trainingModuleTextColorLight',
       'trainingLessonColorLight',
@@ -2539,6 +2566,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'trainingCardOutlineHoverColorLight',
       'trainingHeaderColorDark',
       'trainingHeaderTextColorDark',
+      'trainingHeaderLabelColorDark',
+      'trainingCheckboxColorDark',
+      'trainingCheckboxBorderColorDark',
       'trainingModuleColorDark',
       'trainingModuleTextColorDark',
       'trainingLessonColorDark',
@@ -2666,6 +2696,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       const trainingHeader = readColor(`trainingHeaderColor${suffix}`);
       const trainingHeaderText = readColor(`trainingHeaderTextColor${suffix}`);
+      const trainingHeaderLabel = readColor(`trainingHeaderLabelColor${suffix}`);
+      const trainingCheckbox = readColor(`trainingCheckboxColor${suffix}`);
+      const trainingCheckboxBorder = readColor(`trainingCheckboxBorderColor${suffix}`);
       const trainingModule = readColor(`trainingModuleColor${suffix}`);
       const trainingModuleText = readColor(`trainingModuleTextColor${suffix}`);
       const trainingLesson = readColor(`trainingLessonColor${suffix}`);
@@ -2685,10 +2718,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.color = trainingHeaderText;
       });
       paint('training-header-label', (el) => {
-        el.style.color = trainingHeaderText;
+        el.style.color = trainingHeaderLabel;
+        el.style.opacity = '1';
       });
       paint('training-header-title', (el) => {
         el.style.color = trainingHeaderText;
+        el.style.opacity = '1';
+      });
+      paint('training-checkbox', (el) => {
+        el.style.backgroundColor = trainingCheckbox;
+        el.style.borderColor = trainingCheckbox;
+      });
+      paint('training-checkbox-border', (el) => {
+        el.style.borderColor = trainingCheckboxBorder;
       });
       paint('training-module', (el) => {
         el.style.backgroundColor = trainingModule;
@@ -2831,6 +2873,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       widgetOutlineHoverColorDark?: string | null;
       trainingHeaderColorLight?: string | null;
       trainingHeaderTextColorLight?: string | null;
+      trainingHeaderLabelColorLight?: string | null;
+      trainingCheckboxColorLight?: string | null;
+      trainingCheckboxBorderColorLight?: string | null;
       trainingModuleColorLight?: string | null;
       trainingModuleTextColorLight?: string | null;
       trainingLessonColorLight?: string | null;
@@ -2851,6 +2896,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       trainingCardOutlineHoverColorLight?: string | null;
       trainingHeaderColorDark?: string | null;
       trainingHeaderTextColorDark?: string | null;
+      trainingHeaderLabelColorDark?: string | null;
+      trainingCheckboxColorDark?: string | null;
+      trainingCheckboxBorderColorDark?: string | null;
       trainingModuleColorDark?: string | null;
       trainingModuleTextColorDark?: string | null;
       trainingLessonColorDark?: string | null;
@@ -2995,6 +3043,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           ? {
               header: branding.selectedColorLight || '#F7F8FA',
               'header-text': branding.textColorLight || '#535F51',
+              'header-title': branding.textColorLight || '#535F51',
+              'header-label': branding.trainingHeaderLabelColorLight || branding.textColorLight || '#535F518C',
+              checkbox: branding.trainingCheckboxColorLight || branding.primaryColorLight || '#535F51',
+              'checkbox-border': branding.trainingCheckboxBorderColorLight || '#B7BEB4',
               module: branding.primaryColorLight || '#535F51',
               'module-text': branding.primaryTextColorLight || '#F7F4EE',
               lesson: `${accentBase}40`,
@@ -3017,6 +3069,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           : {
               header: branding.selectedColorDark || '#2A2E2A',
               'header-text': branding.textColorDark || '#BAC6B6',
+              'header-title': branding.textColorDark || '#BAC6B6',
+              'header-label': branding.trainingHeaderLabelColorDark || branding.textColorDark || '#BAC6B68C',
+              checkbox: branding.trainingCheckboxColorDark || branding.primaryColorDark || '#BAC6B6',
+              'checkbox-border': branding.trainingCheckboxBorderColorDark || '#6E786C',
               module: branding.primaryColorDark || '#BAC6B6',
               'module-text': branding.primaryTextColorDark || '#111311',
               lesson: `${accentBase}40`,
@@ -3039,6 +3095,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         const keys: Record<string, string> = {
           header: 'trainingHeaderColor',
           'header-text': 'trainingHeaderTextColor',
+          'header-title': 'trainingHeaderTextColor',
+          'header-label': 'trainingHeaderLabelColor',
+          checkbox: 'trainingCheckboxColor',
+          'checkbox-border': 'trainingCheckboxBorderColor',
           module: 'trainingModuleColor',
           'module-text': 'trainingModuleTextColor',
           lesson: 'trainingLessonColor',

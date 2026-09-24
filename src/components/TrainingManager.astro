@@ -175,8 +175,8 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       {/* Column 1 — Modules */}
       <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r lg:h-full">
         <div class="training-header border-b border-sage-dark/10 px-3 py-2.5">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">Modules</p>
-          <p class="mt-0.5 text-[11px] text-sage-dark/55">Topics / folders</p>
+          <p class="training-header-label text-xs font-semibold uppercase tracking-[0.12em]">Modules</p>
+          <p class="training-header-label mt-0.5 text-[11px]">Topics / folders</p>
         </div>
         <div class="flex-1 space-y-0.5 overflow-y-auto p-2">
           {
@@ -212,7 +212,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
         <div class="training-header border-t border-sage-dark/10 px-3 py-2.5">
           <button
             type="button"
-            class="w-full rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-charcoal transition hover:bg-black/5"
+            class="training-header-label w-full rounded-lg px-2.5 py-2 text-left text-sm font-semibold transition hover:bg-black/5"
             data-training-new-toggle
             aria-expanded="false"
             aria-controls="training-new-module-panel"
@@ -230,10 +230,10 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
               <>
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+                    <p class="training-header-label text-xs font-semibold uppercase tracking-[0.12em]">
                       In this module:
                     </p>
-                    <p class="mt-0.5 break-words text-[13px] font-semibold leading-tight text-charcoal">{selected.title}</p>
+                    <p class="training-header-title mt-0.5 break-words text-[13px] font-semibold leading-tight">{selected.title}</p>
                   </div>
                   <div class="flex shrink-0 flex-col items-end gap-px">
                     <a
@@ -258,8 +258,8 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
               </>
             ) : (
               <>
-                <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">In this module:</p>
-                <p class="mt-0.5 text-[11px] text-sage-dark/55">Open a module to see its contents</p>
+                <p class="training-header-label text-xs font-semibold uppercase tracking-[0.12em]">In this module:</p>
+                <p class="training-header-label mt-0.5 text-[11px]">Open a module to see its contents</p>
               </>
             )
           }
@@ -500,7 +500,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       {/* Column 3 — Detail editor */}
       <div class="flex min-h-0 flex-col lg:h-full">
         <div class="training-header border-b border-sage-dark/10 px-3 py-2.5">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
+          <p class="training-header-label text-xs font-semibold uppercase tracking-[0.12em]">
             {selectedItem
               ? selectedIsAssignment
                 ? 'In this assignment'
@@ -509,7 +509,14 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                 ? 'In this module'
                 : 'In this lesson'}
           </p>
-          <p class="mt-0.5 text-[11px] text-sage-dark/55">
+          <p
+            class:list={[
+              'mt-0.5 text-[11px]',
+              selectedItem || (selectedView === 'settings' && selected)
+                ? 'training-header-title'
+                : 'training-header-label',
+            ]}
+          >
             {selectedItem
               ? selectedItem.title
               : selectedView === 'settings' && selected
