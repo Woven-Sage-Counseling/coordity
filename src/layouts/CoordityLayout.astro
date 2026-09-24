@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import FontLinks from '../components/FontLinks.astro';
 import { COORDITY_PRODUCT_NAME } from '../lib/organization';
 
 interface Props {
@@ -20,6 +21,7 @@ const { title } = Astro.props;
     <link rel="icon" href="/favicon-coordity.svg?v=4" type="image/svg+xml" />
     <link rel="icon" href="/favicon-coordity.png?v=4" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+    <FontLinks />
     <title>{title} | {COORDITY_PRODUCT_NAME}</title>
   </head>
   <body class="coordity-shell flex min-h-screen flex-col font-sans antialiased">

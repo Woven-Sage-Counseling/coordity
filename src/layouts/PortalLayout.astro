@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import FontLinks from '../components/FontLinks.astro';
 import PreviewBanner from '../components/PreviewBanner.astro';
 import PortalFooter from '../components/PortalFooter.astro';
 import { getEnv } from '../lib/env';
@@ -41,22 +42,14 @@ const darkBgRgb = hexToRgbChannels(darkBg) ?? '17 19 17';
 const darkPrimaryRgb = hexToRgbChannels(darkPrimary) ?? '186 198 182';
 const darkAccentRgb = hexToRgbChannels(darkAccent) ?? '138 158 134';
 
-const brandStyle = [
-  `:root {`,
-  `--portal-cream: ${lightBgRgb};`,
-  `--portal-sage-dark: ${lightPrimaryRgb};`,
-  `--portal-charcoal: ${lightPrimaryRgb};`,
-  `--portal-sage: ${lightAccentRgb};`,
-  `--portal-sage-light: ${lightAccentRgb};`,
-  `}`,
-  `html.dark {`,
-  `--portal-cream: ${darkBgRgb};`,
-  `--portal-sage-dark: ${darkPrimaryRgb};`,
-  `--portal-charcoal: ${darkPrimaryRgb};`,
-  `--portal-sage: ${darkAccentRgb};`,
-  `--portal-sage-light: ${darkAccentRgb};`,
-  `}`,
-].join(' ');
+function brandBlock(selector: string, bg: string, primary: string, accent: string) {
+  return `${selector}{--portal-cream:${bg} !important;--portal-sage-dark:${primary} !important;--portal-charcoal:${primary} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;}`;
+}
+// !important so these beat the default palette in global.css no matter which
+// stylesheet Astro injects last.
+const brandStyle =
+  brandBlock('html', lightBgRgb, lightPrimaryRgb, lightAccentRgb) +
+  brandBlock('html.dark', darkBgRgb, darkPrimaryRgb, darkAccentRgb);
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active' && !flush;
@@ -95,8 +88,9 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
     <meta name="description" content={`Private employee workspace for ${orgName}, powered by Coordity.`} />
     <link rel="icon" href={orgFaviconHref} />
     <link rel="apple-touch-icon" href={orgFaviconHref} />
+    <FontLinks />
     <title>{title} | {orgName}</title>
-    <style is:inline set:html={brandStyle} />
+    <Fragment set:html={`<style id="org-brand">${brandStyle}</style>`} />
     <script is:inline define:vars={{ themeUserId: employee?.id ?? null }}>
       (function () {
         try {

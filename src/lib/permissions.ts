@@ -46,53 +46,53 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
 
   if (!profile) return null;
 
-  const roles = await DB.prepare(
-    `SELECT COALESCE(orole.key, r.key) AS key
-     FROM user_role ur
-     LEFT JOIN organization_role orole ON orole.id = ur.role_id
-     LEFT JOIN role r ON r.id = ur.role_id
-     WHERE ur.user_id = ?`,
-  )
-    .bind(userId)
-    .all<{ key: string }>();
+  const active = profile.status === 'active';
+  const [roles, teams, orgPermissions] = await Promise.all([
+    DB.prepare(
+      `SELECT COALESCE(orole.key, r.key) AS key
+       FROM user_role ur
+       LEFT JOIN organization_role orole ON orole.id = ur.role_id
+       LEFT JOIN role r ON r.id = ur.role_id
+       WHERE ur.user_id = ?`,
+    )
+      .bind(userId)
+      .all<{ key: string }>(),
+    DB.prepare(
+      `SELECT t.name
+       FROM user_team ut
+       JOIN directory_team t ON t.id = ut.team_id
+       WHERE ut.user_id = ?
+       ORDER BY t.sort_order`,
+    )
+      .bind(userId)
+      .all<{ name: string }>(),
+    active
+      ? DB.prepare(
+          `SELECT DISTINCT orp.permission_key AS key
+           FROM user_role ur
+           JOIN organization_role_permission orp ON orp.role_id = ur.role_id
+           WHERE ur.user_id = ?`,
+        )
+          .bind(userId)
+          .all<{ key: Permission }>()
+          .catch(() => ({ results: [] as { key: Permission }[] }))
+      : Promise.resolve({ results: [] as { key: Permission }[] }),
+  ]);
 
-  const teams = await DB.prepare(
-    `SELECT t.name
-     FROM user_team ut
-     JOIN directory_team t ON t.id = ut.team_id
-     WHERE ut.user_id = ?
-     ORDER BY t.sort_order`,
-  )
-    .bind(userId)
-    .all<{ name: string }>();
-
-  let permissionKeys: Permission[] = [];
-  if (profile.status === 'active') {
-    try {
-      const fromOrg = await DB.prepare(
-        `SELECT DISTINCT orp.permission_key AS key
-         FROM user_role ur
-         JOIN organization_role_permission orp ON orp.role_id = ur.role_id
-         WHERE ur.user_id = ?`,
-      )
-        .bind(userId)
-        .all<{ key: Permission }>();
-      permissionKeys = (fromOrg.results ?? []).map((row) => row.key);
-    } catch {
-      permissionKeys = [];
-    }
-    if (permissionKeys.length === 0) {
-      const fromGlobal = await DB.prepare(
-        `SELECT DISTINCT perm.key
-         FROM user_role ur
-         JOIN role_permission rp ON rp.role_id = ur.role_id
-         JOIN permission perm ON perm.id = rp.permission_id
-         WHERE ur.user_id = ?`,
-      )
-        .bind(userId)
-        .all<{ key: Permission }>();
-      permissionKeys = (fromGlobal.results ?? []).map((row) => row.key);
-    }
+  let permissionKeys: Permission[] = active
+    ? (orgPermissions.results ?? []).map((row) => row.key)
+    : [];
+  if (active && permissionKeys.length === 0) {
+    const fromGlobal = await DB.prepare(
+      `SELECT DISTINCT perm.key
+       FROM user_role ur
+       JOIN role_permission rp ON rp.role_id = ur.role_id
+       JOIN permission perm ON perm.id = rp.permission_id
+       WHERE ur.user_id = ?`,
+    )
+      .bind(userId)
+      .all<{ key: Permission }>();
+    permissionKeys = (fromGlobal.results ?? []).map((row) => row.key);
   }
 
   return {

@@ -96,35 +96,99 @@ async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): 
   }
 }
 
-const announcements = await safeLoad('announcements', () => listActiveAnnouncements(50), []);
-const timeOffRequests = await safeLoad('time-off', () => listTimeOffRequestsForAdmin(), []);
-const timesheetBacklogRequests = await safeLoad('timesheet-backlog', () => listTimesheetBacklogForAdmin(), []);
-const timesheetShiftEditRequests = await safeLoad(
-  'timesheet-shift-edits',
-  () => listTimesheetShiftEditsForAdmin(),
-  [],
-);
-const pendingBoardRequests = await safeLoad(
-  'bulletin-requests',
-  () => listBulletinBoardRequests({ status: 'pending' }),
-  [],
-);
-const bulletinSettings = await safeLoad(
-  'bulletin-settings',
-  () => getBulletinBoardSettings(orgId),
-  null,
-);
-if (bulletinSettings?.boardMode === 'duplicate') {
-  await ensureDuplicatePinTwins(orgId).catch((error) =>
-    console.error('ensureDuplicatePinTwins failed', error),
-  );
-}
-const bulletinHomeLayout = await safeLoad('bulletin-home-layout', () => getHomeLayoutSettings(orgId), null);
-const bulletinDraftPins = await safeLoad(
-  'bulletin-draft-pins',
-  () => listBulletinBoardPins({ channel: 'draft' }),
-  [],
-);
+const [
+  announcements,
+  timeOffRequests,
+  timesheetBacklogRequests,
+  timesheetShiftEditRequests,
+  pendingBoardRequests,
+  bulletinSettings,
+  bulletinHomeLayout,
+  roles,
+  quickLinks,
+  quickLinkCategories,
+  credentialingProviders,
+  insuranceCatalog,
+  coverageMap,
+  groupCoverageMap,
+  employees,
+  tasksResult,
+  workCategoriesResult,
+  trainingModules,
+  trainingRoster,
+  docusignStatus,
+  qbStatus,
+] = await Promise.all([
+  safeLoad('announcements', () => listActiveAnnouncements(50), []),
+  safeLoad('time-off', () => listTimeOffRequestsForAdmin(), []),
+  safeLoad('timesheet-backlog', () => listTimesheetBacklogForAdmin(), []),
+  safeLoad('timesheet-shift-edits', () => listTimesheetShiftEditsForAdmin(), []),
+  safeLoad('bulletin-requests', () => listBulletinBoardRequests({ status: 'pending' }), []),
+  safeLoad('bulletin-settings', () => getBulletinBoardSettings(orgId), null),
+  safeLoad('bulletin-home-layout', () => getHomeLayoutSettings(orgId), null),
+  safeLoad('roles', () => listRolesWithPermissions(orgId), []),
+  safeLoad('quick-links', () => listQuickLinksForAdmin(orgId), []),
+  safeLoad('quick-link-categories', () => listQuickLinkCategories(orgId), []),
+  safeLoad('credentialing-providers', () => listProvidersForLookup(), []),
+  safeLoad('insurance-catalog', () => listInsuranceCatalog(), []),
+  safeLoad('coverage-matrix', () => listCoverageMatrix(), {}),
+  safeLoad('group-coverage-matrix', () => listGroupCoverageMatrix(), {}),
+  safeLoad('employees', () => listEmployees(orgId), []),
+  listAssignedTasksForAdmin()
+    .then((tasks) => ({ tasks, error: null as string | null }))
+    .catch((error) => {
+      console.error('admin tasks load failed', error);
+      return {
+        tasks: [] as Awaited<ReturnType<typeof listAssignedTasksForAdmin>>,
+        error: 'Tasks are temporarily unavailable. Database migration may still be pending.',
+      };
+    }),
+  listWorkCategoriesForAdmin()
+    .then((categories) => ({ categories, error: null as string | null }))
+    .catch((error) => {
+      console.error('admin work categories load failed', error);
+      return {
+        categories: [] as Awaited<ReturnType<typeof listWorkCategoriesForAdmin>>,
+        error: 'Work items are temporarily unavailable. Database migration may still be pending.',
+      };
+    }),
+  safeLoad('training-modules', () => listTrainingModules(orgId, { includeHidden: true, includeArchived: false }), []),
+  safeLoad('training-roster', () => listTrainingRoster(orgId), []),
+  safeLoad('docusign-status', () => getDocuSignConnectionStatus(orgId), {
+    configured: false,
+    hasOrgApp: false,
+    hasPlatformApp: false,
+    integrationKey: null,
+    authServer: 'https://account-d.docusign.com',
+    status: 'disconnected' as const,
+    accountEmail: null,
+    accountName: null,
+    accountId: null,
+    lastError: null,
+    connectedAt: null,
+  }),
+  safeLoad('qb-status', () => new QuickBooksProvider().getConnectionStatus(), {
+    configured: false,
+    hasOrgApp: false,
+    hasPlatformApp: false,
+    clientId: null,
+    environment: 'sandbox' as const,
+    status: 'disconnected' as const,
+    companyName: null,
+    connectedEmail: null,
+    lastError: null,
+    lastSyncAt: null,
+    connectedAt: null,
+  }),
+]);
+const bulletinDraftPins = await (async () => {
+  if (bulletinSettings?.boardMode === 'duplicate') {
+    await ensureDuplicatePinTwins(orgId).catch((error) =>
+      console.error('ensureDuplicatePinTwins failed', error),
+    );
+  }
+  return safeLoad('bulletin-draft-pins', () => listBulletinBoardPins({ channel: 'draft' }), []);
+})();
 const bulletinPayload =
   bulletinSettings && bulletinHomeLayout
     ? {
@@ -148,28 +212,9 @@ const bulletinPayload =
       }
     : null;
 const bulletinHasUnpublishedChanges = Boolean(bulletinPayload?.hasUnpublishedChanges);
-const roles = await safeLoad('roles', () => listRolesWithPermissions(orgId), []);
-const quickLinks = await safeLoad('quick-links', () => listQuickLinksForAdmin(orgId), []);
-const quickLinkCategories = await safeLoad(
-  'quick-link-categories',
-  () => listQuickLinkCategories(orgId),
-  [],
-);
-const credentialingProviders = await safeLoad('credentialing-providers', () => listProvidersForLookup(), []);
-const insuranceCatalog = await safeLoad('insurance-catalog', () => listInsuranceCatalog(), []);
-const coverageMap = await safeLoad('coverage-matrix', () => listCoverageMatrix(), {});
-const groupCoverageMap = await safeLoad('group-coverage-matrix', () => listGroupCoverageMatrix(), {});
-const employees = await safeLoad('employees', () => listEmployees(orgId), []);
-let assignedTasks: Awaited<ReturnType<typeof listAssignedTasksForAdmin>> = [];
+const assignedTasks = tasksResult.tasks;
 let tasksLoadError: string | null = Astro.url.searchParams.get('tasksError');
-try {
-  assignedTasks = await listAssignedTasksForAdmin();
-} catch (error) {
-  console.error('admin tasks load failed', error);
-  if (!tasksLoadError) {
-    tasksLoadError = 'Tasks are temporarily unavailable. Database migration may still be pending.';
-  }
-}
+if (tasksResult.error && !tasksLoadError) tasksLoadError = tasksResult.error;
 
 const error = Astro.url.searchParams.get('error');
 const announcementSaved = Astro.url.searchParams.get('announcementSaved');
@@ -206,31 +251,21 @@ const pendingTimesheetShiftEdits = timesheetShiftEditRequests.filter((request) =
 const pendingTimesheetRequests = pendingTimesheetBacklog + pendingTimesheetShiftEdits;
 const pendingBulletinRequests = pendingBoardRequests.length;
 const openAssignedTasks = assignedTasks.filter((task) => task.completedAt == null).length;
-let workCategories: Awaited<ReturnType<typeof listWorkCategoriesForAdmin>> = [];
-try {
-  workCategories = await listWorkCategoriesForAdmin();
-} catch (error) {
-  console.error('admin work categories load failed', error);
-  if (!workCategoriesError) {
-    workCategoriesError = 'Work items are temporarily unavailable. Database migration may still be pending.';
-  }
+const workCategories = workCategoriesResult.categories;
+if (workCategoriesResult.error && !workCategoriesError) {
+  workCategoriesError = workCategoriesResult.error;
 }
 
-const trainingModules = await safeLoad(
-  'training-modules',
-  () => listTrainingModules(orgId, { includeHidden: true, includeArchived: false }),
-  [],
-);
 const trainingSelectedId =
   selectedTrainingModuleId && trainingModules.some((m) => m.id === selectedTrainingModuleId)
     ? selectedTrainingModuleId
     : (trainingModules[0]?.id ?? null);
-const trainingLessons = trainingSelectedId
-  ? await safeLoad('training-lessons', () => listLessons(trainingSelectedId), [])
-  : [];
-const trainingAssignments = trainingSelectedId
-  ? await safeLoad('training-assignments', () => listAssignments(trainingSelectedId), [])
-  : [];
+const [trainingLessons, trainingAssignments] = trainingSelectedId
+  ? await Promise.all([
+      safeLoad('training-lessons', () => listLessons(trainingSelectedId), []),
+      safeLoad('training-assignments', () => listAssignments(trainingSelectedId), []),
+    ])
+  : [[], []];
 const trainingItemIds = new Set([...trainingAssignments, ...trainingLessons].map((item) => item.id));
 const trainingSelectedItemId =
   selectedTrainingItemId && trainingItemIds.has(selectedTrainingItemId)
@@ -243,70 +278,33 @@ const trainingSelectedView: 'settings' | 'item' | 'idle' =
       ? 'settings'
       : 'idle';
 const trainingBlocksByItem: Record<string, Awaited<ReturnType<typeof listBlocks>>> = {};
-for (const item of [...trainingAssignments, ...trainingLessons]) {
-  trainingBlocksByItem[item.id] = await safeLoad(
-    `training-blocks-${item.id}`,
-    () => listBlocks(item.id),
-    [],
-  );
-}
-const trainingRoster = await safeLoad('training-roster', () => listTrainingRoster(orgId), []);
 const trainingTraineeId = Astro.url.searchParams.get('trainee')?.trim() || null;
-const trainingTraineeReview = trainingTraineeId
-  ? await safeLoad('training-trainee-review', () => getTrainingUserReview(orgId, trainingTraineeId), null)
-  : null;
-
-const docusignStatus = await safeLoad(
-  'docusign-status',
-  () => getDocuSignConnectionStatus(orgId),
-  {
-    configured: false,
-    hasOrgApp: false,
-    hasPlatformApp: false,
-    integrationKey: null,
-    authServer: 'https://account-d.docusign.com',
-    status: 'disconnected' as const,
-    accountEmail: null,
-    accountName: null,
-    accountId: null,
-    lastError: null,
-    connectedAt: null,
-  },
-);
 const docusignConnected = docusignStatus.status === 'connected';
-const docusignTemplates = docusignConnected
-  ? await safeLoad('docusign-templates', () => listDocuSignTemplates(orgId), [])
-  : [];
-const docusignStatusesRaw = trainingSelectedItemId
-  ? await safeLoad(
-      'docusign-lesson-status',
-      () => listDocuSignStatusesForLesson(trainingSelectedItemId),
-      [],
-    )
-  : [];
+const [trainingBlockEntries, trainingTraineeReview, docusignTemplates, docusignStatusesRaw] =
+  await Promise.all([
+    Promise.all(
+      [...trainingAssignments, ...trainingLessons].map(async (item) => {
+        const blocks = await safeLoad(`training-blocks-${item.id}`, () => listBlocks(item.id), []);
+        return [item.id, blocks] as const;
+      }),
+    ),
+    trainingTraineeId
+      ? safeLoad('training-trainee-review', () => getTrainingUserReview(orgId, trainingTraineeId), null)
+      : Promise.resolve(null),
+    docusignConnected ? safeLoad('docusign-templates', () => listDocuSignTemplates(orgId), []) : Promise.resolve([]),
+    trainingSelectedItemId
+      ? safeLoad('docusign-lesson-status', () => listDocuSignStatusesForLesson(trainingSelectedItemId), [])
+      : Promise.resolve([]),
+  ]);
+for (const [itemId, blocks] of trainingBlockEntries) {
+  trainingBlocksByItem[itemId] = blocks;
+}
 const rosterByUser = new Map(trainingRoster.map((row) => [row.userId, row.name]));
 const docusignStatuses = docusignStatusesRaw.map((row) => ({
   ...row,
   userName: rosterByUser.get(row.userId) ?? row.userId,
 }));
 
-const qbStatus = await safeLoad(
-  'qb-status',
-  () => new QuickBooksProvider().getConnectionStatus(),
-  {
-    configured: false,
-    hasOrgApp: false,
-    hasPlatformApp: false,
-    clientId: null,
-    environment: 'sandbox' as const,
-    status: 'disconnected' as const,
-    companyName: null,
-    connectedEmail: null,
-    lastError: null,
-    lastSyncAt: null,
-    connectedAt: null,
-  },
-);
 const qbConnected = qbStatus.status === 'connected';
 const canManageQuickBooks = hasPermission(employee, 'financials:manage');
 const docusignRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/docusign/callback`;
@@ -1930,6 +1928,39 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       hexInput?.addEventListener('change', () => syncPair(key, false));
     });
 
+    const hexChannels = (value: string | null | undefined) => {
+      const match = /^#?([0-9a-fA-F]{6})$/.exec((value ?? '').trim());
+      if (!match) return null;
+      const hex = match[1];
+      return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+    };
+    const applySavedBrandColors = (branding: {
+      bgColorLight?: string | null;
+      primaryColorLight?: string | null;
+      accentColorLight?: string | null;
+      bgColorDark?: string | null;
+      primaryColorDark?: string | null;
+      accentColorDark?: string | null;
+    }) => {
+      const block = (selector: string, bg: string, primary: string, accent: string) =>
+        `${selector}{--portal-cream:${bg} !important;--portal-sage-dark:${primary} !important;--portal-charcoal:${primary} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;}`;
+      const lightBg = hexChannels(branding.bgColorLight) ?? '247 244 238';
+      const lightPrimary = hexChannels(branding.primaryColorLight) ?? '83 95 81';
+      const lightAccent = hexChannels(branding.accentColorLight) ?? '120 143 117';
+      const darkBg = hexChannels(branding.bgColorDark) ?? '17 19 17';
+      const darkPrimary = hexChannels(branding.primaryColorDark) ?? '186 198 182';
+      const darkAccent = hexChannels(branding.accentColorDark) ?? '138 158 134';
+      let style = document.getElementById('org-brand');
+      if (!(style instanceof HTMLStyleElement)) {
+        style = document.createElement('style');
+        style.id = 'org-brand';
+        document.head.appendChild(style);
+      }
+      style.textContent =
+        block('html', lightBg, lightPrimary, lightAccent) +
+        block('html.dark', darkBg, darkPrimary, darkAccent);
+    };
+
     brandingForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (statusEl instanceof HTMLElement) {
@@ -1949,11 +1980,23 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         });
         const json = (await res.json().catch(() => ({}))) as {
           error?: string;
-          branding?: { hasLogo?: boolean; logoUrl?: string | null; hasFavicon?: boolean; faviconUrl?: string | null };
+          branding?: {
+            hasLogo?: boolean;
+            logoUrl?: string | null;
+            hasFavicon?: boolean;
+            faviconUrl?: string | null;
+            bgColorLight?: string | null;
+            primaryColorLight?: string | null;
+            accentColorLight?: string | null;
+            bgColorDark?: string | null;
+            primaryColorDark?: string | null;
+            accentColorDark?: string | null;
+          };
         };
         if (!res.ok) throw new Error(json.error || 'Could not save branding.');
+        if (json.branding) applySavedBrandColors(json.branding);
         if (statusEl instanceof HTMLElement) {
-          statusEl.textContent = 'Branding saved. Refresh if colors or logos do not update everywhere.';
+          statusEl.textContent = 'Branding saved.';
           statusEl.classList.remove('hidden');
         }
         const branding = json.branding;

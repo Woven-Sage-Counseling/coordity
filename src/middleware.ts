@@ -7,6 +7,7 @@ import {
   isOrganizationMember,
   resolveOrganizationFromHost,
 } from './lib/organization';
+import { ensureOrganizationRolesSeeded } from './lib/org-roles';
 import { canAccessManagement, loadEmployee } from './lib/permissions';
 import { loadPlatformStaff } from './lib/platform-access';
 import { requestHostname } from './lib/request-host';
@@ -67,12 +68,30 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.isCoordityApex = isApex;
   context.locals.platformStaff = null;
 
-  try {
-    context.locals.organization = await resolveOrganizationFromHost(hostname);
-  } catch (error) {
-    console.error('organization resolve failed', error);
-    context.locals.organization = null;
-  }
+  const [resolvedOrganization, session] = await Promise.all([
+    resolveOrganizationFromHost(hostname).catch((error) => {
+      console.error('organization resolve failed', error);
+      return null;
+    }),
+    (async () => {
+      try {
+        const auth = createAuth(context.request);
+        const current = await auth.api.getSession({ headers: context.request.headers });
+        const userId = current?.user?.id ?? null;
+        const [employee, platformStaff] = await Promise.all([
+          userId ? loadEmployee(userId) : Promise.resolve(null),
+          isApex && userId ? loadPlatformStaff(userId) : Promise.resolve(null),
+        ]);
+        return { userId, employee, platformStaff };
+      } catch (error) {
+        console.error('session lookup failed', error);
+        return { userId: null, employee: null, platformStaff: null };
+      }
+    })(),
+  ]);
+
+  context.locals.organization = resolvedOrganization;
+  context.locals.platformStaff = session.platformStaff;
 
   if (!isApex && !context.locals.organization && hostname.endsWith('.coordity.com')) {
     return new Response('Workspace not found', { status: 404, headers: { 'cache-control': 'no-store' } });
@@ -82,35 +101,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.organization = await getOrganizationById(DEFAULT_ORG_ID);
   }
 
-  if (!isApex && context.locals.organization) {
-    try {
-      const { ensureOrganizationRoles } = await import('./lib/org-roles');
-      await ensureOrganizationRoles(context.locals.organization.id);
-    } catch (error) {
-      console.error('organization roles ensure failed', error);
-    }
-  }
-
-  let sessionUserId: string | null = null;
-  try {
-    const auth = createAuth(context.request);
-    const session = await auth.api.getSession({ headers: context.request.headers });
-    sessionUserId = session?.user?.id ?? null;
-    let employee = sessionUserId ? await loadEmployee(sessionUserId) : null;
-    if (employee && context.locals.organization) {
-      const member = await isOrganizationMember(context.locals.organization.id, employee.id);
-      if (!member) employee = null;
-    }
-    context.locals.employee = employee;
-    if (isApex && sessionUserId) {
-      context.locals.platformStaff = await loadPlatformStaff(sessionUserId);
-    }
-  } catch (error) {
-    console.error('session lookup failed', error);
-    context.locals.employee = null;
-    context.locals.platformStaff = null;
-  }
-  const employee = context.locals.employee;
+  let employee = session.employee;
+  const organization = context.locals.organization;
+  const [member] = await Promise.all([
+    employee && organization
+      ? isOrganizationMember(organization.id, employee.id)
+      : Promise.resolve(true),
+    !isApex && organization
+      ? ensureOrganizationRolesSeeded(organization.id).catch((error) => {
+          console.error('organization roles ensure failed', error);
+        })
+      : Promise.resolve(),
+  ]);
+  if (employee && organization && !member) employee = null;
+  context.locals.employee = employee;
 
   if (isApex) {
     if (pathname === '/') {

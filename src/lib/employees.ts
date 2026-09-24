@@ -304,8 +304,8 @@ export function groupDirectoryByTeam(people: DirectoryPerson[]) {
 
 export async function listRoles(orgId?: string) {
   if (orgId) {
-    const { ensureOrganizationRoles, listOrganizationRolesWithPermissions } = await import('./org-roles');
-    await ensureOrganizationRoles(orgId);
+    const { ensureOrganizationRolesSeeded, listOrganizationRolesWithPermissions } = await import('./org-roles');
+    await ensureOrganizationRolesSeeded(orgId);
     const roles = await listOrganizationRolesWithPermissions(orgId);
     return roles.map((role) => ({
       id: role.id,
@@ -602,8 +602,8 @@ export async function assignRole(input: {
 }): Promise<void> {
   const { DB } = getEnv();
   if (input.orgId) {
-    const { ensureOrganizationRoles, getOrganizationRole } = await import('./org-roles');
-    await ensureOrganizationRoles(input.orgId);
+    const { ensureOrganizationRolesSeeded, getOrganizationRole } = await import('./org-roles');
+    await ensureOrganizationRolesSeeded(input.orgId);
     const orgRole = await getOrganizationRole(input.orgId, input.roleId);
     if (!orgRole) throw new Error('Role not found for this organization.');
   }

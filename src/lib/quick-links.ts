@@ -80,8 +80,8 @@ export async function listRoleKeysWithPermission(
 ): Promise<string[]> {
   const { DB } = getEnv();
   if (orgId) {
-    const { ensureOrganizationRoles } = await import('./org-roles');
-    await ensureOrganizationRoles(orgId);
+    const { ensureOrganizationRolesSeeded } = await import('./org-roles');
+    await ensureOrganizationRolesSeeded(orgId);
     const rows = await DB.prepare(
       `SELECT r.key AS role_key
        FROM organization_role r

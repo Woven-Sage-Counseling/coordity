@@ -29,28 +29,36 @@ export const prerender = false;
 
 const employee = Astro.locals.employee!;
 const orgId = orgIdFromLocals(Astro.locals.organization);
-const [quickLinkCategories, visibleLinks] = await Promise.all([
-  listQuickLinkCategories(orgId),
-  listVisibleQuickLinks({ orgId, roleKeys: employee.roles }),
-]);
-const visibleApps = visibleLinks.map(toPortalApp);
 const firstName = employee.name.split(' ')[0] || employee.name;
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeCredentialingWidget = canSeeCredentialing(employee);
 const canSeeCaseloadWidget = canSeeCaseload(employee);
 const canSeeTimesheet = canUseTimesheet(employee);
 const canSeeAdmin = canAccessManagement(employee);
-const announcements = await listAnnouncementsForUser(employee.id);
-const announcementUnreadCount = await countUnreadAnnouncements(employee.id);
-const notifications = await listNotificationsForUser(employee.id);
-const notificationUnreadCount = await countUnreadNotifications(employee.id);
-
-const activeShift = canSeeTimesheet ? await getActiveShift(employee.id) : null;
+const [
+  quickLinkCategories,
+  visibleLinks,
+  announcements,
+  announcementUnreadCount,
+  notifications,
+  notificationUnreadCount,
+  activeShift,
+  onTimeOff,
+  layout,
+] = await Promise.all([
+  listQuickLinkCategories(orgId),
+  listVisibleQuickLinks({ orgId, roleKeys: employee.roles }),
+  listAnnouncementsForUser(employee.id),
+  countUnreadAnnouncements(employee.id),
+  listNotificationsForUser(employee.id),
+  countUnreadNotifications(employee.id),
+  canSeeTimesheet ? getActiveShift(employee.id) : Promise.resolve(null),
+  isUserOnApprovedTimeOffNow(employee.id),
+  resolveEffectiveHomeComposition({ userId: employee.id, orgId }),
+]);
+const visibleApps = visibleLinks.map(toPortalApp);
 const onShift = activeShift != null;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
-const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
-
-const layout = await resolveEffectiveHomeComposition({ userId: employee.id, orgId });
 const showRail = layout.showRail;
 const railBoard = layout.showRailBoard;
 const railImageUrl = layout.railImageUrl;

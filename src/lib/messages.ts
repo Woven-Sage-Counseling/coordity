@@ -86,16 +86,15 @@ export async function ensureChannels(orgId = DEFAULT_ORG_ID): Promise<void> {
     `SELECT id, key, name FROM directory_team ORDER BY sort_order, name`,
   ).all<{ id: string; key: string; name: string }>();
 
-  for (const team of teams.results ?? []) {
+  const teamInserts = (teams.results ?? []).map((team) => {
     const id = orgId === DEFAULT_ORG_ID ? `msgchan_${team.id}` : `msgchan_${orgId}_${team.id}`;
-    await DB.prepare(
+    return DB.prepare(
       `INSERT OR IGNORE INTO message_conversation
          (id, org_id, kind, title, team_id, channel_key, dm_key, created_at, updated_at)
        VALUES (?, ?, 'channel', ?, ?, ?, NULL, ?, ?)`,
-    )
-      .bind(id, orgId, team.name, team.id, team.key, now, now)
-      .run();
-  }
+    ).bind(id, orgId, team.name, team.id, team.key, now, now);
+  });
+  if (teamInserts.length > 0) await DB.batch(teamInserts);
 }
 
 async function getConversation(id: string): Promise<ConversationRow | null> {
@@ -295,20 +294,55 @@ export async function listInbox(userId: string, orgId = DEFAULT_ORG_ID): Promise
     .bind(orgId)
     .all<ConversationRow>();
 
-  for (const channel of channels.results ?? []) {
-    if (!channel.team_id) {
-      await ensureParticipant(channel.id, userId);
-    } else if (await userOnTeam(userId, channel.team_id)) {
-      await syncTeamChannelParticipants(channel);
-      await ensureParticipant(channel.id, userId);
-    }
-  }
+  const memberships = await DB.prepare(`SELECT team_id FROM user_team WHERE user_id = ?`)
+    .bind(userId)
+    .all<{ team_id: string }>();
+  const teamIds = new Set((memberships.results ?? []).map((row) => row.team_id));
+  const now = nowMs();
+  const participantInserts = (channels.results ?? [])
+    .filter((channel) => !channel.team_id || teamIds.has(channel.team_id))
+    .map((channel) =>
+      DB.prepare(
+        `INSERT OR IGNORE INTO message_participant
+           (conversation_id, user_id, joined_at, last_read_at, muted)
+         VALUES (?, ?, ?, ?, 0)`,
+      ).bind(channel.id, userId, now, now),
+    );
+  if (participantInserts.length > 0) await DB.batch(participantInserts);
 
   const rows = await DB.prepare(
-    `SELECT c.id, c.org_id, c.kind, c.title, c.team_id, c.channel_key, c.dm_key, c.created_at, c.updated_at,
-            mp.last_read_at AS last_read_at
+    `SELECT c.id, c.kind, c.title, c.team_id, c.channel_key, c.updated_at,
+            (
+              SELECT COUNT(*)
+              FROM message m
+              WHERE m.conversation_id = c.id
+                AND m.deleted_at IS NULL
+                AND m.created_at > COALESCE(mp.last_read_at, 0)
+                AND m.sender_id != ?
+            ) AS unread_count,
+            last.id AS last_id,
+            last.body AS last_body,
+            last.sender_id AS last_sender_id,
+            last.created_at AS last_created_at,
+            last_user.name AS last_sender_name,
+            other.id AS other_id,
+            other.name AS other_name
      FROM message_conversation c
      JOIN message_participant mp ON mp.conversation_id = c.id AND mp.user_id = ?
+     LEFT JOIN message last ON last.id = (
+       SELECT m.id
+       FROM message m
+       WHERE m.conversation_id = c.id AND m.deleted_at IS NULL
+       ORDER BY m.created_at DESC
+       LIMIT 1
+     )
+     LEFT JOIN user last_user ON last_user.id = last.sender_id
+     LEFT JOIN user other ON other.id = (
+       SELECT mp2.user_id
+       FROM message_participant mp2
+       WHERE mp2.conversation_id = c.id AND mp2.user_id != ? AND c.kind = 'dm'
+       LIMIT 1
+     )
      WHERE c.org_id = ?
        AND (
          c.kind = 'dm'
@@ -320,63 +354,50 @@ export async function listInbox(userId: string, orgId = DEFAULT_ORG_ID): Promise
        )
      ORDER BY c.updated_at DESC, c.created_at DESC`,
   )
-    .bind(userId, orgId, userId)
-    .all<ConversationRow & { last_read_at: number }>();
+    .bind(userId, userId, userId, orgId, userId)
+    .all<{
+      id: string;
+      kind: string;
+      title: string | null;
+      team_id: string | null;
+      channel_key: string | null;
+      updated_at: number;
+      unread_count: number;
+      last_id: string | null;
+      last_body: string | null;
+      last_sender_id: string | null;
+      last_created_at: number | null;
+      last_sender_name: string | null;
+      other_id: string | null;
+      other_name: string | null;
+    }>();
 
-  const summaries: MessageConversationSummary[] = [];
-
-  for (const row of rows.results ?? []) {
-    const { title, other } = await conversationTitleForUser(row, userId);
-    const last = await DB.prepare(
-      `SELECT m.id, m.body, m.sender_id, m.created_at, u.name AS sender_name
-       FROM message m
-       JOIN user u ON u.id = m.sender_id
-       WHERE m.conversation_id = ? AND m.deleted_at IS NULL
-       ORDER BY m.created_at DESC
-       LIMIT 1`,
-    )
-      .bind(row.id)
-      .first<{
-        id: string;
-        body: string;
-        sender_id: string;
-        created_at: number;
-        sender_name: string;
-      }>();
-
-    const unread = await DB.prepare(
-      `SELECT COUNT(*) AS count
-       FROM message
-       WHERE conversation_id = ?
-         AND deleted_at IS NULL
-         AND created_at > ?
-         AND sender_id != ?`,
-    )
-      .bind(row.id, row.last_read_at ?? 0, userId)
-      .first<{ count: number }>();
-
-    summaries.push({
+  return (rows.results ?? []).map((row) => {
+    const other =
+      row.kind === 'dm' && row.other_id && row.other_name
+        ? { id: row.other_id, name: row.other_name }
+        : null;
+    return {
       id: row.id,
       kind: row.kind === 'channel' ? 'channel' : 'dm',
-      title,
+      title: row.kind === 'channel' ? row.title || 'Channel' : other?.name || 'Direct message',
       teamId: row.team_id,
       channelKey: row.channel_key,
       updatedAt: row.updated_at,
-      unreadCount: Number(unread?.count ?? 0),
-      lastMessage: last
-        ? {
-            id: last.id,
-            body: last.body,
-            senderId: last.sender_id,
-            senderName: last.sender_name,
-            createdAt: last.created_at,
-          }
-        : null,
+      unreadCount: Number(row.unread_count ?? 0),
+      lastMessage:
+        row.last_id && row.last_body && row.last_sender_id && row.last_created_at
+          ? {
+              id: row.last_id,
+              body: row.last_body,
+              senderId: row.last_sender_id,
+              senderName: row.last_sender_name || 'Someone',
+              createdAt: row.last_created_at,
+            }
+          : null,
       otherParticipant: other,
-    });
-  }
-
-  return summaries;
+    } satisfies MessageConversationSummary;
+  });
 }
 
 export async function listChannelsForUser(
@@ -495,9 +516,32 @@ export async function markConversationRead(conversationId: string, userId: strin
 }
 
 export async function countUnreadMessages(userId: string, orgId = DEFAULT_ORG_ID): Promise<number> {
-  await ensureChannels(orgId);
-  const inbox = await listInbox(userId, orgId);
-  return inbox.reduce((sum, item) => sum + item.unreadCount, 0);
+  const { DB } = getEnv();
+  try {
+    const row = await DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM message m
+       JOIN message_participant mp ON mp.conversation_id = m.conversation_id AND mp.user_id = ?
+       JOIN message_conversation c ON c.id = m.conversation_id
+       WHERE c.org_id = ?
+         AND m.deleted_at IS NULL
+         AND m.created_at > COALESCE(mp.last_read_at, 0)
+         AND m.sender_id != ?
+         AND (
+           c.kind = 'dm'
+           OR c.team_id IS NULL
+           OR EXISTS (
+             SELECT 1 FROM user_team ut
+             WHERE ut.user_id = ? AND ut.team_id = c.team_id
+           )
+         )`,
+    )
+      .bind(userId, orgId, userId, userId)
+      .first<{ count: number }>();
+    return Number(row?.count ?? 0);
+  } catch {
+    return 0;
+  }
 }
 
 export async function sendMessage(input: {

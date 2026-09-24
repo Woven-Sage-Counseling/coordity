@@ -118,6 +118,20 @@ async function setOrgRolePermissions(roleId: string, permissions: Permission[]):
   );
 }
 
+/** Skip the role seed when this org already has the system roles. */
+export async function ensureOrganizationRolesSeeded(orgId: string): Promise<void> {
+  const { DB } = getEnv();
+  try {
+    const countRow = await DB.prepare(`SELECT COUNT(*) AS n FROM organization_role WHERE org_id = ?`)
+      .bind(orgId)
+      .first<{ n: number }>();
+    if (Number(countRow?.n ?? 0) >= SYSTEM_ROLE_KEYS.length) return;
+  } catch {
+    return;
+  }
+  await ensureOrganizationRoles(orgId);
+}
+
 /** Seed default Woven Sage roles for an org and remap user/invite role ids onto org copies. */
 export async function ensureOrganizationRoles(orgId: string): Promise<OrgRole[]> {
   const { DB } = getEnv();
@@ -136,8 +150,11 @@ export async function ensureOrganizationRoles(orgId: string): Promise<OrgRole[]>
     return [];
   }
 
-  if (existingCount < SYSTEM_ROLE_KEYS.length) {
-    const globalRoles = await DB.prepare(
+  if (existingCount >= SYSTEM_ROLE_KEYS.length) {
+    return listOrganizationRoles(orgId);
+  }
+
+  const globalRoles = await DB.prepare(
       `SELECT id, key, name, description FROM role WHERE key IN (${SYSTEM_ROLE_KEYS.map(() => '?').join(',')})`,
     )
       .bind(...SYSTEM_ROLE_KEYS)
@@ -185,7 +202,6 @@ export async function ensureOrganizationRoles(orgId: string): Promise<OrgRole[]>
         console.error(`ensureOrganizationRoles seed failed for ${global.key}`, error);
       }
     }
-  }
 
   try {
     await remapAssignmentsToOrgRoles(orgId);
