@@ -1,25 +1,28 @@
 ---
 import TaskListItem from './TaskListItem.astro';
-import { listTasksForUser, serializeTask } from '../lib/tasks';
+import { listTasksForUser, serializeTask, type UserTask } from '../lib/tasks';
 
 interface Props {
   userId: string;
   mode?: 'widget' | 'page';
   returnTo?: string;
   initialError?: string | null;
+  preparedTasks?: UserTask[];
 }
 
-const { userId, mode = 'widget', returnTo = mode === 'page' ? '/tasks' : '/', initialError = null } =
+const { userId, mode = 'widget', returnTo = mode === 'page' ? '/tasks' : '/', initialError = null, preparedTasks } =
   Astro.props;
 const isPage = mode === 'page';
 
-let tasks: Awaited<ReturnType<typeof listTasksForUser>> = [];
+let tasks: Awaited<ReturnType<typeof listTasksForUser>> = preparedTasks ?? [];
 let tasksLoadError: string | null = null;
+if (!preparedTasks) {
 try {
   tasks = await listTasksForUser(userId, isPage ? 200 : 50);
 } catch (error) {
   console.error('tasks load failed', error);
   tasksLoadError = 'Tasks are temporarily unavailable.';
+}
 }
 
 const serialized = tasks.map(serializeTask);

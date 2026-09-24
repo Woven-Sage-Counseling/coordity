@@ -1,4 +1,5 @@
 ---
+import type { TimeOffRequest } from '../lib/time-off-requests';
 import { formatTimeOffRequestEntries } from '../lib/time-off';
 import {
   formatTimeOffRequestDate,
@@ -10,11 +11,12 @@ import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
   userId: string;
+  preparedRequests?: TimeOffRequest[];
 }
 
-const { userId } = Astro.props;
+const { userId, preparedRequests } = Astro.props;
 
-const requests = await listTimeOffRequestsForUser(userId, 8);
+const requests = preparedRequests ?? (await listTimeOffRequestsForUser(userId, 8));
 const notice = Astro.url.searchParams.get('timeOff');
 const error = Astro.url.searchParams.get('timeOffError');
 

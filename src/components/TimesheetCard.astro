@@ -8,6 +8,7 @@ import { getWorkCategoryLookup } from '../lib/timesheet-work-categories';
 import { formatWeekLabel } from '../lib/timesheet';
 import { pauseButtonClasses, shiftButtonClasses } from '../lib/timesheet-shift-buttons';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
+import type { HomeTimesheetPrepared } from '../lib/home-load';
 import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
 import { isOnBreak } from '../lib/timesheet-breaks';
 import ShiftStatusIndicator from './ShiftStatusIndicator.astro';
@@ -15,25 +16,28 @@ import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
   userId: string;
+  prepared?: HomeTimesheetPrepared;
 }
 
-const { userId } = Astro.props;
+const { userId, prepared } = Astro.props;
 
-let summary = null;
-let timesheetLoadError: string | null = null;
+let summary = prepared?.summary ?? null;
+let timesheetLoadError: string | null = prepared?.error ?? null;
 
-try {
-  summary = await getTimesheetSummary(userId);
-} catch (error) {
-  console.error('timesheet widget load failed', error);
-  timesheetLoadError = 'Timesheet is temporarily unavailable.';
+if (!prepared) {
+  try {
+    summary = await getTimesheetSummary(userId);
+  } catch (error) {
+    console.error('timesheet widget load failed', error);
+    timesheetLoadError = 'Timesheet is temporarily unavailable.';
+  }
 }
 
-const categoryLookup = await getWorkCategoryLookup();
+const categoryLookup = prepared?.categoryLookup ?? (await getWorkCategoryLookup());
 const serialized = summary ? serializeTimesheetSummary(summary, { categoryLookup }) : null;
 const activeShift = summary?.activeShift ?? null;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
-const onTimeOff = summary ? await isUserOnApprovedTimeOffNow(userId) : false;
+const onTimeOff = prepared ? prepared.onTimeOff : summary ? await isUserOnApprovedTimeOffNow(userId) : false;
 const week = summary?.week;
 ---
 

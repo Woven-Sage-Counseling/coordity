@@ -5,9 +5,10 @@ import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
 interface Props {
   userId: string;
+  preparedTasks?: import('../lib/tasks').UserTask[];
 }
 
-const { userId } = Astro.props;
+const { userId, preparedTasks } = Astro.props;
 const error = Astro.url.searchParams.get('tasksError');
 const initialError = error != null && error !== '' ? error : null;
 ---
@@ -23,6 +24,12 @@ const initialError = error != null && error !== '' ? error : null;
   <WidgetHeaderBar widgetId="tasks" title="Tasks" headingId="home-tasks-heading" openHref="/tasks" />
 
   <div class="flex flex-1 flex-col bg-[#f4f5f8] font-sans text-[#393a3d]" data-widget-body>
-    <TasksPanel userId={userId} mode="widget" returnTo="/" initialError={initialError} />
+    <TasksPanel
+      userId={userId}
+      mode="widget"
+      returnTo="/"
+      initialError={initialError}
+      preparedTasks={preparedTasks}
+    />
   </div>
 </aside>

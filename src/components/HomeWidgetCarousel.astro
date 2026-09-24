@@ -7,6 +7,7 @@ import CredentialingCard from './CredentialingCard.astro';
 import TasksCard from './TasksCard.astro';
 import TimesheetCard from './TimesheetCard.astro';
 import CaseloadCard from './CaseloadCard.astro';
+import type { HomePrepared } from '../lib/home-load';
 import { availableWidgets, type HomeWidgetId } from '../lib/home-widgets';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
   canSeeCredentialing: boolean;
   canSeeClinical: boolean;
   canSeeTimesheet: boolean;
+  prepared?: HomePrepared;
 }
 
 const {
@@ -25,6 +27,7 @@ const {
   canSeeCredentialing,
   canSeeClinical,
   canSeeTimesheet,
+  prepared,
 } = Astro.props;
 
 const available = availableWidgets({
@@ -96,14 +99,26 @@ const arrowClass =
                 data-widget-id={id}
                 data-active="true"
               >
-                {id === 'schedule' ? <ScheduleCard userId={userId} /> : null}
+                {id === 'schedule' ? (
+                  <ScheduleCard userId={userId} preparedSummary={prepared?.schedule} />
+                ) : null}
                 {id === 'caseload' ? <CaseloadCard userId={userId} /> : null}
-                {id === 'time_off' ? <TimeOffCard userId={userId} /> : null}
-                {id === 'timesheet' ? <TimesheetCard userId={userId} /> : null}
-                {id === 'my_progress' ? <MyProgressCard userId={userId} employee={employee} /> : null}
-                {id === 'tasks' ? <TasksCard userId={userId} /> : null}
-                {id === 'credentialing' ? <CredentialingCard employee={employee} /> : null}
-                {id === 'quickbooks' ? <FinancialSnapshotCard /> : null}
+                {id === 'time_off' ? (
+                  <TimeOffCard userId={userId} preparedRequests={prepared?.timeOff} />
+                ) : null}
+                {id === 'timesheet' ? (
+                  <TimesheetCard userId={userId} prepared={prepared?.timesheet} />
+                ) : null}
+                {id === 'my_progress' ? (
+                  <MyProgressCard userId={userId} employee={employee} preparedTracks={prepared?.tracks} />
+                ) : null}
+                {id === 'tasks' ? <TasksCard userId={userId} preparedTasks={prepared?.tasks} /> : null}
+                {id === 'credentialing' ? (
+                  <CredentialingCard employee={employee} prepared={prepared?.credentialing ?? undefined} />
+                ) : null}
+                {id === 'quickbooks' ? (
+                  <FinancialSnapshotCard preparedSummary={prepared?.financials} />
+                ) : null}
               </div>
             ))}
           </div>

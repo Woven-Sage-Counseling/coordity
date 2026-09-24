@@ -6,11 +6,20 @@ import PeriodPicker from './PeriodPicker.astro';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
 
-let summary: FinancialSummary | null = null;
-try {
-  summary = await getFinancialSummary(Astro.url.searchParams);
-} catch (error) {
-  console.error('home financial snapshot failed', error);
+interface Props {
+  /** Cached snapshot for the home widget. The financials page still refreshes live. */
+  preparedSummary?: FinancialSummary | null;
+}
+
+const { preparedSummary } = Astro.props;
+
+let summary: FinancialSummary | null = preparedSummary ?? null;
+if (preparedSummary === undefined) {
+  try {
+    summary = await getFinancialSummary(Astro.url.searchParams, { cachedOnly: true });
+  } catch (error) {
+    console.error('home financial snapshot failed', error);
+  }
 }
 
 const snapshot = summary?.snapshot ?? null;

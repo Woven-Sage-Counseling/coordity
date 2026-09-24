@@ -37,7 +37,8 @@ export function createAuth(request?: Request) {
       expiresIn: 60 * 60 * 12,
       updateAge: 60 * 60,
       cookieCache: {
-        enabled: false,
+        enabled: true,
+        maxAge: 5 * 60,
       },
       fields: {
         expiresAt: 'expires_at',

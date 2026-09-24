@@ -110,18 +110,6 @@ export async function listRoleKeysWithPermission(
     .filter((key) => !QUICK_LINK_LOCKED_ROLES.has(key));
 }
 
-async function listLinkRoleKeys(linkId: string): Promise<string[]> {
-  const { DB } = getEnv();
-  const rows = await DB.prepare(
-    `SELECT role_key FROM portal_quick_link_role WHERE link_id = ? ORDER BY role_key`,
-  )
-    .bind(linkId)
-    .all<{ role_key: string }>();
-  return (rows.results ?? [])
-    .map((row) => row.role_key)
-    .filter((key) => !QUICK_LINK_LOCKED_ROLES.has(key));
-}
-
 async function setLinkRoleKeys(linkId: string, roleKeys: string[]): Promise<void> {
   const { DB } = getEnv();
   const cleaned = sanitizeQuickLinkRoleKeys(roleKeys);
@@ -370,14 +358,32 @@ async function selectLinkRows(orgId: string): Promise<QuickLinkRow[]> {
   }
 }
 
+async function listRoleKeysByLink(linkIds: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (linkIds.length === 0) return map;
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT link_id, role_key
+     FROM portal_quick_link_role
+     WHERE link_id IN (${linkIds.map(() => '?').join(',')})
+     ORDER BY role_key`,
+  )
+    .bind(...linkIds)
+    .all<{ link_id: string; role_key: string }>();
+  for (const row of rows.results ?? []) {
+    if (QUICK_LINK_LOCKED_ROLES.has(row.role_key)) continue;
+    const list = map.get(row.link_id) ?? [];
+    list.push(row.role_key);
+    map.set(row.link_id, list);
+  }
+  return map;
+}
+
 export async function listQuickLinksForAdmin(orgId: string): Promise<QuickLinkView[]> {
   await ensureQuickLinkCategories(orgId);
   const rows = await selectLinkRows(orgId);
-  const out: QuickLinkView[] = [];
-  for (const row of rows) {
-    out.push(mapRow(row, await listLinkRoleKeys(row.id)));
-  }
-  return out;
+  const roles = await listRoleKeysByLink(rows.map((row) => row.id));
+  return rows.map((row) => mapRow(row, roles.get(row.id) ?? []));
 }
 
 export async function listVisibleQuickLinks(input: {

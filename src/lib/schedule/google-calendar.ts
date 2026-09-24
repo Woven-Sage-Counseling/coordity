@@ -383,7 +383,11 @@ export class GoogleCalendarProvider {
     await DB.prepare(`DELETE FROM google_calendar_event_cache WHERE user_id = ?`).bind(userId).run();
   }
 
-  async getSummary(userId: string, rangeId: ScheduleRangeId = 'this_week'): Promise<ScheduleSummary> {
+  async getSummary(
+    userId: string,
+    rangeId: ScheduleRangeId = 'this_week',
+    options?: { preferCache?: boolean },
+  ): Promise<ScheduleSummary> {
     const connection = await this.getConnection(userId);
     const range = resolveScheduleRange(rangeId);
     const calendars = await this.listCalendars(userId);
@@ -393,7 +397,7 @@ export class GoogleCalendarProvider {
     }
 
     try {
-      const events = await this.getEvents(userId, range);
+      const events = await this.getEvents(userId, range, { preferCache: options?.preferCache });
       return { connection, range, events, calendars };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to load calendar events.';
@@ -409,21 +413,26 @@ export class GoogleCalendarProvider {
   async getEvents(
     userId: string,
     range: ResolvedScheduleRange,
-    options?: { refresh?: boolean },
+    options?: { refresh?: boolean; preferCache?: boolean },
   ): Promise<ScheduleEvent[]> {
     const calendars = await this.listCalendars(userId);
     const cacheKey = eventCacheKey(range);
     if (options?.refresh) {
       await this.clearEventCache(userId);
     }
-    const cached = options?.refresh ? null : await this.readEventCache(userId, cacheKey);
+    const cached = options?.refresh
+      ? null
+      : await this.readEventCache(userId, cacheKey, Boolean(options?.preferCache));
     if (cached) {
       const events = applyTitleCovers(await this.applyEventFilters(userId, cached), calendars);
-      if (range.id === 'today' || range.id === 'this_week') {
+      if (!options?.preferCache && (range.id === 'today' || range.id === 'this_week')) {
         await syncScheduleConflictNotifications(userId, events, range);
       }
       return events;
     }
+
+    // Home render must not wait on Google. The card refreshes from the API after paint.
+    if (options?.preferCache) return [];
 
     const enabledCalendars = calendars.filter((calendar) => calendar.enabled);
     if (enabledCalendars.length === 0) return [];
@@ -716,7 +725,11 @@ export class GoogleCalendarProvider {
     return tokens.access_token;
   }
 
-  private async readEventCache(userId: string, rangeKey: string): Promise<ScheduleEvent[] | null> {
+  private async readEventCache(
+    userId: string,
+    rangeKey: string,
+    allowStale = false,
+  ): Promise<ScheduleEvent[] | null> {
     const row = await getEnv()
       .DB.prepare(
         `SELECT payload, fetched_at FROM google_calendar_event_cache
@@ -725,7 +738,8 @@ export class GoogleCalendarProvider {
       .bind(userId, rangeKey)
       .first<{ payload: string; fetched_at: number }>();
 
-    if (!row || nowMs() - row.fetched_at > EVENT_CACHE_MS) return null;
+    if (!row) return null;
+    if (!allowStale && nowMs() - row.fetched_at > EVENT_CACHE_MS) return null;
     try {
       return JSON.parse(row.payload) as ScheduleEvent[];
     } catch {

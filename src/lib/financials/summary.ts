@@ -38,20 +38,24 @@ function parseSnapshotMeta(snapshot: { notes?: string | null } | null): {
   }
 }
 
-export async function getFinancialSummary(search?: URLSearchParams | null): Promise<FinancialSummary> {
+export async function getFinancialSummary(
+  search?: URLSearchParams | null,
+  options?: { cachedOnly?: boolean },
+): Promise<FinancialSummary> {
   const env = getEnv();
   const qb = new QuickBooksProvider();
   const manual = new ManualSnapshotProvider();
   const period = resolvePeriodFromSearch(search);
   const ytd = resolvePreset('ytd');
-  const snapshot =
-    (await qb.getOrFetchSnapshot(period.start, period.end)) ?? (await manual.getSnapshot());
+  const readSnapshot = (start: string, end: string) =>
+    options?.cachedOnly ? qb.getCachedSnapshot(start, end) : qb.getOrFetchSnapshot(start, end);
+  const snapshot = (await readSnapshot(period.start, period.end)) ?? (await manual.getSnapshot());
   const operationsStart = practiceOperationsStart();
   const ytdReserveStart = averagingStart(ytd.start, ytd.end, operationsStart);
   const reserveSnapshot =
     period.start === ytdReserveStart && period.end === ytd.end
       ? snapshot
-      : ((await qb.getOrFetchSnapshot(ytdReserveStart, ytd.end)) ??
+      : ((await readSnapshot(ytdReserveStart, ytd.end)) ??
         (await qb.getCachedSnapshot(ytd.start, ytd.end)) ??
         snapshot);
 

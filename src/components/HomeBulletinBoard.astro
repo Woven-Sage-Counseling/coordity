@@ -8,6 +8,7 @@ import {
   listBulletinBoardPins,
   serializePin,
   writingModeForSurface,
+  type BulletinBoardPin,
   type BulletinSurface,
 } from '../lib/bulletin-board';
 import { BOARD_ZOOM_ICON, linkifyHtml } from '../lib/bulletin-board-format';
@@ -17,16 +18,18 @@ interface Props {
   shape?: BoardShape;
   /** Viewer surface override; falls back to org live surface. */
   surface?: BulletinSurface;
+  pins?: BulletinBoardPin[];
   showSuggest?: boolean;
+  loadFonts?: boolean;
 }
 
-const { shape = 'portrait', surface: surfaceProp, showSuggest = true } = Astro.props;
+const { shape = 'portrait', surface: surfaceProp, pins: pinRows, showSuggest = true, loadFonts = true } =
+  Astro.props;
 
-const settings = await getBulletinBoardSettings();
-const surface = surfaceProp ?? settings.surface;
-const pins = (
-  await listBulletinBoardPins({ channel: 'live', variant: shape })
-).map((pin) => serializePin(pin, surface));
+const surface = surfaceProp ?? (await getBulletinBoardSettings()).surface;
+const pins = (pinRows ?? (await listBulletinBoardPins({ channel: 'live', variant: shape }))).map((pin) =>
+  serializePin(pin, surface),
+);
 const writingMode = writingModeForSurface(surface);
 ---
 
@@ -41,10 +44,16 @@ const writingMode = writingModeForSurface(surface);
   data-max-pdf-bytes={BULLETIN_MAX_PDF_BYTES}
   data-image-max-edge={BULLETIN_IMAGE_MAX_EDGE}
 >
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap"
-  />
+  {
+    loadFonts ? (
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&family=Permanent+Marker&display=swap"
+        media="print"
+        onload="this.setAttribute('media','all')"
+      />
+    ) : null
+  }
   <div
     class:list={['board-surface board-frame relative', shape === 'portrait' ? 'mx-auto' : '']}
     data-board-canvas

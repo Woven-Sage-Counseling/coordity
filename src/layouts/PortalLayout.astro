@@ -57,7 +57,7 @@ const reportIssueEnabled = Boolean(getEnv().RESEND_API_KEY?.trim());
 const orgId = organization?.id;
 const messagesUnread =
   employee?.status === 'active'
-    ? await countUnreadMessages(employee.id, orgId).catch(() => 0)
+    ? await (Astro.locals.unreadMessages ?? countUnreadMessages(employee.id, orgId).catch(() => 0))
     : 0;
 
 const currentPath = (Astro.url.pathname.replace(/\/$/, '') || '/') as string;

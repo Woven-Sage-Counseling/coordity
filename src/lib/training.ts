@@ -778,17 +778,17 @@ export async function listModuleProgressForUser(input: {
   roleKeys: string[];
 }): Promise<TrainingModuleProgress[]> {
   const modules = await listModulesForUser({ orgId: input.orgId, roleKeys: input.roleKeys });
-  const out: TrainingModuleProgress[] = [];
-  for (const module of modules) {
-    const progress = await getModuleProgressForUser({
-      orgId: input.orgId,
-      moduleId: module.id,
-      userId: input.userId,
-      roleKeys: input.roleKeys,
-    });
-    if (progress) out.push(progress);
-  }
-  return out;
+  const progresses = await Promise.all(
+    modules.map((module) =>
+      getModuleProgressForUser({
+        orgId: input.orgId,
+        moduleId: module.id,
+        userId: input.userId,
+        roleKeys: input.roleKeys,
+      }),
+    ),
+  );
+  return progresses.filter((progress): progress is TrainingModuleProgress => progress != null);
 }
 
 export async function completeLesson(input: {

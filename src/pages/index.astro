@@ -13,9 +13,8 @@ import { canAccessManagement, hasPermission } from '../lib/permissions';
 import { canSeeCredentialing } from '../lib/credentialing';
 import { canSeeCaseload } from '../lib/caseload';
 import { canUseTimesheet } from '../lib/timesheet-access';
-import { getActiveShift } from '../lib/timesheet-entries';
 import { isOnBreak } from '../lib/timesheet-breaks';
-import { isUserOnApprovedTimeOffNow } from '../lib/time-off-requests';
+import { loadHomePrepared } from '../lib/home-load';
 import { COMPANY_WORDMARK_SRC } from '../lib/home-layout';
 import { resolveEffectiveHomeComposition } from '../lib/home-user-prefs';
 import { orgIdFromLocals } from '../lib/organization';
@@ -42,21 +41,29 @@ const [
   announcementUnreadCount,
   notifications,
   notificationUnreadCount,
-  activeShift,
-  onTimeOff,
   layout,
+  prepared,
 ] = await Promise.all([
   listQuickLinkCategories(orgId),
   listVisibleQuickLinks({ orgId, roleKeys: employee.roles }),
   listAnnouncementsForUser(employee.id),
   countUnreadAnnouncements(employee.id),
-  listNotificationsForUser(employee.id),
+  listNotificationsForUser(employee.id, 40),
   countUnreadNotifications(employee.id),
-  canSeeTimesheet ? getActiveShift(employee.id) : Promise.resolve(null),
-  isUserOnApprovedTimeOffNow(employee.id),
   resolveEffectiveHomeComposition({ userId: employee.id, orgId }),
+  loadHomePrepared({
+    userId: employee.id,
+    orgId,
+    roleKeys: employee.roles,
+    employee,
+    canSeeFinancials,
+    canSeeCredentialing: canSeeCredentialingWidget,
+    canSeeTimesheet,
+  }),
 ]);
 const visibleApps = visibleLinks.map(toPortalApp);
+const activeShift = canSeeTimesheet ? (prepared.timesheet.summary?.activeShift ?? null) : null;
+const onTimeOff = prepared.onTimeOff;
 const onShift = activeShift != null;
 const onBreak = activeShift ? isOnBreak(activeShift.breaks) : false;
 const showRail = layout.showRail;
@@ -121,6 +128,7 @@ const widgetProps = {
                 <HomeBulletinBoard
                   shape="landscape"
                   surface={layout.surface}
+                  pins={prepared.bulletinLandscape}
                   showSuggest={suggestOnBelow}
                 />
               </div>
@@ -132,7 +140,13 @@ const widgetProps = {
           showRail ? (
             <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
               {railBoard ? (
-                <HomeBulletinBoard shape="portrait" surface={layout.surface} showSuggest={suggestOnRail} />
+                <HomeBulletinBoard
+                  shape="portrait"
+                  surface={layout.surface}
+                  pins={prepared.bulletinPortrait}
+                  showSuggest={suggestOnRail}
+                  loadFonts={false}
+                />
               ) : null}
               {layout.showRailImage && railImageUrl ? (
                 <div class="overflow-hidden rounded-[1.05rem] bg-white/80 p-6 shadow-sm ring-1 ring-black/10">
@@ -155,7 +169,7 @@ const widgetProps = {
       {
         showWidgets ? (
           <div class="mt-8">
-            <HomeWidgetCarousel {...widgetProps} />
+            <HomeWidgetCarousel {...widgetProps} prepared={prepared} />
           </div>
         ) : null
       }

@@ -1,5 +1,5 @@
 ---
-import { listProgressTracksForUser, overallProgress } from '../lib/progress';
+import { listProgressTracksForUser, overallProgress, type ProgressTrack } from '../lib/progress';
 import { orgIdFromLocals } from '../lib/organization';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
 import WidgetHeaderBar from './WidgetHeaderBar.astro';
@@ -7,13 +7,16 @@ import WidgetHeaderBar from './WidgetHeaderBar.astro';
 interface Props {
   userId: string;
   employee: PortalEmployee;
+  preparedTracks?: ProgressTrack[];
 }
 
-const { userId, employee } = Astro.props;
-const tracks = await listProgressTracksForUser(userId, {
-  orgId: orgIdFromLocals(Astro.locals.organization),
-  roleKeys: employee.roles,
-});
+const { userId, employee, preparedTracks } = Astro.props;
+const tracks =
+  preparedTracks ??
+  (await listProgressTracksForUser(userId, {
+    orgId: orgIdFromLocals(Astro.locals.organization),
+    roleKeys: employee.roles,
+  }));
 const overall = overallProgress(tracks);
 ---
 

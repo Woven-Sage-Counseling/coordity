@@ -65,6 +65,7 @@ declare namespace App {
   interface Locals extends Runtime {
     employee: PortalEmployee | null;
     organization: PortalOrganization | null;
+    unreadMessages?: Promise<number>;
     isCoordityApex: boolean;
     platformStaff: PlatformStaffLocals | null;
   }
