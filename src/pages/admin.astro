@@ -1955,10 +1955,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 const rows = [
                   [
                     {
-                      title: 'Headers',
+                      title: 'Filled buttons',
                       fields: [
-                        ['trainingHeaderColor', 'Background', swatch.header],
-                        ['trainingHeaderTextColor', 'Text', swatch.headerText],
+                        ['trainingFilledColor', 'Button', swatch.filled],
+                        ['trainingFilledHoverColor', 'Hover', swatch.filledHover],
+                        ['trainingFilledTextColor', 'Text', swatch.filledText],
                       ],
                     },
                     {
@@ -1970,10 +1971,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       ],
                     },
                     {
-                      title: 'Selected lesson',
+                      title: 'Outlined buttons',
                       fields: [
-                        ['trainingLessonColor', 'Background', swatch.lesson],
-                        ['trainingLessonTextColor', 'Text', swatch.lessonText],
+                        ['trainingOutlineColor', 'Button', swatch.outline],
+                        ['trainingOutlineHoverColor', 'Hover', swatch.outlineHover],
+                        ['trainingOutlineTextColor', 'Text', swatch.outlineText],
                       ],
                     },
                     {
@@ -1996,19 +1998,17 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   ],
                   [
                     {
-                      title: 'Filled buttons',
+                      title: 'Headers',
                       fields: [
-                        ['trainingFilledColor', 'Button', swatch.filled],
-                        ['trainingFilledHoverColor', 'Hover', swatch.filledHover],
-                        ['trainingFilledTextColor', 'Text', swatch.filledText],
+                        ['trainingHeaderColor', 'Background', swatch.header],
+                        ['trainingHeaderTextColor', 'Text', swatch.headerText],
                       ],
                     },
                     {
-                      title: 'Outlined buttons',
+                      title: 'Selected lesson',
                       fields: [
-                        ['trainingOutlineColor', 'Button', swatch.outline],
-                        ['trainingOutlineHoverColor', 'Hover', swatch.outlineHover],
-                        ['trainingOutlineTextColor', 'Text', swatch.outlineText],
+                        ['trainingLessonColor', 'Background', swatch.lesson],
+                        ['trainingLessonTextColor', 'Text', swatch.lessonText],
                       ],
                     },
                   ],
