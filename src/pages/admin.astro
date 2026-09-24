@@ -1980,7 +1980,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 ] as const;
                 return (
                   <div class="space-y-4" data-brand-training-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
-                    {rows.map((columns) => (
+                    {rows.map((columns, rowIndex) => (
                       <div class="grid grid-cols-4 items-start gap-4">
                         {columns.map((column) => (
                           <div class="min-w-0 space-y-4">
@@ -2005,9 +2005,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                             })}
                           </div>
                         ))}
-                      </div>
-                    ))}
-                    <div class="space-y-4">
+                        {rowIndex === 1 ? (
+                          <div class="col-span-2 min-w-0 space-y-4">
                       <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
                       <div
                         class:list={[
@@ -2062,7 +2061,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           </div>
                         </div>
                       </div>
-                    </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
                 );
               })
