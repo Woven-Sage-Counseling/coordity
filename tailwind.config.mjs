@@ -13,6 +13,8 @@ export default {
         },
         accent: { DEFAULT: 'rgb(var(--portal-accent) / <alpha-value>)' },
         brand: { DEFAULT: 'rgb(var(--portal-primary) / <alpha-value>)' },
+        onbrand: { DEFAULT: 'rgb(var(--portal-on-primary) / <alpha-value>)' },
+        onaccent: { DEFAULT: 'rgb(var(--portal-on-accent) / <alpha-value>)' },
         charcoal: { DEFAULT: 'rgb(var(--portal-charcoal) / <alpha-value>)' },
         surface: { DEFAULT: 'rgb(var(--portal-surface) / <alpha-value>)' },
         muted: { DEFAULT: 'rgb(var(--portal-muted) / <alpha-value>)' },

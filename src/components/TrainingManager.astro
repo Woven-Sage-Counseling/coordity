@@ -190,7 +190,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   class:list={[
                     'block rounded-lg px-2.5 py-2 text-sm transition',
                     selected?.id === module.id
-                      ? 'bg-brand text-cream'
+                      ? 'bg-brand text-onbrand'
                       : 'text-charcoal hover:bg-[#f4f5f8]',
                   ]}
                 >
@@ -242,7 +242,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                       class:list={[
                         'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
                         selectedView === 'settings'
-                          ? 'bg-brand text-cream'
+                          ? 'bg-brand text-onbrand'
                           : 'bg-white text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]',
                       ]}
                     >
@@ -306,7 +306,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   To complete
                 </p>
                 <details class="relative" data-training-add>
-                  <summary class="cursor-pointer list-none rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold text-cream [&::-webkit-details-marker]:hidden">
+                  <summary class="cursor-pointer list-none rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold text-onbrand [&::-webkit-details-marker]:hidden">
                     + Add
                   </summary>
                   <form

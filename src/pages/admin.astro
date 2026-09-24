@@ -80,13 +80,19 @@ const orgLogoPreview =
 const brandDisplayName = organization?.displayName ?? organization?.name ?? '';
 const brandWebsiteUrl = organization?.websiteUrl ?? '';
 const brandBgLight = organization?.bgColorLight ?? '#F7F4EE';
+const brandSurfaceLight = organization?.surfaceColorLight ?? '#FFFFFF';
 const brandTextLight = organization?.textColorLight ?? '#535F51';
 const brandPrimaryLight = organization?.primaryColorLight ?? '#535F51';
+const brandPrimaryTextLight = organization?.primaryTextColorLight ?? brandBgLight;
 const brandAccentLight = organization?.accentColorLight ?? '#788F75';
+const brandAccentTextLight = organization?.accentTextColorLight ?? brandAccentLight;
 const brandBgDark = organization?.bgColorDark ?? '#111311';
+const brandSurfaceDark = organization?.surfaceColorDark ?? '#1E211E';
 const brandTextDark = organization?.textColorDark ?? '#BAC6B6';
 const brandPrimaryDark = organization?.primaryColorDark ?? '#BAC6B6';
+const brandPrimaryTextDark = organization?.primaryTextColorDark ?? brandBgDark;
 const brandAccentDark = organization?.accentColorDark ?? '#8A9E86';
+const brandAccentTextDark = organization?.accentTextColorDark ?? brandAccentDark;
 const brandInvertLogoDark = Boolean(organization?.invertLogoDark);
 
 async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
@@ -1390,109 +1396,104 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         <div class="space-y-4 border-t border-sage-dark/10 pt-6">
           <h3 class="text-sm font-semibold text-charcoal">Colors</h3>
           <p class="text-sm text-sage-dark/65">
-            Text, filled buttons, and outline pills are separate. The sample shows how each one
-            looks on the page background.
+            Page background, cards, body text, filled buttons, and outline pills each have their own
+            color, including the words on those buttons. The sample sits a card on the page background.
           </p>
 
-          <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
-            <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Light mode</h4>
-            <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
-              <div class="grid gap-4 sm:grid-cols-2">
-                <label class="block text-sm font-medium text-charcoal">
-                  Background
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="bgColorLight" value={brandBgLight} data-brand-color="bgColorLight" />
-                    <input class="field mt-0" type="text" value={brandBgLight} maxlength="7" data-brand-hex="bgColorLight" aria-label="Light background hex" />
-                  </span>
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Text
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="textColorLight" value={brandTextLight} data-brand-color="textColorLight" />
-                    <input class="field mt-0" type="text" value={brandTextLight} maxlength="7" data-brand-hex="textColorLight" aria-label="Light text hex" />
-                  </span>
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Filled
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="primaryColorLight" value={brandPrimaryLight} data-brand-color="primaryColorLight" />
-                    <input class="field mt-0" type="text" value={brandPrimaryLight} maxlength="7" data-brand-hex="primaryColorLight" aria-label="Light filled hex" />
-                  </span>
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Outline
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="accentColorLight" value={brandAccentLight} data-brand-color="accentColorLight" />
-                    <input class="field mt-0" type="text" value={brandAccentLight} maxlength="7" data-brand-hex="accentColorLight" aria-label="Light outline hex" />
-                  </span>
-                </label>
-              </div>
-              <div
-                class="rounded-xl border border-sage-dark/10 px-4 py-3"
-                data-brand-preview="light"
-                style={`background:${brandBgLight}`}
-              >
-                <p class="font-display text-lg leading-tight" data-brand-preview-heading="light" style={`color:${brandTextLight}`}>Welcome back</p>
-                <p class="mt-1 text-sm leading-snug" data-brand-preview-body="light" style={`color:${brandTextLight}`}>Your workspace, in your colors.</p>
-                <p class="mt-1 text-xs" data-brand-preview-muted="light" style={`color:${brandTextLight};opacity:.65`}>Supporting line</p>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <span class="inline-flex rounded-full px-3.5 py-1.5 text-sm font-semibold" data-brand-preview-primary="light" style={`background:${brandPrimaryLight};color:${brandBgLight}`}>Save</span>
-                  <span class="inline-flex rounded-full border px-3.5 py-1.5 text-sm font-medium" data-brand-preview-accent="light" style={`border-color:${brandAccentLight};color:${brandAccentLight}`}>Details</span>
-                  <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip="light" style={`background:color-mix(in srgb, ${brandAccentLight} 18%, transparent);color:${brandAccentLight}`}>Tag</span>
+          {
+            [
+              {
+                mode: 'light',
+                title: 'Light mode',
+                bg: brandBgLight,
+                surface: brandSurfaceLight,
+                text: brandTextLight,
+                primary: brandPrimaryLight,
+                primaryText: brandPrimaryTextLight,
+                accent: brandAccentLight,
+                accentText: brandAccentTextLight,
+                chipMix: 18,
+              },
+              {
+                mode: 'dark',
+                title: 'Dark mode',
+                bg: brandBgDark,
+                surface: brandSurfaceDark,
+                text: brandTextDark,
+                primary: brandPrimaryDark,
+                primaryText: brandPrimaryTextDark,
+                accent: brandAccentDark,
+                accentText: brandAccentTextDark,
+                chipMix: 22,
+              },
+            ].map((swatch) => {
+              const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
+              const fields = [
+                ['bgColor', 'Background', swatch.bg],
+                ['surfaceColor', 'Cards', swatch.surface],
+                ['textColor', 'Text', swatch.text],
+                ['primaryColor', 'Filled', swatch.primary],
+                ['primaryTextColor', 'Filled text', swatch.primaryText],
+                ['accentColor', 'Outline', swatch.accent],
+                ['accentTextColor', 'Outline text', swatch.accentText],
+              ] as const;
+              return (
+                <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
+                  <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">{swatch.title}</h4>
+                  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                      {fields.map(([key, label, value]) => (
+                        <label class="block text-sm font-medium text-charcoal">
+                          {label}
+                          <span class="mt-1.5 flex items-center gap-2">
+                            <input
+                              class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                              type="color"
+                              name={`${key}${suffix}`}
+                              value={value}
+                              data-brand-color={`${key}${suffix}`}
+                            />
+                            <input
+                              class="field mt-0"
+                              type="text"
+                              value={value}
+                              maxlength="7"
+                              data-brand-hex={`${key}${suffix}`}
+                              aria-label={`${swatch.title} ${label} hex`}
+                            />
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <div
+                      class:list={[
+                        'rounded-xl border px-3 py-3',
+                        swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
+                      ]}
+                      data-brand-preview={swatch.mode}
+                      style={`background:${swatch.bg}`}
+                    >
+                      <p class="font-display text-lg leading-tight" data-brand-preview-heading={swatch.mode} style={`color:${swatch.text}`}>Welcome back</p>
+                      <p class="mt-1 text-sm leading-snug" data-brand-preview-body={swatch.mode} style={`color:${swatch.text}`}>Your workspace, in your colors.</p>
+                      <div
+                        class="mt-3 rounded-lg border border-black/10 px-3 py-2.5"
+                        data-brand-preview-card={swatch.mode}
+                        style={`background:${swatch.surface}`}
+                      >
+                        <p class="text-sm font-semibold" data-brand-preview-card-title={swatch.mode} style={`color:${swatch.text}`}>Today</p>
+                        <p class="mt-0.5 text-xs" data-brand-preview-muted={swatch.mode} style={`color:${swatch.text};opacity:.65`}>On a card</p>
+                        <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background:${swatch.primary};color:${swatch.primaryText}`}>Save</span>
+                          <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText}`}>Details</span>
+                          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip={swatch.mode} style={`background:color-mix(in srgb, ${swatch.accent} ${swatch.chipMix}%, transparent);color:${swatch.accentText}`}>Tag</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
-            <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Dark mode</h4>
-            <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
-              <div class="grid gap-4 sm:grid-cols-2">
-                <label class="block text-sm font-medium text-charcoal">
-                  Background
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="bgColorDark" value={brandBgDark} data-brand-color="bgColorDark" />
-                    <input class="field mt-0" type="text" value={brandBgDark} maxlength="7" data-brand-hex="bgColorDark" aria-label="Dark background hex" />
-                  </span>
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Text
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="textColorDark" value={brandTextDark} data-brand-color="textColorDark" />
-                    <input class="field mt-0" type="text" value={brandTextDark} maxlength="7" data-brand-hex="textColorDark" aria-label="Dark text hex" />
-                  </span>
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Filled
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="primaryColorDark" value={brandPrimaryDark} data-brand-color="primaryColorDark" />
-                    <input class="field mt-0" type="text" value={brandPrimaryDark} maxlength="7" data-brand-hex="primaryColorDark" aria-label="Dark filled hex" />
-                  </span>
-                </label>
-                <label class="block text-sm font-medium text-charcoal">
-                  Outline
-                  <span class="mt-1.5 flex items-center gap-2">
-                    <input class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" name="accentColorDark" value={brandAccentDark} data-brand-color="accentColorDark" />
-                    <input class="field mt-0" type="text" value={brandAccentDark} maxlength="7" data-brand-hex="accentColorDark" aria-label="Dark outline hex" />
-                  </span>
-                </label>
-              </div>
-              <div
-                class="rounded-xl border border-white/10 px-4 py-3"
-                data-brand-preview="dark"
-                style={`background:${brandBgDark}`}
-              >
-                <p class="font-display text-lg leading-tight" data-brand-preview-heading="dark" style={`color:${brandTextDark}`}>Welcome back</p>
-                <p class="mt-1 text-sm leading-snug" data-brand-preview-body="dark" style={`color:${brandTextDark}`}>Your workspace, in your colors.</p>
-                <p class="mt-1 text-xs" data-brand-preview-muted="dark" style={`color:${brandTextDark};opacity:.65`}>Supporting line</p>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <span class="inline-flex rounded-full px-3.5 py-1.5 text-sm font-semibold" data-brand-preview-primary="dark" style={`background:${brandPrimaryDark};color:${brandBgDark}`}>Save</span>
-                  <span class="inline-flex rounded-full border px-3.5 py-1.5 text-sm font-medium" data-brand-preview-accent="dark" style={`border-color:${brandAccentDark};color:${brandAccentDark}`}>Details</span>
-                  <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip="dark" style={`background:color-mix(in srgb, ${brandAccentDark} 22%, transparent);color:${brandAccentDark}`}>Tag</span>
-                </div>
-              </div>
-            </div>
-          </div>
+              );
+            })
+          }
         </div>
 
         <div class="border-t border-sage-dark/10 pt-6">
@@ -1809,13 +1810,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
     const errorEl = brandingForm.querySelector('[data-brand-error]');
     const colorKeys = [
       'bgColorLight',
+      'surfaceColorLight',
       'textColorLight',
       'primaryColorLight',
+      'primaryTextColorLight',
       'accentColorLight',
+      'accentTextColorLight',
       'bgColorDark',
+      'surfaceColorDark',
       'textColorDark',
       'primaryColorDark',
+      'primaryTextColorDark',
       'accentColorDark',
+      'accentTextColorDark',
     ];
 
     const readColor = (key: string) => {
@@ -1826,9 +1833,12 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
     const paintPreview = (mode: 'light' | 'dark') => {
       const suffix = mode === 'dark' ? 'Dark' : 'Light';
       const bg = readColor(`bgColor${suffix}`);
+      const surface = readColor(`surfaceColor${suffix}`);
       const text = readColor(`textColor${suffix}`);
       const primary = readColor(`primaryColor${suffix}`);
+      const primaryText = readColor(`primaryTextColor${suffix}`);
       const accent = readColor(`accentColor${suffix}`);
+      const accentText = readColor(`accentTextColor${suffix}`);
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
       if (preview instanceof HTMLElement) preview.style.background = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
@@ -1846,15 +1856,21 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       paint('primary', (el) => {
         el.style.background = primary;
-        el.style.color = bg;
+        el.style.color = primaryText;
       });
       paint('accent', (el) => {
         el.style.borderColor = accent;
-        el.style.color = accent;
+        el.style.color = accentText;
       });
       paint('chip', (el) => {
         el.style.background = `color-mix(in srgb, ${accent} ${mode === 'dark' ? 22 : 18}%, transparent)`;
-        el.style.color = accent;
+        el.style.color = accentText;
+      });
+      paint('card', (el) => {
+        el.style.background = surface;
+      });
+      paint('card-title', (el) => {
+        el.style.color = text;
       });
     };
 
@@ -1890,24 +1906,45 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
     };
     const applySavedBrandColors = (branding: {
       bgColorLight?: string | null;
+      surfaceColorLight?: string | null;
       textColorLight?: string | null;
       primaryColorLight?: string | null;
+      primaryTextColorLight?: string | null;
       accentColorLight?: string | null;
+      accentTextColorLight?: string | null;
       bgColorDark?: string | null;
+      surfaceColorDark?: string | null;
       textColorDark?: string | null;
       primaryColorDark?: string | null;
+      primaryTextColorDark?: string | null;
       accentColorDark?: string | null;
+      accentTextColorDark?: string | null;
     }) => {
-      const block = (selector: string, bg: string, text: string, primary: string, accent: string) =>
-        `${selector}{--portal-cream:${bg} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;}`;
+      const block = (
+        selector: string,
+        bg: string,
+        surface: string,
+        text: string,
+        primary: string,
+        primaryText: string,
+        accent: string,
+        accentText: string,
+      ) =>
+        `${selector}{--portal-cream:${bg} !important;--portal-surface:${surface} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-on-primary:${primaryText} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;--portal-on-accent:${accentText} !important;}`;
       const lightBg = hexChannels(branding.bgColorLight) ?? '247 244 238';
+      const lightSurface = hexChannels(branding.surfaceColorLight) ?? '255 255 255';
       const lightText = hexChannels(branding.textColorLight) ?? hexChannels(branding.primaryColorLight) ?? '83 95 81';
       const lightPrimary = hexChannels(branding.primaryColorLight) ?? '83 95 81';
+      const lightPrimaryText = hexChannels(branding.primaryTextColorLight) ?? lightBg;
       const lightAccent = hexChannels(branding.accentColorLight) ?? '120 143 117';
+      const lightAccentText = hexChannels(branding.accentTextColorLight) ?? lightAccent;
       const darkBg = hexChannels(branding.bgColorDark) ?? '17 19 17';
+      const darkSurface = hexChannels(branding.surfaceColorDark) ?? '30 33 30';
       const darkText = hexChannels(branding.textColorDark) ?? hexChannels(branding.primaryColorDark) ?? '186 198 182';
       const darkPrimary = hexChannels(branding.primaryColorDark) ?? '186 198 182';
+      const darkPrimaryText = hexChannels(branding.primaryTextColorDark) ?? darkBg;
       const darkAccent = hexChannels(branding.accentColorDark) ?? '138 158 134';
+      const darkAccentText = hexChannels(branding.accentTextColorDark) ?? darkAccent;
       let style = document.getElementById('org-brand');
       if (!(style instanceof HTMLStyleElement)) {
         style = document.createElement('style');
@@ -1915,8 +1952,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         document.head.appendChild(style);
       }
       style.textContent =
-        block('html', lightBg, lightText, lightPrimary, lightAccent) +
-        block('html.dark', darkBg, darkText, darkPrimary, darkAccent);
+        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText) +
+        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText);
     };
 
     brandingForm.addEventListener('submit', async (event) => {
@@ -1944,13 +1981,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             hasFavicon?: boolean;
             faviconUrl?: string | null;
             bgColorLight?: string | null;
+            surfaceColorLight?: string | null;
             textColorLight?: string | null;
             primaryColorLight?: string | null;
+            primaryTextColorLight?: string | null;
             accentColorLight?: string | null;
+            accentTextColorLight?: string | null;
             bgColorDark?: string | null;
+            surfaceColorDark?: string | null;
             textColorDark?: string | null;
             primaryColorDark?: string | null;
+            primaryTextColorDark?: string | null;
             accentColorDark?: string | null;
+            accentTextColorDark?: string | null;
           };
         };
         if (!res.ok) throw new Error(json.error || 'Could not save branding.');

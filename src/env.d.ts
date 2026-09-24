@@ -40,13 +40,19 @@ interface PortalOrganization {
   hasFavicon: boolean;
   faviconUpdatedAt: number | null;
   bgColorLight: string | null;
+  surfaceColorLight: string | null;
   textColorLight: string | null;
   primaryColorLight: string | null;
+  primaryTextColorLight: string | null;
   accentColorLight: string | null;
+  accentTextColorLight: string | null;
   bgColorDark: string | null;
+  surfaceColorDark: string | null;
   textColorDark: string | null;
   primaryColorDark: string | null;
+  primaryTextColorDark: string | null;
   accentColorDark: string | null;
+  accentTextColorDark: string | null;
   invertLogoDark: boolean;
   archivedAt: number | null;
 }

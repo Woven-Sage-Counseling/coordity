@@ -9,7 +9,9 @@
   --portal-sage-light: 150 166 147;
   --portal-sage-dark: 83 95 81;
   --portal-primary: 83 95 81;
+  --portal-on-primary: 247 244 238;
   --portal-accent: 185 181 174;
+  --portal-on-accent: 120 143 117;
   --portal-charcoal: 58 58 56;
   --portal-surface: 255 255 255;
   --portal-muted: 244 245 248;
@@ -28,7 +30,9 @@ html.dark {
   --portal-sage-light: 158 174 154;
   --portal-sage-dark: 186 198 182;
   --portal-primary: 186 198 182;
+  --portal-on-primary: 17 19 17;
   --portal-accent: 120 118 112;
+  --portal-on-accent: 138 158 134;
   --portal-charcoal: 232 230 224;
   --portal-surface: 30 33 30;
   --portal-muted: 37 41 37;
@@ -58,15 +62,15 @@ html.dark {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-cream transition hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-onbrand transition hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   html.dark .btn-primary {
-    @apply text-cream hover:bg-sage-light;
+    @apply text-onbrand hover:bg-sage-light;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-full border border-sage/40 bg-surface/70 px-5 py-2.5 text-sm font-medium text-sage transition hover:border-sage hover:bg-sage/10;
+    @apply inline-flex items-center justify-center rounded-full border border-sage/40 bg-surface/70 px-5 py-2.5 text-sm font-medium text-onaccent transition hover:border-sage hover:bg-sage/10;
   }
 
   .field {
@@ -237,6 +241,36 @@ html.dark {
   .financials-transaction-details[open] .financials-transaction-details__summary {
     @apply text-charcoal;
   }
+}
+
+/* Card panels use the brand surface in both themes. Dark mode keeps its own opacities below. */
+html .bg-white {
+  background-color: rgb(var(--portal-surface) / 1);
+}
+html .bg-white\/95 {
+  background-color: rgb(var(--portal-surface) / 0.95);
+}
+html .bg-white\/90 {
+  background-color: rgb(var(--portal-surface) / 0.9);
+}
+html .bg-white\/80 {
+  background-color: rgb(var(--portal-surface) / 0.8);
+}
+html .bg-white\/70 {
+  background-color: rgb(var(--portal-surface) / 0.7);
+}
+html .bg-white\/60 {
+  background-color: rgb(var(--portal-surface) / 0.6);
+}
+html .bg-white\/40 {
+  background-color: rgb(var(--portal-surface) / 0.4);
+}
+html .hover\:bg-white:hover {
+  background-color: rgb(var(--portal-surface) / 1);
+}
+
+.text-sage {
+  color: rgb(var(--portal-on-accent) / 1);
 }
 
 /* Remap common light-only utilities used across portal pages */
