@@ -191,7 +191,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     'block rounded-lg px-2.5 py-2 text-sm transition',
                     selected?.id === module.id
                       ? 'training-module-selected'
-                      : 'text-charcoal hover:bg-[#f4f5f8]',
+                      : 'training-list-text hover:bg-[#f4f5f8]',
                   ]}
                 >
                   <span class="font-semibold leading-snug">{module.title}</span>
@@ -353,7 +353,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                             'block rounded-lg px-2.5 py-2 text-sm transition',
                             selectedItem?.id === item.id
                               ? 'training-lesson-selected font-semibold'
-                              : 'text-charcoal hover:bg-[#f4f5f8]',
+                              : 'training-list-text hover:bg-[#f4f5f8]',
                           ]}
                         >
                           <span class="flex items-center gap-2">
@@ -378,7 +378,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                             'block rounded-lg px-2.5 py-2 text-sm transition',
                             selectedItem?.id === item.id
                               ? 'training-lesson-selected font-semibold'
-                              : 'text-charcoal hover:bg-[#f4f5f8]',
+                              : 'training-list-text hover:bg-[#f4f5f8]',
                           ]}
                         >
                           <span class="flex items-center gap-2">
@@ -602,7 +602,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   </div>
                   <div class="flex shrink-0 flex-col items-end gap-1">
                     <details class="relative" data-training-item-settings>
-                      <summary class="training-outline cursor-pointer list-none rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none [&::-webkit-details-marker]:hidden">
+                      <summary class="training-card-outline cursor-pointer list-none rounded-full border border-solid px-2 py-0.5 text-[10px] font-semibold leading-none [&::-webkit-details-marker]:hidden">
                         Settings
                       </summary>
                       <form
@@ -674,7 +674,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     </details>
                     <button
                       type="button"
-                      class="training-outline rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none"
+                      class="training-card-outline rounded-full border border-solid px-2 py-0.5 text-[10px] font-semibold leading-none"
                       data-training-preview-open="lesson"
                     >
                       Preview

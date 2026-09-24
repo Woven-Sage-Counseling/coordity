@@ -51,6 +51,11 @@
   --portal-training-outline-text: 120 143 117;
   --portal-training-outline-hover: 120 143 117;
   --portal-training-outline-hover-a: 0.1;
+  --portal-training-list-text: 83 95 81;
+  --portal-training-card-outline: 120 143 117;
+  --portal-training-card-outline-text: 120 143 117;
+  --portal-training-card-outline-hover: 120 143 117;
+  --portal-training-card-outline-hover-a: 0.1;
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
@@ -115,6 +120,11 @@ html.dark {
   --portal-training-outline-text: 138 158 134;
   --portal-training-outline-hover: 138 158 134;
   --portal-training-outline-hover-a: 0.1;
+  --portal-training-list-text: 186 198 182;
+  --portal-training-card-outline: 138 158 134;
+  --portal-training-card-outline-text: 138 158 134;
+  --portal-training-card-outline-hover: 138 158 134;
+  --portal-training-card-outline-hover-a: 0.1;
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
@@ -548,7 +558,8 @@ html :is([data-widget-body], [data-schedule-dialog]) .hover\:bg-white:hover {
 [data-brand-preview-widget-button]:hover,
 [data-brand-preview-widget-outline]:hover,
 [data-brand-preview-training-filled]:hover,
-[data-brand-preview-training-outline]:hover {
+[data-brand-preview-training-outline]:hover,
+[data-brand-preview-training-card-outline]:hover {
   background-color: var(--brand-preview-hover) !important;
   border-color: var(--brand-preview-hover);
 }
@@ -827,4 +838,22 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
 
 #training input[type='checkbox'] {
   accent-color: rgb(var(--portal-training-filled, 83 95 81) / var(--portal-training-filled-a, 1));
+}
+
+#training .training-list-text {
+  color: rgb(var(--portal-training-list-text, 83 95 81) / var(--portal-training-list-text-a, 1));
+}
+
+#training .training-list-text :is(.text-sage-dark\/45, .text-sage-dark\/55, .text-sage-dark\/60) {
+  color: rgb(var(--portal-training-list-text, 83 95 81) / calc(var(--portal-training-list-text-a, 1) * 0.55)) !important;
+}
+
+#training .training-card-outline {
+  border-color: rgb(var(--portal-training-card-outline, 120 143 117) / var(--portal-training-card-outline-a, 1)) !important;
+  color: rgb(var(--portal-training-card-outline-text, 120 143 117) / var(--portal-training-card-outline-text-a, 1)) !important;
+  background-color: transparent;
+}
+
+#training .training-card-outline:hover {
+  background-color: rgb(var(--portal-training-card-outline-hover, 120 143 117) / var(--portal-training-card-outline-hover-a, 0.1)) !important;
 }

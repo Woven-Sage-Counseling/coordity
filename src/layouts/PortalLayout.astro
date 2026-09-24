@@ -72,6 +72,10 @@ const lightTrainingFilledHover = organization?.trainingFilledHoverColorLight ?? 
 const lightTrainingOutline = organization?.trainingOutlineColorLight ?? lightAccent;
 const lightTrainingOutlineText = organization?.trainingOutlineTextColorLight ?? lightAccentText;
 const lightTrainingOutlineHover = organization?.trainingOutlineHoverColorLight ?? lightAccentHover;
+const lightTrainingListText = organization?.trainingListTextColorLight ?? lightText;
+const lightTrainingCardOutline = organization?.trainingCardOutlineColorLight ?? lightTrainingOutline;
+const lightTrainingCardOutlineText = organization?.trainingCardOutlineTextColorLight ?? lightTrainingOutlineText;
+const lightTrainingCardOutlineHover = organization?.trainingCardOutlineHoverColorLight ?? lightTrainingOutlineHover;
 const darkBg = organization?.bgColorDark ?? DEFAULT_ORG_COLORS.dark.background;
 const darkSurface = organization?.surfaceColorDark ?? DEFAULT_ORG_COLORS.dark.surface;
 const darkText = organization?.textColorDark ?? DEFAULT_ORG_COLORS.dark.text;
@@ -111,6 +115,10 @@ const darkTrainingFilledHover = organization?.trainingFilledHoverColorDark ?? da
 const darkTrainingOutline = organization?.trainingOutlineColorDark ?? darkAccent;
 const darkTrainingOutlineText = organization?.trainingOutlineTextColorDark ?? darkAccentText;
 const darkTrainingOutlineHover = organization?.trainingOutlineHoverColorDark ?? darkAccentHover;
+const darkTrainingListText = organization?.trainingListTextColorDark ?? darkText;
+const darkTrainingCardOutline = organization?.trainingCardOutlineColorDark ?? darkTrainingOutline;
+const darkTrainingCardOutlineText = organization?.trainingCardOutlineTextColorDark ?? darkTrainingOutlineText;
+const darkTrainingCardOutlineHover = organization?.trainingCardOutlineHoverColorDark ?? darkTrainingOutlineHover;
 
 const lightBgRgb = hexToRgbChannels(lightBg) ?? '247 244 238';
 const lightSurfaceRgb = hexToRgbChannels(lightSurface) ?? '255 255 255';
@@ -270,6 +278,10 @@ const brandStyle =
     outline: lightTrainingOutline,
     'outline-text': lightTrainingOutlineText,
     'outline-hover': lightTrainingOutlineHover,
+    'list-text': lightTrainingListText,
+    'card-outline': lightTrainingCardOutline,
+    'card-outline-text': lightTrainingCardOutlineText,
+    'card-outline-hover': lightTrainingCardOutlineHover,
   }) +
   brandBlock(
     'html.dark',
@@ -330,6 +342,10 @@ const brandStyle =
     outline: darkTrainingOutline,
     'outline-text': darkTrainingOutlineText,
     'outline-hover': darkTrainingOutlineHover,
+    'list-text': darkTrainingListText,
+    'card-outline': darkTrainingCardOutline,
+    'card-outline-text': darkTrainingCardOutlineText,
+    'card-outline-hover': darkTrainingCardOutlineHover,
   });
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);

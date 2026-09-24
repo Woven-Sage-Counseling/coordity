@@ -78,6 +78,10 @@ interface PortalOrganization {
   trainingOutlineColorLight: string | null;
   trainingOutlineTextColorLight: string | null;
   trainingOutlineHoverColorLight: string | null;
+  trainingListTextColorLight: string | null;
+  trainingCardOutlineColorLight: string | null;
+  trainingCardOutlineTextColorLight: string | null;
+  trainingCardOutlineHoverColorLight: string | null;
   bgColorDark: string | null;
   surfaceColorDark: string | null;
   textColorDark: string | null;
@@ -117,6 +121,10 @@ interface PortalOrganization {
   trainingOutlineColorDark: string | null;
   trainingOutlineTextColorDark: string | null;
   trainingOutlineHoverColorDark: string | null;
+  trainingListTextColorDark: string | null;
+  trainingCardOutlineColorDark: string | null;
+  trainingCardOutlineTextColorDark: string | null;
+  trainingCardOutlineHoverColorDark: string | null;
   invertLogoDark: boolean;
   archivedAt: number | null;
 }
