@@ -1529,9 +1529,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               ] as const;
               return (
                 <div class="space-y-4" data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
-                  <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                  <div class="grid grid-cols-4 gap-4">
                     {columns.map((column) => (
-                      <div class="space-y-4">
+                      <div class="min-w-0 space-y-4">
                         <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
                         {column.fields.map(([key, label, value]) => {
                           const color = brandColorParts(value);
