@@ -564,8 +564,13 @@ const settingsNav = [
 
   const DEFAULT_WIDGET_HEADER_COLOR = '#535f51';
 
+  function orgWidgetHeaderColor(): string {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--portal-widget-header').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : DEFAULT_WIDGET_HEADER_COLOR;
+  }
+
   function defaultHeaderColor(widget: CatalogItem): string {
-    return widget.brandHeaderColor ?? DEFAULT_WIDGET_HEADER_COLOR;
+    return widget.brandHeaderColor ?? orgWidgetHeaderColor();
   }
 
   function sanitizeHeaderColors(raw: unknown): Record<string, string> {

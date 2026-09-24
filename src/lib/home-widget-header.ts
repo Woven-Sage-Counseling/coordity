@@ -51,9 +51,10 @@ export function sanitizeHeaderColors(
 }
 
 export function widgetAccentVarsStyle(widgetId: HomeWidgetId): string {
-  const background = resolveWidgetHeaderColor(widgetId);
-  const foreground = widgetHeaderForeground(background);
-  return `--widget-accent-bg: ${background}; --widget-accent-fg: ${foreground};`;
+  const widget = HOME_WIDGET_CATALOG.find((entry) => entry.id === widgetId);
+  if (!widget?.brandHeaderColor) return '';
+  const foreground = widgetHeaderForeground(widget.brandHeaderColor);
+  return `--widget-accent-bg: ${widget.brandHeaderColor}; --widget-accent-fg: ${foreground};`;
 }
 
 function setWidgetAccentVars(
@@ -61,10 +62,16 @@ function setWidgetAccentVars(
   widgetId: HomeWidgetId,
   headerColors?: Partial<Record<HomeWidgetId, string>>,
 ): void {
-  const background = resolveWidgetHeaderColor(widgetId, headerColors);
-  const foreground = widgetHeaderForeground(background);
+  const custom = headerColors?.[widgetId];
+  const brand = HOME_WIDGET_CATALOG.find((entry) => entry.id === widgetId)?.brandHeaderColor;
+  const background = custom && isValidHexColor(custom) ? custom : brand;
+  if (!background) {
+    element.style.removeProperty('--widget-accent-bg');
+    element.style.removeProperty('--widget-accent-fg');
+    return;
+  }
   element.style.setProperty('--widget-accent-bg', background);
-  element.style.setProperty('--widget-accent-fg', foreground);
+  element.style.setProperty('--widget-accent-fg', widgetHeaderForeground(background));
 }
 
 export function applyWidgetAccentColors(

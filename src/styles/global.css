@@ -17,6 +17,9 @@
   --portal-muted: 244 245 248;
   --portal-panel: 247 248 246;
   --portal-soft: 232 235 231;
+  --portal-widget-header: #535F51;
+  --portal-widget-header-fg: #F7F4EE;
+  --portal-widget-bg: 244 245 248;
   --coordity-blue: 0 82 132;
   --coordity-blue-bright: 59 130 246;
   --coordity-yellow: 254 203 0;
@@ -38,6 +41,9 @@ html.dark {
   --portal-muted: 37 41 37;
   --portal-panel: 34 38 34;
   --portal-soft: 48 54 48;
+  --portal-widget-header: #535F51;
+  --portal-widget-header-fg: #F7F4EE;
+  --portal-widget-bg: 37 41 37;
 }
 
 @layer base {
@@ -478,7 +484,7 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   color: rgb(var(--portal-charcoal) / 1) !important;
-  background-color: rgb(var(--portal-muted) / 1) !important;
+  background-color: rgb(var(--portal-widget-bg, var(--portal-muted)) / 1) !important;
   opacity: 1 !important;
   visibility: visible !important;
 }

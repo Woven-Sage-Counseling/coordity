@@ -86,6 +86,8 @@ const brandPrimaryLight = organization?.primaryColorLight ?? '#535F51';
 const brandPrimaryTextLight = organization?.primaryTextColorLight ?? brandBgLight;
 const brandAccentLight = organization?.accentColorLight ?? '#788F75';
 const brandAccentTextLight = organization?.accentTextColorLight ?? brandAccentLight;
+const brandWidgetHeaderLight = organization?.widgetHeaderColorLight ?? '#535F51';
+const brandWidgetBgLight = organization?.widgetBgColorLight ?? '#F4F5F8';
 const brandBgDark = organization?.bgColorDark ?? '#111311';
 const brandSurfaceDark = organization?.surfaceColorDark ?? '#1E211E';
 const brandTextDark = organization?.textColorDark ?? '#BAC6B6';
@@ -93,6 +95,8 @@ const brandPrimaryDark = organization?.primaryColorDark ?? '#BAC6B6';
 const brandPrimaryTextDark = organization?.primaryTextColorDark ?? brandBgDark;
 const brandAccentDark = organization?.accentColorDark ?? '#8A9E86';
 const brandAccentTextDark = organization?.accentTextColorDark ?? brandAccentDark;
+const brandWidgetHeaderDark = organization?.widgetHeaderColorDark ?? '#535F51';
+const brandWidgetBgDark = organization?.widgetBgColorDark ?? '#252925';
 const brandInvertLogoDark = Boolean(organization?.invertLogoDark);
 
 async function safeLoad<T>(label: string, load: () => Promise<T>, fallback: T): Promise<T> {
@@ -1494,6 +1498,70 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               );
             })
           }
+
+          <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
+            <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Home widgets</h4>
+            <p class="text-sm text-sage-dark/65">
+              The default header bar and the background behind widget content. QuickBooks keeps its own header.
+            </p>
+            {
+              [
+                {
+                  mode: 'light',
+                  title: 'Light mode',
+                  header: brandWidgetHeaderLight,
+                  background: brandWidgetBgLight,
+                },
+                {
+                  mode: 'dark',
+                  title: 'Dark mode',
+                  header: brandWidgetHeaderDark,
+                  background: brandWidgetBgDark,
+                },
+              ].map((swatch) => {
+                const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
+                const fields = [
+                  ['widgetHeaderColor', 'Header', swatch.header],
+                  ['widgetBgColor', 'Background', swatch.background],
+                ] as const;
+                return (
+                  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+                    <div>
+                      <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-sage-dark/45">{swatch.title}</p>
+                      <div class="grid gap-4 sm:grid-cols-2">
+                        {fields.map(([key, label, value]) => (
+                          <label class="block text-sm font-medium text-charcoal">
+                            {label}
+                            <span class="mt-1.5 flex items-center gap-2">
+                              <input
+                                class="h-10 w-14 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1"
+                                type="color"
+                                name={`${key}${suffix}`}
+                                value={value}
+                                data-brand-color={`${key}${suffix}`}
+                              />
+                              <input
+                                class="field mt-0"
+                                type="text"
+                                value={value}
+                                maxlength="7"
+                                data-brand-hex={`${key}${suffix}`}
+                                aria-label={`${swatch.title} widget ${label} hex`}
+                              />
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
+                      <div class="px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background:${swatch.header};color:#F7F4EE`}>Calendar</div>
+                      <div class="px-3 py-3 text-xs" data-brand-preview-widget-body={swatch.mode} style={`background:${swatch.background};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>Thursday · 2:00</div>
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
         </div>
 
         <div class="border-t border-sage-dark/10 pt-6">
@@ -1823,6 +1891,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'primaryTextColorDark',
       'accentColorDark',
       'accentTextColorDark',
+      'widgetHeaderColorLight',
+      'widgetBgColorLight',
+      'widgetHeaderColorDark',
+      'widgetBgColorDark',
     ];
 
     const readColor = (key: string) => {
@@ -1839,6 +1911,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const primaryText = readColor(`primaryTextColor${suffix}`);
       const accent = readColor(`accentColor${suffix}`);
       const accentText = readColor(`accentTextColor${suffix}`);
+      const widgetHeader = readColor(`widgetHeaderColor${suffix}`);
+      const widgetBg = readColor(`widgetBgColor${suffix}`);
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
       if (preview instanceof HTMLElement) preview.style.background = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
@@ -1871,6 +1945,22 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       paint('card-title', (el) => {
         el.style.color = text;
+      });
+      const headerFg = (() => {
+        const match = /^#?([0-9a-fA-F]{6})$/.exec(widgetHeader.trim());
+        if (!match) return '#F7F4EE';
+        const hex = match[1];
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.58 ? '#393A3D' : '#F7F4EE';
+      })();
+      paint('widget-header', (el) => {
+        el.style.background = widgetHeader;
+        el.style.color = headerFg;
+      });
+      paint('widget-body', (el) => {
+        el.style.background = widgetBg;
       });
     };
 
@@ -1919,7 +2009,21 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       primaryTextColorDark?: string | null;
       accentColorDark?: string | null;
       accentTextColorDark?: string | null;
+      widgetHeaderColorLight?: string | null;
+      widgetBgColorLight?: string | null;
+      widgetHeaderColorDark?: string | null;
+      widgetBgColorDark?: string | null;
     }) => {
+      const onHeader = (hex: string | null | undefined, fallback: string) => {
+        const match = /^#?([0-9a-fA-F]{6})$/.exec((hex ?? '').trim());
+        const value = match ? `#${match[1].toUpperCase()}` : fallback;
+        const channels = match ? match[1] : fallback.slice(1);
+        const r = parseInt(channels.slice(0, 2), 16);
+        const g = parseInt(channels.slice(2, 4), 16);
+        const b = parseInt(channels.slice(4, 6), 16);
+        const fg = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.58 ? '#393A3D' : '#F7F4EE';
+        return { value, fg };
+      };
       const block = (
         selector: string,
         bg: string,
@@ -1929,8 +2033,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         primaryText: string,
         accent: string,
         accentText: string,
+        widgetHeader: string,
+        widgetHeaderFg: string,
+        widgetBg: string,
       ) =>
-        `${selector}{--portal-cream:${bg} !important;--portal-surface:${surface} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-on-primary:${primaryText} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;--portal-on-accent:${accentText} !important;}`;
+        `${selector}{--portal-cream:${bg} !important;--portal-surface:${surface} !important;--portal-sage-dark:${text} !important;--portal-charcoal:${text} !important;--portal-primary:${primary} !important;--portal-on-primary:${primaryText} !important;--portal-sage:${accent} !important;--portal-sage-light:${accent} !important;--portal-accent:${accent} !important;--portal-on-accent:${accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;}`;
       const lightBg = hexChannels(branding.bgColorLight) ?? '247 244 238';
       const lightSurface = hexChannels(branding.surfaceColorLight) ?? '255 255 255';
       const lightText = hexChannels(branding.textColorLight) ?? hexChannels(branding.primaryColorLight) ?? '83 95 81';
@@ -1938,6 +2045,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const lightPrimaryText = hexChannels(branding.primaryTextColorLight) ?? lightBg;
       const lightAccent = hexChannels(branding.accentColorLight) ?? '120 143 117';
       const lightAccentText = hexChannels(branding.accentTextColorLight) ?? lightAccent;
+      const lightWidgetHeader = onHeader(branding.widgetHeaderColorLight, '#535F51');
+      const lightWidgetBg = hexChannels(branding.widgetBgColorLight) ?? '244 245 248';
       const darkBg = hexChannels(branding.bgColorDark) ?? '17 19 17';
       const darkSurface = hexChannels(branding.surfaceColorDark) ?? '30 33 30';
       const darkText = hexChannels(branding.textColorDark) ?? hexChannels(branding.primaryColorDark) ?? '186 198 182';
@@ -1945,6 +2054,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const darkPrimaryText = hexChannels(branding.primaryTextColorDark) ?? darkBg;
       const darkAccent = hexChannels(branding.accentColorDark) ?? '138 158 134';
       const darkAccentText = hexChannels(branding.accentTextColorDark) ?? darkAccent;
+      const darkWidgetHeader = onHeader(branding.widgetHeaderColorDark, '#535F51');
+      const darkWidgetBg = hexChannels(branding.widgetBgColorDark) ?? '37 41 37';
       let style = document.getElementById('org-brand');
       if (!(style instanceof HTMLStyleElement)) {
         style = document.createElement('style');
@@ -1952,8 +2063,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         document.head.appendChild(style);
       }
       style.textContent =
-        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText) +
-        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText);
+        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg) +
+        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg);
     };
 
     brandingForm.addEventListener('submit', async (event) => {
@@ -1994,6 +2105,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             primaryTextColorDark?: string | null;
             accentColorDark?: string | null;
             accentTextColorDark?: string | null;
+            widgetHeaderColorLight?: string | null;
+            widgetBgColorLight?: string | null;
+            widgetHeaderColorDark?: string | null;
+            widgetBgColorDark?: string | null;
           };
         };
         if (!res.ok) throw new Error(json.error || 'Could not save branding.');
