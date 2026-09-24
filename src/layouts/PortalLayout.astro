@@ -41,6 +41,9 @@ const lightAccent = organization?.accentColorLight ?? DEFAULT_ORG_COLORS.light.a
 const lightAccentText = organization?.accentTextColorLight ?? lightAccent;
 const lightPrimaryHover = organization?.primaryHoverColorLight ?? lightAccent;
 const lightAccentHover = organization?.accentHoverColorLight ?? withAlpha(lightAccent, 10);
+const lightShadow = organization?.shadowColorLight ?? withAlpha(lightAccent, 18);
+const lightShadowText = organization?.shadowTextColorLight ?? lightAccentText;
+const lightShadowHover = organization?.shadowHoverColorLight ?? withAlpha(lightAccent, 28);
 const lightWidgetHeader = organization?.widgetHeaderColorLight ?? DEFAULT_ORG_COLORS.light.widgetHeader;
 const lightWidgetBg = organization?.widgetBgColorLight ?? DEFAULT_ORG_COLORS.light.widgetBg;
 const lightWidgetCard = organization?.widgetCardColorLight ?? lightSurface;
@@ -56,6 +59,9 @@ const darkAccent = organization?.accentColorDark ?? DEFAULT_ORG_COLORS.dark.acce
 const darkAccentText = organization?.accentTextColorDark ?? darkAccent;
 const darkPrimaryHover = organization?.primaryHoverColorDark ?? darkAccent;
 const darkAccentHover = organization?.accentHoverColorDark ?? withAlpha(darkAccent, 10);
+const darkShadow = organization?.shadowColorDark ?? withAlpha(darkAccent, 22);
+const darkShadowText = organization?.shadowTextColorDark ?? darkAccentText;
+const darkShadowHover = organization?.shadowHoverColorDark ?? withAlpha(darkAccent, 32);
 const darkWidgetHeader = organization?.widgetHeaderColorDark ?? DEFAULT_ORG_COLORS.dark.widgetHeader;
 const darkWidgetBg = organization?.widgetBgColorDark ?? DEFAULT_ORG_COLORS.dark.widgetBg;
 const darkWidgetCard = organization?.widgetCardColorDark ?? darkSurface;
@@ -72,6 +78,9 @@ const lightAccentRgb = hexToRgbChannels(lightAccent) ?? '120 143 117';
 const lightAccentTextRgb = hexToRgbChannels(lightAccentText) ?? lightAccentRgb;
 const lightPrimaryHoverRgb = hexToRgbChannels(lightPrimaryHover) ?? lightAccentRgb;
 const lightAccentHoverRgb = hexToRgbChannels(lightAccentHover) ?? lightAccentRgb;
+const lightShadowRgb = hexToRgbChannels(lightShadow) ?? lightAccentRgb;
+const lightShadowTextRgb = hexToRgbChannels(lightShadowText) ?? lightAccentTextRgb;
+const lightShadowHoverRgb = hexToRgbChannels(lightShadowHover) ?? lightAccentRgb;
 const lightWidgetBgRgb = hexToRgbChannels(lightWidgetBg) ?? '244 245 248';
 const lightWidgetCardRgb = hexToRgbChannels(lightWidgetCard) ?? lightSurfaceRgb;
 const lightWidgetButtonRgb = hexToRgbChannels(lightWidgetButton) ?? '83 95 81';
@@ -86,6 +95,9 @@ const darkAccentRgb = hexToRgbChannels(darkAccent) ?? '138 158 134';
 const darkAccentTextRgb = hexToRgbChannels(darkAccentText) ?? darkAccentRgb;
 const darkPrimaryHoverRgb = hexToRgbChannels(darkPrimaryHover) ?? darkAccentRgb;
 const darkAccentHoverRgb = hexToRgbChannels(darkAccentHover) ?? darkAccentRgb;
+const darkShadowRgb = hexToRgbChannels(darkShadow) ?? darkAccentRgb;
+const darkShadowTextRgb = hexToRgbChannels(darkShadowText) ?? darkAccentTextRgb;
+const darkShadowHoverRgb = hexToRgbChannels(darkShadowHover) ?? darkAccentRgb;
 const darkWidgetBgRgb = hexToRgbChannels(darkWidgetBg) ?? '37 41 37';
 const darkWidgetCardRgb = hexToRgbChannels(darkWidgetCard) ?? darkSurfaceRgb;
 const darkWidgetButtonRgb = hexToRgbChannels(darkWidgetButton) ?? '83 95 81';
@@ -110,6 +122,9 @@ function brandBlock(
   widgetButton: string,
   widgetButtonText: string,
   widgetButtonHover: string,
+  shadow: string,
+  shadowText: string,
+  shadowHover: string,
   alphas: {
     bg: string;
     surface: string;
@@ -125,9 +140,12 @@ function brandBlock(
     widgetButton: string;
     widgetButtonText: string;
     widgetButtonHover: string;
+    shadow: string;
+    shadowText: string;
+    shadowHover: string;
   },
 ) {
-  return `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-primary-hover:${primaryHover} !important;--portal-primary-hover-a:${alphas.primaryHover} !important;--portal-accent-hover:${accentHover} !important;--portal-accent-hover-a:${alphas.accentHover} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;--portal-widget-card:${widgetCard} !important;--portal-widget-card-a:${alphas.widgetCard} !important;--portal-widget-button:${widgetButton} !important;--portal-widget-button-a:${alphas.widgetButton} !important;--portal-widget-button-text:${widgetButtonText} !important;--portal-widget-button-text-a:${alphas.widgetButtonText} !important;--portal-widget-button-hover:${widgetButtonHover} !important;--portal-widget-button-hover-a:${alphas.widgetButtonHover} !important;}`;
+  return `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-primary-hover:${primaryHover} !important;--portal-primary-hover-a:${alphas.primaryHover} !important;--portal-accent-hover:${accentHover} !important;--portal-accent-hover-a:${alphas.accentHover} !important;--portal-shadow:${shadow} !important;--portal-shadow-a:${alphas.shadow} !important;--portal-on-shadow:${shadowText} !important;--portal-on-shadow-a:${alphas.shadowText} !important;--portal-shadow-hover:${shadowHover} !important;--portal-shadow-hover-a:${alphas.shadowHover} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;--portal-widget-card:${widgetCard} !important;--portal-widget-card-a:${alphas.widgetCard} !important;--portal-widget-button:${widgetButton} !important;--portal-widget-button-a:${alphas.widgetButton} !important;--portal-widget-button-text:${widgetButtonText} !important;--portal-widget-button-text-a:${alphas.widgetButtonText} !important;--portal-widget-button-hover:${widgetButtonHover} !important;--portal-widget-button-hover-a:${alphas.widgetButtonHover} !important;}`;
 }
 // !important so these beat the default palette in global.css no matter which
 // stylesheet Astro injects last.
@@ -150,6 +168,9 @@ const brandStyle =
     lightWidgetButtonRgb,
     lightWidgetButtonTextRgb,
     lightWidgetButtonHoverRgb,
+    lightShadowRgb,
+    lightShadowTextRgb,
+    lightShadowHoverRgb,
     {
       bg: hexToAlpha(lightBg),
       surface: hexToAlpha(lightSurface),
@@ -165,6 +186,9 @@ const brandStyle =
       widgetButton: hexToAlpha(lightWidgetButton),
       widgetButtonText: hexToAlpha(lightWidgetButtonText),
       widgetButtonHover: hexToAlpha(lightWidgetButtonHover),
+      shadow: hexToAlpha(lightShadow),
+      shadowText: hexToAlpha(lightShadowText),
+      shadowHover: hexToAlpha(lightShadowHover),
     },
   ) +
   brandBlock(
@@ -185,6 +209,9 @@ const brandStyle =
     darkWidgetButtonRgb,
     darkWidgetButtonTextRgb,
     darkWidgetButtonHoverRgb,
+    darkShadowRgb,
+    darkShadowTextRgb,
+    darkShadowHoverRgb,
     {
       bg: hexToAlpha(darkBg),
       surface: hexToAlpha(darkSurface),
@@ -200,6 +227,9 @@ const brandStyle =
       widgetButton: hexToAlpha(darkWidgetButton),
       widgetButtonText: hexToAlpha(darkWidgetButtonText),
       widgetButtonHover: hexToAlpha(darkWidgetButtonHover),
+      shadow: hexToAlpha(darkShadow),
+      shadowText: hexToAlpha(darkShadowText),
+      shadowHover: hexToAlpha(darkShadowHover),
     },
   );
 const canSeeFinancials = hasPermission(employee, 'financials:view');

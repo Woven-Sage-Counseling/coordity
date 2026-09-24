@@ -89,6 +89,9 @@ export interface PortalOrganization {
   accentColorLight: string | null;
   accentTextColorLight: string | null;
   accentHoverColorLight: string | null;
+  shadowColorLight: string | null;
+  shadowTextColorLight: string | null;
+  shadowHoverColorLight: string | null;
   widgetHeaderColorLight: string | null;
   widgetBgColorLight: string | null;
   widgetCardColorLight: string | null;
@@ -105,6 +108,9 @@ export interface PortalOrganization {
   accentColorDark: string | null;
   accentTextColorDark: string | null;
   accentHoverColorDark: string | null;
+  shadowColorDark: string | null;
+  shadowTextColorDark: string | null;
+  shadowHoverColorDark: string | null;
   widgetHeaderColorDark: string | null;
   widgetBgColorDark: string | null;
   widgetCardColorDark: string | null;
@@ -127,6 +133,9 @@ export const DEFAULT_ORG_COLORS = {
     accent: '#788F75',
     accentText: '#788F75',
     accentHover: '#788F751A',
+    shadow: '#788F752E',
+    shadowText: '#788F75',
+    shadowHover: '#788F7547',
     widgetHeader: '#535F51',
     widgetBg: '#F4F5F8',
     widgetCard: '#FFFFFF',
@@ -144,6 +153,9 @@ export const DEFAULT_ORG_COLORS = {
     accent: '#8A9E86',
     accentText: '#8A9E86',
     accentHover: '#8A9E861A',
+    shadow: '#8A9E8638',
+    shadowText: '#8A9E86',
+    shadowHover: '#8A9E8652',
     widgetHeader: '#535F51',
     widgetBg: '#252925',
     widgetCard: '#1E211E',
@@ -189,6 +201,12 @@ type OrgRow = {
   accent_text_color_dark?: string | null;
   accent_hover_color_light?: string | null;
   accent_hover_color_dark?: string | null;
+  shadow_color_light?: string | null;
+  shadow_color_dark?: string | null;
+  shadow_text_color_light?: string | null;
+  shadow_text_color_dark?: string | null;
+  shadow_hover_color_light?: string | null;
+  shadow_hover_color_dark?: string | null;
   widget_header_color_light?: string | null;
   widget_header_color_dark?: string | null;
   widget_bg_color_light?: string | null;
@@ -231,6 +249,9 @@ function mapOrg(row: OrgRow): PortalOrganization {
     accentColorLight: normalizeHexColor(row.accent_color_light) ?? legacyAccent,
     accentTextColorLight: normalizeHexColor(row.accent_text_color_light) ?? normalizeHexColor(row.accent_color_light) ?? legacyAccent,
     accentHoverColorLight: normalizeHexColor(row.accent_hover_color_light) ?? null,
+    shadowColorLight: normalizeHexColor(row.shadow_color_light) ?? null,
+    shadowTextColorLight: normalizeHexColor(row.shadow_text_color_light) ?? null,
+    shadowHoverColorLight: normalizeHexColor(row.shadow_hover_color_light) ?? null,
     widgetHeaderColorLight: normalizeHexColor(row.widget_header_color_light) ?? null,
     widgetBgColorLight: normalizeHexColor(row.widget_bg_color_light) ?? null,
     widgetCardColorLight: normalizeHexColor(row.widget_card_color_light) ?? null,
@@ -246,6 +267,9 @@ function mapOrg(row: OrgRow): PortalOrganization {
     accentColorDark: normalizeHexColor(row.accent_color_dark) ?? null,
     accentTextColorDark: normalizeHexColor(row.accent_text_color_dark) ?? normalizeHexColor(row.accent_color_dark),
     accentHoverColorDark: normalizeHexColor(row.accent_hover_color_dark) ?? null,
+    shadowColorDark: normalizeHexColor(row.shadow_color_dark) ?? null,
+    shadowTextColorDark: normalizeHexColor(row.shadow_text_color_dark) ?? null,
+    shadowHoverColorDark: normalizeHexColor(row.shadow_hover_color_dark) ?? null,
     widgetHeaderColorDark: normalizeHexColor(row.widget_header_color_dark) ?? null,
     widgetBgColorDark: normalizeHexColor(row.widget_bg_color_dark) ?? null,
     widgetCardColorDark: normalizeHexColor(row.widget_card_color_dark) ?? null,
@@ -278,6 +302,9 @@ function wovenSageFallback(): PortalOrganization {
     accentColorLight: null,
     accentTextColorLight: null,
     accentHoverColorLight: null,
+    shadowColorLight: null,
+    shadowTextColorLight: null,
+    shadowHoverColorLight: null,
     widgetHeaderColorLight: null,
     widgetBgColorLight: null,
     widgetCardColorLight: null,
@@ -293,6 +320,9 @@ function wovenSageFallback(): PortalOrganization {
     accentColorDark: null,
     accentTextColorDark: null,
     accentHoverColorDark: null,
+    shadowColorDark: null,
+    shadowTextColorDark: null,
+    shadowHoverColorDark: null,
     widgetHeaderColorDark: null,
     widgetBgColorDark: null,
     widgetCardColorDark: null,
@@ -305,6 +335,32 @@ function wovenSageFallback(): PortalOrganization {
 }
 
 const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
+  CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
+  logo_updated_at,
+  CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
+  favicon_updated_at,
+  primary_color, accent_color,
+  bg_color_light, bg_color_dark,
+  surface_color_light, surface_color_dark,
+  text_color_light, text_color_dark,
+  primary_color_light, primary_color_dark,
+  primary_text_color_light, primary_text_color_dark,
+  accent_color_light, accent_color_dark,
+  accent_text_color_light, accent_text_color_dark,
+  widget_header_color_light, widget_header_color_dark,
+  widget_bg_color_light, widget_bg_color_dark,
+  widget_card_color_light, widget_card_color_dark,
+  primary_hover_color_light, primary_hover_color_dark,
+  accent_hover_color_light, accent_hover_color_dark,
+  widget_button_color_light, widget_button_color_dark,
+  widget_button_text_color_light, widget_button_text_color_dark,
+  widget_button_hover_color_light, widget_button_hover_color_dark,
+  shadow_color_light, shadow_color_dark,
+  shadow_text_color_light, shadow_text_color_dark,
+  shadow_hover_color_light, shadow_hover_color_dark,
+  invert_logo_dark, archived_at`;
+
+const ORG_SELECT_BUTTON = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
   logo_updated_at,
   CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
@@ -417,7 +473,7 @@ async function queryOrganization(
   sqlWithSelect: (select: string) => { sql: string; binds: unknown[] },
 ): Promise<OrgRow | null> {
   const { DB } = getEnv();
-  for (const select of [ORG_SELECT, ORG_SELECT_CARD, ORG_SELECT_WIDGET, ORG_SELECT_SURFACE, ORG_SELECT_TEXT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
+  for (const select of [ORG_SELECT, ORG_SELECT_BUTTON, ORG_SELECT_CARD, ORG_SELECT_WIDGET, ORG_SELECT_SURFACE, ORG_SELECT_TEXT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
     try {
       const { sql, binds } = sqlWithSelect(select);
       const row = await DB.prepare(sql).bind(...binds).first<OrgRow>();
@@ -833,6 +889,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     accentColorLight: org.accentColorLight,
     accentTextColorLight: org.accentTextColorLight,
     accentHoverColorLight: org.accentHoverColorLight,
+    shadowColorLight: org.shadowColorLight,
+    shadowTextColorLight: org.shadowTextColorLight,
+    shadowHoverColorLight: org.shadowHoverColorLight,
     widgetHeaderColorLight: org.widgetHeaderColorLight,
     widgetBgColorLight: org.widgetBgColorLight,
     widgetCardColorLight: org.widgetCardColorLight,
@@ -848,6 +907,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     accentColorDark: org.accentColorDark,
     accentTextColorDark: org.accentTextColorDark,
     accentHoverColorDark: org.accentHoverColorDark,
+    shadowColorDark: org.shadowColorDark,
+    shadowTextColorDark: org.shadowTextColorDark,
+    shadowHoverColorDark: org.shadowHoverColorDark,
     widgetHeaderColorDark: org.widgetHeaderColorDark,
     widgetBgColorDark: org.widgetBgColorDark,
     widgetCardColorDark: org.widgetCardColorDark,
@@ -871,6 +933,9 @@ export async function updateOrganizationBranding(input: {
   accentColorLight?: string | null;
   accentTextColorLight?: string | null;
   accentHoverColorLight?: string | null;
+  shadowColorLight?: string | null;
+  shadowTextColorLight?: string | null;
+  shadowHoverColorLight?: string | null;
   widgetHeaderColorLight?: string | null;
   widgetBgColorLight?: string | null;
   widgetCardColorLight?: string | null;
@@ -886,6 +951,9 @@ export async function updateOrganizationBranding(input: {
   accentColorDark?: string | null;
   accentTextColorDark?: string | null;
   accentHoverColorDark?: string | null;
+  shadowColorDark?: string | null;
+  shadowTextColorDark?: string | null;
+  shadowHoverColorDark?: string | null;
   widgetHeaderColorDark?: string | null;
   widgetBgColorDark?: string | null;
   widgetCardColorDark?: string | null;
@@ -960,6 +1028,18 @@ export async function updateOrganizationBranding(input: {
     input.accentHoverColorLight !== undefined
       ? (resolveOptionalHex(input.accentHoverColorLight, 'Light outline hover color') ?? null)
       : existing.accentHoverColorLight;
+  const shadowColorLight =
+    input.shadowColorLight !== undefined
+      ? (resolveOptionalHex(input.shadowColorLight, 'Light shadowed bubble color') ?? null)
+      : existing.shadowColorLight;
+  const shadowTextColorLight =
+    input.shadowTextColorLight !== undefined
+      ? (resolveOptionalHex(input.shadowTextColorLight, 'Light shadowed text color') ?? null)
+      : existing.shadowTextColorLight;
+  const shadowHoverColorLight =
+    input.shadowHoverColorLight !== undefined
+      ? (resolveOptionalHex(input.shadowHoverColorLight, 'Light shadowed hover color') ?? null)
+      : existing.shadowHoverColorLight;
   const widgetHeaderColorLight =
     input.widgetHeaderColorLight !== undefined
       ? (resolveOptionalHex(input.widgetHeaderColorLight, 'Light widget header color') ?? null)
@@ -1020,6 +1100,18 @@ export async function updateOrganizationBranding(input: {
     input.accentHoverColorDark !== undefined
       ? (resolveOptionalHex(input.accentHoverColorDark, 'Dark outline hover color') ?? null)
       : existing.accentHoverColorDark;
+  const shadowColorDark =
+    input.shadowColorDark !== undefined
+      ? (resolveOptionalHex(input.shadowColorDark, 'Dark shadowed bubble color') ?? null)
+      : existing.shadowColorDark;
+  const shadowTextColorDark =
+    input.shadowTextColorDark !== undefined
+      ? (resolveOptionalHex(input.shadowTextColorDark, 'Dark shadowed text color') ?? null)
+      : existing.shadowTextColorDark;
+  const shadowHoverColorDark =
+    input.shadowHoverColorDark !== undefined
+      ? (resolveOptionalHex(input.shadowHoverColorDark, 'Dark shadowed hover color') ?? null)
+      : existing.shadowHoverColorDark;
   const widgetHeaderColorDark =
     input.widgetHeaderColorDark !== undefined
       ? (resolveOptionalHex(input.widgetHeaderColorDark, 'Dark widget header color') ?? null)
@@ -1082,6 +1174,12 @@ export async function updateOrganizationBranding(input: {
          primary_hover_color_dark = ?,
          accent_hover_color_light = ?,
          accent_hover_color_dark = ?,
+         shadow_color_light = ?,
+         shadow_color_dark = ?,
+         shadow_text_color_light = ?,
+         shadow_text_color_dark = ?,
+         shadow_hover_color_light = ?,
+         shadow_hover_color_dark = ?,
          widget_button_color_light = ?,
          widget_button_color_dark = ?,
          widget_button_text_color_light = ?,
@@ -1121,6 +1219,12 @@ export async function updateOrganizationBranding(input: {
       primaryHoverColorDark,
       accentHoverColorLight,
       accentHoverColorDark,
+      shadowColorLight,
+      shadowColorDark,
+      shadowTextColorLight,
+      shadowTextColorDark,
+      shadowHoverColorLight,
+      shadowHoverColorDark,
       widgetButtonColorLight,
       widgetButtonColorDark,
       widgetButtonTextColorLight,
