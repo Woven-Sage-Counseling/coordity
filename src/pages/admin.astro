@@ -42,7 +42,8 @@ import {
   writingModeForSurface,
 } from '../lib/bulletin-board';
 import { getHomeLayoutSettings, serializeHomeLayout } from '../lib/home-layout';
-import { orgCanonicalOrigin, orgIdFromLocals } from '../lib/organization';
+import { widgetHeaderForeground } from '../lib/home-widget-header';
+import { darkenHex, orgCanonicalOrigin, orgIdFromLocals, withAlpha } from '../lib/organization';
 import {
   getTrainingUserReview,
   listBlocks,
@@ -86,9 +87,15 @@ const brandPrimaryLight = organization?.primaryColorLight ?? '#535F51';
 const brandPrimaryTextLight = organization?.primaryTextColorLight ?? brandBgLight;
 const brandAccentLight = organization?.accentColorLight ?? '#788F75';
 const brandAccentTextLight = organization?.accentTextColorLight ?? brandAccentLight;
+const brandPrimaryHoverLight = organization?.primaryHoverColorLight ?? brandAccentLight;
+const brandAccentHoverLight = organization?.accentHoverColorLight ?? withAlpha(brandAccentLight, 10);
 const brandWidgetHeaderLight = organization?.widgetHeaderColorLight ?? '#535F51';
 const brandWidgetBgLight = organization?.widgetBgColorLight ?? '#F4F5F8';
 const brandWidgetCardLight = organization?.widgetCardColorLight ?? brandSurfaceLight;
+const brandWidgetButtonLight = organization?.widgetButtonColorLight ?? brandWidgetHeaderLight;
+const brandWidgetButtonTextLight =
+  organization?.widgetButtonTextColorLight ?? widgetHeaderForeground(brandWidgetButtonLight);
+const brandWidgetButtonHoverLight = organization?.widgetButtonHoverColorLight ?? darkenHex(brandWidgetButtonLight);
 const brandBgDark = organization?.bgColorDark ?? '#111311';
 const brandSurfaceDark = organization?.surfaceColorDark ?? '#1E211E';
 const brandTextDark = organization?.textColorDark ?? '#BAC6B6';
@@ -96,9 +103,15 @@ const brandPrimaryDark = organization?.primaryColorDark ?? '#BAC6B6';
 const brandPrimaryTextDark = organization?.primaryTextColorDark ?? brandBgDark;
 const brandAccentDark = organization?.accentColorDark ?? '#8A9E86';
 const brandAccentTextDark = organization?.accentTextColorDark ?? brandAccentDark;
+const brandPrimaryHoverDark = organization?.primaryHoverColorDark ?? brandAccentDark;
+const brandAccentHoverDark = organization?.accentHoverColorDark ?? withAlpha(brandAccentDark, 10);
 const brandWidgetHeaderDark = organization?.widgetHeaderColorDark ?? '#535F51';
 const brandWidgetBgDark = organization?.widgetBgColorDark ?? '#252925';
 const brandWidgetCardDark = organization?.widgetCardColorDark ?? brandSurfaceDark;
+const brandWidgetButtonDark = organization?.widgetButtonColorDark ?? brandWidgetHeaderDark;
+const brandWidgetButtonTextDark =
+  organization?.widgetButtonTextColorDark ?? widgetHeaderForeground(brandWidgetButtonDark);
+const brandWidgetButtonHoverDark = organization?.widgetButtonHoverColorDark ?? darkenHex(brandWidgetButtonDark);
 
 function brandColorParts(value: string): { opaque: string; alpha: number; full: string } {
   const match = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(value.trim());
@@ -1412,7 +1425,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           <h3 class="text-sm font-semibold text-charcoal">Colors</h3>
           <p class="text-sm text-sage-dark/65">
             Page background, cards, body text, filled buttons, and outline pills each have their own
-            color, including the words on those buttons. The sample sits a card on the page background.
+            color, including the words on those buttons and the color they turn on hover. The sample sits a card on the page background.
           </p>
 
           {
@@ -1425,8 +1438,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 text: brandTextLight,
                 primary: brandPrimaryLight,
                 primaryText: brandPrimaryTextLight,
+                primaryHover: brandPrimaryHoverLight,
                 accent: brandAccentLight,
                 accentText: brandAccentTextLight,
+                accentHover: brandAccentHoverLight,
                 chipMix: 18,
               },
               {
@@ -1437,8 +1452,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 text: brandTextDark,
                 primary: brandPrimaryDark,
                 primaryText: brandPrimaryTextDark,
+                primaryHover: brandPrimaryHoverDark,
                 accent: brandAccentDark,
                 accentText: brandAccentTextDark,
+                accentHover: brandAccentHoverDark,
                 chipMix: 22,
               },
             ].map((swatch) => {
@@ -1449,8 +1466,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 ['textColor', 'Text', swatch.text],
                 ['primaryColor', 'Filled', swatch.primary],
                 ['primaryTextColor', 'Filled text', swatch.primaryText],
+                ['primaryHoverColor', 'Filled hover', swatch.primaryHover],
                 ['accentColor', 'Outline', swatch.accent],
                 ['accentTextColor', 'Outline text', swatch.accentText],
+                ['accentHoverColor', 'Outline hover', swatch.accentHover],
               ] as const;
               return (
                 <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
@@ -1516,8 +1535,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         <p class="text-sm font-semibold" data-brand-preview-card-title={swatch.mode} style={`color:${swatch.text}`}>Today</p>
                         <p class="mt-0.5 text-xs" data-brand-preview-muted={swatch.mode} style={`color:${swatch.text};opacity:.65`}>On a card</p>
                         <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText}`}>Save</span>
-                          <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText}`}>Details</span>
+                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText};--brand-preview-hover:${swatch.primaryHover}`}>Save</span>
+                          <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText};--brand-preview-hover:${swatch.accentHover}`}>Details</span>
                           <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip={swatch.mode} style={`background-color:color-mix(in srgb, ${swatch.accent} ${swatch.chipMix}%, transparent);color:${swatch.accentText}`}>Tag</span>
                         </div>
                       </div>
@@ -1531,7 +1550,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
             <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Home widgets</h4>
             <p class="text-sm text-sage-dark/65">
-              The default header bar, the panel behind the content, and the cards inside it. QuickBooks keeps its own header.
+              The top bar, the buttons, the panel behind the content, and the cards inside it. Buttons have their own hover color. QuickBooks keeps its own top bar.
             </p>
             {
               [
@@ -1541,6 +1560,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   header: brandWidgetHeaderLight,
                   background: brandWidgetBgLight,
                   card: brandWidgetCardLight,
+                  button: brandWidgetButtonLight,
+                  buttonText: brandWidgetButtonTextLight,
+                  buttonHover: brandWidgetButtonHoverLight,
                 },
                 {
                   mode: 'dark',
@@ -1548,11 +1570,17 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   header: brandWidgetHeaderDark,
                   background: brandWidgetBgDark,
                   card: brandWidgetCardDark,
+                  button: brandWidgetButtonDark,
+                  buttonText: brandWidgetButtonTextDark,
+                  buttonHover: brandWidgetButtonHoverDark,
                 },
               ].map((swatch) => {
                 const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
                 const fields = [
-                  ['widgetHeaderColor', 'Header', swatch.header],
+                  ['widgetHeaderColor', 'Top', swatch.header],
+                  ['widgetButtonColor', 'Button', swatch.button],
+                  ['widgetButtonTextColor', 'Button text', swatch.buttonText],
+                  ['widgetButtonHoverColor', 'Button hover', swatch.buttonHover],
                   ['widgetBgColor', 'Background', swatch.background],
                   ['widgetCardColor', 'Cards', swatch.card],
                 ] as const;
@@ -1604,7 +1632,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       </div>
                     </div>
                     <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
-                      <div class="px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>Calendar</div>
+                      <div class="flex items-center justify-between gap-2 px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>
+                        <span>Calendar</span>
+                        <span class="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" data-brand-preview-widget-button={swatch.mode} style={`background-color:${swatch.button};color:${swatch.buttonText};--brand-preview-hover:${swatch.buttonHover}`}>Open</span>
+                      </div>
                       <div class="px-3 py-3" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background}`}>
                         <div class="rounded-lg px-2.5 py-2 shadow-sm ring-1 ring-black/5" data-brand-preview-widget-card={swatch.mode} style={`background-color:${swatch.card};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>
                           <p class="text-xs font-semibold">Thursday</p>
@@ -1937,21 +1968,31 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'textColorLight',
       'primaryColorLight',
       'primaryTextColorLight',
+      'primaryHoverColorLight',
       'accentColorLight',
       'accentTextColorLight',
+      'accentHoverColorLight',
       'bgColorDark',
       'surfaceColorDark',
       'textColorDark',
       'primaryColorDark',
       'primaryTextColorDark',
+      'primaryHoverColorDark',
       'accentColorDark',
       'accentTextColorDark',
+      'accentHoverColorDark',
       'widgetHeaderColorLight',
       'widgetBgColorLight',
       'widgetCardColorLight',
+      'widgetButtonColorLight',
+      'widgetButtonTextColorLight',
+      'widgetButtonHoverColorLight',
       'widgetHeaderColorDark',
       'widgetBgColorDark',
       'widgetCardColorDark',
+      'widgetButtonColorDark',
+      'widgetButtonTextColorDark',
+      'widgetButtonHoverColorDark',
     ];
 
     const readColor = (key: string) => {
@@ -1968,11 +2009,16 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const text = readColor(`textColor${suffix}`);
       const primary = readColor(`primaryColor${suffix}`);
       const primaryText = readColor(`primaryTextColor${suffix}`);
+      const primaryHover = readColor(`primaryHoverColor${suffix}`);
       const accent = readColor(`accentColor${suffix}`);
       const accentText = readColor(`accentTextColor${suffix}`);
+      const accentHover = readColor(`accentHoverColor${suffix}`);
       const widgetHeader = readColor(`widgetHeaderColor${suffix}`);
       const widgetBg = readColor(`widgetBgColor${suffix}`);
       const widgetCard = readColor(`widgetCardColor${suffix}`);
+      const widgetButton = readColor(`widgetButtonColor${suffix}`);
+      const widgetButtonText = readColor(`widgetButtonTextColor${suffix}`);
+      const widgetButtonHover = readColor(`widgetButtonHoverColor${suffix}`);
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
       if (preview instanceof HTMLElement) preview.style.backgroundColor = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
@@ -1991,10 +2037,12 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       paint('primary', (el) => {
         el.style.backgroundColor = primary;
         el.style.color = primaryText;
+        el.style.setProperty('--brand-preview-hover', primaryHover);
       });
       paint('accent', (el) => {
         el.style.borderColor = accent;
         el.style.color = accentText;
+        el.style.setProperty('--brand-preview-hover', accentHover);
       });
       paint('chip', (el) => {
         el.style.backgroundColor = `color-mix(in srgb, ${accent} ${mode === 'dark' ? 22 : 18}%, transparent)`;
@@ -2024,6 +2072,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       paint('widget-card', (el) => {
         el.style.backgroundColor = widgetCard;
+      });
+      paint('widget-button', (el) => {
+        el.style.backgroundColor = widgetButton;
+        el.style.color = widgetButtonText;
+        el.style.setProperty('--brand-preview-hover', widgetButtonHover);
       });
     };
 
@@ -2080,21 +2133,31 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       textColorLight?: string | null;
       primaryColorLight?: string | null;
       primaryTextColorLight?: string | null;
+      primaryHoverColorLight?: string | null;
       accentColorLight?: string | null;
       accentTextColorLight?: string | null;
+      accentHoverColorLight?: string | null;
       bgColorDark?: string | null;
       surfaceColorDark?: string | null;
       textColorDark?: string | null;
       primaryColorDark?: string | null;
       primaryTextColorDark?: string | null;
+      primaryHoverColorDark?: string | null;
       accentColorDark?: string | null;
       accentTextColorDark?: string | null;
+      accentHoverColorDark?: string | null;
       widgetHeaderColorLight?: string | null;
       widgetBgColorLight?: string | null;
       widgetCardColorLight?: string | null;
+      widgetButtonColorLight?: string | null;
+      widgetButtonTextColorLight?: string | null;
+      widgetButtonHoverColorLight?: string | null;
       widgetHeaderColorDark?: string | null;
       widgetBgColorDark?: string | null;
       widgetCardColorDark?: string | null;
+      widgetButtonColorDark?: string | null;
+      widgetButtonTextColorDark?: string | null;
+      widgetButtonHoverColorDark?: string | null;
     }) => {
       const onHeader = (hex: string | null | undefined, fallback: string) => {
         const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((hex ?? '').trim());
@@ -2120,6 +2183,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         widgetHeaderFg: string,
         widgetBg: string,
         widgetCard: string,
+        primaryHover: string,
+        accentHover: string,
+        widgetButton: string,
+        widgetButtonText: string,
+        widgetButtonHover: string,
         alphas: {
           bg: string;
           surface: string;
@@ -2130,9 +2198,14 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           accentText: string;
           widgetBg: string;
           widgetCard: string;
+          primaryHover: string;
+          accentHover: string;
+          widgetButton: string;
+          widgetButtonText: string;
+          widgetButtonHover: string;
         },
       ) =>
-        `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;--portal-widget-card:${widgetCard} !important;--portal-widget-card-a:${alphas.widgetCard} !important;}`;
+        `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-primary-hover:${primaryHover} !important;--portal-primary-hover-a:${alphas.primaryHover} !important;--portal-accent-hover:${accentHover} !important;--portal-accent-hover-a:${alphas.accentHover} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;--portal-widget-card:${widgetCard} !important;--portal-widget-card-a:${alphas.widgetCard} !important;--portal-widget-button:${widgetButton} !important;--portal-widget-button-a:${alphas.widgetButton} !important;--portal-widget-button-text:${widgetButtonText} !important;--portal-widget-button-text-a:${alphas.widgetButtonText} !important;--portal-widget-button-hover:${widgetButtonHover} !important;--portal-widget-button-hover-a:${alphas.widgetButtonHover} !important;}`;
       const lightBg = hexChannels(branding.bgColorLight) ?? '247 244 238';
       const lightSurface = hexChannels(branding.surfaceColorLight) ?? '255 255 255';
       const lightText = hexChannels(branding.textColorLight) ?? hexChannels(branding.primaryColorLight) ?? '83 95 81';
@@ -2140,9 +2213,14 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const lightPrimaryText = hexChannels(branding.primaryTextColorLight) ?? lightBg;
       const lightAccent = hexChannels(branding.accentColorLight) ?? '120 143 117';
       const lightAccentText = hexChannels(branding.accentTextColorLight) ?? lightAccent;
+      const lightPrimaryHover = hexChannels(branding.primaryHoverColorLight) ?? lightAccent;
+      const lightAccentHover = hexChannels(branding.accentHoverColorLight) ?? lightAccent;
       const lightWidgetHeader = onHeader(branding.widgetHeaderColorLight, '#535F51');
       const lightWidgetBg = hexChannels(branding.widgetBgColorLight) ?? '244 245 248';
       const lightWidgetCard = hexChannels(branding.widgetCardColorLight) ?? lightSurface;
+      const lightWidgetButton = hexChannels(branding.widgetButtonColorLight) ?? '83 95 81';
+      const lightWidgetButtonText = hexChannels(branding.widgetButtonTextColorLight) ?? '247 244 238';
+      const lightWidgetButtonHover = hexChannels(branding.widgetButtonHoverColorLight) ?? lightWidgetButton.split(' ').map((channel) => String(Math.round(Number(channel) * 0.92))).join(' ');
       const darkBg = hexChannels(branding.bgColorDark) ?? '17 19 17';
       const darkSurface = hexChannels(branding.surfaceColorDark) ?? '30 33 30';
       const darkText = hexChannels(branding.textColorDark) ?? hexChannels(branding.primaryColorDark) ?? '186 198 182';
@@ -2150,9 +2228,14 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const darkPrimaryText = hexChannels(branding.primaryTextColorDark) ?? darkBg;
       const darkAccent = hexChannels(branding.accentColorDark) ?? '138 158 134';
       const darkAccentText = hexChannels(branding.accentTextColorDark) ?? darkAccent;
+      const darkPrimaryHover = hexChannels(branding.primaryHoverColorDark) ?? darkAccent;
+      const darkAccentHover = hexChannels(branding.accentHoverColorDark) ?? darkAccent;
       const darkWidgetHeader = onHeader(branding.widgetHeaderColorDark, '#535F51');
       const darkWidgetBg = hexChannels(branding.widgetBgColorDark) ?? '37 41 37';
       const darkWidgetCard = hexChannels(branding.widgetCardColorDark) ?? darkSurface;
+      const darkWidgetButton = hexChannels(branding.widgetButtonColorDark) ?? '83 95 81';
+      const darkWidgetButtonText = hexChannels(branding.widgetButtonTextColorDark) ?? '247 244 238';
+      const darkWidgetButtonHover = hexChannels(branding.widgetButtonHoverColorDark) ?? darkWidgetButton.split(' ').map((channel) => String(Math.round(Number(channel) * 0.92))).join(' ');
       let style = document.getElementById('org-brand');
       if (!(style instanceof HTMLStyleElement)) {
         style = document.createElement('style');
@@ -2160,7 +2243,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         document.head.appendChild(style);
       }
       style.textContent =
-        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg, lightWidgetCard, {
+        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg, lightWidgetCard, lightPrimaryHover, lightAccentHover, lightWidgetButton, lightWidgetButtonText, lightWidgetButtonHover, {
           bg: hexAlpha(branding.bgColorLight),
           surface: hexAlpha(branding.surfaceColorLight),
           text: hexAlpha(branding.textColorLight),
@@ -2170,8 +2253,13 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           accentText: hexAlpha(branding.accentTextColorLight),
           widgetBg: hexAlpha(branding.widgetBgColorLight),
           widgetCard: hexAlpha(branding.widgetCardColorLight),
+          primaryHover: hexAlpha(branding.primaryHoverColorLight),
+          accentHover: branding.accentHoverColorLight ? hexAlpha(branding.accentHoverColorLight) : '0.1',
+          widgetButton: hexAlpha(branding.widgetButtonColorLight),
+          widgetButtonText: hexAlpha(branding.widgetButtonTextColorLight),
+          widgetButtonHover: hexAlpha(branding.widgetButtonHoverColorLight),
         }) +
-        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg, darkWidgetCard, {
+        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg, darkWidgetCard, darkPrimaryHover, darkAccentHover, darkWidgetButton, darkWidgetButtonText, darkWidgetButtonHover, {
           bg: hexAlpha(branding.bgColorDark),
           surface: hexAlpha(branding.surfaceColorDark),
           text: hexAlpha(branding.textColorDark),
@@ -2181,6 +2269,11 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           accentText: hexAlpha(branding.accentTextColorDark),
           widgetBg: hexAlpha(branding.widgetBgColorDark),
           widgetCard: hexAlpha(branding.widgetCardColorDark),
+          primaryHover: hexAlpha(branding.primaryHoverColorDark),
+          accentHover: branding.accentHoverColorDark ? hexAlpha(branding.accentHoverColorDark) : '0.1',
+          widgetButton: hexAlpha(branding.widgetButtonColorDark),
+          widgetButtonText: hexAlpha(branding.widgetButtonTextColorDark),
+          widgetButtonHover: hexAlpha(branding.widgetButtonHoverColorDark),
         });
     };
 

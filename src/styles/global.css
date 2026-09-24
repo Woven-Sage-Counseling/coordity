@@ -21,6 +21,12 @@
   --portal-widget-header-fg: #F7F4EE;
   --portal-widget-bg: 244 245 248;
   --portal-widget-card: 255 255 255;
+  --portal-primary-hover: 120 143 117;
+  --portal-accent-hover: 120 143 117;
+  --portal-accent-hover-a: 0.1;
+  --portal-widget-button: 83 95 81;
+  --portal-widget-button-text: 247 244 238;
+  --portal-widget-button-hover: 76 87 75;
   --coordity-blue: 0 82 132;
   --coordity-blue-bright: 59 130 246;
   --coordity-yellow: 254 203 0;
@@ -46,6 +52,12 @@ html.dark {
   --portal-widget-header-fg: #F7F4EE;
   --portal-widget-bg: 37 41 37;
   --portal-widget-card: 30 33 30;
+  --portal-primary-hover: 138 158 134;
+  --portal-accent-hover: 138 158 134;
+  --portal-accent-hover-a: 0.1;
+  --portal-widget-button: 83 95 81;
+  --portal-widget-button-text: 247 244 238;
+  --portal-widget-button-hover: 76 87 75;
 }
 
 @layer base {
@@ -79,6 +91,15 @@ html.dark {
 
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded-full border border-sage/40 bg-surface/70 px-5 py-2.5 text-sm font-medium text-onaccent transition hover:border-sage hover:bg-sage/10;
+  }
+
+  .btn-primary:hover:not(:disabled),
+  html.dark .btn-primary:hover:not(:disabled) {
+    background-color: rgb(var(--portal-primary-hover, var(--portal-sage)) / var(--portal-primary-hover-a, var(--portal-sage-a, 1))) !important;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: rgb(var(--portal-accent-hover, var(--portal-sage)) / var(--portal-accent-hover-a, 0.1)) !important;
   }
 
   .field {
@@ -312,6 +333,13 @@ html.dark .hover\:bg-white:hover {
 html :is([data-widget-body], [data-schedule-dialog]) .bg-white,
 html :is([data-widget-body], [data-schedule-dialog]) .hover\:bg-white:hover {
   background-color: rgb(var(--portal-widget-card, var(--portal-surface)) / var(--portal-widget-card-a, var(--portal-surface-a, 1))) !important;
+}
+
+[data-brand-preview-primary]:hover,
+[data-brand-preview-accent]:hover,
+[data-brand-preview-widget-button]:hover {
+  background-color: var(--brand-preview-hover) !important;
+  border-color: var(--brand-preview-hover);
 }
 html.dark .hover\:bg-red-50:hover {
   background-color: rgb(127 29 29 / 0.18) !important;
