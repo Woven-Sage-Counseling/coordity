@@ -104,6 +104,19 @@ export interface PortalOrganization {
   widgetOutlineColorLight: string | null;
   widgetOutlineTextColorLight: string | null;
   widgetOutlineHoverColorLight: string | null;
+  trainingHeaderColorLight: string | null;
+  trainingModuleColorLight: string | null;
+  trainingModuleTextColorLight: string | null;
+  trainingLessonColorLight: string | null;
+  trainingLessonTextColorLight: string | null;
+  trainingBlockColorLight: string | null;
+  trainingFieldColorLight: string | null;
+  trainingFilledColorLight: string | null;
+  trainingFilledTextColorLight: string | null;
+  trainingFilledHoverColorLight: string | null;
+  trainingOutlineColorLight: string | null;
+  trainingOutlineTextColorLight: string | null;
+  trainingOutlineHoverColorLight: string | null;
   /** Dark-mode colors (#RRGGBB), or null for portal defaults. */
   bgColorDark: string | null;
   surfaceColorDark: string | null;
@@ -129,6 +142,19 @@ export interface PortalOrganization {
   widgetOutlineColorDark: string | null;
   widgetOutlineTextColorDark: string | null;
   widgetOutlineHoverColorDark: string | null;
+  trainingHeaderColorDark: string | null;
+  trainingModuleColorDark: string | null;
+  trainingModuleTextColorDark: string | null;
+  trainingLessonColorDark: string | null;
+  trainingLessonTextColorDark: string | null;
+  trainingBlockColorDark: string | null;
+  trainingFieldColorDark: string | null;
+  trainingFilledColorDark: string | null;
+  trainingFilledTextColorDark: string | null;
+  trainingFilledHoverColorDark: string | null;
+  trainingOutlineColorDark: string | null;
+  trainingOutlineTextColorDark: string | null;
+  trainingOutlineHoverColorDark: string | null;
   invertLogoDark: boolean;
   /** Soft-delete timestamp; archived orgs are hidden from tenants. */
   archivedAt: number | null;
@@ -160,6 +186,19 @@ export const DEFAULT_ORG_COLORS = {
     widgetOutline: '#535F5140',
     widgetOutlineText: '#535F51CC',
     widgetOutlineHover: '#535F511A',
+    trainingHeader: '#F7F8FA',
+    trainingModule: '#535F51',
+    trainingModuleText: '#F7F4EE',
+    trainingLesson: '#788F7540',
+    trainingLessonText: '#535F51',
+    trainingBlock: '#F7F8FA',
+    trainingField: '#FFFFFF',
+    trainingFilled: '#535F51',
+    trainingFilledText: '#F7F4EE',
+    trainingFilledHover: '#788F75',
+    trainingOutline: '#788F75',
+    trainingOutlineText: '#788F75',
+    trainingOutlineHover: '#788F751A',
   },
   dark: {
     background: '#111311',
@@ -186,6 +225,19 @@ export const DEFAULT_ORG_COLORS = {
     widgetOutline: '#BAC6B666',
     widgetOutlineText: '#BAC6B6',
     widgetOutlineHover: '#BAC6B61A',
+    trainingHeader: '#2A2E2A',
+    trainingModule: '#BAC6B6',
+    trainingModuleText: '#111311',
+    trainingLesson: '#8A9E8640',
+    trainingLessonText: '#BAC6B6',
+    trainingBlock: '#252925',
+    trainingField: '#1E211E',
+    trainingFilled: '#BAC6B6',
+    trainingFilledText: '#111311',
+    trainingFilledHover: '#8A9E86',
+    trainingOutline: '#8A9E86',
+    trainingOutlineText: '#8A9E86',
+    trainingOutlineHover: '#8A9E861A',
   },
 } as const;
 
@@ -255,6 +307,32 @@ type OrgRow = {
   widget_outline_text_color_dark?: string | null;
   widget_outline_hover_color_light?: string | null;
   widget_outline_hover_color_dark?: string | null;
+  training_header_color_light?: string | null;
+  training_header_color_dark?: string | null;
+  training_module_color_light?: string | null;
+  training_module_color_dark?: string | null;
+  training_module_text_color_light?: string | null;
+  training_module_text_color_dark?: string | null;
+  training_lesson_color_light?: string | null;
+  training_lesson_color_dark?: string | null;
+  training_lesson_text_color_light?: string | null;
+  training_lesson_text_color_dark?: string | null;
+  training_block_color_light?: string | null;
+  training_block_color_dark?: string | null;
+  training_field_color_light?: string | null;
+  training_field_color_dark?: string | null;
+  training_filled_color_light?: string | null;
+  training_filled_color_dark?: string | null;
+  training_filled_text_color_light?: string | null;
+  training_filled_text_color_dark?: string | null;
+  training_filled_hover_color_light?: string | null;
+  training_filled_hover_color_dark?: string | null;
+  training_outline_color_light?: string | null;
+  training_outline_color_dark?: string | null;
+  training_outline_text_color_light?: string | null;
+  training_outline_text_color_dark?: string | null;
+  training_outline_hover_color_light?: string | null;
+  training_outline_hover_color_dark?: string | null;
   invert_logo_dark?: number | null;
   archived_at?: number | null;
 };
@@ -300,6 +378,19 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetOutlineColorLight: normalizeHexColor(row.widget_outline_color_light) ?? null,
     widgetOutlineTextColorLight: normalizeHexColor(row.widget_outline_text_color_light) ?? null,
     widgetOutlineHoverColorLight: normalizeHexColor(row.widget_outline_hover_color_light) ?? null,
+    trainingHeaderColorLight: normalizeHexColor(row.training_header_color_light) ?? null,
+    trainingModuleColorLight: normalizeHexColor(row.training_module_color_light) ?? null,
+    trainingModuleTextColorLight: normalizeHexColor(row.training_module_text_color_light) ?? null,
+    trainingLessonColorLight: normalizeHexColor(row.training_lesson_color_light) ?? null,
+    trainingLessonTextColorLight: normalizeHexColor(row.training_lesson_text_color_light) ?? null,
+    trainingBlockColorLight: normalizeHexColor(row.training_block_color_light) ?? null,
+    trainingFieldColorLight: normalizeHexColor(row.training_field_color_light) ?? null,
+    trainingFilledColorLight: normalizeHexColor(row.training_filled_color_light) ?? null,
+    trainingFilledTextColorLight: normalizeHexColor(row.training_filled_text_color_light) ?? null,
+    trainingFilledHoverColorLight: normalizeHexColor(row.training_filled_hover_color_light) ?? null,
+    trainingOutlineColorLight: normalizeHexColor(row.training_outline_color_light) ?? null,
+    trainingOutlineTextColorLight: normalizeHexColor(row.training_outline_text_color_light) ?? null,
+    trainingOutlineHoverColorLight: normalizeHexColor(row.training_outline_hover_color_light) ?? null,
     bgColorDark: normalizeHexColor(row.bg_color_dark) ?? null,
     surfaceColorDark: normalizeHexColor(row.surface_color_dark) ?? null,
     textColorDark: normalizeHexColor(row.text_color_dark) ?? normalizeHexColor(row.primary_color_dark),
@@ -324,6 +415,19 @@ function mapOrg(row: OrgRow): PortalOrganization {
     widgetOutlineColorDark: normalizeHexColor(row.widget_outline_color_dark) ?? null,
     widgetOutlineTextColorDark: normalizeHexColor(row.widget_outline_text_color_dark) ?? null,
     widgetOutlineHoverColorDark: normalizeHexColor(row.widget_outline_hover_color_dark) ?? null,
+    trainingHeaderColorDark: normalizeHexColor(row.training_header_color_dark) ?? null,
+    trainingModuleColorDark: normalizeHexColor(row.training_module_color_dark) ?? null,
+    trainingModuleTextColorDark: normalizeHexColor(row.training_module_text_color_dark) ?? null,
+    trainingLessonColorDark: normalizeHexColor(row.training_lesson_color_dark) ?? null,
+    trainingLessonTextColorDark: normalizeHexColor(row.training_lesson_text_color_dark) ?? null,
+    trainingBlockColorDark: normalizeHexColor(row.training_block_color_dark) ?? null,
+    trainingFieldColorDark: normalizeHexColor(row.training_field_color_dark) ?? null,
+    trainingFilledColorDark: normalizeHexColor(row.training_filled_color_dark) ?? null,
+    trainingFilledTextColorDark: normalizeHexColor(row.training_filled_text_color_dark) ?? null,
+    trainingFilledHoverColorDark: normalizeHexColor(row.training_filled_hover_color_dark) ?? null,
+    trainingOutlineColorDark: normalizeHexColor(row.training_outline_color_dark) ?? null,
+    trainingOutlineTextColorDark: normalizeHexColor(row.training_outline_text_color_dark) ?? null,
+    trainingOutlineHoverColorDark: normalizeHexColor(row.training_outline_hover_color_dark) ?? null,
     invertLogoDark: Boolean(row.invert_logo_dark),
     archivedAt: row.archived_at ?? null,
   };
@@ -365,6 +469,19 @@ function wovenSageFallback(): PortalOrganization {
     widgetOutlineColorLight: null,
     widgetOutlineTextColorLight: null,
     widgetOutlineHoverColorLight: null,
+    trainingHeaderColorLight: null,
+    trainingModuleColorLight: null,
+    trainingModuleTextColorLight: null,
+    trainingLessonColorLight: null,
+    trainingLessonTextColorLight: null,
+    trainingBlockColorLight: null,
+    trainingFieldColorLight: null,
+    trainingFilledColorLight: null,
+    trainingFilledTextColorLight: null,
+    trainingFilledHoverColorLight: null,
+    trainingOutlineColorLight: null,
+    trainingOutlineTextColorLight: null,
+    trainingOutlineHoverColorLight: null,
     bgColorDark: null,
     surfaceColorDark: null,
     textColorDark: null,
@@ -389,6 +506,19 @@ function wovenSageFallback(): PortalOrganization {
     widgetOutlineColorDark: null,
     widgetOutlineTextColorDark: null,
     widgetOutlineHoverColorDark: null,
+    trainingHeaderColorDark: null,
+    trainingModuleColorDark: null,
+    trainingModuleTextColorDark: null,
+    trainingLessonColorDark: null,
+    trainingLessonTextColorDark: null,
+    trainingBlockColorDark: null,
+    trainingFieldColorDark: null,
+    trainingFilledColorDark: null,
+    trainingFilledTextColorDark: null,
+    trainingFilledHoverColorDark: null,
+    trainingOutlineColorDark: null,
+    trainingOutlineTextColorDark: null,
+    trainingOutlineHoverColorDark: null,
     invertLogoDark: true,
     archivedAt: null,
   };
@@ -428,6 +558,19 @@ const ORG_SELECT = ORG_SELECT_FILLED.replace(
   selected_color_light, selected_color_dark,
   selected_text_color_light, selected_text_color_dark,
   selected_hover_color_light, selected_hover_color_dark,
+  training_header_color_light, training_header_color_dark,
+  training_module_color_light, training_module_color_dark,
+  training_module_text_color_light, training_module_text_color_dark,
+  training_lesson_color_light, training_lesson_color_dark,
+  training_lesson_text_color_light, training_lesson_text_color_dark,
+  training_block_color_light, training_block_color_dark,
+  training_field_color_light, training_field_color_dark,
+  training_filled_color_light, training_filled_color_dark,
+  training_filled_text_color_light, training_filled_text_color_dark,
+  training_filled_hover_color_light, training_filled_hover_color_dark,
+  training_outline_color_light, training_outline_color_dark,
+  training_outline_text_color_light, training_outline_text_color_dark,
+  training_outline_hover_color_light, training_outline_hover_color_dark,
   invert_logo_dark, archived_at`,
 );
 
@@ -975,6 +1118,19 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetOutlineColorLight: org.widgetOutlineColorLight,
     widgetOutlineTextColorLight: org.widgetOutlineTextColorLight,
     widgetOutlineHoverColorLight: org.widgetOutlineHoverColorLight,
+    trainingHeaderColorLight: org.trainingHeaderColorLight,
+    trainingModuleColorLight: org.trainingModuleColorLight,
+    trainingModuleTextColorLight: org.trainingModuleTextColorLight,
+    trainingLessonColorLight: org.trainingLessonColorLight,
+    trainingLessonTextColorLight: org.trainingLessonTextColorLight,
+    trainingBlockColorLight: org.trainingBlockColorLight,
+    trainingFieldColorLight: org.trainingFieldColorLight,
+    trainingFilledColorLight: org.trainingFilledColorLight,
+    trainingFilledTextColorLight: org.trainingFilledTextColorLight,
+    trainingFilledHoverColorLight: org.trainingFilledHoverColorLight,
+    trainingOutlineColorLight: org.trainingOutlineColorLight,
+    trainingOutlineTextColorLight: org.trainingOutlineTextColorLight,
+    trainingOutlineHoverColorLight: org.trainingOutlineHoverColorLight,
     bgColorDark: org.bgColorDark,
     surfaceColorDark: org.surfaceColorDark,
     textColorDark: org.textColorDark,
@@ -999,6 +1155,19 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     widgetOutlineColorDark: org.widgetOutlineColorDark,
     widgetOutlineTextColorDark: org.widgetOutlineTextColorDark,
     widgetOutlineHoverColorDark: org.widgetOutlineHoverColorDark,
+    trainingHeaderColorDark: org.trainingHeaderColorDark,
+    trainingModuleColorDark: org.trainingModuleColorDark,
+    trainingModuleTextColorDark: org.trainingModuleTextColorDark,
+    trainingLessonColorDark: org.trainingLessonColorDark,
+    trainingLessonTextColorDark: org.trainingLessonTextColorDark,
+    trainingBlockColorDark: org.trainingBlockColorDark,
+    trainingFieldColorDark: org.trainingFieldColorDark,
+    trainingFilledColorDark: org.trainingFilledColorDark,
+    trainingFilledTextColorDark: org.trainingFilledTextColorDark,
+    trainingFilledHoverColorDark: org.trainingFilledHoverColorDark,
+    trainingOutlineColorDark: org.trainingOutlineColorDark,
+    trainingOutlineTextColorDark: org.trainingOutlineTextColorDark,
+    trainingOutlineHoverColorDark: org.trainingOutlineHoverColorDark,
     invertLogoDark: org.invertLogoDark,
   };
 }
@@ -1031,6 +1200,19 @@ export async function updateOrganizationBranding(input: {
   widgetOutlineColorLight?: string | null;
   widgetOutlineTextColorLight?: string | null;
   widgetOutlineHoverColorLight?: string | null;
+  trainingHeaderColorLight?: string | null;
+  trainingModuleColorLight?: string | null;
+  trainingModuleTextColorLight?: string | null;
+  trainingLessonColorLight?: string | null;
+  trainingLessonTextColorLight?: string | null;
+  trainingBlockColorLight?: string | null;
+  trainingFieldColorLight?: string | null;
+  trainingFilledColorLight?: string | null;
+  trainingFilledTextColorLight?: string | null;
+  trainingFilledHoverColorLight?: string | null;
+  trainingOutlineColorLight?: string | null;
+  trainingOutlineTextColorLight?: string | null;
+  trainingOutlineHoverColorLight?: string | null;
   bgColorDark?: string | null;
   surfaceColorDark?: string | null;
   textColorDark?: string | null;
@@ -1055,6 +1237,19 @@ export async function updateOrganizationBranding(input: {
   widgetOutlineColorDark?: string | null;
   widgetOutlineTextColorDark?: string | null;
   widgetOutlineHoverColorDark?: string | null;
+  trainingHeaderColorDark?: string | null;
+  trainingModuleColorDark?: string | null;
+  trainingModuleTextColorDark?: string | null;
+  trainingLessonColorDark?: string | null;
+  trainingLessonTextColorDark?: string | null;
+  trainingBlockColorDark?: string | null;
+  trainingFieldColorDark?: string | null;
+  trainingFilledColorDark?: string | null;
+  trainingFilledTextColorDark?: string | null;
+  trainingFilledHoverColorDark?: string | null;
+  trainingOutlineColorDark?: string | null;
+  trainingOutlineTextColorDark?: string | null;
+  trainingOutlineHoverColorDark?: string | null;
   invertLogoDark?: boolean;
   logoFile?: File | null;
   clearLogo?: boolean;
@@ -1183,6 +1378,58 @@ export async function updateOrganizationBranding(input: {
     input.widgetOutlineHoverColorLight !== undefined
       ? (resolveOptionalHex(input.widgetOutlineHoverColorLight, 'Light widget outline hover color') ?? null)
       : existing.widgetOutlineHoverColorLight;
+  const trainingHeaderColorLight =
+    input.trainingHeaderColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingHeaderColorLight, 'Light training header color') ?? null)
+      : existing.trainingHeaderColorLight;
+  const trainingModuleColorLight =
+    input.trainingModuleColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingModuleColorLight, 'Light training module color') ?? null)
+      : existing.trainingModuleColorLight;
+  const trainingModuleTextColorLight =
+    input.trainingModuleTextColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingModuleTextColorLight, 'Light training module text color') ?? null)
+      : existing.trainingModuleTextColorLight;
+  const trainingLessonColorLight =
+    input.trainingLessonColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingLessonColorLight, 'Light training lesson color') ?? null)
+      : existing.trainingLessonColorLight;
+  const trainingLessonTextColorLight =
+    input.trainingLessonTextColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingLessonTextColorLight, 'Light training lesson text color') ?? null)
+      : existing.trainingLessonTextColorLight;
+  const trainingBlockColorLight =
+    input.trainingBlockColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingBlockColorLight, 'Light training block color') ?? null)
+      : existing.trainingBlockColorLight;
+  const trainingFieldColorLight =
+    input.trainingFieldColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingFieldColorLight, 'Light training field color') ?? null)
+      : existing.trainingFieldColorLight;
+  const trainingFilledColorLight =
+    input.trainingFilledColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingFilledColorLight, 'Light training filled button color') ?? null)
+      : existing.trainingFilledColorLight;
+  const trainingFilledTextColorLight =
+    input.trainingFilledTextColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingFilledTextColorLight, 'Light training filled text color') ?? null)
+      : existing.trainingFilledTextColorLight;
+  const trainingFilledHoverColorLight =
+    input.trainingFilledHoverColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingFilledHoverColorLight, 'Light training filled hover color') ?? null)
+      : existing.trainingFilledHoverColorLight;
+  const trainingOutlineColorLight =
+    input.trainingOutlineColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingOutlineColorLight, 'Light training outline color') ?? null)
+      : existing.trainingOutlineColorLight;
+  const trainingOutlineTextColorLight =
+    input.trainingOutlineTextColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingOutlineTextColorLight, 'Light training outline text color') ?? null)
+      : existing.trainingOutlineTextColorLight;
+  const trainingOutlineHoverColorLight =
+    input.trainingOutlineHoverColorLight !== undefined
+      ? (resolveOptionalHex(input.trainingOutlineHoverColorLight, 'Light training outline hover color') ?? null)
+      : existing.trainingOutlineHoverColorLight;
   const bgColorDark =
     input.bgColorDark !== undefined
       ? (resolveOptionalHex(input.bgColorDark, 'Dark background color') ?? null)
@@ -1279,6 +1526,58 @@ export async function updateOrganizationBranding(input: {
     input.widgetOutlineHoverColorDark !== undefined
       ? (resolveOptionalHex(input.widgetOutlineHoverColorDark, 'Dark widget outline hover color') ?? null)
       : existing.widgetOutlineHoverColorDark;
+  const trainingHeaderColorDark =
+    input.trainingHeaderColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingHeaderColorDark, 'Dark training header color') ?? null)
+      : existing.trainingHeaderColorDark;
+  const trainingModuleColorDark =
+    input.trainingModuleColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingModuleColorDark, 'Dark training module color') ?? null)
+      : existing.trainingModuleColorDark;
+  const trainingModuleTextColorDark =
+    input.trainingModuleTextColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingModuleTextColorDark, 'Dark training module text color') ?? null)
+      : existing.trainingModuleTextColorDark;
+  const trainingLessonColorDark =
+    input.trainingLessonColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingLessonColorDark, 'Dark training lesson color') ?? null)
+      : existing.trainingLessonColorDark;
+  const trainingLessonTextColorDark =
+    input.trainingLessonTextColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingLessonTextColorDark, 'Dark training lesson text color') ?? null)
+      : existing.trainingLessonTextColorDark;
+  const trainingBlockColorDark =
+    input.trainingBlockColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingBlockColorDark, 'Dark training block color') ?? null)
+      : existing.trainingBlockColorDark;
+  const trainingFieldColorDark =
+    input.trainingFieldColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingFieldColorDark, 'Dark training field color') ?? null)
+      : existing.trainingFieldColorDark;
+  const trainingFilledColorDark =
+    input.trainingFilledColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingFilledColorDark, 'Dark training filled button color') ?? null)
+      : existing.trainingFilledColorDark;
+  const trainingFilledTextColorDark =
+    input.trainingFilledTextColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingFilledTextColorDark, 'Dark training filled text color') ?? null)
+      : existing.trainingFilledTextColorDark;
+  const trainingFilledHoverColorDark =
+    input.trainingFilledHoverColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingFilledHoverColorDark, 'Dark training filled hover color') ?? null)
+      : existing.trainingFilledHoverColorDark;
+  const trainingOutlineColorDark =
+    input.trainingOutlineColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingOutlineColorDark, 'Dark training outline color') ?? null)
+      : existing.trainingOutlineColorDark;
+  const trainingOutlineTextColorDark =
+    input.trainingOutlineTextColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingOutlineTextColorDark, 'Dark training outline text color') ?? null)
+      : existing.trainingOutlineTextColorDark;
+  const trainingOutlineHoverColorDark =
+    input.trainingOutlineHoverColorDark !== undefined
+      ? (resolveOptionalHex(input.trainingOutlineHoverColorDark, 'Dark training outline hover color') ?? null)
+      : existing.trainingOutlineHoverColorDark;
 
   // Keep legacy columns in sync with light-mode primary/accent for older readers.
   const legacyPrimary = primaryColorLight;
@@ -1341,6 +1640,32 @@ export async function updateOrganizationBranding(input: {
          widget_outline_text_color_dark = ?,
          widget_outline_hover_color_light = ?,
          widget_outline_hover_color_dark = ?,
+         training_header_color_light = ?,
+         training_header_color_dark = ?,
+         training_module_color_light = ?,
+         training_module_color_dark = ?,
+         training_module_text_color_light = ?,
+         training_module_text_color_dark = ?,
+         training_lesson_color_light = ?,
+         training_lesson_color_dark = ?,
+         training_lesson_text_color_light = ?,
+         training_lesson_text_color_dark = ?,
+         training_block_color_light = ?,
+         training_block_color_dark = ?,
+         training_field_color_light = ?,
+         training_field_color_dark = ?,
+         training_filled_color_light = ?,
+         training_filled_color_dark = ?,
+         training_filled_text_color_light = ?,
+         training_filled_text_color_dark = ?,
+         training_filled_hover_color_light = ?,
+         training_filled_hover_color_dark = ?,
+         training_outline_color_light = ?,
+         training_outline_color_dark = ?,
+         training_outline_text_color_light = ?,
+         training_outline_text_color_dark = ?,
+         training_outline_hover_color_light = ?,
+         training_outline_hover_color_dark = ?,
          invert_logo_dark = ?,
          updated_at = ?
      WHERE id = ?`,
@@ -1398,6 +1723,32 @@ export async function updateOrganizationBranding(input: {
       widgetOutlineTextColorDark,
       widgetOutlineHoverColorLight,
       widgetOutlineHoverColorDark,
+      trainingHeaderColorLight,
+      trainingHeaderColorDark,
+      trainingModuleColorLight,
+      trainingModuleColorDark,
+      trainingModuleTextColorLight,
+      trainingModuleTextColorDark,
+      trainingLessonColorLight,
+      trainingLessonColorDark,
+      trainingLessonTextColorLight,
+      trainingLessonTextColorDark,
+      trainingBlockColorLight,
+      trainingBlockColorDark,
+      trainingFieldColorLight,
+      trainingFieldColorDark,
+      trainingFilledColorLight,
+      trainingFilledColorDark,
+      trainingFilledTextColorLight,
+      trainingFilledTextColorDark,
+      trainingFilledHoverColorLight,
+      trainingFilledHoverColorDark,
+      trainingOutlineColorLight,
+      trainingOutlineColorDark,
+      trainingOutlineTextColorLight,
+      trainingOutlineTextColorDark,
+      trainingOutlineHoverColorLight,
+      trainingOutlineHoverColorDark,
       invertLogoDark ? 1 : 0,
       ts,
       input.orgId,

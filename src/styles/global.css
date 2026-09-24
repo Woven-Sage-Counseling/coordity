@@ -34,6 +34,21 @@
   --portal-on-selected: 83 95 81;
   --portal-selected-hover: 120 143 117;
   --portal-selected-hover-a: 0.1;
+  --portal-training-header: 247 248 250;
+  --portal-training-module: 83 95 81;
+  --portal-training-module-text: 247 244 238;
+  --portal-training-lesson: 120 143 117;
+  --portal-training-lesson-a: 0.25;
+  --portal-training-lesson-text: 83 95 81;
+  --portal-training-block: 247 248 250;
+  --portal-training-field: 255 255 255;
+  --portal-training-filled: 83 95 81;
+  --portal-training-filled-text: 247 244 238;
+  --portal-training-filled-hover: 120 143 117;
+  --portal-training-outline: 120 143 117;
+  --portal-training-outline-text: 120 143 117;
+  --portal-training-outline-hover: 120 143 117;
+  --portal-training-outline-hover-a: 0.1;
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
@@ -81,6 +96,21 @@ html.dark {
   --portal-on-selected: 186 198 182;
   --portal-selected-hover: 138 158 134;
   --portal-selected-hover-a: 0.1;
+  --portal-training-header: 42 46 42;
+  --portal-training-module: 186 198 182;
+  --portal-training-module-text: 17 19 17;
+  --portal-training-lesson: 138 158 134;
+  --portal-training-lesson-a: 0.25;
+  --portal-training-lesson-text: 186 198 182;
+  --portal-training-block: 37 41 37;
+  --portal-training-field: 30 33 30;
+  --portal-training-filled: 186 198 182;
+  --portal-training-filled-text: 17 19 17;
+  --portal-training-filled-hover: 138 158 134;
+  --portal-training-outline: 138 158 134;
+  --portal-training-outline-text: 138 158 134;
+  --portal-training-outline-hover: 138 158 134;
+  --portal-training-outline-hover-a: 0.1;
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
@@ -203,6 +233,66 @@ html.dark {
 
   .item-selected-surface {
     background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
+  }
+
+  .training-header {
+    background-color: rgb(var(--portal-training-header, 247 248 250) / var(--portal-training-header-a, 1));
+  }
+
+  .training-module-selected {
+    background-color: rgb(var(--portal-training-module, 83 95 81) / var(--portal-training-module-a, 1));
+    color: rgb(var(--portal-training-module-text, 247 244 238) / var(--portal-training-module-text-a, 1)) !important;
+  }
+
+  .training-lesson-selected {
+    background-color: rgb(var(--portal-training-lesson, 120 143 117) / var(--portal-training-lesson-a, 0.25));
+    color: rgb(var(--portal-training-lesson-text, 83 95 81) / var(--portal-training-lesson-text-a, 1));
+  }
+
+  .training-lesson-selected :is(.text-charcoal, .text-sage-dark, .text-sage-dark\/45, .text-sage-dark\/55, .text-sage-dark\/60) {
+    color: inherit !important;
+  }
+
+  .training-filled,
+  .training-fill {
+    background-color: rgb(var(--portal-training-filled, 83 95 81) / var(--portal-training-filled-a, 1));
+  }
+
+  .training-filled {
+    color: rgb(var(--portal-training-filled-text, 247 244 238) / var(--portal-training-filled-text-a, 1));
+  }
+
+  .training-filled {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .training-filled:hover:not(:disabled) {
+    background-color: rgb(var(--portal-training-filled-hover, 120 143 117) / var(--portal-training-filled-hover-a, 1)) !important;
+  }
+
+  .training-filled:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .training-outline {
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(var(--portal-training-outline, 120 143 117) / var(--portal-training-outline-a, 1));
+    background-color: transparent;
+    color: rgb(var(--portal-training-outline-text, 120 143 117) / var(--portal-training-outline-text-a, 1));
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+
+  .training-outline:hover {
+    background-color: rgb(var(--portal-training-outline-hover, 120 143 117) / var(--portal-training-outline-hover-a, 0.1)) !important;
   }
 
   .field {
@@ -443,7 +533,9 @@ html :is([data-widget-body], [data-schedule-dialog]) .hover\:bg-white:hover {
 [data-brand-preview-chip]:hover,
 [data-brand-preview-selected]:hover,
 [data-brand-preview-widget-button]:hover,
-[data-brand-preview-widget-outline]:hover {
+[data-brand-preview-widget-outline]:hover,
+[data-brand-preview-training-filled]:hover,
+[data-brand-preview-training-outline]:hover {
   background-color: var(--brand-preview-hover) !important;
   border-color: var(--brand-preview-hover);
 }
@@ -697,4 +789,20 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
     0 2px 6px rgba(57, 58, 61, 0.04);
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+#training .bg-\[\#f7f8fa\] {
+  background-color: rgb(var(--portal-training-block, 247 248 250) / var(--portal-training-block-a, 1)) !important;
+}
+
+#training :is(.field, textarea, select) {
+  background-color: rgb(var(--portal-training-field, 255 255 255) / var(--portal-training-field-a, 1));
+}
+
+#training input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='range']) {
+  background-color: rgb(var(--portal-training-field, 255 255 255) / var(--portal-training-field-a, 1));
+}
+
+#training input[type='checkbox'] {
+  accent-color: rgb(var(--portal-training-filled, 83 95 81) / var(--portal-training-filled-a, 1));
 }

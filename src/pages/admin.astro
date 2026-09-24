@@ -130,6 +130,32 @@ const brandWidgetButtonHoverDark = organization?.widgetButtonHoverColorDark ?? d
 const brandWidgetOutlineDark = organization?.widgetOutlineColorDark ?? '#BAC6B666';
 const brandWidgetOutlineTextDark = organization?.widgetOutlineTextColorDark ?? '#BAC6B6';
 const brandWidgetOutlineHoverDark = organization?.widgetOutlineHoverColorDark ?? '#BAC6B61A';
+const brandTrainingHeaderLight = organization?.trainingHeaderColorLight ?? brandSelectedLight;
+const brandTrainingModuleLight = organization?.trainingModuleColorLight ?? brandPrimaryLight;
+const brandTrainingModuleTextLight = organization?.trainingModuleTextColorLight ?? brandPrimaryTextLight;
+const brandTrainingLessonLight = organization?.trainingLessonColorLight ?? withAlpha(brandAccentLight, 25);
+const brandTrainingLessonTextLight = organization?.trainingLessonTextColorLight ?? brandTextLight;
+const brandTrainingBlockLight = organization?.trainingBlockColorLight ?? '#F7F8FA';
+const brandTrainingFieldLight = organization?.trainingFieldColorLight ?? brandSurfaceLight;
+const brandTrainingFilledLight = organization?.trainingFilledColorLight ?? brandPrimaryLight;
+const brandTrainingFilledTextLight = organization?.trainingFilledTextColorLight ?? brandPrimaryTextLight;
+const brandTrainingFilledHoverLight = organization?.trainingFilledHoverColorLight ?? brandPrimaryHoverLight;
+const brandTrainingOutlineLight = organization?.trainingOutlineColorLight ?? brandAccentLight;
+const brandTrainingOutlineTextLight = organization?.trainingOutlineTextColorLight ?? brandAccentTextLight;
+const brandTrainingOutlineHoverLight = organization?.trainingOutlineHoverColorLight ?? brandAccentHoverLight;
+const brandTrainingHeaderDark = organization?.trainingHeaderColorDark ?? brandSelectedDark;
+const brandTrainingModuleDark = organization?.trainingModuleColorDark ?? brandPrimaryDark;
+const brandTrainingModuleTextDark = organization?.trainingModuleTextColorDark ?? brandPrimaryTextDark;
+const brandTrainingLessonDark = organization?.trainingLessonColorDark ?? withAlpha(brandAccentDark, 25);
+const brandTrainingLessonTextDark = organization?.trainingLessonTextColorDark ?? brandTextDark;
+const brandTrainingBlockDark = organization?.trainingBlockColorDark ?? '#252925';
+const brandTrainingFieldDark = organization?.trainingFieldColorDark ?? brandSurfaceDark;
+const brandTrainingFilledDark = organization?.trainingFilledColorDark ?? brandPrimaryDark;
+const brandTrainingFilledTextDark = organization?.trainingFilledTextColorDark ?? brandPrimaryTextDark;
+const brandTrainingFilledHoverDark = organization?.trainingFilledHoverColorDark ?? brandPrimaryHoverDark;
+const brandTrainingOutlineDark = organization?.trainingOutlineColorDark ?? brandAccentDark;
+const brandTrainingOutlineTextDark = organization?.trainingOutlineTextColorDark ?? brandAccentTextDark;
+const brandTrainingOutlineHoverDark = organization?.trainingOutlineHoverColorDark ?? brandAccentHoverDark;
 
 function brandColorParts(value: string): { opaque: string; alpha: number; full: string } {
   const match = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(value.trim());
@@ -1839,6 +1865,172 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
           </div>
         </details>
+
+        <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm" data-brand-section>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+            <span>Training colors</span>
+            <span class="text-sage-dark/40" set:html={menuChevron} />
+          </summary>
+          <div class="space-y-4 border-t border-sage-dark/10 px-5 pb-5 pt-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="relative inline-grid grid-cols-2 rounded-full bg-sage-dark/10 p-1" data-brand-training-mode-switch>
+                <span
+                  class="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-white shadow-[0_6px_16px_rgba(26,28,30,0.14)] ring-1 ring-black/5 transition-transform duration-200 ease-out"
+                  data-brand-mode-bubble
+                ></span>
+                <button type="button" class="relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold text-charcoal" data-brand-mode="light" aria-pressed="true">
+                  Light mode
+                </button>
+                <button type="button" class="relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold text-sage-dark/55" data-brand-mode="dark" aria-pressed="false">
+                  Dark mode
+                </button>
+              </div>
+            </div>
+            {
+              [
+                {
+                  mode: 'light',
+                  title: 'Light mode',
+                  header: brandTrainingHeaderLight,
+                  module: brandTrainingModuleLight,
+                  moduleText: brandTrainingModuleTextLight,
+                  lesson: brandTrainingLessonLight,
+                  lessonText: brandTrainingLessonTextLight,
+                  block: brandTrainingBlockLight,
+                  field: brandTrainingFieldLight,
+                  filled: brandTrainingFilledLight,
+                  filledText: brandTrainingFilledTextLight,
+                  filledHover: brandTrainingFilledHoverLight,
+                  outline: brandTrainingOutlineLight,
+                  outlineText: brandTrainingOutlineTextLight,
+                  outlineHover: brandTrainingOutlineHoverLight,
+                },
+                {
+                  mode: 'dark',
+                  title: 'Dark mode',
+                  header: brandTrainingHeaderDark,
+                  module: brandTrainingModuleDark,
+                  moduleText: brandTrainingModuleTextDark,
+                  lesson: brandTrainingLessonDark,
+                  lessonText: brandTrainingLessonTextDark,
+                  block: brandTrainingBlockDark,
+                  field: brandTrainingFieldDark,
+                  filled: brandTrainingFilledDark,
+                  filledText: brandTrainingFilledTextDark,
+                  filledHover: brandTrainingFilledHoverDark,
+                  outline: brandTrainingOutlineDark,
+                  outlineText: brandTrainingOutlineTextDark,
+                  outlineHover: brandTrainingOutlineHoverDark,
+                },
+              ].map((swatch) => {
+                const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
+                const rows = [
+                  [
+                    {
+                      title: 'Headers',
+                      fields: [['trainingHeaderColor', 'Background', swatch.header]],
+                    },
+                    {
+                      title: 'Selected module',
+                      fields: [
+                        ['trainingModuleColor', 'Background', swatch.module],
+                        ['trainingModuleTextColor', 'Text', swatch.moduleText],
+                      ],
+                    },
+                    {
+                      title: 'Selected lesson',
+                      fields: [
+                        ['trainingLessonColor', 'Background', swatch.lesson],
+                        ['trainingLessonTextColor', 'Text', swatch.lessonText],
+                      ],
+                    },
+                    {
+                      title: 'Blocks',
+                      fields: [
+                        ['trainingBlockColor', 'Card', swatch.block],
+                        ['trainingFieldColor', 'Field', swatch.field],
+                      ],
+                    },
+                  ],
+                  [
+                    {
+                      title: 'Filled buttons',
+                      fields: [
+                        ['trainingFilledColor', 'Button', swatch.filled],
+                        ['trainingFilledHoverColor', 'Hover', swatch.filledHover],
+                        ['trainingFilledTextColor', 'Text', swatch.filledText],
+                      ],
+                    },
+                    {
+                      title: 'Outlined buttons',
+                      fields: [
+                        ['trainingOutlineColor', 'Button', swatch.outline],
+                        ['trainingOutlineHoverColor', 'Hover', swatch.outlineHover],
+                        ['trainingOutlineTextColor', 'Text', swatch.outlineText],
+                      ],
+                    },
+                  ],
+                ] as const;
+                return (
+                  <div class="space-y-4" data-brand-training-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
+                    {rows.map((columns, rowIndex) => (
+                      <div class:list={['grid items-start gap-4', rowIndex === 0 ? 'grid-cols-4' : 'grid-cols-3']}>
+                        {columns.map((column) => (
+                          <div class="min-w-0 space-y-4">
+                            <h4 class="text-sm font-semibold text-charcoal">{column.title}</h4>
+                            {column.fields.map(([key, label, value]) => {
+                              const color = brandColorParts(value);
+                              const id = `${key}${suffix}`;
+                              return (
+                                <label class="block text-sm font-medium text-charcoal">
+                                  {label}
+                                  <span class="mt-1.5 flex items-center gap-2">
+                                    <input class="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-sage-dark/15 bg-white p-1" type="color" value={color.opaque} data-brand-color={id} />
+                                    <input class="field mt-0 min-w-0" type="text" value={color.opaque} maxlength="7" data-brand-hex={id} aria-label={`${swatch.title} ${column.title} ${label} hex`} />
+                                    <input type="hidden" name={id} value={color.full} data-brand-value={id} />
+                                  </span>
+                                  <span class="mt-1.5 flex items-center gap-2">
+                                    <input class="h-1.5 w-full cursor-pointer accent-sage-dark" type="range" min="0" max="100" value={color.alpha} data-brand-alpha={id} aria-label={`${swatch.title} ${column.title} ${label} transparency`} />
+                                    <span class="w-9 shrink-0 text-right text-xs tabular-nums text-sage-dark/55" data-brand-alpha-label={id}>{color.alpha}%</span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ))}
+                        {rowIndex === 1 ? (
+                          <div class="min-w-0 space-y-4">
+                            <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
+                            <div class="overflow-hidden rounded-xl border border-sage-dark/10 bg-white" data-brand-preview-training={swatch.mode}>
+                              <div class="flex items-center justify-between gap-2 px-2.5 py-2" data-brand-preview-training-header={swatch.mode} style={`background-color:${swatch.header}`}>
+                                <div class="min-w-0">
+                                  <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-sage-dark/55">In this module</p>
+                                  <p class="text-xs font-semibold text-charcoal">Getting Started</p>
+                                </div>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold" data-brand-preview-training-outline={swatch.mode} style={`border-color:${swatch.outline};color:${swatch.outlineText};--brand-preview-hover:${swatch.outlineHover}`}>Preview</span>
+                              </div>
+                              <div class="space-y-1.5 p-2">
+                                <div class="rounded-md px-2 py-1 text-xs font-semibold" data-brand-preview-training-module={swatch.mode} style={`background-color:${swatch.module};color:${swatch.moduleText}`}>Onboarding</div>
+                                <div class="rounded-md px-2 py-1 text-xs font-semibold" data-brand-preview-training-lesson={swatch.mode} style={`background-color:${swatch.lesson};color:${swatch.lessonText}`}>Getting Started</div>
+                                <div class="rounded-lg px-2 py-2" data-brand-preview-training-block={swatch.mode} style={`background-color:${swatch.block}`}>
+                                  <div class="rounded px-2 py-1 text-[11px] text-charcoal" data-brand-preview-training-field={swatch.mode} style={`background-color:${swatch.field}`}>Written content</div>
+                                  <span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold" data-brand-preview-training-filled={swatch.mode} style={`background-color:${swatch.filled};color:${swatch.filledText};--brand-preview-hover:${swatch.filledHover}`}>Save</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            }
+            <button type="submit" class="btn-primary !px-4 !py-2">Save</button>
+            <p class="mt-3 hidden text-sm text-sage-dark/70" data-brand-status></p>
+            <p class="mt-3 hidden text-sm text-red-700" data-brand-error></p>
+          </div>
+        </details>
       </form>
     </section>
 
@@ -2182,6 +2374,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
     };
     bindBrandModeSwitch(brandingForm.querySelector('[data-brand-mode-switch]'), '[data-brand-page-panel]');
     bindBrandModeSwitch(brandingForm.querySelector('[data-brand-widget-mode-switch]'), '[data-brand-widget-panel]');
+    bindBrandModeSwitch(brandingForm.querySelector('[data-brand-training-mode-switch]'), '[data-brand-training-panel]');
 
     const colorKeys = [
       'bgColorLight',
@@ -2232,6 +2425,32 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'widgetOutlineColorDark',
       'widgetOutlineTextColorDark',
       'widgetOutlineHoverColorDark',
+      'trainingHeaderColorLight',
+      'trainingModuleColorLight',
+      'trainingModuleTextColorLight',
+      'trainingLessonColorLight',
+      'trainingLessonTextColorLight',
+      'trainingBlockColorLight',
+      'trainingFieldColorLight',
+      'trainingFilledColorLight',
+      'trainingFilledTextColorLight',
+      'trainingFilledHoverColorLight',
+      'trainingOutlineColorLight',
+      'trainingOutlineTextColorLight',
+      'trainingOutlineHoverColorLight',
+      'trainingHeaderColorDark',
+      'trainingModuleColorDark',
+      'trainingModuleTextColorDark',
+      'trainingLessonColorDark',
+      'trainingLessonTextColorDark',
+      'trainingBlockColorDark',
+      'trainingFieldColorDark',
+      'trainingFilledColorDark',
+      'trainingFilledTextColorDark',
+      'trainingFilledHoverColorDark',
+      'trainingOutlineColorDark',
+      'trainingOutlineTextColorDark',
+      'trainingOutlineHoverColorDark',
     ];
 
     const readColor = (key: string) => {
@@ -2338,6 +2557,46 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.color = widgetOutlineText;
         el.style.setProperty('--brand-preview-hover', widgetOutlineHover);
       });
+      const trainingHeader = readColor(`trainingHeaderColor${suffix}`);
+      const trainingModule = readColor(`trainingModuleColor${suffix}`);
+      const trainingModuleText = readColor(`trainingModuleTextColor${suffix}`);
+      const trainingLesson = readColor(`trainingLessonColor${suffix}`);
+      const trainingLessonText = readColor(`trainingLessonTextColor${suffix}`);
+      const trainingBlock = readColor(`trainingBlockColor${suffix}`);
+      const trainingField = readColor(`trainingFieldColor${suffix}`);
+      const trainingFilled = readColor(`trainingFilledColor${suffix}`);
+      const trainingFilledText = readColor(`trainingFilledTextColor${suffix}`);
+      const trainingFilledHover = readColor(`trainingFilledHoverColor${suffix}`);
+      const trainingOutline = readColor(`trainingOutlineColor${suffix}`);
+      const trainingOutlineText = readColor(`trainingOutlineTextColor${suffix}`);
+      const trainingOutlineHover = readColor(`trainingOutlineHoverColor${suffix}`);
+      paint('training-header', (el) => {
+        el.style.backgroundColor = trainingHeader;
+      });
+      paint('training-module', (el) => {
+        el.style.backgroundColor = trainingModule;
+        el.style.color = trainingModuleText;
+      });
+      paint('training-lesson', (el) => {
+        el.style.backgroundColor = trainingLesson;
+        el.style.color = trainingLessonText;
+      });
+      paint('training-block', (el) => {
+        el.style.backgroundColor = trainingBlock;
+      });
+      paint('training-field', (el) => {
+        el.style.backgroundColor = trainingField;
+      });
+      paint('training-filled', (el) => {
+        el.style.backgroundColor = trainingFilled;
+        el.style.color = trainingFilledText;
+        el.style.setProperty('--brand-preview-hover', trainingFilledHover);
+      });
+      paint('training-outline', (el) => {
+        el.style.borderColor = trainingOutline;
+        el.style.color = trainingOutlineText;
+        el.style.setProperty('--brand-preview-hover', trainingOutlineHover);
+      });
     };
 
     const syncPair = (key: string, fromColor: boolean) => {
@@ -2436,6 +2695,32 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       widgetOutlineColorDark?: string | null;
       widgetOutlineTextColorDark?: string | null;
       widgetOutlineHoverColorDark?: string | null;
+      trainingHeaderColorLight?: string | null;
+      trainingModuleColorLight?: string | null;
+      trainingModuleTextColorLight?: string | null;
+      trainingLessonColorLight?: string | null;
+      trainingLessonTextColorLight?: string | null;
+      trainingBlockColorLight?: string | null;
+      trainingFieldColorLight?: string | null;
+      trainingFilledColorLight?: string | null;
+      trainingFilledTextColorLight?: string | null;
+      trainingFilledHoverColorLight?: string | null;
+      trainingOutlineColorLight?: string | null;
+      trainingOutlineTextColorLight?: string | null;
+      trainingOutlineHoverColorLight?: string | null;
+      trainingHeaderColorDark?: string | null;
+      trainingModuleColorDark?: string | null;
+      trainingModuleTextColorDark?: string | null;
+      trainingLessonColorDark?: string | null;
+      trainingLessonTextColorDark?: string | null;
+      trainingBlockColorDark?: string | null;
+      trainingFieldColorDark?: string | null;
+      trainingFilledColorDark?: string | null;
+      trainingFilledTextColorDark?: string | null;
+      trainingFilledHoverColorDark?: string | null;
+      trainingOutlineColorDark?: string | null;
+      trainingOutlineTextColorDark?: string | null;
+      trainingOutlineHoverColorDark?: string | null;
     }) => {
       const onHeader = (hex: string | null | undefined, fallback: string) => {
         const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((hex ?? '').trim());
@@ -2555,6 +2840,65 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         const alpha = (value: string | null | undefined, fallback: string) => hexAlpha(value || fallback);
         return `${selector}{--portal-widget-outline:${channels(color, colorFallback)} !important;--portal-widget-outline-a:${alpha(color, colorFallback)} !important;--portal-widget-outline-text:${channels(text, textFallback)} !important;--portal-widget-outline-text-a:${alpha(text, textFallback)} !important;--portal-widget-outline-hover:${channels(hover, hoverFallback)} !important;--portal-widget-outline-hover-a:${alpha(hover, hoverFallback)} !important;}`;
       };
+      const trainingRule = (selector: string, mode: 'Light' | 'Dark') => {
+        const accent = mode === 'Light' ? branding.accentColorLight : branding.accentColorDark;
+        const accentBase = accent && accent.length >= 7 ? accent.slice(0, 7) : mode === 'Light' ? '#788F75' : '#8A9E86';
+        const fallbacks: Record<string, string> = mode === 'Light'
+          ? {
+              header: branding.selectedColorLight || '#F7F8FA',
+              module: branding.primaryColorLight || '#535F51',
+              'module-text': branding.primaryTextColorLight || '#F7F4EE',
+              lesson: `${accentBase}40`,
+              'lesson-text': branding.textColorLight || '#535F51',
+              block: '#F7F8FA',
+              field: branding.surfaceColorLight || '#FFFFFF',
+              filled: branding.primaryColorLight || '#535F51',
+              'filled-text': branding.primaryTextColorLight || '#F7F4EE',
+              'filled-hover': branding.primaryHoverColorLight || branding.accentColorLight || '#788F75',
+              outline: branding.accentColorLight || '#788F75',
+              'outline-text': branding.accentTextColorLight || branding.accentColorLight || '#788F75',
+              'outline-hover': branding.accentHoverColorLight || `${accentBase}1A`,
+            }
+          : {
+              header: branding.selectedColorDark || '#2A2E2A',
+              module: branding.primaryColorDark || '#BAC6B6',
+              'module-text': branding.primaryTextColorDark || '#111311',
+              lesson: `${accentBase}40`,
+              'lesson-text': branding.textColorDark || '#BAC6B6',
+              block: '#252925',
+              field: branding.surfaceColorDark || '#1E211E',
+              filled: branding.primaryColorDark || '#BAC6B6',
+              'filled-text': branding.primaryTextColorDark || '#111311',
+              'filled-hover': branding.primaryHoverColorDark || branding.accentColorDark || '#8A9E86',
+              outline: branding.accentColorDark || '#8A9E86',
+              'outline-text': branding.accentTextColorDark || branding.accentColorDark || '#8A9E86',
+              'outline-hover': branding.accentHoverColorDark || `${accentBase}1A`,
+            };
+        const keys: Record<string, string> = {
+          header: 'trainingHeaderColor',
+          module: 'trainingModuleColor',
+          'module-text': 'trainingModuleTextColor',
+          lesson: 'trainingLessonColor',
+          'lesson-text': 'trainingLessonTextColor',
+          block: 'trainingBlockColor',
+          field: 'trainingFieldColor',
+          filled: 'trainingFilledColor',
+          'filled-text': 'trainingFilledTextColor',
+          'filled-hover': 'trainingFilledHoverColor',
+          outline: 'trainingOutlineColor',
+          'outline-text': 'trainingOutlineTextColor',
+          'outline-hover': 'trainingOutlineHoverColor',
+        };
+        const decl = Object.entries(keys)
+          .map(([name, key]) => {
+            const stored = branding[`${key}${mode}` as keyof typeof branding] as string | null | undefined;
+            const hex = stored || fallbacks[name];
+            const channels = hexChannels(hex) ?? '247 248 250';
+            return `--portal-training-${name}:${channels} !important;--portal-training-${name}-a:${hexAlpha(hex)} !important;`;
+          })
+          .join('');
+        return `${selector}{${decl}}`;
+      };
       let style = document.getElementById('org-brand');
       if (!(style instanceof HTMLStyleElement)) {
         style = document.createElement('style');
@@ -2603,7 +2947,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         widgetOutlineRule('html', branding.widgetOutlineColorLight, '#535F5140', branding.widgetOutlineTextColorLight, '#535F51CC', branding.widgetOutlineHoverColorLight, '#535F511A') +
         widgetOutlineRule('html.dark', branding.widgetOutlineColorDark, '#BAC6B666', branding.widgetOutlineTextColorDark, '#BAC6B6', branding.widgetOutlineHoverColorDark, '#BAC6B61A') +
         selectedItemRule('html', branding.selectedColorLight, branding.accentColorLight ? `${branding.accentColorLight.slice(0, 7)}33` : '#788F7533', branding.selectedTextColorLight, branding.textColorLight, '#535F51', branding.selectedHoverColorLight, branding.accentColorLight ? `${branding.accentColorLight.slice(0, 7)}1A` : '#788F751A') +
-        selectedItemRule('html.dark', branding.selectedColorDark, branding.accentColorDark ? `${branding.accentColorDark.slice(0, 7)}33` : '#8A9E8633', branding.selectedTextColorDark, branding.textColorDark, '#BAC6B6', branding.selectedHoverColorDark, branding.accentColorDark ? `${branding.accentColorDark.slice(0, 7)}1A` : '#8A9E861A');
+        selectedItemRule('html.dark', branding.selectedColorDark, branding.accentColorDark ? `${branding.accentColorDark.slice(0, 7)}33` : '#8A9E8633', branding.selectedTextColorDark, branding.textColorDark, '#BAC6B6', branding.selectedHoverColorDark, branding.accentColorDark ? `${branding.accentColorDark.slice(0, 7)}1A` : '#8A9E861A') +
+        trainingRule('html', 'Light') +
+        trainingRule('html.dark', 'Dark');
     };
 
     brandingForm.addEventListener(

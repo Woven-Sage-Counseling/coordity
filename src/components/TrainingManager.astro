@@ -174,7 +174,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
     <div class="grid min-h-[42rem] lg:h-[min(94vh,68rem)] lg:grid-cols-[13.5rem_15.5rem_minmax(0,1fr)]">
       {/* Column 1 — Modules */}
       <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r lg:h-full">
-        <div class="item-selected-surface border-b border-sage-dark/10 px-3 py-2.5">
+        <div class="training-header border-b border-sage-dark/10 px-3 py-2.5">
           <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">Modules</p>
           <p class="mt-0.5 text-[11px] text-sage-dark/55">Topics / folders</p>
         </div>
@@ -190,7 +190,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   class:list={[
                     'block rounded-lg px-2.5 py-2 text-sm transition',
                     selected?.id === module.id
-                      ? 'bg-brand text-onbrand'
+                      ? 'training-module-selected'
                       : 'text-charcoal hover:bg-[#f4f5f8]',
                   ]}
                 >
@@ -198,7 +198,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   <span
                     class:list={[
                       'mt-0.5 block text-[11px]',
-                      selected?.id === module.id ? 'text-white/65' : 'text-sage-dark/55',
+                      selected?.id === module.id ? 'opacity-70' : 'text-sage-dark/55',
                     ]}
                   >
                     {kindLabel(module.kind)}
@@ -209,10 +209,10 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
             )
           }
         </div>
-        <div class="item-selected-surface border-t border-sage-dark/10 px-3 py-2.5">
+        <div class="training-header border-t border-sage-dark/10 px-3 py-2.5">
           <button
             type="button"
-            class="item-selected-hover w-full rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-charcoal transition"
+            class="w-full rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-charcoal transition hover:bg-black/5"
             data-training-new-toggle
             aria-expanded="false"
             aria-controls="training-new-module-panel"
@@ -224,7 +224,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
 
       {/* Column 2 — Contents of selected module */}
       <div class="flex min-h-0 flex-col border-b border-sage-dark/10 lg:border-b-0 lg:border-r lg:h-full">
-        <div class="item-selected-surface border-b border-sage-dark/10 px-3 py-2.5">
+        <div class="training-header border-b border-sage-dark/10 px-3 py-2.5">
           {
             selected ? (
               <>
@@ -235,29 +235,26 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     </p>
                     <p class="mt-0.5 break-words text-sm font-semibold leading-snug text-charcoal">{selected.title}</p>
                   </div>
-                  <div class="flex shrink-0 flex-col items-end gap-1">
+                  <div class="flex shrink-0 items-center gap-1">
                     <a
                       href={moduleHref(selected.id, { view: 'settings' })}
                       data-training-nav="settings"
                       class:list={[
-                        'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
-                        selectedView === 'settings' ? 'bg-brand text-onbrand' : 'outline-btn',
+                        'rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none transition',
+                        selectedView === 'settings' ? 'training-filled' : 'training-outline',
                       ]}
                     >
                       Settings
                     </a>
                     <button
                       type="button"
-                      class="outline-btn rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                      class="training-outline rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none"
                       data-training-preview-open="module"
                     >
                       Preview
                     </button>
                   </div>
                 </div>
-                <p class="mt-1.5 text-[11px] leading-snug text-sage-dark/60">
-                  Add intro text, then lessons and assignments for people to finish.
-                </p>
               </>
             ) : (
               <>
@@ -293,7 +290,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                 </label>
                 <div class="mt-1.5 flex items-center justify-between gap-2">
                   <p class="text-[10px] text-sage-dark/50" data-training-autosave-status></p>
-                  <button class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]" type="submit">
+                  <button class="training-outline rounded-full px-2.5 py-1 text-[11px] font-semibold" type="submit">
                     Save
                   </button>
                 </div>
@@ -304,7 +301,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   To complete
                 </p>
                 <details class="relative" data-training-add>
-                  <summary class="cursor-pointer list-none rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold text-onbrand [&::-webkit-details-marker]:hidden">
+                  <summary class="training-filled cursor-pointer list-none rounded-full px-2.5 py-1 text-[11px] font-semibold [&::-webkit-details-marker]:hidden">
                     + Add
                   </summary>
                   <form
@@ -335,7 +332,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     <p class="mt-1.5 text-[10px] leading-snug text-sage-dark/55">
                       Lesson = multi-step. Assignment = one short to-do.
                     </p>
-                    <button class="btn-primary mt-2 w-full !px-2.5 !py-1.5 text-xs" type="submit">
+                    <button class="training-filled mt-2 w-full !px-2.5 !py-1.5 text-xs" type="submit">
                       Add to list
                     </button>
                   </form>
@@ -355,7 +352,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                           class:list={[
                             'block rounded-lg px-2.5 py-2 text-sm transition',
                             selectedItem?.id === item.id
-                              ? 'bg-sage/25 font-semibold text-charcoal ring-1 ring-sage-dark/15'
+                              ? 'training-lesson-selected font-semibold'
                               : 'text-charcoal hover:bg-[#f4f5f8]',
                           ]}
                         >
@@ -380,7 +377,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                           class:list={[
                             'block rounded-lg px-2.5 py-2 text-sm transition',
                             selectedItem?.id === item.id
-                              ? 'bg-sage/25 font-semibold text-charcoal ring-1 ring-sage-dark/15'
+                              ? 'training-lesson-selected font-semibold'
                               : 'text-charcoal hover:bg-[#f4f5f8]',
                           ]}
                         >
@@ -440,7 +437,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   )}
                   <p class="mt-4 text-sm font-semibold text-sage-dark/80">0% complete</p>
                   <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#e3e5e8]">
-                    <div class="h-full w-0 rounded-full bg-brand" />
+                    <div class="training-fill h-full w-0 rounded-full" />
                   </div>
                 </div>
 
@@ -502,7 +499,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
 
       {/* Column 3 — Detail editor */}
       <div class="flex min-h-0 flex-col lg:h-full">
-        <div class="item-selected-surface border-b border-sage-dark/10 px-3 py-2.5">
+        <div class="training-header border-b border-sage-dark/10 px-3 py-2.5">
           <p class="text-xs font-semibold uppercase tracking-[0.12em] text-sage-dark/55">
             {selectedItem
               ? selectedIsAssignment
@@ -577,7 +574,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     <textarea class="field mt-1.5" name="description" rows="3">{selected.description}</textarea>
                   </label>
                   <div class="flex flex-wrap gap-2">
-                    <button class="btn-primary !px-4 !py-2 text-sm" type="submit">Save intro text</button>
+                    <button class="training-filled !px-4 !py-2 text-sm" type="submit">Save intro text</button>
                     {selected.kind === 'custom' ? (
                       <button
                         class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
@@ -605,7 +602,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                   </div>
                   <div class="flex shrink-0 flex-col items-end gap-1">
                     <details class="relative" data-training-item-settings>
-                      <summary class="cursor-pointer list-none rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 [&::-webkit-details-marker]:hidden hover:bg-[#f4f5f8]">
+                      <summary class="training-outline cursor-pointer list-none rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none [&::-webkit-details-marker]:hidden">
                         Settings
                       </summary>
                       <form
@@ -677,7 +674,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                     </details>
                     <button
                       type="button"
-                      class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-[#f4f5f8]"
+                      class="training-outline rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none"
                       data-training-preview-open="lesson"
                     >
                       Preview
@@ -832,7 +829,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                     Review and sign this document to continue.
                                   </p>
                                 )}
-                                <button class="btn-primary mt-4" type="button" disabled>
+                                <button class="training-filled mt-4" type="button" disabled>
                                   Sign document
                                 </button>
                               </section>
@@ -910,7 +907,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                       )
                     }
                     <div class="rounded-xl border border-dashed border-sage-dark/20 px-4 py-3">
-                      <button class="btn-primary" type="button" disabled>
+                      <button class="training-filled" type="button" disabled>
                         Mark {selectedIsAssignment ? 'assignment' : 'lesson'} complete
                       </button>
                     </div>
@@ -1153,7 +1150,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                               ) : null}
                               <div class="flex flex-wrap items-center gap-2">
                                 {needsExplicitSave ? (
-                                  <button class="btn-primary !px-3 !py-1.5 text-xs" type="submit">
+                                  <button class="training-filled !px-3 !py-1.5 text-xs" type="submit">
                                     Save block
                                   </button>
                                 ) : (
@@ -1212,7 +1209,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                     />
                                   </label>
                                   <div class="flex items-end">
-                                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">
+                                    <button class="training-filled !px-3 !py-2 text-xs" type="submit">
                                       Add question
                                     </button>
                                   </div>
@@ -1299,7 +1296,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                         <option value="docusign">DocuSign document</option>
                       </select>
                     </label>
-                    <button class="btn-primary !px-3 !py-2 text-xs" type="submit">Add</button>
+                    <button class="training-filled !px-3 !py-2 text-xs" type="submit">Add</button>
                   </form>
                 </div>
               </div>
@@ -1415,7 +1412,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                 </label>
               ))}
             </div>
-            <button class="btn-primary mt-4 !px-4 !py-2 text-sm" type="submit">Create module</button>
+            <button class="training-filled mt-4 !px-4 !py-2 text-sm" type="submit">Create module</button>
           </div>
         </form>
       </div>
@@ -1454,7 +1451,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                 data-training-trainee-results
               ></div>
             </label>
-            <button class="btn-primary !px-4 !py-2 text-sm" type="submit" data-training-trainee-open>
+            <button class="training-filled !px-4 !py-2 text-sm" type="submit" data-training-trainee-open>
               View
             </button>
           </form>
