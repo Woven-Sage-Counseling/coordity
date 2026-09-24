@@ -1498,7 +1498,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </div>
                     <div
                       class:list={[
-                        'brand-alpha-swatch rounded-xl border px-3 py-3',
+                        'rounded-xl border px-3 py-3',
                         swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
                       ]}
                       data-brand-preview={swatch.mode}
@@ -1507,16 +1507,16 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       <p class="font-display text-lg leading-tight" data-brand-preview-heading={swatch.mode} style={`color:${swatch.text}`}>Welcome back</p>
                       <p class="mt-1 text-sm leading-snug" data-brand-preview-body={swatch.mode} style={`color:${swatch.text}`}>Your workspace, in your colors.</p>
                       <div
-                        class="brand-alpha-swatch mt-3 rounded-lg border border-black/10 px-3 py-2.5"
+                        class="mt-3 rounded-lg border border-black/10 px-3 py-2.5"
                         data-brand-preview-card={swatch.mode}
                         style={`background-color:${swatch.surface}`}
                       >
                         <p class="text-sm font-semibold" data-brand-preview-card-title={swatch.mode} style={`color:${swatch.text}`}>Today</p>
                         <p class="mt-0.5 text-xs" data-brand-preview-muted={swatch.mode} style={`color:${swatch.text};opacity:.65`}>On a card</p>
                         <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                          <span class="brand-alpha-swatch inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText}`}>Save</span>
+                          <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText}`}>Save</span>
                           <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText}`}>Details</span>
-                          <span class="brand-alpha-swatch inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip={swatch.mode} style={`background-color:color-mix(in srgb, ${swatch.accent} ${swatch.chipMix}%, transparent);color:${swatch.accentText}`}>Tag</span>
+                          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" data-brand-preview-chip={swatch.mode} style={`background-color:color-mix(in srgb, ${swatch.accent} ${swatch.chipMix}%, transparent);color:${swatch.accentText}`}>Tag</span>
                         </div>
                       </div>
                     </div>
@@ -1598,7 +1598,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         })}
                       </div>
                     </div>
-                    <div class="brand-alpha-swatch overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
+                    <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
                       <div class="px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>Calendar</div>
                       <div class="px-3 py-3 text-xs" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>Thursday · 2:00</div>
                     </div>
