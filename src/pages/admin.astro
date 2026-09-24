@@ -88,6 +88,7 @@ const brandAccentLight = organization?.accentColorLight ?? '#788F75';
 const brandAccentTextLight = organization?.accentTextColorLight ?? brandAccentLight;
 const brandWidgetHeaderLight = organization?.widgetHeaderColorLight ?? '#535F51';
 const brandWidgetBgLight = organization?.widgetBgColorLight ?? '#F4F5F8';
+const brandWidgetCardLight = organization?.widgetCardColorLight ?? brandSurfaceLight;
 const brandBgDark = organization?.bgColorDark ?? '#111311';
 const brandSurfaceDark = organization?.surfaceColorDark ?? '#1E211E';
 const brandTextDark = organization?.textColorDark ?? '#BAC6B6';
@@ -97,6 +98,7 @@ const brandAccentDark = organization?.accentColorDark ?? '#8A9E86';
 const brandAccentTextDark = organization?.accentTextColorDark ?? brandAccentDark;
 const brandWidgetHeaderDark = organization?.widgetHeaderColorDark ?? '#535F51';
 const brandWidgetBgDark = organization?.widgetBgColorDark ?? '#252925';
+const brandWidgetCardDark = organization?.widgetCardColorDark ?? brandSurfaceDark;
 
 function brandColorParts(value: string): { opaque: string; alpha: number; full: string } {
   const match = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(value.trim());
@@ -1529,7 +1531,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
             <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Home widgets</h4>
             <p class="text-sm text-sage-dark/65">
-              The default header bar and the background behind widget content. QuickBooks keeps its own header.
+              The default header bar, the panel behind the content, and the cards inside it. QuickBooks keeps its own header.
             </p>
             {
               [
@@ -1538,18 +1540,21 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   title: 'Light mode',
                   header: brandWidgetHeaderLight,
                   background: brandWidgetBgLight,
+                  card: brandWidgetCardLight,
                 },
                 {
                   mode: 'dark',
                   title: 'Dark mode',
                   header: brandWidgetHeaderDark,
                   background: brandWidgetBgDark,
+                  card: brandWidgetCardDark,
                 },
               ].map((swatch) => {
                 const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
                 const fields = [
                   ['widgetHeaderColor', 'Header', swatch.header],
                   ['widgetBgColor', 'Background', swatch.background],
+                  ['widgetCardColor', 'Cards', swatch.card],
                 ] as const;
                 return (
                   <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
@@ -1600,7 +1605,12 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </div>
                     <div class="overflow-hidden rounded-xl border border-black/10" data-brand-preview-widget={swatch.mode}>
                       <div class="px-3 py-2 text-sm font-semibold" data-brand-preview-widget-header={swatch.mode} style={`background-color:${swatch.header};color:#F7F4EE`}>Calendar</div>
-                      <div class="px-3 py-3 text-xs" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>Thursday · 2:00</div>
+                      <div class="px-3 py-3" data-brand-preview-widget-body={swatch.mode} style={`background-color:${swatch.background}`}>
+                        <div class="rounded-lg px-2.5 py-2 shadow-sm ring-1 ring-black/5" data-brand-preview-widget-card={swatch.mode} style={`background-color:${swatch.card};color:${swatch.mode === 'dark' ? '#E8E6E0' : '#3A3A38'}`}>
+                          <p class="text-xs font-semibold">Thursday</p>
+                          <p class="mt-0.5 text-[11px] opacity-70">2:00 · Team meeting</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1938,8 +1948,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'accentTextColorDark',
       'widgetHeaderColorLight',
       'widgetBgColorLight',
+      'widgetCardColorLight',
       'widgetHeaderColorDark',
       'widgetBgColorDark',
+      'widgetCardColorDark',
     ];
 
     const readColor = (key: string) => {
@@ -1960,6 +1972,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const accentText = readColor(`accentTextColor${suffix}`);
       const widgetHeader = readColor(`widgetHeaderColor${suffix}`);
       const widgetBg = readColor(`widgetBgColor${suffix}`);
+      const widgetCard = readColor(`widgetCardColor${suffix}`);
       const preview = brandingForm.querySelector(`[data-brand-preview="${mode}"]`);
       if (preview instanceof HTMLElement) preview.style.backgroundColor = bg;
       const paint = (role: string, apply: (el: HTMLElement) => void) => {
@@ -2008,6 +2021,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       });
       paint('widget-body', (el) => {
         el.style.backgroundColor = widgetBg;
+      });
+      paint('widget-card', (el) => {
+        el.style.backgroundColor = widgetCard;
       });
     };
 
@@ -2075,8 +2091,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       accentTextColorDark?: string | null;
       widgetHeaderColorLight?: string | null;
       widgetBgColorLight?: string | null;
+      widgetCardColorLight?: string | null;
       widgetHeaderColorDark?: string | null;
       widgetBgColorDark?: string | null;
+      widgetCardColorDark?: string | null;
     }) => {
       const onHeader = (hex: string | null | undefined, fallback: string) => {
         const match = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/.exec((hex ?? '').trim());
@@ -2101,6 +2119,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         widgetHeader: string,
         widgetHeaderFg: string,
         widgetBg: string,
+        widgetCard: string,
         alphas: {
           bg: string;
           surface: string;
@@ -2110,9 +2129,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           accent: string;
           accentText: string;
           widgetBg: string;
+          widgetCard: string;
         },
       ) =>
-        `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;}`;
+        `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;--portal-widget-card:${widgetCard} !important;--portal-widget-card-a:${alphas.widgetCard} !important;}`;
       const lightBg = hexChannels(branding.bgColorLight) ?? '247 244 238';
       const lightSurface = hexChannels(branding.surfaceColorLight) ?? '255 255 255';
       const lightText = hexChannels(branding.textColorLight) ?? hexChannels(branding.primaryColorLight) ?? '83 95 81';
@@ -2122,6 +2142,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const lightAccentText = hexChannels(branding.accentTextColorLight) ?? lightAccent;
       const lightWidgetHeader = onHeader(branding.widgetHeaderColorLight, '#535F51');
       const lightWidgetBg = hexChannels(branding.widgetBgColorLight) ?? '244 245 248';
+      const lightWidgetCard = hexChannels(branding.widgetCardColorLight) ?? lightSurface;
       const darkBg = hexChannels(branding.bgColorDark) ?? '17 19 17';
       const darkSurface = hexChannels(branding.surfaceColorDark) ?? '30 33 30';
       const darkText = hexChannels(branding.textColorDark) ?? hexChannels(branding.primaryColorDark) ?? '186 198 182';
@@ -2131,6 +2152,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const darkAccentText = hexChannels(branding.accentTextColorDark) ?? darkAccent;
       const darkWidgetHeader = onHeader(branding.widgetHeaderColorDark, '#535F51');
       const darkWidgetBg = hexChannels(branding.widgetBgColorDark) ?? '37 41 37';
+      const darkWidgetCard = hexChannels(branding.widgetCardColorDark) ?? darkSurface;
       let style = document.getElementById('org-brand');
       if (!(style instanceof HTMLStyleElement)) {
         style = document.createElement('style');
@@ -2138,7 +2160,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         document.head.appendChild(style);
       }
       style.textContent =
-        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg, {
+        block('html', lightBg, lightSurface, lightText, lightPrimary, lightPrimaryText, lightAccent, lightAccentText, lightWidgetHeader.value, lightWidgetHeader.fg, lightWidgetBg, lightWidgetCard, {
           bg: hexAlpha(branding.bgColorLight),
           surface: hexAlpha(branding.surfaceColorLight),
           text: hexAlpha(branding.textColorLight),
@@ -2147,8 +2169,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           accent: hexAlpha(branding.accentColorLight),
           accentText: hexAlpha(branding.accentTextColorLight),
           widgetBg: hexAlpha(branding.widgetBgColorLight),
+          widgetCard: hexAlpha(branding.widgetCardColorLight),
         }) +
-        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg, {
+        block('html.dark', darkBg, darkSurface, darkText, darkPrimary, darkPrimaryText, darkAccent, darkAccentText, darkWidgetHeader.value, darkWidgetHeader.fg, darkWidgetBg, darkWidgetCard, {
           bg: hexAlpha(branding.bgColorDark),
           surface: hexAlpha(branding.surfaceColorDark),
           text: hexAlpha(branding.textColorDark),
@@ -2157,6 +2180,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           accent: hexAlpha(branding.accentColorDark),
           accentText: hexAlpha(branding.accentTextColorDark),
           widgetBg: hexAlpha(branding.widgetBgColorDark),
+          widgetCard: hexAlpha(branding.widgetCardColorDark),
         });
     };
 
@@ -2200,8 +2224,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             accentTextColorDark?: string | null;
             widgetHeaderColorLight?: string | null;
             widgetBgColorLight?: string | null;
+            widgetCardColorLight?: string | null;
             widgetHeaderColorDark?: string | null;
             widgetBgColorDark?: string | null;
+            widgetCardColorDark?: string | null;
           };
         };
         if (!res.ok) throw new Error(json.error || 'Could not save branding.');

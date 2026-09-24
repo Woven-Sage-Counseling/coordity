@@ -89,6 +89,7 @@ export interface PortalOrganization {
   accentTextColorLight: string | null;
   widgetHeaderColorLight: string | null;
   widgetBgColorLight: string | null;
+  widgetCardColorLight: string | null;
   /** Dark-mode colors (#RRGGBB), or null for portal defaults. */
   bgColorDark: string | null;
   surfaceColorDark: string | null;
@@ -99,6 +100,7 @@ export interface PortalOrganization {
   accentTextColorDark: string | null;
   widgetHeaderColorDark: string | null;
   widgetBgColorDark: string | null;
+  widgetCardColorDark: string | null;
   invertLogoDark: boolean;
   /** Soft-delete timestamp; archived orgs are hidden from tenants. */
   archivedAt: number | null;
@@ -115,6 +117,7 @@ export const DEFAULT_ORG_COLORS = {
     accentText: '#788F75',
     widgetHeader: '#535F51',
     widgetBg: '#F4F5F8',
+    widgetCard: '#FFFFFF',
   },
   dark: {
     background: '#111311',
@@ -126,6 +129,7 @@ export const DEFAULT_ORG_COLORS = {
     accentText: '#8A9E86',
     widgetHeader: '#535F51',
     widgetBg: '#252925',
+    widgetCard: '#1E211E',
   },
 } as const;
 
@@ -165,6 +169,8 @@ type OrgRow = {
   widget_header_color_dark?: string | null;
   widget_bg_color_light?: string | null;
   widget_bg_color_dark?: string | null;
+  widget_card_color_light?: string | null;
+  widget_card_color_dark?: string | null;
   invert_logo_dark?: number | null;
   archived_at?: number | null;
 };
@@ -195,6 +201,7 @@ function mapOrg(row: OrgRow): PortalOrganization {
     accentTextColorLight: normalizeHexColor(row.accent_text_color_light) ?? normalizeHexColor(row.accent_color_light) ?? legacyAccent,
     widgetHeaderColorLight: normalizeHexColor(row.widget_header_color_light) ?? null,
     widgetBgColorLight: normalizeHexColor(row.widget_bg_color_light) ?? null,
+    widgetCardColorLight: normalizeHexColor(row.widget_card_color_light) ?? null,
     bgColorDark: normalizeHexColor(row.bg_color_dark) ?? null,
     surfaceColorDark: normalizeHexColor(row.surface_color_dark) ?? null,
     textColorDark: normalizeHexColor(row.text_color_dark) ?? normalizeHexColor(row.primary_color_dark),
@@ -204,6 +211,7 @@ function mapOrg(row: OrgRow): PortalOrganization {
     accentTextColorDark: normalizeHexColor(row.accent_text_color_dark) ?? normalizeHexColor(row.accent_color_dark),
     widgetHeaderColorDark: normalizeHexColor(row.widget_header_color_dark) ?? null,
     widgetBgColorDark: normalizeHexColor(row.widget_bg_color_dark) ?? null,
+    widgetCardColorDark: normalizeHexColor(row.widget_card_color_dark) ?? null,
     invertLogoDark: Boolean(row.invert_logo_dark),
     archivedAt: row.archived_at ?? null,
   };
@@ -230,6 +238,7 @@ function wovenSageFallback(): PortalOrganization {
     accentTextColorLight: null,
     widgetHeaderColorLight: null,
     widgetBgColorLight: null,
+    widgetCardColorLight: null,
     bgColorDark: null,
     surfaceColorDark: null,
     textColorDark: null,
@@ -239,12 +248,31 @@ function wovenSageFallback(): PortalOrganization {
     accentTextColorDark: null,
     widgetHeaderColorDark: null,
     widgetBgColorDark: null,
+    widgetCardColorDark: null,
     invertLogoDark: true,
     archivedAt: null,
   };
 }
 
 const ORG_SELECT = `id, name, slug, display_name, logo_url, website_url,
+  CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
+  logo_updated_at,
+  CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
+  favicon_updated_at,
+  primary_color, accent_color,
+  bg_color_light, bg_color_dark,
+  surface_color_light, surface_color_dark,
+  text_color_light, text_color_dark,
+  primary_color_light, primary_color_dark,
+  primary_text_color_light, primary_text_color_dark,
+  accent_color_light, accent_color_dark,
+  accent_text_color_light, accent_text_color_dark,
+  widget_header_color_light, widget_header_color_dark,
+  widget_bg_color_light, widget_bg_color_dark,
+  widget_card_color_light, widget_card_color_dark,
+  invert_logo_dark, archived_at`;
+
+const ORG_SELECT_WIDGET = `id, name, slug, display_name, logo_url, website_url,
   CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 1 ELSE 0 END AS has_logo,
   logo_updated_at,
   CASE WHEN favicon_data IS NOT NULL AND favicon_data != '' THEN 1 ELSE 0 END AS has_favicon,
@@ -316,7 +344,7 @@ async function queryOrganization(
   sqlWithSelect: (select: string) => { sql: string; binds: unknown[] },
 ): Promise<OrgRow | null> {
   const { DB } = getEnv();
-  for (const select of [ORG_SELECT, ORG_SELECT_SURFACE, ORG_SELECT_TEXT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
+  for (const select of [ORG_SELECT, ORG_SELECT_WIDGET, ORG_SELECT_SURFACE, ORG_SELECT_TEXT, ORG_SELECT_COLORS, ORG_SELECT_BRANDING, ORG_SELECT_FAVICON, ORG_SELECT_LEGACY]) {
     try {
       const { sql, binds } = sqlWithSelect(select);
       const row = await DB.prepare(sql).bind(...binds).first<OrgRow>();
@@ -708,6 +736,7 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     accentTextColorLight: org.accentTextColorLight,
     widgetHeaderColorLight: org.widgetHeaderColorLight,
     widgetBgColorLight: org.widgetBgColorLight,
+    widgetCardColorLight: org.widgetCardColorLight,
     bgColorDark: org.bgColorDark,
     surfaceColorDark: org.surfaceColorDark,
     textColorDark: org.textColorDark,
@@ -717,6 +746,7 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     accentTextColorDark: org.accentTextColorDark,
     widgetHeaderColorDark: org.widgetHeaderColorDark,
     widgetBgColorDark: org.widgetBgColorDark,
+    widgetCardColorDark: org.widgetCardColorDark,
     invertLogoDark: org.invertLogoDark,
   };
 }
@@ -734,6 +764,7 @@ export async function updateOrganizationBranding(input: {
   accentTextColorLight?: string | null;
   widgetHeaderColorLight?: string | null;
   widgetBgColorLight?: string | null;
+  widgetCardColorLight?: string | null;
   bgColorDark?: string | null;
   surfaceColorDark?: string | null;
   textColorDark?: string | null;
@@ -743,6 +774,7 @@ export async function updateOrganizationBranding(input: {
   accentTextColorDark?: string | null;
   widgetHeaderColorDark?: string | null;
   widgetBgColorDark?: string | null;
+  widgetCardColorDark?: string | null;
   invertLogoDark?: boolean;
   logoFile?: File | null;
   clearLogo?: boolean;
@@ -811,6 +843,10 @@ export async function updateOrganizationBranding(input: {
     input.widgetBgColorLight !== undefined
       ? (resolveOptionalHex(input.widgetBgColorLight, 'Light widget background color') ?? null)
       : existing.widgetBgColorLight;
+  const widgetCardColorLight =
+    input.widgetCardColorLight !== undefined
+      ? (resolveOptionalHex(input.widgetCardColorLight, 'Light widget card color') ?? null)
+      : existing.widgetCardColorLight;
   const bgColorDark =
     input.bgColorDark !== undefined
       ? (resolveOptionalHex(input.bgColorDark, 'Dark background color') ?? null)
@@ -847,6 +883,10 @@ export async function updateOrganizationBranding(input: {
     input.widgetBgColorDark !== undefined
       ? (resolveOptionalHex(input.widgetBgColorDark, 'Dark widget background color') ?? null)
       : existing.widgetBgColorDark;
+  const widgetCardColorDark =
+    input.widgetCardColorDark !== undefined
+      ? (resolveOptionalHex(input.widgetCardColorDark, 'Dark widget card color') ?? null)
+      : existing.widgetCardColorDark;
 
   // Keep legacy columns in sync with light-mode primary/accent for older readers.
   const legacyPrimary = primaryColorLight;
@@ -879,6 +919,8 @@ export async function updateOrganizationBranding(input: {
          widget_header_color_dark = ?,
          widget_bg_color_light = ?,
          widget_bg_color_dark = ?,
+         widget_card_color_light = ?,
+         widget_card_color_dark = ?,
          invert_logo_dark = ?,
          updated_at = ?
      WHERE id = ?`,
@@ -906,6 +948,8 @@ export async function updateOrganizationBranding(input: {
       widgetHeaderColorDark,
       widgetBgColorLight,
       widgetBgColorDark,
+      widgetCardColorLight,
+      widgetCardColorDark,
       invertLogoDark ? 1 : 0,
       ts,
       input.orgId,

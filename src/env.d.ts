@@ -48,6 +48,7 @@ interface PortalOrganization {
   accentTextColorLight: string | null;
   widgetHeaderColorLight: string | null;
   widgetBgColorLight: string | null;
+  widgetCardColorLight: string | null;
   bgColorDark: string | null;
   surfaceColorDark: string | null;
   textColorDark: string | null;
@@ -57,6 +58,7 @@ interface PortalOrganization {
   accentTextColorDark: string | null;
   widgetHeaderColorDark: string | null;
   widgetBgColorDark: string | null;
+  widgetCardColorDark: string | null;
   invertLogoDark: boolean;
   archivedAt: number | null;
 }

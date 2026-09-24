@@ -39,6 +39,7 @@ const lightAccent = organization?.accentColorLight ?? DEFAULT_ORG_COLORS.light.a
 const lightAccentText = organization?.accentTextColorLight ?? lightAccent;
 const lightWidgetHeader = organization?.widgetHeaderColorLight ?? DEFAULT_ORG_COLORS.light.widgetHeader;
 const lightWidgetBg = organization?.widgetBgColorLight ?? DEFAULT_ORG_COLORS.light.widgetBg;
+const lightWidgetCard = organization?.widgetCardColorLight ?? lightSurface;
 const darkBg = organization?.bgColorDark ?? DEFAULT_ORG_COLORS.dark.background;
 const darkSurface = organization?.surfaceColorDark ?? DEFAULT_ORG_COLORS.dark.surface;
 const darkText = organization?.textColorDark ?? DEFAULT_ORG_COLORS.dark.text;
@@ -48,6 +49,7 @@ const darkAccent = organization?.accentColorDark ?? DEFAULT_ORG_COLORS.dark.acce
 const darkAccentText = organization?.accentTextColorDark ?? darkAccent;
 const darkWidgetHeader = organization?.widgetHeaderColorDark ?? DEFAULT_ORG_COLORS.dark.widgetHeader;
 const darkWidgetBg = organization?.widgetBgColorDark ?? DEFAULT_ORG_COLORS.dark.widgetBg;
+const darkWidgetCard = organization?.widgetCardColorDark ?? darkSurface;
 
 const lightBgRgb = hexToRgbChannels(lightBg) ?? '247 244 238';
 const lightSurfaceRgb = hexToRgbChannels(lightSurface) ?? '255 255 255';
@@ -57,6 +59,7 @@ const lightPrimaryTextRgb = hexToRgbChannels(lightPrimaryText) ?? lightBgRgb;
 const lightAccentRgb = hexToRgbChannels(lightAccent) ?? '120 143 117';
 const lightAccentTextRgb = hexToRgbChannels(lightAccentText) ?? lightAccentRgb;
 const lightWidgetBgRgb = hexToRgbChannels(lightWidgetBg) ?? '244 245 248';
+const lightWidgetCardRgb = hexToRgbChannels(lightWidgetCard) ?? lightSurfaceRgb;
 const darkBgRgb = hexToRgbChannels(darkBg) ?? '17 19 17';
 const darkSurfaceRgb = hexToRgbChannels(darkSurface) ?? '30 33 30';
 const darkTextRgb = hexToRgbChannels(darkText) ?? '186 198 182';
@@ -65,6 +68,7 @@ const darkPrimaryTextRgb = hexToRgbChannels(darkPrimaryText) ?? darkBgRgb;
 const darkAccentRgb = hexToRgbChannels(darkAccent) ?? '138 158 134';
 const darkAccentTextRgb = hexToRgbChannels(darkAccentText) ?? darkAccentRgb;
 const darkWidgetBgRgb = hexToRgbChannels(darkWidgetBg) ?? '37 41 37';
+const darkWidgetCardRgb = hexToRgbChannels(darkWidgetCard) ?? darkSurfaceRgb;
 
 function brandBlock(
   selector: string,
@@ -78,6 +82,7 @@ function brandBlock(
   widgetHeader: string,
   widgetHeaderFg: string,
   widgetBg: string,
+  widgetCard: string,
   alphas: {
     bg: string;
     surface: string;
@@ -87,9 +92,10 @@ function brandBlock(
     accent: string;
     accentText: string;
     widgetBg: string;
+    widgetCard: string;
   },
 ) {
-  return `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;}`;
+  return `${selector}{--portal-cream:${bg} !important;--portal-cream-a:${alphas.bg} !important;--portal-surface:${surface} !important;--portal-surface-a:${alphas.surface} !important;--portal-sage-dark:${text} !important;--portal-sage-dark-a:${alphas.text} !important;--portal-charcoal:${text} !important;--portal-charcoal-a:${alphas.text} !important;--portal-primary:${primary} !important;--portal-primary-a:${alphas.primary} !important;--portal-on-primary:${primaryText} !important;--portal-on-primary-a:${alphas.primaryText} !important;--portal-sage:${accent} !important;--portal-sage-a:${alphas.accent} !important;--portal-sage-light:${accent} !important;--portal-sage-light-a:${alphas.accent} !important;--portal-accent:${accent} !important;--portal-accent-a:${alphas.accent} !important;--portal-on-accent:${accentText} !important;--portal-on-accent-a:${alphas.accentText} !important;--portal-widget-header:${widgetHeader} !important;--portal-widget-header-fg:${widgetHeaderFg} !important;--portal-widget-bg:${widgetBg} !important;--portal-widget-bg-a:${alphas.widgetBg} !important;--portal-widget-card:${widgetCard} !important;--portal-widget-card-a:${alphas.widgetCard} !important;}`;
 }
 // !important so these beat the default palette in global.css no matter which
 // stylesheet Astro injects last.
@@ -106,6 +112,7 @@ const brandStyle =
     lightWidgetHeader,
     widgetHeaderForeground(lightWidgetHeader),
     lightWidgetBgRgb,
+    lightWidgetCardRgb,
     {
       bg: hexToAlpha(lightBg),
       surface: hexToAlpha(lightSurface),
@@ -115,6 +122,7 @@ const brandStyle =
       accent: hexToAlpha(lightAccent),
       accentText: hexToAlpha(lightAccentText),
       widgetBg: hexToAlpha(lightWidgetBg),
+      widgetCard: hexToAlpha(lightWidgetCard),
     },
   ) +
   brandBlock(
@@ -129,6 +137,7 @@ const brandStyle =
     darkWidgetHeader,
     widgetHeaderForeground(darkWidgetHeader),
     darkWidgetBgRgb,
+    darkWidgetCardRgb,
     {
       bg: hexToAlpha(darkBg),
       surface: hexToAlpha(darkSurface),
@@ -138,6 +147,7 @@ const brandStyle =
       accent: hexToAlpha(darkAccent),
       accentText: hexToAlpha(darkAccentText),
       widgetBg: hexToAlpha(darkWidgetBg),
+      widgetCard: hexToAlpha(darkWidgetCard),
     },
   );
 const canSeeFinancials = hasPermission(employee, 'financials:view');
