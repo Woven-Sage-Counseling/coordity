@@ -1429,7 +1429,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
 
         <div class="space-y-4 border-t border-sage-dark/10 pt-6">
           <div class="flex flex-wrap items-center gap-3">
-            <h3 class="text-sm font-semibold text-charcoal">Colors</h3>
+            <h3 class="text-sm font-semibold text-charcoal">Main Colors</h3>
             <div class="relative inline-grid grid-cols-2 rounded-full bg-sage-dark/10 p-1" data-brand-mode-switch>
               <span
                 class="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-white shadow-[0_6px_16px_rgba(26,28,30,0.14)] ring-1 ring-black/5 transition-transform duration-200 ease-out"
@@ -1606,10 +1606,31 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           }
 
           <div class="space-y-3 rounded-2xl border border-sage-dark/10 p-4">
-            <h4 class="text-xs font-semibold uppercase tracking-wide text-sage-dark/55">Home widgets</h4>
-            <p class="text-sm text-sage-dark/65">
-              The top bar, the buttons, the panel behind the content, and the cards inside it. Buttons have their own hover color. QuickBooks keeps its own top bar.
-            </p>
+            <div class="flex flex-wrap items-center gap-3">
+              <h3 class="text-sm font-semibold text-charcoal">Widgets colors</h3>
+              <div class="relative inline-grid grid-cols-2 rounded-full bg-sage-dark/10 p-1" data-brand-widget-mode-switch>
+                <span
+                  class="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-white shadow-[0_6px_16px_rgba(26,28,30,0.14)] ring-1 ring-black/5 transition-transform duration-200 ease-out"
+                  data-brand-mode-bubble
+                ></span>
+                <button
+                  type="button"
+                  class="relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold text-charcoal"
+                  data-brand-mode="light"
+                  aria-pressed="true"
+                >
+                  Light mode
+                </button>
+                <button
+                  type="button"
+                  class="relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold text-sage-dark/55"
+                  data-brand-mode="dark"
+                  aria-pressed="false"
+                >
+                  Dark mode
+                </button>
+              </div>
+            </div>
             {
               [
                 {
@@ -1643,9 +1664,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   ['widgetCardColor', 'Cards', swatch.card],
                 ] as const;
                 return (
-                  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+                  <div data-brand-widget-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
+                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
                     <div>
-                      <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-sage-dark/45">{swatch.title}</p>
                       <div class="grid gap-4 sm:grid-cols-2">
                         {fields.map(([key, label, value]) => {
                           const color = brandColorParts(value);
@@ -1700,6 +1721,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           <p class="mt-0.5 text-[11px] opacity-70">2:00 · Team meeting</p>
                         </div>
                       </div>
+                    </div>
                     </div>
                   </div>
                 );
@@ -2018,45 +2040,49 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
 
   const brandingForm = document.getElementById('org-branding-form');
   if (brandingForm instanceof HTMLFormElement) {
-    const modeSwitch = brandingForm.querySelector('[data-brand-mode-switch]');
-    const modeBubble = brandingForm.querySelector('[data-brand-mode-bubble]');
-    const modeButtons = Array.from(brandingForm.querySelectorAll('[data-brand-mode]'));
-    const placeModeBubble = (mode: 'light' | 'dark') => {
-      const button = modeButtons.find((entry) => entry.getAttribute('data-brand-mode') === mode);
-      if (!(modeBubble instanceof HTMLElement) || !(button instanceof HTMLElement)) return;
-      modeBubble.style.width = `${button.offsetWidth}px`;
-      modeBubble.style.transform = `translateX(${button.offsetLeft}px)`;
+    const bindBrandModeSwitch = (switcher: Element | null, panelSelector: string) => {
+      if (!(switcher instanceof HTMLElement)) return;
+      const bubble = switcher.querySelector('[data-brand-mode-bubble]');
+      const buttons = Array.from(switcher.querySelectorAll('[data-brand-mode]'));
+      const placeBubble = (mode: 'light' | 'dark') => {
+        const button = buttons.find((entry) => entry.getAttribute('data-brand-mode') === mode);
+        if (!(bubble instanceof HTMLElement) || !(button instanceof HTMLElement)) return;
+        bubble.style.width = `${button.offsetWidth}px`;
+        bubble.style.transform = `translateX(${button.offsetLeft}px)`;
+      };
+      const showMode = (mode: 'light' | 'dark') => {
+        brandingForm.querySelectorAll(panelSelector).forEach((panel) => {
+          if (!(panel instanceof HTMLElement)) return;
+          panel.hidden = panel.getAttribute(panelSelector.slice(1, -1)) !== mode;
+        });
+        buttons.forEach((button) => {
+          if (!(button instanceof HTMLButtonElement)) return;
+          const active = button.getAttribute('data-brand-mode') === mode;
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+          button.classList.toggle('text-charcoal', active);
+          button.classList.toggle('text-sage-dark/55', !active);
+        });
+        placeBubble(mode);
+      };
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const mode = button.getAttribute('data-brand-mode');
+          if (mode === 'light' || mode === 'dark') showMode(mode);
+        });
+      });
+      showMode('light');
+      if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => {
+          if (switcher.offsetWidth === 0) return;
+          const active = buttons.find((button) => button.getAttribute('aria-pressed') === 'true');
+          const mode = active?.getAttribute('data-brand-mode');
+          if (mode === 'light' || mode === 'dark') placeBubble(mode);
+        });
+        observer.observe(switcher);
+      }
     };
-    const showPageMode = (mode: 'light' | 'dark') => {
-      brandingForm.querySelectorAll('[data-brand-page-panel]').forEach((panel) => {
-        if (!(panel instanceof HTMLElement)) return;
-        panel.hidden = panel.getAttribute('data-brand-page-panel') !== mode;
-      });
-      modeButtons.forEach((button) => {
-        if (!(button instanceof HTMLButtonElement)) return;
-        const active = button.getAttribute('data-brand-mode') === mode;
-        button.setAttribute('aria-pressed', active ? 'true' : 'false');
-        button.classList.toggle('text-charcoal', active);
-        button.classList.toggle('text-sage-dark/55', !active);
-      });
-      placeModeBubble(mode);
-    };
-    modeButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const mode = button.getAttribute('data-brand-mode');
-        if (mode === 'light' || mode === 'dark') showPageMode(mode);
-      });
-    });
-    showPageMode('light');
-    if (modeSwitch instanceof HTMLElement && typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(() => {
-        if (modeSwitch.offsetWidth === 0) return;
-        const active = modeButtons.find((button) => button.getAttribute('aria-pressed') === 'true');
-        const mode = active?.getAttribute('data-brand-mode');
-        if (mode === 'light' || mode === 'dark') placeModeBubble(mode);
-      });
-      observer.observe(modeSwitch);
-    }
+    bindBrandModeSwitch(brandingForm.querySelector('[data-brand-mode-switch]'), '[data-brand-page-panel]');
+    bindBrandModeSwitch(brandingForm.querySelector('[data-brand-widget-mode-switch]'), '[data-brand-widget-panel]');
 
     const statusEl = brandingForm.querySelector('[data-brand-status]');
     const errorEl = brandingForm.querySelector('[data-brand-error]');
