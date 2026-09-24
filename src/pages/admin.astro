@@ -92,6 +92,9 @@ const brandAccentHoverLight = organization?.accentHoverColorLight ?? withAlpha(b
 const brandShadowLight = organization?.shadowColorLight ?? withAlpha(brandAccentLight, 18);
 const brandShadowTextLight = organization?.shadowTextColorLight ?? brandAccentTextLight;
 const brandShadowHoverLight = organization?.shadowHoverColorLight ?? withAlpha(brandAccentLight, 28);
+const brandSelectedLight = organization?.selectedColorLight ?? withAlpha(brandAccentLight, 20);
+const brandSelectedTextLight = organization?.selectedTextColorLight ?? brandTextLight;
+const brandSelectedHoverLight = organization?.selectedHoverColorLight ?? withAlpha(brandAccentLight, 10);
 const brandWidgetHeaderLight = organization?.widgetHeaderColorLight ?? '#535F51';
 const brandWidgetBgLight = organization?.widgetBgColorLight ?? '#F4F5F8';
 const brandWidgetCardLight = organization?.widgetCardColorLight ?? brandSurfaceLight;
@@ -114,6 +117,9 @@ const brandAccentHoverDark = organization?.accentHoverColorDark ?? withAlpha(bra
 const brandShadowDark = organization?.shadowColorDark ?? withAlpha(brandAccentDark, 22);
 const brandShadowTextDark = organization?.shadowTextColorDark ?? brandAccentTextDark;
 const brandShadowHoverDark = organization?.shadowHoverColorDark ?? withAlpha(brandAccentDark, 32);
+const brandSelectedDark = organization?.selectedColorDark ?? withAlpha(brandAccentDark, 20);
+const brandSelectedTextDark = organization?.selectedTextColorDark ?? brandTextDark;
+const brandSelectedHoverDark = organization?.selectedHoverColorDark ?? withAlpha(brandAccentDark, 10);
 const brandWidgetHeaderDark = organization?.widgetHeaderColorDark ?? '#535F51';
 const brandWidgetBgDark = organization?.widgetBgColorDark ?? '#252925';
 const brandWidgetCardDark = organization?.widgetCardColorDark ?? brandSurfaceDark;
@@ -602,6 +608,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           <>
                             <span
                               class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
+                              data-admin-icon
                               set:html={item.icon}
                             />
                             <span class="min-w-0 flex-1">
@@ -628,7 +635,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         return (
                           <button
                             type="button"
-                            class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10 data-[active=true]:bg-sage/20"
+                            class="item-selected item-selected-hover flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition"
                             data-admin-open={item.id}
                             data-admin-group-id={group.id}
                           >
@@ -678,7 +685,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             return (
               <button
                 type="button"
-                class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15 data-[active=true]:bg-sage/25 data-[active=true]:text-charcoal"
+                class="item-selected item-selected-hover relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-sage-dark transition"
                 aria-label={item.label}
                 data-admin-tip={item.label}
                 data-admin-open={item.id}
@@ -1505,6 +1512,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 shadow: brandShadowLight,
                 shadowText: brandShadowTextLight,
                 shadowHover: brandShadowHoverLight,
+                selected: brandSelectedLight,
+                selectedText: brandSelectedTextLight,
+                selectedHover: brandSelectedHoverLight,
               },
               {
                 mode: 'dark',
@@ -1521,6 +1531,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                 shadow: brandShadowDark,
                 shadowText: brandShadowTextDark,
                 shadowHover: brandShadowHoverDark,
+                selected: brandSelectedDark,
+                selectedText: brandSelectedTextDark,
+                selectedHover: brandSelectedHoverDark,
               },
             ].map((swatch) => {
               const suffix = swatch.mode === 'dark' ? 'Dark' : 'Light';
@@ -1557,9 +1570,17 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     ['shadowTextColor', 'Text', swatch.shadowText],
                   ],
                 },
+                {
+                  title: 'Selected Items',
+                  fields: [
+                    ['selectedColor', 'Background', swatch.selected],
+                    ['selectedHoverColor', 'Hover', swatch.selectedHover],
+                    ['selectedTextColor', 'Text', swatch.selectedText],
+                  ],
+                },
               ] as const;
               return (
-                <div data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
+                <div class="space-y-4" data-brand-page-panel={swatch.mode} hidden={swatch.mode === 'dark'}>
                   <div class="grid grid-cols-5 items-start gap-4">
                     {columns.map((column) => (
                       <div class="min-w-0 space-y-4">
@@ -1606,11 +1627,12 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         })}
                       </div>
                     ))}
-                  <div class="min-w-0 space-y-4">
+                  </div>
+                  <div class="space-y-4">
                     <h4 class="text-sm font-semibold text-charcoal">Preview</h4>
                     <div
                       class:list={[
-                        'rounded-xl border px-3 py-3',
+                        'max-w-md rounded-xl border px-3 py-3',
                         swatch.mode === 'dark' ? 'border-white/10' : 'border-sage-dark/10',
                       ]}
                       data-brand-preview={swatch.mode}
@@ -1629,10 +1651,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold" data-brand-preview-primary={swatch.mode} style={`background-color:${swatch.primary};color:${swatch.primaryText};--brand-preview-hover:${swatch.primaryHover}`}>Filled</span>
                         <span class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-accent={swatch.mode} style={`border-color:${swatch.accent};color:${swatch.accentText};--brand-preview-hover:${swatch.accentHover}`}>Outlined</span>
                         <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium shadow-sm" data-brand-preview-chip={swatch.mode} style={`background-color:${swatch.shadow};color:${swatch.shadowText};--brand-preview-hover:${swatch.shadowHover}`}>Shadowed</span>
+                        <span class="inline-flex cursor-pointer rounded-full border px-3 py-1 text-sm font-medium" data-brand-preview-selected={swatch.mode} style={`background-color:${swatch.selected};color:${swatch.selectedText};border-color:color-mix(in srgb, ${swatch.selectedText} 35%, transparent);--brand-preview-hover:${swatch.selectedHover}`}>Selected</span>
                       </div>
                     </div>
                     </div>
-                  </div>
                   </div>
                 </div>
               );
@@ -2174,6 +2196,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'shadowColorLight',
       'shadowTextColorLight',
       'shadowHoverColorLight',
+      'selectedColorLight',
+      'selectedTextColorLight',
+      'selectedHoverColorLight',
       'bgColorDark',
       'surfaceColorDark',
       'textColorDark',
@@ -2186,6 +2211,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       'shadowColorDark',
       'shadowTextColorDark',
       'shadowHoverColorDark',
+      'selectedColorDark',
+      'selectedTextColorDark',
+      'selectedHoverColorDark',
       'widgetHeaderColorLight',
       'widgetBgColorLight',
       'widgetCardColorLight',
@@ -2227,6 +2255,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const shadow = readColor(`shadowColor${suffix}`);
       const shadowText = readColor(`shadowTextColor${suffix}`);
       const shadowHover = readColor(`shadowHoverColor${suffix}`);
+      const selected = readColor(`selectedColor${suffix}`);
+      const selectedText = readColor(`selectedTextColor${suffix}`);
+      const selectedHover = readColor(`selectedHoverColor${suffix}`);
       const widgetHeader = readColor(`widgetHeaderColor${suffix}`);
       const widgetBg = readColor(`widgetBgColor${suffix}`);
       const widgetCard = readColor(`widgetCardColor${suffix}`);
@@ -2265,6 +2296,12 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
         el.style.backgroundColor = shadow;
         el.style.color = shadowText;
         el.style.setProperty('--brand-preview-hover', shadowHover);
+      });
+      paint('selected', (el) => {
+        el.style.backgroundColor = selected;
+        el.style.color = selectedText;
+        el.style.borderColor = `color-mix(in srgb, ${selectedText} 35%, transparent)`;
+        el.style.setProperty('--brand-preview-hover', selectedHover);
       });
       paint('card', (el) => {
         el.style.backgroundColor = surface;
@@ -2363,6 +2400,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       shadowColorLight?: string | null;
       shadowTextColorLight?: string | null;
       shadowHoverColorLight?: string | null;
+      selectedColorLight?: string | null;
+      selectedTextColorLight?: string | null;
+      selectedHoverColorLight?: string | null;
       bgColorDark?: string | null;
       surfaceColorDark?: string | null;
       textColorDark?: string | null;
@@ -2375,6 +2415,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       shadowColorDark?: string | null;
       shadowTextColorDark?: string | null;
       shadowHoverColorDark?: string | null;
+      selectedColorDark?: string | null;
+      selectedTextColorDark?: string | null;
+      selectedHoverColorDark?: string | null;
       widgetHeaderColorLight?: string | null;
       widgetBgColorLight?: string | null;
       widgetCardColorLight?: string | null;
@@ -2483,6 +2526,21 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       const darkWidgetButton = hexChannels(branding.widgetButtonColorDark) ?? '83 95 81';
       const darkWidgetButtonText = hexChannels(branding.widgetButtonTextColorDark) ?? '247 244 238';
       const darkWidgetButtonHover = hexChannels(branding.widgetButtonHoverColorDark) ?? darkWidgetButton.split(' ').map((channel) => String(Math.round(Number(channel) * 0.92))).join(' ');
+      const selectedItemRule = (
+        selector: string,
+        color: string | null | undefined,
+        colorFallback: string,
+        text: string | null | undefined,
+        textFallback: string | null | undefined,
+        textDefault: string,
+        hover: string | null | undefined,
+        hoverFallback: string,
+      ) => {
+        const channels = (value: string | null | undefined, fallback: string) =>
+          hexChannels(value) ?? hexChannels(fallback) ?? '120 143 117';
+        const alpha = (value: string | null | undefined, fallback: string) => hexAlpha(value || fallback);
+        return `${selector}{--portal-selected:${channels(color, colorFallback)} !important;--portal-selected-a:${alpha(color, colorFallback)} !important;--portal-on-selected:${channels(text, textFallback || textDefault)} !important;--portal-on-selected-a:${alpha(text, textFallback || textDefault)} !important;--portal-selected-hover:${channels(hover, hoverFallback)} !important;--portal-selected-hover-a:${alpha(hover, hoverFallback)} !important;}`;
+      };
       const widgetOutlineRule = (
         selector: string,
         color: string | null | undefined,
@@ -2543,7 +2601,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
           shadowHover: branding.shadowHoverColorDark ? hexAlpha(branding.shadowHoverColorDark) : '0.32',
         }) +
         widgetOutlineRule('html', branding.widgetOutlineColorLight, '#535F5140', branding.widgetOutlineTextColorLight, '#535F51CC', branding.widgetOutlineHoverColorLight, '#535F511A') +
-        widgetOutlineRule('html.dark', branding.widgetOutlineColorDark, '#BAC6B666', branding.widgetOutlineTextColorDark, '#BAC6B6', branding.widgetOutlineHoverColorDark, '#BAC6B61A');
+        widgetOutlineRule('html.dark', branding.widgetOutlineColorDark, '#BAC6B666', branding.widgetOutlineTextColorDark, '#BAC6B6', branding.widgetOutlineHoverColorDark, '#BAC6B61A') +
+        selectedItemRule('html', branding.selectedColorLight, branding.accentColorLight ? `${branding.accentColorLight.slice(0, 7)}33` : '#788F7533', branding.selectedTextColorLight, branding.textColorLight, '#535F51', branding.selectedHoverColorLight, branding.accentColorLight ? `${branding.accentColorLight.slice(0, 7)}1A` : '#788F751A') +
+        selectedItemRule('html.dark', branding.selectedColorDark, branding.accentColorDark ? `${branding.accentColorDark.slice(0, 7)}33` : '#8A9E8633', branding.selectedTextColorDark, branding.textColorDark, '#BAC6B6', branding.selectedHoverColorDark, branding.accentColorDark ? `${branding.accentColorDark.slice(0, 7)}1A` : '#8A9E861A');
     };
 
     brandingForm.addEventListener(

@@ -29,6 +29,11 @@
   --portal-on-shadow: 120 143 117;
   --portal-shadow-hover: 120 143 117;
   --portal-shadow-hover-a: 0.28;
+  --portal-selected: 120 143 117;
+  --portal-selected-a: 0.2;
+  --portal-on-selected: 83 95 81;
+  --portal-selected-hover: 120 143 117;
+  --portal-selected-hover-a: 0.1;
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
@@ -71,6 +76,11 @@ html.dark {
   --portal-on-shadow: 138 158 134;
   --portal-shadow-hover: 138 158 134;
   --portal-shadow-hover-a: 0.32;
+  --portal-selected: 138 158 134;
+  --portal-selected-a: 0.2;
+  --portal-on-selected: 186 198 182;
+  --portal-selected-hover: 138 158 134;
+  --portal-selected-hover-a: 0.1;
   --portal-widget-button: 83 95 81;
   --portal-widget-button-text: 247 244 238;
   --portal-widget-button-hover: 76 87 75;
@@ -145,6 +155,33 @@ html.dark {
 
   .bubble-shadow:hover {
     background-color: rgb(var(--portal-shadow-hover, var(--portal-shadow, var(--portal-sage))) / var(--portal-shadow-hover-a, var(--portal-shadow-a, 0.28))) !important;
+  }
+
+  .item-selected-fill {
+    background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
+    border-color: rgb(var(--portal-on-selected, var(--portal-sage-dark)) / calc(var(--portal-on-selected-a, 1) * 0.35));
+  }
+
+  .item-selected-text {
+    color: rgb(var(--portal-on-selected, var(--portal-charcoal)) / var(--portal-on-selected-a, 1)) !important;
+  }
+
+  .item-selected[data-active='true'] {
+    background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2)) !important;
+    color: rgb(var(--portal-on-selected, var(--portal-charcoal)) / var(--portal-on-selected-a, 1)) !important;
+  }
+
+  .item-selected[data-active='true'] .text-charcoal,
+  .item-selected[data-active='true'] [data-admin-icon] {
+    color: rgb(var(--portal-on-selected, var(--portal-charcoal)) / var(--portal-on-selected-a, 1)) !important;
+  }
+
+  .item-selected[data-active='true'] [data-admin-icon] {
+    background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2)) !important;
+  }
+
+  .item-selected-hover:hover {
+    background-color: rgb(var(--portal-selected-hover, var(--portal-sage)) / var(--portal-selected-hover-a, 0.1)) !important;
   }
 
   .field {
@@ -383,6 +420,7 @@ html :is([data-widget-body], [data-schedule-dialog]) .hover\:bg-white:hover {
 [data-brand-preview-primary]:hover,
 [data-brand-preview-accent]:hover,
 [data-brand-preview-chip]:hover,
+[data-brand-preview-selected]:hover,
 [data-brand-preview-widget-button]:hover,
 [data-brand-preview-widget-outline]:hover {
   background-color: var(--brand-preview-hover) !important;

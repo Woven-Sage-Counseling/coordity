@@ -51,6 +51,9 @@ interface PortalOrganization {
   shadowColorLight: string | null;
   shadowTextColorLight: string | null;
   shadowHoverColorLight: string | null;
+  selectedColorLight: string | null;
+  selectedTextColorLight: string | null;
+  selectedHoverColorLight: string | null;
   widgetHeaderColorLight: string | null;
   widgetBgColorLight: string | null;
   widgetCardColorLight: string | null;
@@ -72,6 +75,9 @@ interface PortalOrganization {
   shadowColorDark: string | null;
   shadowTextColorDark: string | null;
   shadowHoverColorDark: string | null;
+  selectedColorDark: string | null;
+  selectedTextColorDark: string | null;
+  selectedHoverColorDark: string | null;
   widgetHeaderColorDark: string | null;
   widgetBgColorDark: string | null;
   widgetCardColorDark: string | null;

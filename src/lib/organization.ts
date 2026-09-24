@@ -92,6 +92,9 @@ export interface PortalOrganization {
   shadowColorLight: string | null;
   shadowTextColorLight: string | null;
   shadowHoverColorLight: string | null;
+  selectedColorLight: string | null;
+  selectedTextColorLight: string | null;
+  selectedHoverColorLight: string | null;
   widgetHeaderColorLight: string | null;
   widgetBgColorLight: string | null;
   widgetCardColorLight: string | null;
@@ -114,6 +117,9 @@ export interface PortalOrganization {
   shadowColorDark: string | null;
   shadowTextColorDark: string | null;
   shadowHoverColorDark: string | null;
+  selectedColorDark: string | null;
+  selectedTextColorDark: string | null;
+  selectedHoverColorDark: string | null;
   widgetHeaderColorDark: string | null;
   widgetBgColorDark: string | null;
   widgetCardColorDark: string | null;
@@ -142,6 +148,9 @@ export const DEFAULT_ORG_COLORS = {
     shadow: '#788F752E',
     shadowText: '#788F75',
     shadowHover: '#788F7547',
+    selected: '#788F7533',
+    selectedText: '#535F51',
+    selectedHover: '#788F751A',
     widgetHeader: '#535F51',
     widgetBg: '#F4F5F8',
     widgetCard: '#FFFFFF',
@@ -165,6 +174,9 @@ export const DEFAULT_ORG_COLORS = {
     shadow: '#8A9E8638',
     shadowText: '#8A9E86',
     shadowHover: '#8A9E8652',
+    selected: '#8A9E8633',
+    selectedText: '#BAC6B6',
+    selectedHover: '#8A9E861A',
     widgetHeader: '#535F51',
     widgetBg: '#252925',
     widgetCard: '#1E211E',
@@ -219,6 +231,12 @@ type OrgRow = {
   shadow_text_color_dark?: string | null;
   shadow_hover_color_light?: string | null;
   shadow_hover_color_dark?: string | null;
+  selected_color_light?: string | null;
+  selected_color_dark?: string | null;
+  selected_text_color_light?: string | null;
+  selected_text_color_dark?: string | null;
+  selected_hover_color_light?: string | null;
+  selected_hover_color_dark?: string | null;
   widget_header_color_light?: string | null;
   widget_header_color_dark?: string | null;
   widget_bg_color_light?: string | null;
@@ -270,6 +288,9 @@ function mapOrg(row: OrgRow): PortalOrganization {
     shadowColorLight: normalizeHexColor(row.shadow_color_light) ?? null,
     shadowTextColorLight: normalizeHexColor(row.shadow_text_color_light) ?? null,
     shadowHoverColorLight: normalizeHexColor(row.shadow_hover_color_light) ?? null,
+    selectedColorLight: normalizeHexColor(row.selected_color_light) ?? null,
+    selectedTextColorLight: normalizeHexColor(row.selected_text_color_light) ?? null,
+    selectedHoverColorLight: normalizeHexColor(row.selected_hover_color_light) ?? null,
     widgetHeaderColorLight: normalizeHexColor(row.widget_header_color_light) ?? null,
     widgetBgColorLight: normalizeHexColor(row.widget_bg_color_light) ?? null,
     widgetCardColorLight: normalizeHexColor(row.widget_card_color_light) ?? null,
@@ -291,6 +312,9 @@ function mapOrg(row: OrgRow): PortalOrganization {
     shadowColorDark: normalizeHexColor(row.shadow_color_dark) ?? null,
     shadowTextColorDark: normalizeHexColor(row.shadow_text_color_dark) ?? null,
     shadowHoverColorDark: normalizeHexColor(row.shadow_hover_color_dark) ?? null,
+    selectedColorDark: normalizeHexColor(row.selected_color_dark) ?? null,
+    selectedTextColorDark: normalizeHexColor(row.selected_text_color_dark) ?? null,
+    selectedHoverColorDark: normalizeHexColor(row.selected_hover_color_dark) ?? null,
     widgetHeaderColorDark: normalizeHexColor(row.widget_header_color_dark) ?? null,
     widgetBgColorDark: normalizeHexColor(row.widget_bg_color_dark) ?? null,
     widgetCardColorDark: normalizeHexColor(row.widget_card_color_dark) ?? null,
@@ -329,6 +353,9 @@ function wovenSageFallback(): PortalOrganization {
     shadowColorLight: null,
     shadowTextColorLight: null,
     shadowHoverColorLight: null,
+    selectedColorLight: null,
+    selectedTextColorLight: null,
+    selectedHoverColorLight: null,
     widgetHeaderColorLight: null,
     widgetBgColorLight: null,
     widgetCardColorLight: null,
@@ -350,6 +377,9 @@ function wovenSageFallback(): PortalOrganization {
     shadowColorDark: null,
     shadowTextColorDark: null,
     shadowHoverColorDark: null,
+    selectedColorDark: null,
+    selectedTextColorDark: null,
+    selectedHoverColorDark: null,
     widgetHeaderColorDark: null,
     widgetBgColorDark: null,
     widgetCardColorDark: null,
@@ -395,6 +425,9 @@ const ORG_SELECT = ORG_SELECT_FILLED.replace(
   `widget_outline_color_light, widget_outline_color_dark,
   widget_outline_text_color_light, widget_outline_text_color_dark,
   widget_outline_hover_color_light, widget_outline_hover_color_dark,
+  selected_color_light, selected_color_dark,
+  selected_text_color_light, selected_text_color_dark,
+  selected_hover_color_light, selected_hover_color_dark,
   invert_logo_dark, archived_at`,
 );
 
@@ -930,6 +963,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     shadowColorLight: org.shadowColorLight,
     shadowTextColorLight: org.shadowTextColorLight,
     shadowHoverColorLight: org.shadowHoverColorLight,
+    selectedColorLight: org.selectedColorLight,
+    selectedTextColorLight: org.selectedTextColorLight,
+    selectedHoverColorLight: org.selectedHoverColorLight,
     widgetHeaderColorLight: org.widgetHeaderColorLight,
     widgetBgColorLight: org.widgetBgColorLight,
     widgetCardColorLight: org.widgetCardColorLight,
@@ -951,6 +987,9 @@ export function serializeOrganizationBranding(org: PortalOrganization) {
     shadowColorDark: org.shadowColorDark,
     shadowTextColorDark: org.shadowTextColorDark,
     shadowHoverColorDark: org.shadowHoverColorDark,
+    selectedColorDark: org.selectedColorDark,
+    selectedTextColorDark: org.selectedTextColorDark,
+    selectedHoverColorDark: org.selectedHoverColorDark,
     widgetHeaderColorDark: org.widgetHeaderColorDark,
     widgetBgColorDark: org.widgetBgColorDark,
     widgetCardColorDark: org.widgetCardColorDark,
@@ -980,6 +1019,9 @@ export async function updateOrganizationBranding(input: {
   shadowColorLight?: string | null;
   shadowTextColorLight?: string | null;
   shadowHoverColorLight?: string | null;
+  selectedColorLight?: string | null;
+  selectedTextColorLight?: string | null;
+  selectedHoverColorLight?: string | null;
   widgetHeaderColorLight?: string | null;
   widgetBgColorLight?: string | null;
   widgetCardColorLight?: string | null;
@@ -1001,6 +1043,9 @@ export async function updateOrganizationBranding(input: {
   shadowColorDark?: string | null;
   shadowTextColorDark?: string | null;
   shadowHoverColorDark?: string | null;
+  selectedColorDark?: string | null;
+  selectedTextColorDark?: string | null;
+  selectedHoverColorDark?: string | null;
   widgetHeaderColorDark?: string | null;
   widgetBgColorDark?: string | null;
   widgetCardColorDark?: string | null;
@@ -1090,6 +1135,18 @@ export async function updateOrganizationBranding(input: {
     input.shadowHoverColorLight !== undefined
       ? (resolveOptionalHex(input.shadowHoverColorLight, 'Light shadowed hover color') ?? null)
       : existing.shadowHoverColorLight;
+  const selectedColorLight =
+    input.selectedColorLight !== undefined
+      ? (resolveOptionalHex(input.selectedColorLight, 'Light selected item color') ?? null)
+      : existing.selectedColorLight;
+  const selectedTextColorLight =
+    input.selectedTextColorLight !== undefined
+      ? (resolveOptionalHex(input.selectedTextColorLight, 'Light selected item text color') ?? null)
+      : existing.selectedTextColorLight;
+  const selectedHoverColorLight =
+    input.selectedHoverColorLight !== undefined
+      ? (resolveOptionalHex(input.selectedHoverColorLight, 'Light selected item hover color') ?? null)
+      : existing.selectedHoverColorLight;
   const widgetHeaderColorLight =
     input.widgetHeaderColorLight !== undefined
       ? (resolveOptionalHex(input.widgetHeaderColorLight, 'Light widget header color') ?? null)
@@ -1174,6 +1231,18 @@ export async function updateOrganizationBranding(input: {
     input.shadowHoverColorDark !== undefined
       ? (resolveOptionalHex(input.shadowHoverColorDark, 'Dark shadowed hover color') ?? null)
       : existing.shadowHoverColorDark;
+  const selectedColorDark =
+    input.selectedColorDark !== undefined
+      ? (resolveOptionalHex(input.selectedColorDark, 'Dark selected item color') ?? null)
+      : existing.selectedColorDark;
+  const selectedTextColorDark =
+    input.selectedTextColorDark !== undefined
+      ? (resolveOptionalHex(input.selectedTextColorDark, 'Dark selected item text color') ?? null)
+      : existing.selectedTextColorDark;
+  const selectedHoverColorDark =
+    input.selectedHoverColorDark !== undefined
+      ? (resolveOptionalHex(input.selectedHoverColorDark, 'Dark selected item hover color') ?? null)
+      : existing.selectedHoverColorDark;
   const widgetHeaderColorDark =
     input.widgetHeaderColorDark !== undefined
       ? (resolveOptionalHex(input.widgetHeaderColorDark, 'Dark widget header color') ?? null)
@@ -1254,6 +1323,12 @@ export async function updateOrganizationBranding(input: {
          shadow_text_color_dark = ?,
          shadow_hover_color_light = ?,
          shadow_hover_color_dark = ?,
+         selected_color_light = ?,
+         selected_color_dark = ?,
+         selected_text_color_light = ?,
+         selected_text_color_dark = ?,
+         selected_hover_color_light = ?,
+         selected_hover_color_dark = ?,
          widget_button_color_light = ?,
          widget_button_color_dark = ?,
          widget_button_text_color_light = ?,
@@ -1305,6 +1380,12 @@ export async function updateOrganizationBranding(input: {
       shadowTextColorDark,
       shadowHoverColorLight,
       shadowHoverColorDark,
+      selectedColorLight,
+      selectedColorDark,
+      selectedTextColorLight,
+      selectedTextColorDark,
+      selectedHoverColorLight,
+      selectedHoverColorDark,
       widgetButtonColorLight,
       widgetButtonColorDark,
       widgetButtonTextColorLight,

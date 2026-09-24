@@ -44,6 +44,9 @@ const lightAccentHover = organization?.accentHoverColorLight ?? withAlpha(lightA
 const lightShadow = organization?.shadowColorLight ?? withAlpha(lightAccent, 18);
 const lightShadowText = organization?.shadowTextColorLight ?? lightAccentText;
 const lightShadowHover = organization?.shadowHoverColorLight ?? withAlpha(lightAccent, 28);
+const lightSelected = organization?.selectedColorLight ?? withAlpha(lightAccent, 20);
+const lightSelectedText = organization?.selectedTextColorLight ?? lightText;
+const lightSelectedHover = organization?.selectedHoverColorLight ?? withAlpha(lightAccent, 10);
 const lightWidgetHeader = organization?.widgetHeaderColorLight ?? DEFAULT_ORG_COLORS.light.widgetHeader;
 const lightWidgetBg = organization?.widgetBgColorLight ?? DEFAULT_ORG_COLORS.light.widgetBg;
 const lightWidgetCard = organization?.widgetCardColorLight ?? lightSurface;
@@ -65,6 +68,9 @@ const darkAccentHover = organization?.accentHoverColorDark ?? withAlpha(darkAcce
 const darkShadow = organization?.shadowColorDark ?? withAlpha(darkAccent, 22);
 const darkShadowText = organization?.shadowTextColorDark ?? darkAccentText;
 const darkShadowHover = organization?.shadowHoverColorDark ?? withAlpha(darkAccent, 32);
+const darkSelected = organization?.selectedColorDark ?? withAlpha(darkAccent, 20);
+const darkSelectedText = organization?.selectedTextColorDark ?? darkText;
+const darkSelectedHover = organization?.selectedHoverColorDark ?? withAlpha(darkAccent, 10);
 const darkWidgetHeader = organization?.widgetHeaderColorDark ?? DEFAULT_ORG_COLORS.dark.widgetHeader;
 const darkWidgetBg = organization?.widgetBgColorDark ?? DEFAULT_ORG_COLORS.dark.widgetBg;
 const darkWidgetCard = organization?.widgetCardColorDark ?? darkSurface;
@@ -109,6 +115,10 @@ const darkWidgetCardRgb = hexToRgbChannels(darkWidgetCard) ?? darkSurfaceRgb;
 const darkWidgetButtonRgb = hexToRgbChannels(darkWidgetButton) ?? '83 95 81';
 const darkWidgetButtonTextRgb = hexToRgbChannels(darkWidgetButtonText) ?? '247 244 238';
 const darkWidgetButtonHoverRgb = hexToRgbChannels(darkWidgetButtonHover) ?? darkWidgetButtonRgb;
+
+function selectedItemRule(selector: string, color: string, text: string, hover: string) {
+  return `${selector}{--portal-selected:${hexToRgbChannels(color) ?? '120 143 117'} !important;--portal-selected-a:${hexToAlpha(color)} !important;--portal-on-selected:${hexToRgbChannels(text) ?? '83 95 81'} !important;--portal-on-selected-a:${hexToAlpha(text)} !important;--portal-selected-hover:${hexToRgbChannels(hover) ?? '120 143 117'} !important;--portal-selected-hover-a:${hexToAlpha(hover)} !important;}`;
+}
 
 function widgetOutlineRule(selector: string, color: string, text: string, hover: string) {
   return `${selector}{--portal-widget-outline:${hexToRgbChannels(color) ?? '83 95 81'} !important;--portal-widget-outline-a:${hexToAlpha(color)} !important;--portal-widget-outline-text:${hexToRgbChannels(text) ?? '83 95 81'} !important;--portal-widget-outline-text-a:${hexToAlpha(text)} !important;--portal-widget-outline-hover:${hexToRgbChannels(hover) ?? '83 95 81'} !important;--portal-widget-outline-hover-a:${hexToAlpha(hover)} !important;}`;
@@ -202,6 +212,7 @@ const brandStyle =
     },
   ) +
   widgetOutlineRule('html', lightWidgetOutline, lightWidgetOutlineText, lightWidgetOutlineHover) +
+  selectedItemRule('html', lightSelected, lightSelectedText, lightSelectedHover) +
   brandBlock(
     'html.dark',
     darkBgRgb,
@@ -243,7 +254,8 @@ const brandStyle =
       shadowHover: hexToAlpha(darkShadowHover),
     },
   ) +
-  widgetOutlineRule('html.dark', darkWidgetOutline, darkWidgetOutlineText, darkWidgetOutlineHover);
+  widgetOutlineRule('html.dark', darkWidgetOutline, darkWidgetOutlineText, darkWidgetOutlineHover) +
+  selectedItemRule('html.dark', darkSelected, darkSelectedText, darkSelectedHover);
 const canSeeFinancials = hasPermission(employee, 'financials:view');
 const canSeeManagement = canAccessManagement(employee);
 const showFooter = employee?.status === 'active' && !flush;
@@ -320,7 +332,7 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
                 data-portal-nav
               >
                 <span
-                  class="pointer-events-none absolute left-0 top-0 z-0 rounded-full border border-sage-dark/35 bg-sage/15 opacity-0"
+                  class="item-selected-fill pointer-events-none absolute left-0 top-0 z-0 rounded-full border opacity-0"
                   data-portal-nav-pill
                   aria-hidden="true"
                 ></span>
@@ -344,7 +356,7 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
                           class:list={[
                             'relative z-10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors',
                             active
-                              ? 'font-medium text-charcoal'
+                              ? 'item-selected-text font-medium'
                               : 'text-sage-dark/80 hover:text-sage-dark',
                           ]}
                         >
@@ -374,7 +386,7 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
                 title="Settings"
                 class:list={[
                   'inline-flex items-center text-sage-dark/80 hover:text-sage-dark',
-                  navIsActive('/settings') ? 'text-charcoal' : null,
+                  navIsActive('/settings') ? 'item-selected-text' : null,
                 ]}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
