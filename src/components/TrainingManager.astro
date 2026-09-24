@@ -503,18 +503,18 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
           <p class="training-header-label text-xs font-semibold uppercase tracking-[0.12em]">
             {selectedItem
               ? selectedIsAssignment
-                ? 'In this assignment'
-                : 'In this lesson'
+                ? 'In this assignment:'
+                : 'In this lesson:'
               : selectedView === 'settings' && selected
-                ? 'In this module'
-                : 'In this lesson'}
+                ? 'In this module:'
+                : 'In this lesson:'}
           </p>
           <p
             class:list={[
-              'mt-0.5 text-[11px]',
+              'mt-0.5',
               selectedItem || (selectedView === 'settings' && selected)
-                ? 'training-header-title'
-                : 'training-header-label',
+                ? 'training-header-title break-words text-[13px] font-semibold leading-tight'
+                : 'training-header-label text-[11px]',
             ]}
           >
             {selectedItem
