@@ -1411,7 +1411,80 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </div>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-                    <p class="font-semibold text-charcoal">3. Paste your keys here</p>
+                    <p class="font-semibold text-charcoal">3. Fill out the compliance questionnaire</p>
+                    <p class="mt-1">
+                      Intuit asks this before it shows production keys. Use these answers.
+                    </p>
+                    <div class="mt-3 space-y-3">
+                      <div>
+                        <p class="font-medium text-charcoal">General questions</p>
+                        <ol class="mt-1 list-decimal space-y-1 pl-5">
+                          <li>No, unless your company has had that complaint, lawsuit, or investigation.</li>
+                          <li>No, unless you have worked with a lawyer on this.</li>
+                          <li>Yes, I confirm that my app will comply with the security policies found above.</li>
+                          <li>Yes.</li>
+                          <li>No, unless someone covered by that question is on a sanctions list or in those places.</li>
+                          <li>No.</li>
+                        </ol>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">App information</p>
+                        <ol class="mt-1 list-decimal space-y-1 pl-5">
+                          <li>
+                            Check only “You built your app from scratch and wrote the code that lets it interact with
+                            Intuit APIs and data.”
+                          </li>
+                          <li>Web/SaaS and Web/Browser. Leave Mobile and Desktop unselected.</li>
+                          <li>It reads data from Intuit products. Do not select write or delete.</li>
+                          <li>We're building a private app.</li>
+                          <li>Any admin of the QuickBooks Online company.</li>
+                          <li>Yes. This product also connects Google Calendar and DocuSign.</li>
+                        </ol>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">Authorization and authentication</p>
+                        <ol class="mt-1 list-decimal space-y-1 pl-5">
+                          <li>No, unless you have connected, disconnected, and reconnected a sandbox company.</li>
+                          <li>Only when access tokens expire.</li>
+                          <li>No.</li>
+                          <li>Yes.</li>
+                          <li>No.</li>
+                          <li>Yes for expired access tokens, expired refresh tokens, invalid grant, and CSRF.</li>
+                          <li>No.</li>
+                        </ol>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">API usage</p>
+                        <ol class="mt-1 list-decimal space-y-1 pl-5">
+                          <li>Accounting API only. Leave Payments and Payroll unselected.</li>
+                          <li>Only on-demand during customer interactions with your app.</li>
+                        </ol>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">Error handling</p>
+                        <ol class="mt-1 list-decimal space-y-1 pl-5">
+                          <li>Yes if a QuickBooks error has already shown in Coordity. Otherwise No.</li>
+                          <li>No.</li>
+                          <li>No.</li>
+                          <li>No.</li>
+                        </ol>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">Security</p>
+                        <ol class="mt-1 list-decimal space-y-1 pl-5">
+                          <li>No, unless your company has had a breach that required that notice.</li>
+                          <li>No, unless someone regularly reviews the app for security risks.</li>
+                          <li>Yes.</li>
+                          <li>No.</li>
+                          <li>No.</li>
+                          <li>No.</li>
+                          <li>No.</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
+                    <p class="font-semibold text-charcoal">4. Paste your keys here</p>
                     <p class="mt-1 text-xs text-sage-dark/60">
                       Paste the Client ID and Client Secret from the Production credentials, and leave the environment
                       on <span class="font-medium text-charcoal">Production</span>. Sandbox only matches Development
@@ -1468,7 +1541,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </form>
                     {
                       qbStatus.hasOrgApp ? (
-                        <p class="mt-2 text-xs text-emerald-800">Keys saved. Continue to step 4.</p>
+                        <p class="mt-2 text-xs text-emerald-800">Keys saved. Continue to step 5.</p>
                       ) : qbStatus.hasPlatformApp ? (
                         <p class="mt-2 text-xs text-sage-dark/60">
                           Optional: Coordity already has platform QuickBooks keys, so you can skip to Connect — or
@@ -1478,7 +1551,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     }
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-                    <p class="font-semibold text-charcoal">4. Add this Redirect URI</p>
+                    <p class="font-semibold text-charcoal">5. Add this Redirect URI</p>
                     <p class="mt-1">
                       Still on the Production keys page, open
                       <span class="font-medium text-charcoal">Redirect URIs</span>, paste this URL, then click Save.
@@ -1497,7 +1570,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </div>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-                    <p class="font-semibold text-charcoal">5. Connect your QuickBooks company</p>
+                    <p class="font-semibold text-charcoal">6. Connect your QuickBooks company</p>
                     <p class="mt-1">
                       Click Connect, sign in to Intuit, and choose the company file Coordity should sync.
                     </p>
@@ -1521,7 +1594,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     {
                       !qbStatus.configured ? (
                         <p class="mt-2 text-xs text-amber-800">
-                          Save your Client ID and Client Secret in step 3 first.
+                          Save your Client ID and Client Secret in step 4 first.
                         </p>
                       ) : null
                     }
