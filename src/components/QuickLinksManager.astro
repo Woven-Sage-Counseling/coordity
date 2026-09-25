@@ -632,15 +632,25 @@ const previewSections = categories.map((category, index) => ({
             event.preventDefault();
             var submitter = event.submitter;
             if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
-            fetch(form.action, {
+            var actionUrl = form.getAttribute('action') || '/api/admin/quick-links';
+            fetch(actionUrl, {
               method: 'POST',
               body: new FormData(form),
               credentials: 'same-origin',
               headers: { 'X-Quick-Links-Fetch': '1', Accept: 'application/json' },
             })
               .then(function (res) {
-                return res.json().then(function (data) {
-                  return { ok: res.ok && data && data.ok, error: data && data.error };
+                return res.text().then(function (text) {
+                  var data = null;
+                  try {
+                    data = JSON.parse(text);
+                  } catch (error) {
+                    data = null;
+                  }
+                  if (!data || typeof data !== 'object') {
+                    throw new Error('Could not save quick links.');
+                  }
+                  return { ok: res.ok && data.ok, error: data.error };
                 });
               })
               .then(function (result) {
