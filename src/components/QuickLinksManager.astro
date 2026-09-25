@@ -253,24 +253,19 @@ const previewSections = categories.map((category, index) => ({
                 </section>
               ) : null
             }
-            <div>
+            <form method="post" action="/api/admin/quick-links">
+              <input type="hidden" name="action" value="create-category" />
+              <input type="hidden" name="title" value="New section" />
               <button
-                type="button"
-                data-ql-add-section
-                aria-pressed="false"
-                class="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-sage-dark/30 px-3 py-1.5 font-display text-lg text-sage-dark/50 outline-none aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2"
+                type="submit"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-sage-dark/30 px-3 py-2.5 font-display text-lg text-sage-dark/50 hover:bg-white"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
                 </svg>
                 Section
               </button>
-              <form hidden method="post" action="/api/admin/quick-links" class="mt-2 flex items-center gap-1.5" data-ql-add-section-panel>
-                <input type="hidden" name="action" value="create-category" />
-                <input class="field min-w-0 max-w-xs flex-1" type="text" name="title" required placeholder="New section" aria-label="New section title" />
-                <button class="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
-              </form>
-            </div>
+            </form>
           </div>
       <div hidden data-ql-add-panel class="mt-4 rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
         <div data-ql-add-catalog>
@@ -461,8 +456,6 @@ const previewSections = categories.map((category, index) => ({
           var sectionButtons = root.querySelectorAll('[data-ql-section]');
           var sectionPanels = root.querySelectorAll('[data-ql-section-editor]');
           var sectionLabels = root.querySelectorAll('[data-ql-section-label]');
-          var addSectionButton = root.querySelector('[data-ql-add-section]');
-          var addSectionPanel = root.querySelector('[data-ql-add-section-panel]');
 
           function showCatalogChoice() {
             if (catalogChoice) catalogChoice.hidden = false;
@@ -484,8 +477,6 @@ const previewSections = categories.map((category, index) => ({
             sectionPanels.forEach(function (panel) {
               panel.hidden = true;
             });
-            if (addSectionButton) addSectionButton.setAttribute('aria-pressed', 'false');
-            if (addSectionPanel) addSectionPanel.hidden = true;
             sectionLabels.forEach(function (label) {
               label.hidden = false;
             });
@@ -595,23 +586,6 @@ const previewSections = categories.map((category, index) => ({
               });
             });
           });
-
-          if (addSectionButton) {
-            addSectionButton.addEventListener('click', function () {
-              var already = addSectionButton.getAttribute('aria-pressed') === 'true';
-              closeAdd();
-              closeEditors();
-              closeSections();
-              if (already) return;
-              addSectionButton.setAttribute('aria-pressed', 'true');
-              if (addSectionPanel) {
-                addSectionPanel.hidden = false;
-                if (addSectionPanel.scrollIntoView) addSectionPanel.scrollIntoView({ block: 'nearest' });
-                var title = addSectionPanel.querySelector('input[name="title"]');
-                if (title instanceof HTMLInputElement) title.focus();
-              }
-            });
-          }
         })();
       </script>
     </div>
