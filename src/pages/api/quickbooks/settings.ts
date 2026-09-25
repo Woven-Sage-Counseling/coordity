@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await new QuickBooksProvider().saveAppSettings({
       clientId: String(form.get('clientId') ?? ''),
       clientSecret: String(form.get('clientSecret') ?? ''),
-      environment: String(form.get('environment') ?? 'sandbox'),
+      environment: String(form.get('environment') ?? 'production'),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not save QuickBooks settings.';

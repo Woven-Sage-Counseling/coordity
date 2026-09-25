@@ -521,7 +521,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
   }): Promise<void> {
     const clientId = input.clientId.trim();
     if (!clientId) throw new Error('Client ID is required.');
-    const environment = input.environment === 'production' ? 'production' : 'sandbox';
+    const environment = input.environment === 'sandbox' ? 'sandbox' : 'production';
     const existing = await this.connection();
     const secretInput = input.clientSecret?.trim() || '';
     if (!secretInput && !existing?.client_secret_encrypted) {

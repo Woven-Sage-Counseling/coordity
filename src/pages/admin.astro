@@ -1248,17 +1248,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       . Click <span class="font-medium text-charcoal">App dashboard</span> under My Hub. Then click
                       the plus sign to create an app (we recommend naming it
                       <span class="font-medium text-charcoal">Coordity</span>). Under authorization scope, select both
-                      options for accounting and payment. Click to open the app, go to
-                      <span class="font-medium text-charcoal">Keys and credentials</span>, then click
-                      <span class="font-medium text-charcoal">Show credentials</span> under Development.
+                      options for accounting and payment. Open the app, go to
+                      <span class="font-medium text-charcoal">Keys and credentials</span>, and switch to
+                      <span class="font-medium text-charcoal">Production</span>. Click
+                      <span class="font-medium text-charcoal">Show credentials</span> there. Use those production
+                      keys. Development keys open a sandbox company, which is not your live books.
                     </p>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
                     <p class="font-semibold text-charcoal">2. Paste your keys here</p>
                     <p class="mt-1 text-xs text-sage-dark/60">
-                      Copy the Client ID and Client Secret from Development credentials. Keep the environment on
-                      <span class="font-medium text-charcoal">Sandbox / development</span> first; switch to Production
-                      keys when the Intuit app is live.
+                      Paste the Client ID and Client Secret from the Production credentials, and leave the environment
+                      on <span class="font-medium text-charcoal">Production</span>. Sandbox only matches Development
+                      keys, and it connects a different company than your live QuickBooks.
                     </p>
                     <form method="post" action="/api/quickbooks/settings" class="mt-3 space-y-3">
                       <label class="block text-xs font-medium text-charcoal">
@@ -1291,11 +1293,17 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       <label class="block text-xs font-medium text-charcoal">
                         QuickBooks environment
                         <select class="field mt-1" name="environment">
-                          <option value="sandbox" selected={qbStatus.environment === 'sandbox'}>
-                            Sandbox / development (start here)
+                          <option
+                            value="production"
+                            selected={!qbStatus.hasOrgApp || qbStatus.environment === 'production'}
+                          >
+                            Production
                           </option>
-                          <option value="production" selected={qbStatus.environment === 'production'}>
-                            Production (after Intuit app go-live)
+                          <option
+                            value="sandbox"
+                            selected={qbStatus.hasOrgApp && qbStatus.environment === 'sandbox'}
+                          >
+                            Sandbox / development
                           </option>
                         </select>
                       </label>
@@ -1317,7 +1325,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
                     <p class="font-semibold text-charcoal">3. Add this Redirect URI</p>
                     <p class="mt-1">
-                      Go to <span class="font-medium text-charcoal">Settings</span>, click
+                      Still on the Production keys page, open
                       <span class="font-medium text-charcoal">Redirect URIs</span>, paste this URL, then click Save.
                     </p>
                     <div class="mt-2 flex flex-wrap items-center gap-2">
