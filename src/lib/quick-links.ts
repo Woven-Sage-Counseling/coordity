@@ -47,6 +47,7 @@ function isHttpUrl(value: string): boolean {
 function isAllowedIconSrc(value: string | null | undefined): value is string {
   if (!value) return false;
   if (value.startsWith('/app-icons/')) return true;
+  if (value.startsWith('/api/quick-links/icon/')) return true;
   return isHttpUrl(value);
 }
 
@@ -412,7 +413,7 @@ export async function createQuickLink(input: {
   await assertCategoryBelongsToOrg(input.orgId, input.categoryId);
   const iconSrc = input.iconSrc?.trim() || null;
   if (iconSrc && !isAllowedIconSrc(iconSrc)) {
-    throw new Error('Icon must be an https URL or an /app-icons/ path.');
+    throw new Error('Use an image from the website, an uploaded image, or an /app-icons/ path.');
   }
   const catalogKey = input.catalogKey?.trim() || null;
 
@@ -571,7 +572,7 @@ export async function updateQuickLink(input: {
   if (input.iconSrc !== undefined) {
     const next = input.iconSrc?.trim() || null;
     if (next && !isAllowedIconSrc(next)) {
-      throw new Error('Icon must be an https URL or an /app-icons/ path.');
+      throw new Error('Use an image from the website, an uploaded image, or an /app-icons/ path.');
     }
     iconSrc = next;
   }

@@ -12,6 +12,13 @@ import {
   updateQuickLink,
   updateQuickLinkCategory,
 } from '../../../lib/quick-links';
+import {
+  clearQuickLinkIcon,
+  discoverSiteIcon,
+  quickLinkIconPath,
+  readQuickLinkIconFile,
+  storeQuickLinkIcon,
+} from '../../../lib/quick-link-icons';
 
 export const prerender = false;
 
@@ -66,31 +73,64 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (action === 'create-custom') {
-      await createQuickLink({
+      const href = String(form.get('href') ?? '');
+      const uploaded = await readQuickLinkIconFile(form.get('icon'));
+      const iconSrc = uploaded ? null : await discoverSiteIcon(href);
+      const link = await createQuickLink({
         orgId,
         name: String(form.get('name') ?? ''),
-        href: String(form.get('href') ?? ''),
+        href,
         description: String(form.get('description') ?? ''),
         categoryId: String(form.get('categoryId') ?? '').trim(),
-        iconSrc: String(form.get('iconSrc') ?? '').trim() || null,
+        iconSrc,
         roleKeys,
         enabled: String(form.get('enabled') ?? '1') === '1',
       });
+      if (uploaded) {
+        try {
+          const version = await storeQuickLinkIcon(orgId, link.id, uploaded);
+          await updateQuickLink({
+            orgId,
+            linkId: link.id,
+            iconSrc: quickLinkIconPath(link.id, version),
+          });
+        } catch (error) {
+          await deleteQuickLink(orgId, link.id).catch(() => undefined);
+          throw error;
+        }
+      }
       return finish(request);
     }
 
     if (action === 'update-custom') {
+      const linkId = String(form.get('linkId') ?? '').trim();
+      const href = String(form.get('href') ?? '');
+      const uploaded = await readQuickLinkIconFile(form.get('icon'));
+      const useSiteIcon = String(form.get('useSiteIcon') ?? '') === '1';
+      let iconSrc: string | null | undefined;
+      if (!uploaded && useSiteIcon) {
+        await clearQuickLinkIcon(orgId, linkId);
+        iconSrc = await discoverSiteIcon(href);
+      }
       await updateQuickLink({
         orgId,
-        linkId: String(form.get('linkId') ?? '').trim(),
+        linkId,
         name: String(form.get('name') ?? ''),
-        href: String(form.get('href') ?? ''),
+        href,
         description: String(form.get('description') ?? ''),
         categoryId: String(form.get('categoryId') ?? '').trim(),
-        iconSrc: String(form.get('iconSrc') ?? '').trim() || null,
+        iconSrc,
         roleKeys,
         enabled: String(form.get('enabled') ?? '') === '1',
       });
+      if (uploaded) {
+        const version = await storeQuickLinkIcon(orgId, linkId, uploaded);
+        await updateQuickLink({
+          orgId,
+          linkId,
+          iconSrc: quickLinkIconPath(linkId, version),
+        });
+      }
       return finish(request);
     }
 
