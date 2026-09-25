@@ -2,6 +2,8 @@ import { getEnv } from '../env';
 import type { FinancialDataProvider, FinancialSnapshot } from './types';
 
 export class ManualSnapshotProvider implements FinancialDataProvider {
+  constructor(private readonly orgId: string) {}
+
   async getSnapshot(): Promise<FinancialSnapshot | null> {
     const { DB } = getEnv();
     const row = await DB.prepare(
@@ -9,9 +11,12 @@ export class ManualSnapshotProvider implements FinancialDataProvider {
               revenue_cents, therapist_compensation_cents, management_compensation_cents,
               software_and_technology_cents, total_expenses_cents, net_income_cents, notes
        FROM financial_snapshot
+       WHERE org_id = ?
        ORDER BY period_end DESC, created_at DESC
        LIMIT 1`,
-    ).first<{
+    )
+      .bind(this.orgId)
+      .first<{
       source: 'manual' | 'quickbooks';
       accounting_method: 'cash';
       period_start: string;

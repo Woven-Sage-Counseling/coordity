@@ -3,7 +3,11 @@ import PortalLayout from '../layouts/PortalLayout.astro';
 import PeriodPicker from '../components/PeriodPicker.astro';
 import FinancialScrollPanel from '../components/FinancialScrollPanel.astro';
 import FinancialTransactionItem from '../components/FinancialTransactionItem.astro';
+import { QuickBooksProvider, type ChartAccountChoice } from '../lib/financials/quickbooks';
+import { periodQuery } from '../lib/financials/periods';
 import { calendarDateValue, formatDisplayDate, formatUsd, getFinancialSummary } from '../lib/financials/summary';
+import { orgIdFromLocals } from '../lib/organization';
+import { getFinancialOutlook, normalizeMatchName, type OutlookLine } from '../lib/financials/outlook';
 import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
@@ -13,21 +17,34 @@ if (!hasPermission(employee, 'financials:view')) {
   return new Response('Forbidden', { status: 403 });
 }
 
-const summary = await getFinancialSummary(Astro.url.searchParams);
+const orgId = orgIdFromLocals(Astro.locals.organization);
+const summary = await getFinancialSummary(Astro.url.searchParams, { orgId });
 const snapshot = summary.snapshot;
 const canManage = hasPermission(employee, 'financials:manage');
+const outlookOpen = canManage && summary.quickbooks.status === 'connected';
+const outlook = outlookOpen ? await getFinancialOutlook(orgId) : null;
+const outlookLines: OutlookLine[] = outlook?.lines ?? [];
+let chartAccounts: ChartAccountChoice[] = [];
+let accountsError: string | null = null;
+if (outlookOpen && Astro.url.searchParams.get('accounts') === '1') {
+  try {
+    chartAccounts = await new QuickBooksProvider(orgId).listChartAccounts();
+  } catch (loadError) {
+    accountsError = loadError instanceof Error ? loadError.message : 'Could not load QuickBooks accounts.';
+  }
+}
+const expenseAccounts = chartAccounts.filter((account) => account.accountType === 'expense');
+const bankAccounts = chartAccounts.filter((account) => account.accountType === 'bank');
 const error = Astro.url.searchParams.get('error');
 const lastSync = summary.quickbooks.lastSyncAt
   ? new Date(summary.quickbooks.lastSyncAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
   : null;
 
 const revenue = snapshot?.revenueCents ?? 0;
-const net = snapshot?.netIncomeCents ?? 0;
-const therapist = snapshot?.therapistCompensationCents ?? 0;
-const management = snapshot?.managementCompensationCents ?? 0;
-const software = snapshot?.softwareAndTechnologyCents ?? 0;
-const expenses = snapshot?.totalExpensesCents ?? 0;
-const scale = Math.max(revenue, therapist, management, software, expenses, 1);
+const net = summary.reportedNetCents ?? 0;
+const expenses = summary.reportedExpensesCents ?? 0;
+const linePalette = ['#3d8b37', '#6aa84f', '#8fbc8f', '#a8c5a0'];
+const scale = Math.max(revenue, expenses, ...summary.expenseLines.map((line) => line.cents ?? 0), 1);
 const bar = (cents: number) => `${Math.round((cents / scale) * 100)}%`;
 const shareOfIncome = (cents: number) => (revenue > 0 ? `${Math.round((cents / revenue) * 100)}%` : null);
 const netPositive = net >= 0;
@@ -41,11 +58,23 @@ const ringOffset = ringCircumference * (1 - ringRatio);
 
 const pnlRows = [
   { label: 'Income', cents: revenue, color: '#2CA01C', share: null as string | null, showBar: false },
-  { label: 'Therapist compensation', cents: therapist, color: '#3d8b37', share: shareOfIncome(therapist), showBar: true },
-  { label: 'Manager compensation', cents: management, color: '#6aa84f', share: shareOfIncome(management), showBar: true },
-  { label: 'Software and technology', cents: software, color: '#8fbc8f', share: shareOfIncome(software), showBar: true },
-  { label: 'Total expenses', cents: expenses, color: '#a8c5a0', share: shareOfIncome(expenses), showBar: true },
+  ...summary.expenseLines.map((line, index) => ({
+    label: line.label,
+    cents: line.cents ?? 0,
+    color: line.color || linePalette[index % linePalette.length],
+    share: shareOfIncome(line.cents ?? 0),
+    showBar: true,
+  })),
+  {
+    label: 'Total expenses',
+    cents: expenses,
+    color: '#a8c5a0',
+    share: shareOfIncome(expenses),
+    showBar: summary.expenseLines.length === 0,
+  },
 ];
+const reserveLine = summary.cashLines.find((line) => line.role === 'reserve') ?? null;
+const accountsHref = `${periodQuery(summary.period)}${periodQuery(summary.period) ? '&' : '?'}accounts=1#outlook`;
 
 const incomeTransactions = summary.transactions
   .filter((transaction) => transaction.bucket === 'income' && transaction.cents !== 0)
@@ -111,7 +140,7 @@ const needsReconnect =
 
   <section class="mt-10" aria-labelledby="overview-heading">
     <h2 id="overview-heading" class="font-display text-2xl text-charcoal">Overview</h2>
-    <div class="mt-4 grid gap-4 md:grid-cols-2">
+    <div class:list={['mt-4 grid gap-4', reserveLine && 'md:grid-cols-2']}>
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Net income</p>
         <p
@@ -120,15 +149,16 @@ const needsReconnect =
             netPositive ? 'text-[#2CA01C]' : 'text-[#d52b1e]',
           ]}
         >
-          {formatUsd(snapshot?.netIncomeCents ?? null)}
+          {formatUsd(snapshot ? net : null)}
         </p>
       </article>
 
+      {reserveLine && (
       <article class="flex items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <div class="min-w-0">
           <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reserve</p>
           <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-            {formatUsd(summary.cash.boaReserveCents)}
+            {formatUsd(summary.reserveCents)}
           </p>
           <p class="mt-1 text-sm text-[#6b6c72]">
             of {formatUsd(summary.reserveTargetCents)}
@@ -164,10 +194,11 @@ const needsReconnect =
           </p>
         </div>
       </article>
+      )}
     </div>
   </section>
 
-  <div class="mt-12 grid gap-8 lg:grid-cols-2 lg:items-stretch">
+  <div class:list={['mt-12 grid gap-8 lg:items-stretch', summary.cashLines.length > 0 && 'lg:grid-cols-2']}>
     <section class="flex flex-col" aria-labelledby="pnl-heading">
       <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
       <div class="mt-4 flex flex-1 flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
@@ -199,30 +230,196 @@ const needsReconnect =
       </div>
     </section>
 
-    <section class="flex flex-col" aria-labelledby="cash-heading">
-      <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
-      <div class="mt-4 flex flex-1 flex-col gap-3">
-        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Operating Checking - Relay</p>
-          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-            {formatUsd(summary.cash.relayOperatingCents)}
-          </p>
-        </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">3-month Reserve - Bank of America</p>
-          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-            {formatUsd(summary.cash.boaReserveCents)}
-          </p>
-        </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
-          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-            {formatUsd(summary.totalCashCents)}
-          </p>
-        </article>
-      </div>
-    </section>
+    {
+      summary.cashLines.length > 0 && (
+        <section class="flex flex-col" aria-labelledby="cash-heading">
+          <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
+          <div class="mt-4 flex flex-1 flex-col gap-3">
+            {summary.cashLines.map((line) => (
+              <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">{line.label}</p>
+                <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">{formatUsd(line.cents)}</p>
+              </article>
+            ))}
+            <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
+              <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">{formatUsd(summary.totalCashCents)}</p>
+            </article>
+          </div>
+        </section>
+      )
+    }
   </div>
+
+  {
+    outlookOpen && (
+      <section class="mt-12" id="outlook" aria-labelledby="outlook-heading">
+        <h2 id="outlook-heading" class="font-display text-2xl text-charcoal">Outlook</h2>
+        <p class="mt-2 max-w-2xl text-sm text-sage-dark/70">
+          Choose which QuickBooks accounts roll into each expense group and cash account. Until you save groups, the dashboard keeps the full QuickBooks income, expenses, and net income.
+        </p>
+        <form method="post" action="/api/financials/outlook" class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          {chartAccounts.length > 0 && <input type="hidden" name="accountsLoaded" value="1" />}
+          <input type="hidden" name="period" value={summary.period.id} />
+          <input type="hidden" name="start" value={summary.period.start} />
+          <input type="hidden" name="end" value={summary.period.end} />
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block text-sm text-charcoal">
+              Reserve target (months)
+              <input class="field" type="number" name="reserveTargetMonths" min="1" max="24" required value={summary.reserveTargetMonths} />
+            </label>
+            <label class="block text-sm text-charcoal">
+              Averaging starts
+              <input class="field" type="date" name="operationsStart" value={outlook?.operationsStart ?? ''} />
+            </label>
+          </div>
+          <p class="mt-1 text-[11px] text-sage-dark/55">Leave the date empty to average across the whole reporting period. The reserve ring appears after you mark one cash account as the reserve.</p>
+
+          {
+            outlookLines.filter((line) => line.kind === 'expense').map((line) => (
+              <fieldset class="mt-5 rounded-xl border border-black/[0.08] p-3">
+                <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expense group</legend>
+                <input type="hidden" name="lineId" value={line.id} />
+                <input type="hidden" name="lineKind" value="expense" />
+                <input type="hidden" name="lineRole" value="expense" />
+                <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input class="field" type="text" name="lineLabel" required value={line.label} aria-label="Expense group name" />
+                  <input class="field h-11 w-16" type="color" name="lineColor" value={line.color || '#3d8b37'} aria-label="Bar color" />
+                </div>
+                <label class="mt-2 inline-flex items-center gap-2 text-sm text-charcoal">
+                  <input type="checkbox" name="remove" value={line.id} />
+                  Remove
+                </label>
+                {chartAccounts.length > 0 && (
+                  <div class="mt-3 grid gap-1 sm:grid-cols-2">
+                    {expenseAccounts.map((account) => (
+                      <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                        <input
+                          type="checkbox"
+                          name="lineAccount"
+                          value={`${line.id}\t${account.id}\t${normalizeMatchName(account.name)}`}
+                          checked={line.accounts.some((saved) => saved.qbAccountId === account.id || saved.matchName === normalizeMatchName(account.name))}
+                        />
+                        {account.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {chartAccounts.length === 0 && (
+                  <label class="mt-2 block text-sm text-charcoal">
+                    Account names, one per line
+                    <textarea class="field min-h-16" name="lineTyped" placeholder="Software and technology">{line.accounts.map((account) => account.matchName).join('\n')}</textarea>
+                  </label>
+                )}
+              </fieldset>
+            ))
+          }
+
+          {
+            outlookLines.filter((line) => line.kind === 'cash').map((line) => (
+              <fieldset class="mt-5 rounded-xl border border-black/[0.08] p-3">
+                <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Cash account</legend>
+                <input type="hidden" name="lineId" value={line.id} />
+                <input type="hidden" name="lineKind" value="cash" />
+                <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input class="field" type="text" name="lineLabel" required value={line.label} aria-label="Cash account name" />
+                  <select class="field" name="lineRole" aria-label="Cash role">
+                    <option value="operating" selected={line.role === 'operating'}>Operating</option>
+                    <option value="reserve" selected={line.role === 'reserve'}>Reserve</option>
+                  </select>
+                </div>
+                <input type="hidden" name="lineColor" value={line.color || '#3d8b37'} />
+                <label class="mt-2 inline-flex items-center gap-2 text-sm text-charcoal">
+                  <input type="checkbox" name="remove" value={line.id} />
+                  Remove
+                </label>
+                {chartAccounts.length > 0 && (
+                  <div class="mt-3 grid gap-1 sm:grid-cols-2">
+                    {bankAccounts.map((account) => (
+                      <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                        <input
+                          type="checkbox"
+                          name="lineAccount"
+                          value={`${line.id}\t${account.id}\t${normalizeMatchName(account.name)}`}
+                          checked={line.accounts.some((saved) => saved.qbAccountId === account.id || saved.matchName === normalizeMatchName(account.name) || (account.accountNumber != null && saved.matchName === normalizeMatchName(account.accountNumber)))}
+                        />
+                        {account.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {chartAccounts.length === 0 && (
+                  <label class="mt-2 block text-sm text-charcoal">
+                    Account names or numbers, one per line
+                    <textarea class="field min-h-16" name="lineTyped">{line.accounts.map((account) => account.matchName).join('\n')}</textarea>
+                  </label>
+                )}
+              </fieldset>
+            ))
+          }
+
+          <fieldset class="mt-5 rounded-xl border border-dashed border-sage-dark/30 p-3">
+            <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Add expense group</legend>
+            <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input class="field" type="text" name="newExpenseLabel" placeholder="Group name" aria-label="New expense group name" />
+              <input class="field h-11 w-16" type="color" name="newExpenseColor" value="#3d8b37" aria-label="New group color" />
+            </div>
+            {expenseAccounts.length > 0 && (
+              <div class="mt-3 grid gap-1 sm:grid-cols-2">
+                {expenseAccounts.map((account) => (
+                  <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                    <input type="checkbox" name="newExpenseAccount" value={`${account.id}\t${normalizeMatchName(account.name)}`} />
+                    {account.name}
+                  </label>
+                ))}
+              </div>
+            )}
+            <label class="mt-2 block text-sm text-charcoal">
+              Account names, one per line
+              <textarea class="field min-h-16" name="newExpenseTyped"></textarea>
+            </label>
+          </fieldset>
+
+          <fieldset class="mt-5 rounded-xl border border-dashed border-sage-dark/30 p-3">
+            <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Add cash account</legend>
+            <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input class="field" type="text" name="newCashLabel" placeholder="Account name" aria-label="New cash account name" />
+              <select class="field" name="newCashRole" aria-label="New cash role">
+                <option value="operating">Operating</option>
+                <option value="reserve">Reserve</option>
+              </select>
+            </div>
+            {bankAccounts.length > 0 && (
+              <div class="mt-3 grid gap-1 sm:grid-cols-2">
+                {bankAccounts.map((account) => (
+                  <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                    <input type="checkbox" name="newCashAccount" value={`${account.id}\t${normalizeMatchName(`${account.name} ${account.accountNumber ?? ''}`)}`} />
+                    {account.name}
+                  </label>
+                ))}
+              </div>
+            )}
+            <label class="mt-2 block text-sm text-charcoal">
+              Account names or numbers, one per line
+              <textarea class="field min-h-16" name="newCashTyped"></textarea>
+            </label>
+          </fieldset>
+
+          {accountsError && <p class="mt-3 text-sm text-red-800">{accountsError}</p>}
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a class="rounded-md bg-white px-3.5 py-2 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]" href={accountsHref}>
+              Load accounts from QuickBooks
+            </a>
+            <button class="rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]" type="submit">
+              Save outlook
+            </button>
+          </div>
+        </form>
+      </section>
+    )
+  }
 
   <section class="mt-12" aria-labelledby="detail-heading">
     <h2 id="detail-heading" class="font-display text-2xl text-charcoal">Income and expense transactions</h2>

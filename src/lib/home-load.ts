@@ -119,7 +119,7 @@ export async function loadHomePrepared(input: {
           )
         : Promise.resolve(null),
       input.canSeeFinancials
-        ? settle('home financials', () => getFinancialSummary(null, { cachedOnly: true }), null)
+        ? settle('home financials', () => getFinancialSummary(null, { cachedOnly: true, orgId: input.orgId }), null)
         : Promise.resolve(null),
       settle(
         'home bulletin landscape',

@@ -14,15 +14,19 @@ export interface FinancialSnapshot {
   notes?: string | null;
 }
 
-export interface CashBalances {
-  relayOperatingCents: number | null;
-  boaReserveCents: number | null;
+export interface OutlookDisplayLine {
+  id: string;
+  label: string;
+  color: string | null;
+  role: 'expense' | 'operating' | 'reserve';
+  cents: number | null;
 }
 
 export interface PnlLine {
   name: string;
   cents: number;
-  bucket: 'therapist' | 'management' | 'software' | 'income' | 'other' | null;
+  bucket: string | null;
+  accountId?: string | null;
 }
 
 export interface FinancialTransaction {
@@ -33,24 +37,30 @@ export interface FinancialTransaction {
   memo: string | null;
   accountName: string;
   cents: number;
-  bucket: 'therapist' | 'management' | 'software' | 'income' | 'other' | null;
+  bucket: string | null;
 }
 
 export interface BankAccountLine {
   name: string;
   balanceCents: number | null;
-  mappedKey: 'relay_operating' | 'boa_reserve' | null;
+  mappedKey: string | null;
+  accountId?: string | null;
+  accountNumber?: string | null;
 }
 
 export interface FinancialSummary {
   period: ResolvedPeriod;
   snapshot: FinancialSnapshot | null;
-  cash: CashBalances;
+  expenseLines: OutlookDisplayLine[];
+  cashLines: OutlookDisplayLine[];
+  reportedExpensesCents: number | null;
+  reportedNetCents: number | null;
   totalCashCents: number | null;
   reserveTargetMonths: number;
   reserveTargetCents: number | null;
   reserveProgressRatio: number | null;
   reserveAveragingStart: string | null;
+  reserveCents: number | null;
   pnlLines: PnlLine[];
   transactions: FinancialTransaction[];
   bankAccounts: BankAccountLine[];

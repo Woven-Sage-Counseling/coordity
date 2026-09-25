@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { hasPermission } from '../../../lib/permissions';
 import { QuickBooksProvider } from '../../../lib/financials/quickbooks';
+import { orgIdFromLocals } from '../../../lib/organization';
 import { formErrorRedirect } from '../../../lib/http';
 
 export const prerender = false;
@@ -11,7 +12,7 @@ export const POST: APIRoute = async ({ locals }) => {
   }
 
   try {
-    await new QuickBooksProvider().syncSnapshot();
+    await new QuickBooksProvider(orgIdFromLocals(locals.organization)).syncSnapshot();
   } catch (error) {
     const message = error instanceof Error ? error.message : 'QuickBooks sync failed.';
     return formErrorRedirect('/financials', message);

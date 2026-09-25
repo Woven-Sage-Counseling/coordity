@@ -1,6 +1,7 @@
 ---
 import { formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { periodQuery, resolvePeriodFromSearch } from '../lib/financials/periods';
+import { orgIdFromLocals } from '../lib/organization';
 import type { FinancialSummary } from '../lib/financials/types';
 import PeriodPicker from './PeriodPicker.astro';
 import { widgetAccentVarsStyle } from '../lib/home-widget-header';
@@ -16,7 +17,10 @@ const { preparedSummary } = Astro.props;
 let summary: FinancialSummary | null = preparedSummary ?? null;
 if (preparedSummary === undefined) {
   try {
-    summary = await getFinancialSummary(Astro.url.searchParams, { cachedOnly: true });
+    summary = await getFinancialSummary(Astro.url.searchParams, {
+      cachedOnly: true,
+      orgId: orgIdFromLocals(Astro.locals.organization),
+    });
   } catch (error) {
     console.error('home financial snapshot failed', error);
   }
@@ -25,6 +29,8 @@ if (preparedSummary === undefined) {
 const snapshot = summary?.snapshot ?? null;
 const period = summary?.period ?? resolvePeriodFromSearch(Astro.url.searchParams);
 const ratio = summary?.reserveProgressRatio ?? null;
+const expenseLines = summary?.expenseLines ?? [];
+const reserveLine = summary?.cashLines.find((line) => line.role === 'reserve') ?? null;
 const percent = ratio == null ? null : Math.round(ratio * 100);
 
 function formatPeriod(iso: string): string {
@@ -77,30 +83,37 @@ const periodLabel = snapshot
         <span class="font-medium text-[#393a3d]">Income</span>
         <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.revenueCents ?? null)}</span>
       </div>
-      <div class="mb-3 flex justify-between text-xs">
-        <span class="font-medium text-[#393a3d]">Therapist comp.</span>
-        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.therapistCompensationCents ?? null)}</span>
-      </div>
-      <div class="mb-3 flex justify-between text-xs">
-        <span class="font-medium text-[#393a3d]">Manager comp.</span>
-        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.managementCompensationCents ?? null)}</span>
-      </div>
-      <div class="flex justify-between text-xs">
-        <span class="font-medium text-[#393a3d]">Software &amp; tech</span>
-        <span class="font-semibold text-[#393a3d]">{formatUsd(snapshot?.softwareAndTechnologyCents ?? null)}</span>
-      </div>
+      {
+        expenseLines.length > 0 ? (
+          expenseLines.map((line, index) => (
+            <div class:list={['flex justify-between text-xs', index < expenseLines.length - 1 && 'mb-3']}>
+              <span class="font-medium text-[#393a3d]">{line.label}</span>
+              <span class="font-semibold text-[#393a3d]">{formatUsd(line.cents)}</span>
+            </div>
+          ))
+        ) : (
+          <div class="flex justify-between text-xs">
+            <span class="font-medium text-[#393a3d]">Total expenses</span>
+            <span class="font-semibold text-[#393a3d]">{formatUsd(summary?.reportedExpensesCents ?? null)}</span>
+          </div>
+        )
+      }
     </div>
 
-    <div class="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-sm">
-      <div>
-        <p class="m-0 text-xs font-medium text-[#393a3d]">Reserve</p>
-        <p class="mt-1 text-[11px] text-[#6b6c72]">
-          {formatUsd(summary?.cash.boaReserveCents ?? null)} of {formatUsd(summary?.reserveTargetCents ?? null)}
-        </p>
-      </div>
-      <p class="m-0 text-sm font-bold text-[#393a3d]">
-        {percent == null ? '—' : `${percent}%`}
-      </p>
-    </div>
+    {
+      reserveLine && (
+        <div class="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-sm">
+          <div>
+            <p class="m-0 text-xs font-medium text-[#393a3d]">{reserveLine.label}</p>
+            <p class="mt-1 text-[11px] text-[#6b6c72]">
+              {formatUsd(reserveLine.cents)} of {formatUsd(summary?.reserveTargetCents ?? null)}
+            </p>
+          </div>
+          <p class="m-0 text-sm font-bold text-[#393a3d]">
+            {percent == null ? '—' : `${percent}%`}
+          </p>
+        </div>
+      )
+    }
   </div>
 </aside>

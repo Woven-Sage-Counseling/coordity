@@ -214,6 +214,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  if (pathname === '/api/financials/outlook' && context.request.method === 'POST') {
+    if (!employee.permissions.includes('financials:manage')) {
+      return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
+    }
+  }
+
   if (pathname.startsWith('/management')) {
     const redirectPath = pathname.replace(/^\/management/, '/admin');
     return context.redirect(`${redirectPath}${context.url.search}`);

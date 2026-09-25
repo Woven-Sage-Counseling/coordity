@@ -1,8 +1,15 @@
-import { getEnv, practiceOperationsStart } from '../env';
+import { DEFAULT_ORG_ID } from '../organization';
 import { ManualSnapshotProvider } from './manual-snapshot';
+import {
+  centsByOutlookLine,
+  expenseTotals,
+  getFinancialOutlook,
+  readCashBalances,
+  readSnapshotNotes,
+} from './outlook';
 import { averagingStart, resolvePeriodFromSearch, resolvePreset } from './periods';
 import { QuickBooksProvider } from './quickbooks';
-import type { BankAccountLine, CashBalances, FinancialSummary, FinancialTransaction, PnlLine } from './types';
+import type { FinancialSnapshot, FinancialSummary, OutlookDisplayLine } from './types';
 
 function daysInclusive(start: string, end: string): number {
   const from = Date.parse(`${start}T00:00:00Z`);
@@ -16,109 +23,121 @@ function averageMonthlyRevenueCents(revenueCents: number, periodStart: string, p
   return Math.round(averageDay * 30.4375);
 }
 
-function parseSnapshotMeta(snapshot: { notes?: string | null } | null): {
-  pnlLines: PnlLine[];
-  transactions: FinancialTransaction[];
-  bankAccounts: BankAccountLine[];
-} {
-  if (!snapshot?.notes?.startsWith('{')) return { pnlLines: [], transactions: [], bankAccounts: [] };
-  try {
-    const meta = JSON.parse(snapshot.notes) as {
-      lines?: PnlLine[];
-      transactions?: FinancialTransaction[];
-      banks?: BankAccountLine[];
-    };
-    return {
-      pnlLines: meta.lines ?? [],
-      transactions: meta.transactions ?? [],
-      bankAccounts: meta.banks ?? [],
-    };
-  } catch {
-    return { pnlLines: [], transactions: [], bankAccounts: [] };
-  }
-}
-
 export async function getFinancialSummary(
   search?: URLSearchParams | null,
-  options?: { cachedOnly?: boolean },
+  options?: { cachedOnly?: boolean; orgId?: string },
 ): Promise<FinancialSummary> {
-  const env = getEnv();
-  const qb = new QuickBooksProvider();
-  const manual = new ManualSnapshotProvider();
+  const orgId = options?.orgId || DEFAULT_ORG_ID;
+  const qb = new QuickBooksProvider(orgId);
+  const manual = new ManualSnapshotProvider(orgId);
   const period = resolvePeriodFromSearch(search);
   const ytd = resolvePreset('ytd');
+  const outlook = await getFinancialOutlook(orgId);
   const readSnapshot = (start: string, end: string) =>
     options?.cachedOnly ? qb.getCachedSnapshot(start, end) : qb.getOrFetchSnapshot(start, end);
   const snapshot = (await readSnapshot(period.start, period.end)) ?? (await manual.getSnapshot());
-  const operationsStart = practiceOperationsStart();
-  const ytdReserveStart = averagingStart(ytd.start, ytd.end, operationsStart);
+  const selectedNotes = readSnapshotNotes(snapshot?.notes);
+  const ytdReserveStart = outlook.operationsStart
+    ? averagingStart(ytd.start, ytd.end, outlook.operationsStart)
+    : ytd.start;
   const reserveSnapshot =
     period.start === ytdReserveStart && period.end === ytd.end
       ? snapshot
       : ((await readSnapshot(ytdReserveStart, ytd.end)) ??
         (await qb.getCachedSnapshot(ytd.start, ytd.end)) ??
         snapshot);
+  const bankNotes = selectedNotes.banks.length > 0 ? selectedNotes : readSnapshotNotes(reserveSnapshot?.notes);
+  const amounts = centsByOutlookLine(outlook, {
+    ...selectedNotes,
+    banks: bankNotes.banks,
+  });
+  const storedCash = amounts.cash.size > 0 ? amounts.cash : await readCashBalances(orgId);
 
-  const cashRow = await env.DB.prepare(
-    `SELECT account_key, balance_cents FROM cash_account_balance`,
-  ).all<{ account_key: string; balance_cents: number | null }>();
+  const expenseLines: OutlookDisplayLine[] = outlook.lines
+    .filter((line) => line.kind === 'expense')
+    .map((line) => ({
+      id: line.id,
+      label: line.label,
+      color: line.color,
+      role: 'expense' as const,
+      cents: amounts.expense.get(line.id) ?? 0,
+    }));
+  const cashLines: OutlookDisplayLine[] = outlook.lines
+    .filter((line) => line.kind === 'cash')
+    .map((line) => ({
+      id: line.id,
+      label: line.label,
+      color: line.color,
+      role: line.role === 'reserve' ? ('reserve' as const) : ('operating' as const),
+      cents: storedCash.get(line.id) ?? null,
+    }));
 
-  const cash: CashBalances = {
-    relayOperatingCents: null,
-    boaReserveCents: null,
-  };
-  for (const row of cashRow.results ?? []) {
-    if (row.account_key === 'relay_operating') cash.relayOperatingCents = row.balance_cents;
-    if (row.account_key === 'boa_reserve') cash.boaReserveCents = row.balance_cents;
-  }
+  const incomeCents = snapshot?.revenueCents ?? 0;
+  const qboExpenses = selectedNotes.qboExpenses ?? snapshot?.totalExpensesCents ?? 0;
+  const qboNet = selectedNotes.qboNet ?? snapshot?.netIncomeCents ?? incomeCents - qboExpenses;
+  const reported = snapshot
+    ? expenseTotals({
+        outlook,
+        incomeCents,
+        qboExpensesCents: qboExpenses,
+        qboNetCents: qboNet,
+        lineCents: amounts.expense,
+      })
+    : { totalExpensesCents: 0, netIncomeCents: 0 };
 
-  const totalCashCents =
-    cash.relayOperatingCents != null && cash.boaReserveCents != null
-      ? cash.relayOperatingCents + cash.boaReserveCents
+  const reserveLine = cashLines.find((line) => line.role === 'reserve') ?? null;
+  const operationsStart = outlook.operationsStart;
+  const reserveAveragingStart =
+    reserveLine && reserveSnapshot && operationsStart
+      ? averagingStart(reserveSnapshot.periodStart, reserveSnapshot.periodEnd, operationsStart)
+      : reserveLine && reserveSnapshot
+        ? reserveSnapshot.periodStart
+        : null;
+  const reserveTargetCents =
+    reserveLine && reserveSnapshot && reserveAveragingStart
+      ? averageMonthlyRevenueCents(
+          reserveSnapshot.revenueCents,
+          reserveAveragingStart,
+          reserveSnapshot.periodEnd,
+        ) * outlook.reserveTargetMonths
       : null;
-
-  const reserve = await env.DB.prepare(
-    `SELECT target_months FROM reserve_setting WHERE id = 1`,
-  ).first<{ target_months: number }>();
-  const reserveTargetMonths = reserve?.target_months ?? 3;
-
-  const reserveAveragingStart = reserveSnapshot
-    ? averagingStart(reserveSnapshot.periodStart, reserveSnapshot.periodEnd, operationsStart)
-    : null;
-  const reserveTargetCents = reserveSnapshot
-    ? averageMonthlyRevenueCents(
-        reserveSnapshot.revenueCents,
-        reserveAveragingStart!,
-        reserveSnapshot.periodEnd,
-      ) * reserveTargetMonths
-    : null;
-
+  const reserveCents = reserveLine?.cents ?? null;
   const reserveProgressRatio =
-    cash.boaReserveCents != null && reserveTargetCents && reserveTargetCents > 0
-      ? cash.boaReserveCents / reserveTargetCents
-      : null;
+    reserveCents != null && reserveTargetCents && reserveTargetCents > 0 ? reserveCents / reserveTargetCents : null;
+
+  const totalCashCents = cashLines.every((line) => line.cents != null)
+    ? cashLines.reduce((sum, line) => sum + (line.cents ?? 0), 0)
+    : null;
 
   const qbStatus = await qb.getConnectionStatus();
-
-  const selectedMeta = parseSnapshotMeta(snapshot);
-  const reserveMeta = parseSnapshotMeta(reserveSnapshot);
-  const pnlLines = selectedMeta.pnlLines;
-  const transactions = selectedMeta.transactions;
-  const bankAccounts =
-    selectedMeta.bankAccounts.length > 0 ? selectedMeta.bankAccounts : reserveMeta.bankAccounts;
 
   return {
     period,
     snapshot,
-    cash,
-    totalCashCents,
-    reserveTargetMonths,
+    expenseLines,
+    cashLines,
+    reportedExpensesCents: snapshot ? reported.totalExpensesCents : null,
+    reportedNetCents: snapshot ? reported.netIncomeCents : null,
+    totalCashCents: cashLines.length > 0 ? totalCashCents : null,
+    reserveTargetMonths: outlook.reserveTargetMonths,
     reserveTargetCents,
     reserveProgressRatio,
     reserveAveragingStart,
-    pnlLines,
-    transactions,
-    bankAccounts,
+    reserveCents,
+    pnlLines: selectedNotes.pnlLines.map((line) => ({
+      name: line.name,
+      cents: line.cents,
+      bucket: line.expense ? 'other' : 'income',
+      accountId: line.accountId,
+    })),
+    transactions: selectedNotes.transactions,
+    bankAccounts: bankNotes.banks.map((bank) => ({
+      name: bank.name,
+      balanceCents: bank.balanceCents,
+      mappedKey: null,
+      accountId: bank.accountId,
+      accountNumber: bank.accountNumber,
+    })),
     quickbooks: {
       configured: qbStatus.configured,
       status: qbStatus.status,
@@ -179,3 +198,5 @@ export function calendarDateValue(value: string | null | undefined): number {
   if (!value) return 0;
   return parseCalendarDate(value)?.getTime() ?? 0;
 }
+
+export type { FinancialSnapshot };

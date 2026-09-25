@@ -267,7 +267,7 @@ const [
     lastError: null,
     connectedAt: null,
   }),
-  safeLoad('qb-status', () => new QuickBooksProvider().getConnectionStatus(), {
+  safeLoad('qb-status', () => new QuickBooksProvider(orgId).getConnectionStatus(), {
     configured: false,
     hasOrgApp: false,
     hasPlatformApp: false,

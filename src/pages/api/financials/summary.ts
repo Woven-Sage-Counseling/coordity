@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { hasPermission } from '../../../lib/permissions';
 import { getFinancialSummary } from '../../../lib/financials/summary';
+import { orgIdFromLocals } from '../../../lib/organization';
 
 export const prerender = false;
 
@@ -12,7 +13,9 @@ export const GET: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const summary = await getFinancialSummary(new URL(request.url).searchParams);
+  const summary = await getFinancialSummary(new URL(request.url).searchParams, {
+    orgId: orgIdFromLocals(locals.organization),
+  });
   return new Response(JSON.stringify(summary), {
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });

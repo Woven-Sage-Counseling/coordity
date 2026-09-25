@@ -1,19 +1,17 @@
 import type { APIRoute } from 'astro';
 import { QuickBooksProvider } from '../../../lib/financials/quickbooks';
-import { orgCanonicalOrigin } from '../../../lib/organization';
+import { orgCanonicalOrigin, orgIdFromLocals } from '../../../lib/organization';
 import { hasPermission } from '../../../lib/permissions';
 
 export const prerender = false;
 
-function integrationsRedirect(opts?: { error?: string; saved?: string }): Response {
-  const params = new URLSearchParams();
-  if (opts?.error) params.set('integrationsError', opts.error);
-  if (opts?.saved) params.set('integrationsSaved', opts.saved);
-  const qs = params.toString();
+function financialsRedirect(opts?: { error?: string }): Response {
+  const params = new URLSearchParams({ outlook: '1' });
+  if (opts?.error) params.set('error', opts.error);
   return new Response(null, {
     status: 303,
     headers: {
-      Location: `/admin${qs ? `?${qs}` : ''}#integrations`,
+      Location: `/financials?${params.toString()}#outlook`,
       'Cache-Control': 'no-store',
     },
   });
@@ -26,20 +24,20 @@ export const GET: APIRoute = async ({ locals, url, request }) => {
 
   const denied = url.searchParams.get('error');
   if (denied) {
-    return integrationsRedirect({ error: 'QuickBooks connection was cancelled.' });
+    return financialsRedirect({ error: 'QuickBooks connection was cancelled.' });
   }
 
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const realmId = url.searchParams.get('realmId');
   if (!code || !state || !realmId) {
-    return integrationsRedirect({ error: 'QuickBooks did not return a complete authorization.' });
+    return financialsRedirect({ error: 'QuickBooks did not return a complete authorization.' });
   }
 
-  const provider = new QuickBooksProvider();
+  const provider = new QuickBooksProvider(orgIdFromLocals(locals.organization));
   const saved = await provider.readOauthState(state);
   if (!saved || saved.userId !== locals.employee!.id) {
-    return integrationsRedirect({ error: 'QuickBooks connection expired. Please try Connect again.' });
+    return financialsRedirect({ error: 'QuickBooks connection expired. Please try Connect again.' });
   }
 
   try {
@@ -51,8 +49,8 @@ export const GET: APIRoute = async ({ locals, url, request }) => {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to connect QuickBooks.';
-    return integrationsRedirect({ error: message });
+    return financialsRedirect({ error: message });
   }
 
-  return integrationsRedirect({ saved: 'quickbooks' });
+  return financialsRedirect();
 };

@@ -1,6 +1,12 @@
 import { getEnv, qbApiEnvironment } from '../env';
 import { nowMs, randomToken } from '../crypto';
-import { classifyBank, classifyExpense } from './account-map';
+import { DEFAULT_ORG_ID } from '../organization';
+import {
+  expenseTotals,
+  getFinancialOutlook,
+  matchOutlookLine,
+  type FinancialOutlook,
+} from './outlook';
 import { resolvePreset, todayEastern } from './periods';
 import type { FinancialDataProvider, FinancialSnapshot, FinancialTransaction } from './types';
 
@@ -30,6 +36,7 @@ interface TokenResponse {
 }
 
 interface ConnectionRow {
+  id: string;
   realm_id: string | null;
   access_token_encrypted: string | null;
   refresh_token_encrypted: string | null;
@@ -124,7 +131,7 @@ function resolveAccountBucket(
     if (normalizeAccountKey(name) === normalized) return bucket;
   }
 
-  return classifyExpense(accountName) ?? (inExpense ? 'other' : 'income');
+  return inExpense ? 'other' : 'income';
 }
 
 function isTransactionRow(row: QbRow): boolean {
@@ -192,15 +199,20 @@ function isStructuralAccount(name: string): boolean {
   );
 }
 
+function rowAccountId(row: QbRow): string | null {
+  const id = (row.ColData?.[0]?.id ?? row.Header?.ColData?.[0]?.id ?? '').trim();
+  return id || null;
+}
+
 function parsePnl(rows: QbRow[]): {
   income: number;
   expenses: number;
   net: number;
-  leaves: Map<string, { cents: number; expense: boolean }>;
+  leaves: Map<string, { cents: number; expense: boolean; accountId: string | null }>;
 } {
   const groups: Partial<Record<string, number>> = {};
   const named = new Map<string, number>();
-  const leaves = new Map<string, { cents: number; expense: boolean }>();
+  const leaves = new Map<string, { cents: number; expense: boolean; accountId: string | null }>();
   let expenseData = 0;
 
   function walk(list: QbRow[], inExpense: boolean): void {
@@ -220,6 +232,7 @@ function parsePnl(rows: QbRow[]): {
         leaves.set(name, {
           cents: (previous?.cents ?? 0) + amount,
           expense: previous?.expense || nextExpense,
+          accountId: previous?.accountId ?? rowAccountId(row),
         });
       }
 
@@ -442,7 +455,38 @@ function basicAuth(clientId: string, clientSecret: string): string {
   return btoa(`${clientId}:${clientSecret}`);
 }
 
+export interface ChartAccountChoice {
+  id: string;
+  name: string;
+  accountType: 'expense' | 'bank';
+  accountNumber: string | null;
+}
+
+interface BankQueryAccount {
+  Id?: string;
+  Name?: string;
+  FullyQualifiedName?: string;
+  AccountType?: string;
+  AcctNum?: string;
+  CurrentBalance?: number;
+}
+
+function expenseAccountType(type: string): boolean {
+  return type === 'Expense' || type === 'Other Expense' || type === 'Cost of Goods Sold';
+}
+
 export class QuickBooksProvider implements FinancialDataProvider {
+  constructor(private readonly orgId = DEFAULT_ORG_ID) {}
+
+  private fallbackConnectionId(): string {
+    return this.orgId === DEFAULT_ORG_ID ? CONNECTION_ID : `qb_${this.orgId}`;
+  }
+
+  private async persistId(): Promise<string> {
+    const row = await this.connection();
+    return row?.id ?? this.fallbackConnectionId();
+  }
+
   isConfigured(): boolean {
     // Sync check for platform env only; prefer async isReady() when org keys may exist.
     const env = getEnv();
@@ -530,7 +574,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
              last_error = NULL
          WHERE id = ?`,
       )
-      .bind(CONNECTION_ID)
+      .bind(await this.persistId())
       .run();
   }
 
@@ -558,16 +602,16 @@ export class QuickBooksProvider implements FinancialDataProvider {
          SET client_id = ?, client_secret_encrypted = ?, environment = ?
          WHERE id = ?`,
       )
-        .bind(clientId, secretEncrypted, environment, CONNECTION_ID)
+        .bind(clientId, secretEncrypted, environment, await this.persistId())
         .run();
       return;
     }
     await DB.prepare(
       `INSERT INTO quickbooks_connection
-         (id, client_id, client_secret_encrypted, environment, status, connected_at)
-       VALUES (?, ?, ?, ?, 'disconnected', ?)`,
+         (id, org_id, client_id, client_secret_encrypted, environment, status, connected_at)
+       VALUES (?, ?, ?, ?, ?, 'disconnected', ?)`,
     )
-      .bind(CONNECTION_ID, clientId, secretEncrypted, environment, ts)
+      .bind(this.fallbackConnectionId(), this.orgId, clientId, secretEncrypted, environment, ts)
       .run();
   }
 
@@ -652,13 +696,13 @@ export class QuickBooksProvider implements FinancialDataProvider {
            SET status = 'connected', last_sync_at = ?, last_error = NULL
            WHERE id = ?`,
         )
-        .bind(nowMs(), CONNECTION_ID)
+        .bind(nowMs(), await this.persistId())
         .run();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'QuickBooks sync failed.';
       await getEnv()
         .DB.prepare(`UPDATE quickbooks_connection SET status = 'error', last_error = ? WHERE id = ?`)
-        .bind(message.slice(0, 500), CONNECTION_ID)
+        .bind(message.slice(0, 500), await this.persistId())
         .run();
       throw error;
     }
@@ -705,21 +749,23 @@ export class QuickBooksProvider implements FinancialDataProvider {
                     revenue_cents, therapist_compensation_cents, management_compensation_cents,
                     software_and_technology_cents, total_expenses_cents, net_income_cents, notes
              FROM financial_snapshot
-             WHERE source = 'quickbooks' AND period_start = ? AND period_end = ?
+             WHERE org_id = ? AND source = 'quickbooks' AND period_start = ? AND period_end = ?
              ORDER BY created_at DESC
              LIMIT 1`,
           )
-            .bind(periodStart, periodEnd)
+            .bind(this.orgId, periodStart, periodEnd)
             .first<Record<string, unknown>>()
         : await DB.prepare(
             `SELECT source, accounting_method, period_start, period_end,
                     revenue_cents, therapist_compensation_cents, management_compensation_cents,
                     software_and_technology_cents, total_expenses_cents, net_income_cents, notes
              FROM financial_snapshot
-             WHERE source = 'quickbooks'
+             WHERE org_id = ? AND source = 'quickbooks'
              ORDER BY period_end DESC, created_at DESC
              LIMIT 1`,
-          ).first<Record<string, unknown>>();
+          )
+            .bind(this.orgId)
+            .first<Record<string, unknown>>();
 
     return row ? snapshotFromRow(row) : null;
   }
@@ -731,11 +777,11 @@ export class QuickBooksProvider implements FinancialDataProvider {
               revenue_cents, therapist_compensation_cents, management_compensation_cents,
               software_and_technology_cents, total_expenses_cents, net_income_cents, notes
        FROM financial_snapshot
-       WHERE source = 'quickbooks' AND period_start = ? AND period_end <= ?
+       WHERE org_id = ? AND source = 'quickbooks' AND period_start = ? AND period_end <= ?
        ORDER BY period_end DESC, created_at DESC
        LIMIT 1`,
     )
-      .bind(periodStart, periodEnd)
+      .bind(this.orgId, periodStart, periodEnd)
       .first<Record<string, unknown>>();
 
     return row ? snapshotFromRow(row) : null;
@@ -745,11 +791,11 @@ export class QuickBooksProvider implements FinancialDataProvider {
     const row = await getEnv()
       .DB.prepare(
         `SELECT created_at FROM financial_snapshot
-         WHERE source = 'quickbooks' AND period_start = ? AND period_end = ?
+         WHERE org_id = ? AND source = 'quickbooks' AND period_start = ? AND period_end = ?
          ORDER BY created_at DESC
          LIMIT 1`,
       )
-      .bind(periodStart, periodEnd)
+      .bind(this.orgId, periodStart, periodEnd)
       .first<{ created_at: number }>();
     return row?.created_at ?? null;
   }
@@ -773,11 +819,18 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
     const parsed = parsePnl(asRows(pnl.Rows?.Row));
     const basis = pnl.Header?.ReportBasis ?? 'Cash';
-    const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => ({
-      name: name.slice(0, 200),
-      cents: line.cents,
-      bucket: (classifyExpense(name) ?? (line.expense ? 'other' : 'income')) as FinancialTransaction['bucket'],
-    }));
+    const outlook = await getFinancialOutlook(this.orgId);
+    const pnlLines = [...parsed.leaves.entries()].map(([name, line]) => {
+      const matched = line.expense
+        ? matchOutlookLine(outlook.lines, 'expense', { name, accountId: line.accountId })
+        : null;
+      return {
+        name: name.slice(0, 200),
+        cents: line.cents,
+        accountId: line.accountId,
+        bucket: matched?.id ?? (line.expense ? 'other' : 'income'),
+      };
+    });
     const accountBuckets = new Map<string, FinancialTransaction['bucket']>(
       pnlLines.map((line) => [line.name, line.bucket]),
     );
@@ -811,50 +864,29 @@ export class QuickBooksProvider implements FinancialDataProvider {
       );
     }
 
-    let therapist = 0;
-    let management = 0;
-    let software = 0;
-    for (const [name, line] of parsed.leaves) {
-      const kind = classifyExpense(name);
-      if (kind === 'therapist') therapist += line.cents;
-      if (kind === 'management') management += line.cents;
-      if (kind === 'software') software += line.cents;
+    const lineCents = new Map<string, number>();
+    for (const line of pnlLines) {
+      if (!line.bucket || line.bucket === 'income' || line.bucket === 'other') continue;
+      lineCents.set(line.bucket, (lineCents.get(line.bucket) ?? 0) + line.cents);
     }
+    const totals = expenseTotals({
+      outlook,
+      incomeCents: parsed.income,
+      qboExpensesCents: parsed.expenses,
+      qboNetCents: parsed.net,
+      lineCents,
+    });
 
-    const tracked = therapist + management + software;
-    const totalExpenses = tracked > 0 ? tracked : parsed.expenses;
-    const netIncome = tracked > 0 ? parsed.income - tracked : parsed.net;
-
-    type BankAccount = {
-      Name?: string;
-      FullyQualifiedName?: string;
-      AcctNum?: string;
-      CurrentBalance?: number;
-    };
-
-    let relay: number | null = null;
-    let boa: number | null = null;
-    let bankAccounts: Array<{ name: string; balanceCents: number; mappedKey: ReturnType<typeof classifyBank> }> = [];
+    let bankAccounts: Array<{
+      name: string;
+      balanceCents: number;
+      accountId: string | null;
+      accountNumber: string | null;
+      mappedKey: string | null;
+    }> = [];
 
     if (options.includeBanks) {
-      const accounts = await this.qbGet(
-        accessToken,
-        realmId,
-        `/query?query=${encodeURIComponent("select * from Account where AccountType = 'Bank' maxresults 100")}`,
-      );
-      const bankRows = asRows(
-        (accounts as { QueryResponse?: { Account?: BankAccount | BankAccount[] } }).QueryResponse?.Account,
-      );
-      bankAccounts = bankRows.map((account) => {
-        const label = (account.FullyQualifiedName || account.Name || 'Bank').slice(0, 200);
-        const kind = classifyBank(`${account.FullyQualifiedName ?? ''} ${account.Name ?? ''}`, account.AcctNum);
-        const cents = dollarsToCents(account.CurrentBalance);
-        if (kind === 'relay_operating') relay = (relay ?? 0) + cents;
-        if (kind === 'boa_reserve') boa = (boa ?? 0) + cents;
-        return { name: label, balanceCents: cents, mappedKey: kind };
-      });
-      await this.upsertCash('relay_operating', 'Relay operating cash', relay, periodEnd);
-      await this.upsertCash('boa_reserve', 'Bank of America reserve', boa, periodEnd);
+      bankAccounts = await this.storeBankBalances(accessToken, realmId, outlook, periodEnd);
     }
 
     const envName = (await this.resolveAppCredentials())?.environment ?? qbApiEnvironment();
@@ -865,25 +897,26 @@ export class QuickBooksProvider implements FinancialDataProvider {
       lines: pnlLines,
       transactions,
       banks: bankAccounts,
+      outlook: outlook.lines
+        .filter((line) => line.kind === 'expense')
+        .map((line) => ({ lineId: line.id, cents: lineCents.get(line.id) ?? 0 })),
     });
-    const snapshotId = `snap_qb_${periodStart}_${periodEnd}_${randomToken(4)}`;
+    const snapshotId = `snap_qb_${this.orgId}_${periodStart}_${periodEnd}_${randomToken(4)}`;
     await env.DB.prepare(
       `INSERT INTO financial_snapshot (
-         id, source, accounting_method, period_start, period_end,
+         id, org_id, source, accounting_method, period_start, period_end,
          revenue_cents, therapist_compensation_cents, management_compensation_cents,
          software_and_technology_cents, total_expenses_cents, net_income_cents, created_at, notes
-       ) VALUES (?, 'quickbooks', 'cash', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, 'quickbooks', 'cash', ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)`,
     )
       .bind(
         snapshotId,
+        this.orgId,
         periodStart,
         periodEnd,
         parsed.income,
-        therapist,
-        management,
-        software,
-        totalExpenses,
-        netIncome,
+        totals.totalExpensesCents,
+        totals.netIncomeCents,
         nowMs(),
         notes,
       )
@@ -893,13 +926,79 @@ export class QuickBooksProvider implements FinancialDataProvider {
       period_start: periodStart,
       period_end: periodEnd,
       revenue_cents: parsed.income,
-      therapist_compensation_cents: therapist,
-      management_compensation_cents: management,
-      software_and_technology_cents: software,
-      total_expenses_cents: totalExpenses,
-      net_income_cents: netIncome,
+      therapist_compensation_cents: 0,
+      management_compensation_cents: 0,
+      software_and_technology_cents: 0,
+      total_expenses_cents: totals.totalExpensesCents,
+      net_income_cents: totals.netIncomeCents,
       notes,
     });
+  }
+
+  async listChartAccounts(): Promise<ChartAccountChoice[]> {
+    const accessToken = await this.validAccessToken();
+    const connection = await this.connection();
+    if (!connection?.realm_id) return [];
+    const query = encodeURIComponent(
+      'select Id, Name, FullyQualifiedName, AccountType, AcctNum from Account where Active = true maxresults 1000',
+    );
+    const payload = (await this.qbGet(accessToken, connection.realm_id, `/query?query=${query}`)) as {
+      QueryResponse?: { Account?: BankQueryAccount | BankQueryAccount[] };
+    };
+    return asRows(payload.QueryResponse?.Account).flatMap((account) => {
+      const type = account.AccountType ?? '';
+      const accountType = type === 'Bank' ? 'bank' : expenseAccountType(type) ? 'expense' : null;
+      if (!accountType || !account.Id) return [];
+      const name = (account.FullyQualifiedName || account.Name || 'Account').slice(0, 200);
+      return [{ id: account.Id, name, accountType, accountNumber: account.AcctNum ?? null }];
+    });
+  }
+
+  private async storeBankBalances(
+    accessToken: string,
+    realmId: string,
+    outlook: FinancialOutlook,
+    periodEnd: string,
+  ): Promise<
+    Array<{
+      name: string;
+      balanceCents: number;
+      accountId: string | null;
+      accountNumber: string | null;
+      mappedKey: string | null;
+    }>
+  > {
+    const accounts = await this.qbGet(
+      accessToken,
+      realmId,
+      `/query?query=${encodeURIComponent("select * from Account where AccountType = 'Bank' maxresults 100")}`,
+    );
+    const bankRows = asRows(
+      (accounts as { QueryResponse?: { Account?: BankQueryAccount | BankQueryAccount[] } }).QueryResponse?.Account,
+    );
+    const balances = new Map<string, number>();
+    const bankAccounts = bankRows.map((account) => {
+      const label = (account.FullyQualifiedName || account.Name || 'Bank').slice(0, 200);
+      const cents = dollarsToCents(account.CurrentBalance);
+      const matched = matchOutlookLine(outlook.lines, 'cash', {
+        name: label,
+        accountId: account.Id,
+        accountNumber: account.AcctNum,
+      });
+      if (matched) balances.set(matched.id, (balances.get(matched.id) ?? 0) + cents);
+      return {
+        name: label,
+        balanceCents: cents,
+        accountId: account.Id ?? null,
+        accountNumber: account.AcctNum ?? null,
+        mappedKey: matched?.id ?? null,
+      };
+    });
+    for (const line of outlook.lines.filter((item) => item.kind === 'cash')) {
+      if (!balances.has(line.id)) continue;
+      await this.upsertCashLine(line.id, balances.get(line.id) ?? null, periodEnd);
+    }
+    return bankAccounts;
   }
 
   private async requestTokens(
@@ -930,12 +1029,14 @@ export class QuickBooksProvider implements FinancialDataProvider {
       : nowMs() + 100 * 24 * 60 * 60 * 1000;
     const ts = nowMs();
 
+    const connectionId = await this.persistId();
     await env.DB.prepare(
       `INSERT INTO quickbooks_connection
-         (id, realm_id, access_token_encrypted, refresh_token_encrypted,
+         (id, org_id, realm_id, access_token_encrypted, refresh_token_encrypted,
           access_token_expires_at, refresh_token_expires_at, connected_by, connected_at, status, last_error)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'connected', NULL)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'connected', NULL)
        ON CONFLICT(id) DO UPDATE SET
+         org_id = COALESCE(quickbooks_connection.org_id, excluded.org_id),
          realm_id = excluded.realm_id,
          access_token_encrypted = excluded.access_token_encrypted,
          refresh_token_encrypted = excluded.refresh_token_encrypted,
@@ -947,7 +1048,8 @@ export class QuickBooksProvider implements FinancialDataProvider {
          last_error = NULL`,
     )
       .bind(
-        CONNECTION_ID,
+        connectionId,
+        this.orgId,
         realmId,
         await encryptSecret(tokens.access_token),
         await encryptSecret(tokens.refresh_token),
@@ -971,7 +1073,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
              last_error = ?
          WHERE id = ?`,
       )
-      .bind(lastError.slice(0, 500), CONNECTION_ID)
+      .bind(lastError.slice(0, 500), await this.persistId())
       .run();
   }
 
@@ -1010,13 +1112,13 @@ export class QuickBooksProvider implements FinancialDataProvider {
   private async connection(): Promise<ConnectionRow | null> {
     const { DB } = getEnv();
     return DB.prepare(
-      `SELECT realm_id, access_token_encrypted, refresh_token_encrypted,
+      `SELECT id, realm_id, access_token_encrypted, refresh_token_encrypted,
               access_token_expires_at, refresh_token_expires_at, connected_by, status,
               client_id, client_secret_encrypted, environment, company_name, connected_email,
               last_error, last_sync_at, connected_at
-       FROM quickbooks_connection WHERE id = ?`,
+       FROM quickbooks_connection WHERE org_id = ?`,
     )
-      .bind(CONNECTION_ID)
+      .bind(this.orgId)
       .first<ConnectionRow>();
   }
 
@@ -1076,7 +1178,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
              connected_email = COALESCE(?, connected_email)
          WHERE id = ?`,
       )
-      .bind(companyName, connectedEmail, CONNECTION_ID)
+      .bind(companyName, connectedEmail, await this.persistId())
       .run();
   }
 
@@ -1113,23 +1215,17 @@ export class QuickBooksProvider implements FinancialDataProvider {
     return payload;
   }
 
-  private async upsertCash(
-    accountKey: string,
-    label: string,
-    balanceCents: number | null,
-    asOfDate: string,
-  ): Promise<void> {
+  private async upsertCashLine(lineId: string, balanceCents: number | null, asOfDate: string): Promise<void> {
     const { DB } = getEnv();
     await DB.prepare(
-      `INSERT INTO cash_account_balance (account_key, label, balance_cents, as_of_date, updated_at)
+      `INSERT INTO financial_cash_balance (org_id, line_id, balance_cents, as_of_date, updated_at)
        VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(account_key) DO UPDATE SET
-         label = excluded.label,
+       ON CONFLICT(org_id, line_id) DO UPDATE SET
          balance_cents = excluded.balance_cents,
          as_of_date = excluded.as_of_date,
          updated_at = excluded.updated_at`,
     )
-      .bind(accountKey, label, balanceCents, balanceCents == null ? null : asOfDate, nowMs())
+      .bind(this.orgId, lineId, balanceCents, balanceCents == null ? null : asOfDate, nowMs())
       .run();
   }
 }

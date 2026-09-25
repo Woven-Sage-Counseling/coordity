@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { QuickBooksProvider } from '../../../lib/financials/quickbooks';
+import { orgIdFromLocals } from '../../../lib/organization';
 import { hasPermission } from '../../../lib/permissions';
 
 export const prerender = false;
@@ -25,7 +26,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const form = await request.formData();
   try {
-    await new QuickBooksProvider().saveAppSettings({
+    await new QuickBooksProvider(orgIdFromLocals(locals.organization)).saveAppSettings({
       clientId: String(form.get('clientId') ?? ''),
       clientSecret: String(form.get('clientSecret') ?? ''),
       environment: 'production',

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { randomToken } from '../../../lib/crypto';
 import { QuickBooksProvider } from '../../../lib/financials/quickbooks';
-import { orgCanonicalOrigin } from '../../../lib/organization';
+import { orgCanonicalOrigin, orgIdFromLocals } from '../../../lib/organization';
 import { hasPermission } from '../../../lib/permissions';
 
 export const prerender = false;
@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response('Forbidden', { status: 403 });
   }
 
-  const provider = new QuickBooksProvider();
+  const provider = new QuickBooksProvider(orgIdFromLocals(locals.organization));
   if (!(await provider.isReady())) {
     return new Response(null, {
       status: 303,
