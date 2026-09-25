@@ -1251,7 +1251,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     <details class="group/step">
                       <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden">
                         <span class="min-w-0">
-                          <span class="block font-semibold text-charcoal">1. Create a QuickBooks app (one-time)</span>
+                          <span class="block font-semibold text-charcoal">1. Create a QuickBooks app</span>
                           <span class="mt-0.5 block text-xs font-normal text-sage-dark/65">
                             Create a production app at developer.intuit.com and copy its keys.
                           </span>
@@ -1261,25 +1261,34 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         </svg>
                       </summary>
                       <div class="border-t border-sage-dark/10 px-3 pb-3 pt-3">
-                    <p>
-                      Go to
-                      <a
-                        class="font-medium text-sage-dark underline underline-offset-2"
-                        href="https://developer.intuit.com/app/developer/dashboard"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        developer.intuit.com
-                      </a>
-                      . Click <span class="font-medium text-charcoal">App dashboard</span> under My Hub. Then click
-                      the plus sign to create an app (we recommend naming it
-                      <span class="font-medium text-charcoal">Coordity</span>). Under authorization scope, select both
-                      options for accounting and payment. Open the app, go to
-                      <span class="font-medium text-charcoal">Keys and credentials</span>, and switch to
-                      <span class="font-medium text-charcoal">Production</span>. Click
-                      <span class="font-medium text-charcoal">Show credentials</span> there. Use those production
-                      keys here.
-                    </p>
+                    <ol class="list-decimal space-y-1 pl-5">
+                      <li>
+                        Go to
+                        <a
+                          class="font-medium text-sage-dark underline underline-offset-2"
+                          href="https://developer.intuit.com/app/developer/dashboard"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          developer.intuit.com
+                        </a>
+                        .
+                      </li>
+                      <li>
+                        Click <span class="font-medium text-charcoal">App dashboard</span> under My Hub.
+                      </li>
+                      <li>
+                        Click the plus sign to create an app (we recommend naming it
+                        <span class="font-medium text-charcoal">Coordity</span>).
+                      </li>
+                      <li>
+                        Under authorization scope, select both options for accounting and payment.
+                      </li>
+                      <li>
+                        Open the app, go to <span class="font-medium text-charcoal">Keys and credentials</span>, and
+                        switch to <span class="font-medium text-charcoal">Production</span>.
+                      </li>
+                    </ol>
                       </div>
                     </details>
                   </li>
