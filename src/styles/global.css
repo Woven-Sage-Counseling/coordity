@@ -256,6 +256,14 @@ html.dark {
     background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
   }
 
+  .item-selected-chip {
+    background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
+  }
+
+  details[open] > summary.item-selected-summary {
+    background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
+  }
+
   .item-selected-surface {
     background-color: rgb(var(--portal-selected, var(--portal-sage)) / var(--portal-selected-a, 0.2));
   }

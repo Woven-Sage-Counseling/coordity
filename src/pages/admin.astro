@@ -633,7 +633,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               <div class="space-y-0.5">
                 {section.groups.map((group) => (
                   <details class="group" data-admin-group={group.id}>
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition hover:bg-sage/10 [&::-webkit-details-marker]:hidden">
+                    <summary class="item-selected-summary item-selected-hover flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition [&::-webkit-details-marker]:hidden">
                       <span>{group.label}</span>
                       <span class="text-sage-dark/40" set:html={menuChevron} />
                     </summary>
@@ -653,7 +653,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         const body = (
                           <>
                             <span
-                              class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sage/15 text-sage-dark"
+                              class="item-selected-chip mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sage-dark"
                               data-admin-icon
                               set:html={item.icon}
                             />
@@ -672,7 +672,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           return (
                             <a
                               href={item.href}
-                              class="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-sage/10"
+                              class="item-selected-hover flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition"
                             >
                               {body}
                             </a>
@@ -719,7 +719,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               return (
                 <a
                   href={item.href}
-                  class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-sage-dark transition hover:bg-sage/15"
+                  class="item-selected-hover relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-sage-dark transition"
                   aria-label={item.label}
                   data-admin-tip={item.label}
                 >
@@ -748,7 +748,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       <div class="mt-auto flex shrink-0 items-center justify-end border-t border-sage-dark/10 px-1.5 py-1.5">
         <button
           type="button"
-          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sage-dark/70 transition hover:bg-sage/15 hover:text-charcoal"
+          class="item-selected-hover inline-flex h-8 w-8 items-center justify-center rounded-lg text-sage-dark/70 transition hover:text-charcoal"
           data-admin-menu-toggle
           aria-expanded="true"
           aria-controls="admin-menu-nav"
