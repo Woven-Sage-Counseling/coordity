@@ -1146,45 +1146,55 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   </svg>
                 </summary>
                 <div class="border-t border-sage-dark/10 px-3 pb-3 pt-3">
-              <ol class="list-decimal space-y-1 pl-5">
-                <li>Copy the Client ID and Client Secret from Developer Console.</li>
-                <li>
-                  For first-time setup, keep the environment on
-                  <span class="font-medium text-charcoal">Demo / developer</span>. Switch to Production only after
-                  DocuSign go-live.
-                </li>
-              </ol>
-              <form method="post" action="/api/docusign/settings" class="mt-3 space-y-3">
-                <label class="block text-xs font-medium text-charcoal">
-                  Client ID
-                  <input
-                    class="field mt-1"
-                    type="text"
-                    name="integrationKey"
-                    required
-                    autocomplete="off"
-                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    value={docusignStatus.hasOrgApp ? (docusignStatus.integrationKey ?? '') : ''}
-                  />
-                </label>
-                <label class="block text-xs font-medium text-charcoal">
-                  Client Secret
-                  <input
-                    class="field mt-1"
-                    type="password"
-                    name="secretKey"
-                    autocomplete="new-password"
-                    placeholder={
-                      docusignStatus.hasOrgApp
-                        ? 'Leave blank to keep the saved secret'
-                        : 'Add a client secret in DocuSign, then paste it'
-                    }
-                    {...(!docusignStatus.hasOrgApp ? { required: true } : {})}
-                  />
-                </label>
-                <label class="block text-xs font-medium text-charcoal">
-                  DocuSign environment
-                  <select class="field mt-1" name="authServer">
+              <form method="post" action="/api/docusign/settings" class="space-y-3">
+                <div>
+                  <p>
+                    1. Scroll to <span class="font-medium text-charcoal">General Info</span>, copy the Integration
+                    Key, and paste it below.
+                  </p>
+                  <label class="mt-2 block text-xs font-medium text-charcoal">
+                    Client ID
+                    <input
+                      class="field mt-1"
+                      type="text"
+                      name="integrationKey"
+                      required
+                      autocomplete="off"
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      value={docusignStatus.hasOrgApp ? (docusignStatus.integrationKey ?? '') : ''}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <p>
+                    2. Scroll back to <span class="font-medium text-charcoal">Authentication</span>, copy the Secret
+                    Key, and paste it below.
+                  </p>
+                  <label class="mt-2 block text-xs font-medium text-charcoal">
+                    Client Secret
+                    <input
+                      class="field mt-1"
+                      type="password"
+                      name="secretKey"
+                      autocomplete="new-password"
+                      placeholder={
+                        docusignStatus.hasOrgApp
+                          ? 'Leave blank to keep the saved secret'
+                          : 'Add a client secret in DocuSign, then paste it'
+                      }
+                      {...(!docusignStatus.hasOrgApp ? { required: true } : {})}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <p class="text-xs text-sage-dark/60">
+                    For first-time setup, keep this on
+                    <span class="font-medium text-charcoal">Demo / developer</span>. Switch to Production only after
+                    DocuSign go-live.
+                  </p>
+                  <label class="mt-2 block text-xs font-medium text-charcoal">
+                    DocuSign environment
+                    <select class="field mt-1" name="authServer">
                     <option
                       value="demo"
                       selected={docusignStatus.authServer.includes('account-d.docusign.com')}
@@ -1198,7 +1208,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       Production (after DocuSign go-live)
                     </option>
                   </select>
-                </label>
+                  </label>
+                </div>
                 <button class="btn-primary !px-4 !py-2 text-sm" type="submit">
                   Save DocuSign keys
                 </button>
