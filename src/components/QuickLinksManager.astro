@@ -269,8 +269,8 @@ const previewSections = categories.map((category, index) => ({
           <form method="post" action="/api/admin/quick-links" class="space-y-2" data-catalog-add>
             <input type="hidden" name="action" value="add-from-catalog" />
             <div class="flex flex-wrap items-center gap-1.5">
-              <select class="field min-w-[9rem] flex-1" name="catalogGroup" data-catalog-group required aria-label="Catalog type">
-                <option value="">Type</option>
+              <select class="field min-w-[9rem] flex-1" name="catalogGroup" data-catalog-group required aria-label="Category">
+                <option value="">Category</option>
                 {
                   QUICK_LINK_CATALOG_GROUPS.map((group) => (
                     <option value={group.id}>{group.title}</option>
