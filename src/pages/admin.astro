@@ -1230,14 +1230,10 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                   </svg>
                 </summary>
                 <div class="border-t border-sage-dark/10 px-3 pb-3 pt-3">
-              <ol class="list-decimal space-y-1 pl-5">
-                <li>Click Connect.</li>
-                <li>
-                  Sign in with the matching DocuSign account (developer account for Demo, production account after
-                  go-live).
-                </li>
-                <li>Allow access.</li>
-              </ol>
+              <p>
+                Click Connect, sign in with the matching DocuSign account (developer account for Demo, production
+                account after go-live), and allow access.
+              </p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <form method="post" action="/api/docusign/connect">
                   <button
