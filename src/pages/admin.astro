@@ -1305,8 +1305,13 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                       </summary>
-                      <div class="space-y-3 border-t border-sage-dark/10 px-3 pb-3 pt-3">
-                      <div>
+                      <ol class="list-decimal space-y-3 border-t border-sage-dark/10 pb-3 pl-8 pr-3 pt-3">
+                      <li>
+                        Before you can see your credentials you must fill a few things in. Under
+                        <span class="font-medium text-charcoal">App Details</span> complete the
+                        <span class="font-medium text-charcoal">Review your developer portal profile</span> task.
+                      </li>
+                      <li>
                         <p class="font-medium text-charcoal">End-user license agreement and privacy policy</p>
                         {
                           quickbooksEulaUrl && quickbooksPrivacyUrl ? (
@@ -1379,8 +1384,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                             </div>
                           )
                         }
-                      </div>
-                      <div>
+                      </li>
+                      <li>
                         <p class="font-medium text-charcoal">
                           Host domain, launch URL, disconnect URL, and connect/reconnect URL
                         </p>
@@ -1418,28 +1423,28 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div>
+                      </li>
+                      <li>
                         <p class="font-medium text-charcoal">Category</p>
                         <p class="mt-1">
                           Select <span class="font-medium text-charcoal">Business Insights</span>. You can also
                           select <span class="font-medium text-charcoal">Expenses</span>.
                         </p>
-                      </div>
-                      <div>
+                      </li>
+                      <li>
                         <p class="font-medium text-charcoal">Regulated industries</p>
                         <p class="mt-1">
                           Select <span class="font-medium text-charcoal">None of the above</span>.
                         </p>
-                      </div>
-                      <div>
+                      </li>
+                      <li>
                         <p class="font-medium text-charcoal">Where your app is hosted</p>
                         <p class="mt-1">
                           Country: <span class="font-medium text-charcoal">United States</span>. Leave the IP address
                           blank.
                         </p>
-                      </div>
-                      </div>
+                      </li>
+                      </ol>
                     </details>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa]">
