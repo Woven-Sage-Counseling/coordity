@@ -1,6 +1,5 @@
 ---
 import '../styles/global.css';
-import CoordityMark from '../components/CoordityMark.astro';
 import FontLinks from '../components/FontLinks.astro';
 import PreviewBanner from '../components/PreviewBanner.astro';
 import PortalFooter from '../components/PortalFooter.astro';
@@ -434,19 +433,18 @@ const navSep = `<svg width="4" height="18" viewBox="0 0 4 18" fill="none" aria-h
                     height="38"
                   />
                 ) : (
-                  <>
-                    <span class="dark:hidden">
-                      <CoordityMark class="h-7" />
-                    </span>
-                    <span class="hidden dark:inline-flex">
-                      <CoordityMark variant="light" class="h-7" />
-                    </span>
-                  </>
+                  <span class="text-xs uppercase tracking-[0.18em] text-sage-dark/70">
+                    {orgName} workspace
+                  </span>
                 )
               }
-              <span class="hidden text-xs uppercase tracking-[0.18em] text-sage-dark/70 sm:inline">
-                Workspace
-              </span>
+              {
+                orgLogo ? (
+                  <span class="hidden text-xs uppercase tracking-[0.18em] text-sage-dark/70 sm:inline">
+                    Workspace
+                  </span>
+                ) : null
+              }
             </a>
             <nav class="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-2 text-sm" aria-label="Primary">
               <div
