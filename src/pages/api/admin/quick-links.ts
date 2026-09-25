@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         orgId,
         catalogKey: String(form.get('catalogKey') ?? '').trim(),
         categoryId: String(form.get('categoryId') ?? '').trim() || undefined,
-        roleKeys: roleKeys.length > 0 ? roleKeys : undefined,
+        roleKeys,
       });
       return finish(request);
     }
