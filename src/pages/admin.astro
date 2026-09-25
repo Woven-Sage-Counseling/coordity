@@ -1467,7 +1467,14 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         <p class="font-medium text-charcoal">Accounting API</p>
                         <ol class="mt-1 list-decimal space-y-1 pl-5">
                           <li>Simple Start, Essentials, Plus, and Advanced.</li>
-                          <li>Yes.</li>
+                          <li>
+                            Yes. When it asks how you will handle it, paste: “The app only reads the cash-basis Profit
+                            and Loss report and bank account balances. Those exist on every QuickBooks Online version.
+                            It does not use version-specific features such as inventory, class tracking, multicurrency,
+                            or sales tax. If a company changes versions, those reads stay the same. If a report request
+                            fails, Coordity keeps the last successful numbers and shows the error. It does not write to
+                            or delete QuickBooks data.”
+                          </li>
                           <li>None of the above.</li>
                           <li>No.</li>
                           <li>No.</li>
