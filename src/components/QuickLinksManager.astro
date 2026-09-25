@@ -135,7 +135,7 @@ const previewSections = categories.map((category, index) => ({
                       ) : null
                     }
                   </div>
-                  <div class:list={['flex flex-wrap gap-x-3 gap-y-4', section.links.length > 0 ? 'mt-3' : 'hidden']}>
+                  <div class="mt-3 flex flex-wrap items-start gap-x-3 gap-y-4">
                     {section.links.map((link) => (
                       <button
                         type="button"
@@ -171,6 +171,19 @@ const previewSections = categories.map((category, index) => ({
                         {link.enabled ? null : <span class="mt-1 text-[10px] font-medium text-sage-dark/60">Hidden</span>}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      data-ql-add={section.id}
+                      aria-pressed="false"
+                      aria-label={`Add a link to ${section.title}`}
+                      class="inline-flex w-[4.65rem] flex-col items-center rounded-xl text-center outline-none transition hover:-translate-y-0.5 aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2"
+                    >
+                      <span class="flex h-16 w-16 items-center justify-center rounded-[0.92rem] border-2 border-dashed border-sage-dark/30 text-sage-dark/45">
+                        <svg width="22" height="22" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+                        </svg>
+                      </span>
+                    </button>
                   </div>
                 </section>
             ))}
@@ -232,22 +245,6 @@ const previewSections = categories.map((category, index) => ({
               </form>
             </div>
           </div>
-      <div class="mt-5 flex">
-        <button
-          type="button"
-          data-ql-add
-          aria-pressed="false"
-          aria-label="Add a quick link"
-          class="inline-flex w-[4.65rem] flex-col items-center rounded-xl text-center outline-none transition hover:-translate-y-0.5 aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2"
-        >
-          <span class="flex h-16 w-16 items-center justify-center rounded-[0.92rem] border-2 border-dashed border-sage-dark/30 text-sage-dark/45">
-            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
-            </svg>
-          </span>
-          <span class="mt-1.5 text-[11px] font-medium leading-tight text-sage-dark/60">Add</span>
-        </button>
-      </div>
       <div hidden data-ql-add-panel class="mt-4 rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
         <div data-ql-add-catalog>
           <form method="post" action="/api/admin/quick-links" class="space-y-2" data-catalog-add>
@@ -417,7 +414,7 @@ const previewSections = categories.map((category, index) => ({
           var buttons = root.querySelectorAll('[data-ql-open]');
           var panels = root.querySelectorAll('[data-ql-editor]');
           var hint = root.querySelector('[data-ql-hint]');
-          var addButton = root.querySelector('[data-ql-add]');
+          var addButtons = root.querySelectorAll('[data-ql-add]');
           var addPanel = root.querySelector('[data-ql-add-panel]');
           var catalogChoice = root.querySelector('[data-ql-add-catalog]');
           var customFields = root.querySelector('[data-ql-custom-fields]');
@@ -432,7 +429,9 @@ const previewSections = categories.map((category, index) => ({
           }
 
           function closeAdd() {
-            if (addButton) addButton.setAttribute('aria-pressed', 'false');
+            addButtons.forEach(function (item) {
+              item.setAttribute('aria-pressed', 'false');
+            });
             if (addPanel) addPanel.hidden = true;
             showCatalogChoice();
           }
@@ -479,21 +478,30 @@ const previewSections = categories.map((category, index) => ({
             });
           });
 
-          if (addButton) {
+          addButtons.forEach(function (addButton) {
             addButton.addEventListener('click', function () {
               var already = addButton.getAttribute('aria-pressed') === 'true';
+              var sectionId = addButton.getAttribute('data-ql-add') || '';
               closeEditors();
               closeSections();
               if (already) {
                 closeAdd();
                 return;
               }
+              closeAdd();
               addButton.setAttribute('aria-pressed', 'true');
-              if (addPanel) addPanel.hidden = false;
+              var section = addButton.closest('section');
+              if (section && addPanel) section.appendChild(addPanel);
+              if (addPanel) {
+                addPanel.hidden = false;
+                addPanel.querySelectorAll('select[name="categoryId"]').forEach(function (select) {
+                  if (select instanceof HTMLSelectElement) select.value = sectionId;
+                });
+                if (addPanel.scrollIntoView) addPanel.scrollIntoView({ block: 'nearest' });
+              }
               showCatalogChoice();
-              if (addPanel && addPanel.scrollIntoView) addPanel.scrollIntoView({ block: 'nearest' });
             });
-          }
+          });
 
           var showCustom = root.querySelector('[data-ql-show-custom]');
           var showCatalog = root.querySelector('[data-ql-show-catalog]');
