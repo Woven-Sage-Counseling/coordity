@@ -72,9 +72,7 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
   <div class="mt-6 space-y-6">
     <div data-ql-board>
       {
-        links.length === 0 ? (
-          <p class="text-sm text-sage-dark/60">No quick links yet.</p>
-        ) : (
+        previewSections.length === 0 ? null : (
           <div class="space-y-5">
             {previewSections.map((section) => (
                 <section>
@@ -121,6 +119,118 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
           </div>
         )
       }
+      <div class:list={['flex', previewSections.length === 0 ? '' : 'mt-5']}>
+        <button
+          type="button"
+          data-ql-add
+          aria-pressed="false"
+          aria-label="Add a quick link"
+          class="inline-flex w-[4.65rem] flex-col items-center rounded-xl text-center outline-none transition hover:-translate-y-0.5 aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2"
+        >
+          <span class="flex h-16 w-16 items-center justify-center rounded-[0.92rem] border-2 border-dashed border-sage-dark/30 text-sage-dark/45">
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span class="mt-1.5 text-[11px] font-medium leading-tight text-sage-dark/60">Add</span>
+        </button>
+      </div>
+      <div hidden data-ql-add-panel class="mt-4 rounded-2xl border border-sage-dark/10 bg-white/90 p-4 shadow-sm">
+        <div data-ql-add-catalog>
+          <form method="post" action="/api/admin/quick-links" class="space-y-2" data-catalog-add>
+            <input type="hidden" name="action" value="add-from-catalog" />
+            <div class="flex flex-wrap items-center gap-1.5">
+              <select class="field min-w-[9rem] flex-1" name="catalogGroup" data-catalog-group required aria-label="Catalog type">
+                <option value="">Type</option>
+                {
+                  QUICK_LINK_CATALOG_GROUPS.map((group) => (
+                    <option value={group.id}>{group.title}</option>
+                  ))
+                }
+              </select>
+              <select class="field min-w-[9rem] flex-1" name="catalogKey" data-catalog-tool required disabled aria-label="Tool">
+                <option value="">Tool</option>
+              </select>
+              <select class="field min-w-[9rem] flex-1" name="categoryId" required aria-label="Section">
+                {
+                  categories.map((category) => (
+                    <option value={category.id} selected={category.id === defaultCategoryId}>
+                      {category.title}
+                    </option>
+                  ))
+                }
+              </select>
+              <button class="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
+              <button
+                class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white"
+                type="button"
+                data-ql-show-custom
+              >
+                Custom
+              </button>
+            </div>
+            <details class="group/ql">
+              <summary class="cursor-pointer list-none text-xs font-medium text-sage-dark/70 [&::-webkit-details-marker]:hidden">
+                Limit who can see it
+              </summary>
+              <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                {
+                  roles.map((role) => (
+                    <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                      <input type="checkbox" name="roleKeys" value={role.key} />
+                      {role.name}
+                    </label>
+                  ))
+                }
+              </div>
+              <p class="mt-1.5 text-[11px] text-sage-dark/55">Leave unchecked to use the suggested roles. Owners always see every link.</p>
+            </details>
+          </form>
+        </div>
+        <form hidden method="post" action="/api/admin/quick-links" class="space-y-2" data-ql-custom-fields>
+          <input type="hidden" name="action" value="create-custom" />
+          <input type="hidden" name="enabled" value="1" />
+          <button
+            class="text-xs font-medium text-sage-dark/70 underline-offset-2 hover:underline"
+            type="button"
+            data-ql-show-catalog
+          >
+            Catalog
+          </button>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <input class="field" type="text" name="name" required placeholder="Name" aria-label="Name" />
+            <input class="field" type="url" name="href" required placeholder="https://" aria-label="URL" />
+            <select class="field" name="categoryId" required aria-label="Section">
+              {
+                categories.map((category) => (
+                  <option value={category.id}>{category.title}</option>
+                ))
+              }
+            </select>
+            <input class="field" type="text" name="iconSrc" placeholder="Icon URL" aria-label="Icon URL" />
+          </div>
+          <textarea class="field" name="description" rows="2" placeholder="Description" aria-label="Description"></textarea>
+          <details>
+            <summary class="cursor-pointer list-none text-xs font-medium text-sage-dark/70 [&::-webkit-details-marker]:hidden">
+              Roles
+            </summary>
+            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+              {
+                roles.map((role) => (
+                  <label class="inline-flex items-center gap-2 text-sm text-charcoal">
+                    <input type="checkbox" name="roleKeys" value={role.key} />
+                    {role.name}
+                  </label>
+                ))
+              }
+            </div>
+            <p class="mt-1.5 text-[11px] text-sage-dark/55">Leave unchecked to show everyone. Owners always see every link.</p>
+          </details>
+          <div class="flex justify-end">
+            <button class="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
+          </div>
+        </form>
+      </div>
       {
         links.length === 0 ? null : (
           <div class="mt-5">
@@ -194,20 +304,39 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
           var buttons = root.querySelectorAll('[data-ql-open]');
           var panels = root.querySelectorAll('[data-ql-editor]');
           var hint = root.querySelector('[data-ql-hint]');
+          var addButton = root.querySelector('[data-ql-add]');
+          var addPanel = root.querySelector('[data-ql-add-panel]');
+          var catalogChoice = root.querySelector('[data-ql-add-catalog]');
+          var customFields = root.querySelector('[data-ql-custom-fields]');
+
+          function showCatalogChoice() {
+            if (catalogChoice) catalogChoice.hidden = false;
+            if (customFields) customFields.hidden = true;
+          }
+
+          function closeAdd() {
+            if (addButton) addButton.setAttribute('aria-pressed', 'false');
+            if (addPanel) addPanel.hidden = true;
+            showCatalogChoice();
+          }
+
+          function closeEditors() {
+            buttons.forEach(function (item) {
+              item.setAttribute('aria-pressed', 'false');
+            });
+            panels.forEach(function (panel) {
+              panel.hidden = true;
+            });
+            if (hint) hint.hidden = false;
+          }
+
           buttons.forEach(function (button) {
             button.addEventListener('click', function () {
               var id = button.getAttribute('data-ql-open');
               var already = button.getAttribute('aria-pressed') === 'true';
-              buttons.forEach(function (item) {
-                item.setAttribute('aria-pressed', 'false');
-              });
-              panels.forEach(function (panel) {
-                panel.hidden = true;
-              });
-              if (already) {
-                if (hint) hint.hidden = false;
-                return;
-              }
+              closeAdd();
+              closeEditors();
+              if (already) return;
               button.setAttribute('aria-pressed', 'true');
               var openPanel = null;
               panels.forEach(function (panel) {
@@ -220,6 +349,33 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
               if (openPanel && openPanel.scrollIntoView) openPanel.scrollIntoView({ block: 'nearest' });
             });
           });
+
+          if (addButton) {
+            addButton.addEventListener('click', function () {
+              var already = addButton.getAttribute('aria-pressed') === 'true';
+              closeEditors();
+              if (already) {
+                closeAdd();
+                return;
+              }
+              addButton.setAttribute('aria-pressed', 'true');
+              if (addPanel) addPanel.hidden = false;
+              showCatalogChoice();
+              if (addPanel && addPanel.scrollIntoView) addPanel.scrollIntoView({ block: 'nearest' });
+            });
+          }
+
+          var showCustom = root.querySelector('[data-ql-show-custom]');
+          var showCatalog = root.querySelector('[data-ql-show-catalog]');
+          if (showCustom) {
+            showCustom.addEventListener('click', function () {
+              if (catalogChoice) catalogChoice.hidden = true;
+              if (customFields) customFields.hidden = false;
+            });
+          }
+          if (showCatalog) {
+            showCatalog.addEventListener('click', showCatalogChoice);
+          }
         })();
       </script>
     </div>
@@ -298,55 +454,6 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
       </div>
     </details>
 
-    <div>
-      <h3 class="text-sm font-semibold text-charcoal">Add from catalog</h3>
-      <form
-        method="post"
-        action="/api/admin/quick-links"
-        class="mt-2 space-y-2"
-        data-catalog-add
-      >
-        <input type="hidden" name="action" value="add-from-catalog" />
-        <div class="flex flex-wrap items-center gap-1.5">
-          <select class="field min-w-[9rem] flex-1" name="catalogGroup" data-catalog-group required aria-label="Catalog type">
-            <option value="">Type</option>
-            {
-              QUICK_LINK_CATALOG_GROUPS.map((group) => (
-                <option value={group.id}>{group.title}</option>
-              ))
-            }
-          </select>
-          <select class="field min-w-[9rem] flex-1" name="catalogKey" data-catalog-tool required disabled aria-label="Tool">
-            <option value="">Tool</option>
-          </select>
-          <select class="field min-w-[9rem] flex-1" name="categoryId" required aria-label="Section">
-            {
-              categories.map((category) => (
-                <option value={category.id} selected={category.id === defaultCategoryId}>
-                  {category.title}
-                </option>
-              ))
-            }
-          </select>
-          <button class="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
-        </div>
-        <details class="group/ql">
-          <summary class="cursor-pointer list-none text-xs font-medium text-sage-dark/70 [&::-webkit-details-marker]:hidden">
-            Limit who can see it
-          </summary>
-          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-            {
-              roles.map((role) => (
-                <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                  <input type="checkbox" name="roleKeys" value={role.key} />
-                  {role.name}
-                </label>
-              ))
-            }
-          </div>
-          <p class="mt-1.5 text-[11px] text-sage-dark/55">Leave unchecked to use the suggested roles. Owners always see every link.</p>
-        </details>
-      </form>
       <script
         is:inline
         define:vars={{
@@ -384,47 +491,5 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
           fillTools();
         })();
       </script>
-    </div>
-
-
-    <div>
-      <h3 class="text-sm font-semibold text-charcoal">Add a custom link</h3>
-      <form method="post" action="/api/admin/quick-links" class="mt-2 space-y-2">
-        <input type="hidden" name="action" value="create-custom" />
-        <input type="hidden" name="enabled" value="1" />
-        <div class="grid gap-2 sm:grid-cols-2">
-          <input class="field" type="text" name="name" required placeholder="Name" aria-label="Name" />
-          <input class="field" type="url" name="href" required placeholder="https://" aria-label="URL" />
-          <select class="field" name="categoryId" required aria-label="Section">
-            {
-              categories.map((category) => (
-                <option value={category.id}>{category.title}</option>
-              ))
-            }
-          </select>
-          <input class="field" type="text" name="iconSrc" placeholder="Icon URL" aria-label="Icon URL" />
-        </div>
-        <textarea class="field" name="description" rows="2" placeholder="Description" aria-label="Description"></textarea>
-        <details>
-          <summary class="cursor-pointer list-none text-xs font-medium text-sage-dark/70 [&::-webkit-details-marker]:hidden">
-            Roles
-          </summary>
-          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-            {
-              roles.map((role) => (
-                <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                  <input type="checkbox" name="roleKeys" value={role.key} />
-                  {role.name}
-                </label>
-              ))
-            }
-          </div>
-          <p class="mt-1.5 text-[11px] text-sage-dark/55">Leave unchecked to show everyone. Owners always see every link.</p>
-        </details>
-        <div class="flex justify-end">
-          <button class="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
-        </div>
-      </form>
-    </div>
   </div>
 </section>
