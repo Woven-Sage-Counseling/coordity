@@ -89,11 +89,19 @@ const previewSections = categories.map((category, index) => ({
                 <section>
                   <div class="flex flex-wrap items-center gap-2">
                     <h3 data-ql-section-label={section.id} class="font-display text-lg text-charcoal">{section.title}</h3>
-                    <div hidden data-ql-section-editor={section.id} class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                    <form method="post" action="/api/admin/quick-links" class="flex min-w-0 flex-1 items-center gap-1.5">
+                    <div hidden data-ql-section-editor={section.id} class="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <form method="post" action="/api/admin/quick-links" class="flex min-w-0 items-center gap-1.5">
                       <input type="hidden" name="action" value="update-category" />
                       <input type="hidden" name="categoryId" value={section.id} />
-                      <input class="field min-w-0 flex-1" type="text" name="title" required value={section.title} aria-label="Section title" />
+                      <input
+                        class="w-auto max-w-full bg-transparent p-0 font-display text-lg text-charcoal outline-none"
+                        type="text"
+                        name="title"
+                        required
+                        value={section.title}
+                        size={Math.max(section.title.length, 1)}
+                        aria-label="Section title"
+                      />
                       <button class="shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white" type="submit">
                         Save
                       </button>
