@@ -1320,13 +1320,15 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           quickbooksEulaUrl && quickbooksPrivacyUrl ? (
                             <div class="mt-2 space-y-2">
                               <p>
-                                On your website, create these two public pages if they are not already there. Open
-                                each address and make sure the page loads. Then paste that same address into the
-                                matching box in Intuit.
+                                Create a public page at each address below if one is not already there. The page has
+                                to use that exact address, and it has to include the information named under it.
+                                Anyone with the link must be able to open it. You can leave these pages off your main
+                                menu. Open each address and make sure the page loads, then paste that same address
+                                into the matching box in Intuit.
                               </p>
                               <ol class="list-decimal space-y-3 pl-5">
                                 <li>
-                                  End-user license agreement: the rules for using this workspace.
+                                  End-user license agreement. On this page, write the rules for using this workspace.
                                   <div class="mt-1 flex flex-wrap items-center gap-2">
                                     <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
                                       {quickbooksEulaUrl}
@@ -1341,7 +1343,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                                   </div>
                                 </li>
                                 <li>
-                                  Privacy policy: what information this workspace collects and how you use it.
+                                  Privacy policy. On this page, write what information this workspace collects and how you use it.
                                   <div class="mt-1 flex flex-wrap items-center gap-2">
                                     <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
                                       {quickbooksPrivacyUrl}
