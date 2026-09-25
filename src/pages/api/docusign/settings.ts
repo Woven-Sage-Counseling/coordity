@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       orgId,
       integrationKey: String(form.get('integrationKey') ?? ''),
       secretKey: String(form.get('secretKey') ?? ''),
-      authServer: String(form.get('authServer') ?? 'demo'),
+      authServer: 'demo',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not save DocuSign settings.';

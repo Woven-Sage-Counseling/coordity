@@ -1186,23 +1186,6 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     />
                   </label>
                 </div>
-                <label class="block text-xs font-medium text-charcoal">
-                  DocuSign environment
-                  <select class="field mt-1" name="authServer">
-                    <option
-                      value="demo"
-                      selected={docusignStatus.authServer.includes('account-d.docusign.com')}
-                    >
-                      Demo / developer (start here)
-                    </option>
-                    <option
-                      value="production"
-                      selected={docusignStatus.authServer.includes('account.docusign.com') && !docusignStatus.authServer.includes('account-d')}
-                    >
-                      Production (after DocuSign go-live)
-                    </option>
-                  </select>
-                </label>
                 <button class="btn-primary !px-4 !py-2 text-sm" type="submit">
                   Save DocuSign keys
                 </button>
