@@ -1186,15 +1186,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     />
                   </label>
                 </div>
-                <div>
-                  <p class="text-xs text-sage-dark/60">
-                    For first-time setup, keep this on
-                    <span class="font-medium text-charcoal">Demo / developer</span>. Switch to Production only after
-                    DocuSign go-live.
-                  </p>
-                  <label class="mt-2 block text-xs font-medium text-charcoal">
-                    DocuSign environment
-                    <select class="field mt-1" name="authServer">
+                <label class="block text-xs font-medium text-charcoal">
+                  DocuSign environment
+                  <select class="field mt-1" name="authServer">
                     <option
                       value="demo"
                       selected={docusignStatus.authServer.includes('account-d.docusign.com')}
@@ -1208,8 +1202,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                       Production (after DocuSign go-live)
                     </option>
                   </select>
-                  </label>
-                </div>
+                </label>
                 <button class="btn-primary !px-4 !py-2 text-sm" type="submit">
                   Save DocuSign keys
                 </button>
