@@ -159,14 +159,16 @@ const previewSections = categories.map((category, index) => ({
                       ) : null
                     }
                   </div>
-                  <div class="mt-3 flex flex-wrap items-start gap-x-3 gap-y-4">
+                  <div class="mt-3 flex flex-wrap items-start gap-x-3 gap-y-4" data-ql-row={section.id}>
                     {section.links.map((link) => (
                       <button
                         type="button"
+                        draggable="true"
                         data-ql-open={link.id}
+                        data-ql-drag={link.id}
                         aria-pressed="false"
                         class:list={[
-                          'rounded-xl outline-none transition hover:-translate-y-0.5 aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2',
+                          'cursor-grab rounded-xl outline-none transition hover:-translate-y-0.5 aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2 active:cursor-grabbing [&[data-ql-dragging]]:opacity-40',
                           link.iconSrc
                             ? 'inline-flex w-[4.65rem] flex-col items-center text-center'
                             : 'flex w-36 flex-col border border-sage-dark/10 bg-white p-2.5 text-left shadow-sm',
@@ -178,6 +180,7 @@ const previewSections = categories.map((category, index) => ({
                             <img
                               src={link.iconSrc}
                               alt=""
+                              draggable="false"
                               class="h-16 w-16 rounded-[0.92rem] bg-white object-contain shadow-[0_6px_14px_rgba(26,28,30,0.16)] ring-1 ring-black/10"
                             />
                           ) : (
@@ -519,6 +522,10 @@ const previewSections = categories.map((category, index) => ({
 
           buttons.forEach(function (button) {
             button.addEventListener('click', function () {
+              if (button.getAttribute('data-ql-did-drag') === '1') {
+                button.removeAttribute('data-ql-did-drag');
+                return;
+              }
               var id = button.getAttribute('data-ql-open');
               var already = button.getAttribute('aria-pressed') === 'true';
               closeAdd();
@@ -693,17 +700,77 @@ const previewSections = categories.map((category, index) => ({
             }
           }
 
-          section.addEventListener('submit', function (event) {
-            var form = event.target;
-            if (!(form instanceof HTMLFormElement)) return;
-            if (form.getAttribute('action') !== '/api/admin/quick-links') return;
-            event.preventDefault();
-            var submitter = event.submitter;
-            if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
-            var actionUrl = form.getAttribute('action') || '/api/admin/quick-links';
-            fetch(actionUrl, {
+          function rowLinkIds(row) {
+            var ids = [];
+            row.querySelectorAll('[data-ql-drag]').forEach(function (item) {
+              var id = item.getAttribute('data-ql-drag');
+              if (id) ids.push(id);
+            });
+            return ids;
+          }
+
+          function placeDragged(row, target, clientX) {
+            var from = row.querySelector('[data-ql-dragging]');
+            if (!from || from === target) return;
+            var rect = target.getBoundingClientRect();
+            var after = clientX > rect.left + rect.width / 2;
+            if (after) target.after(from);
+            else target.before(from);
+          }
+
+          root.querySelectorAll('[data-ql-row]').forEach(function (row) {
+            var orderBefore = '';
+            row.querySelectorAll('[data-ql-drag]').forEach(function (button) {
+              button.addEventListener('dragstart', function (event) {
+                orderBefore = rowLinkIds(row).join(',');
+                button.setAttribute('data-ql-dragging', '');
+                button.setAttribute('data-ql-did-drag', '1');
+                closeAdd();
+                closeEditors();
+                if (event.dataTransfer) {
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', button.getAttribute('data-ql-drag') || '');
+                }
+              });
+              button.addEventListener('dragover', function (event) {
+                if (!row.querySelector('[data-ql-dragging]')) return;
+                event.preventDefault();
+                placeDragged(row, button, event.clientX);
+              });
+              button.addEventListener('drop', function (event) {
+                event.preventDefault();
+              });
+              button.addEventListener('dragend', function () {
+                button.removeAttribute('data-ql-dragging');
+                var next = rowLinkIds(row).join(',');
+                if (!next || next === orderBefore) return;
+                var body = new FormData();
+                body.set('action', 'reorder-links');
+                body.set('categoryId', row.getAttribute('data-ql-row') || '');
+                rowLinkIds(row).forEach(function (id) {
+                  body.append('linkIds', id);
+                });
+                postQuickLinks(body);
+              });
+            });
+            var addSquare = row.querySelector('[data-ql-add]');
+            if (addSquare) {
+              addSquare.addEventListener('dragover', function (event) {
+                var from = row.querySelector('[data-ql-dragging]');
+                if (!from) return;
+                event.preventDefault();
+                if (addSquare.previousElementSibling !== from) addSquare.before(from);
+              });
+              addSquare.addEventListener('drop', function (event) {
+                event.preventDefault();
+              });
+            }
+          });
+
+          function postQuickLinks(body, submitter) {
+            fetch('/api/admin/quick-links', {
               method: 'POST',
-              body: new FormData(form),
+              body: body,
               credentials: 'same-origin',
               headers: { 'X-Quick-Links-Fetch': '1', Accept: 'application/json' },
             })
@@ -758,6 +825,16 @@ const previewSections = categories.map((category, index) => ({
                 }
                 note.textContent = error instanceof Error ? error.message : 'Could not save quick links.';
               });
+          }
+
+          section.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (form.getAttribute('action') !== '/api/admin/quick-links') return;
+            event.preventDefault();
+            var submitter = event.submitter;
+            if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
+            postQuickLinks(new FormData(form), submitter);
           });
         };
         window.initQuickLinks();

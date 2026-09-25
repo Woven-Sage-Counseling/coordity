@@ -270,6 +270,42 @@ export async function moveQuickLinkCategory(input: {
   });
 }
 
+export async function reorderQuickLinks(input: {
+  orgId: string;
+  categoryId: string;
+  linkIds: string[];
+}): Promise<void> {
+  await assertCategoryBelongsToOrg(input.orgId, input.categoryId);
+  const { DB } = getEnv();
+  const rows = await DB.prepare(
+    `SELECT id FROM portal_quick_link
+     WHERE org_id = ? AND category = ?
+     ORDER BY sort_order ASC, name ASC`,
+  )
+    .bind(input.orgId, input.categoryId)
+    .all<{ id: string }>();
+  const existing = (rows.results ?? []).map((row) => row.id);
+  if (input.linkIds.length !== existing.length || input.linkIds.length === 0) {
+    throw new Error('Refresh and try that move again.');
+  }
+  const known = new Set(existing);
+  if (new Set(input.linkIds).size !== input.linkIds.length || input.linkIds.some((id) => !known.has(id))) {
+    throw new Error('Refresh and try that move again.');
+  }
+  if (input.linkIds.every((id, index) => id === existing[index])) return;
+
+  const ts = nowMs();
+  await DB.batch(
+    input.linkIds.map((id, index) =>
+      DB.prepare(
+        `UPDATE portal_quick_link
+         SET sort_order = ?, updated_at = ?
+         WHERE id = ? AND org_id = ? AND category = ?`,
+      ).bind(index, ts, id, input.orgId, input.categoryId),
+    ),
+  );
+}
+
 export async function deleteQuickLinkCategory(input: {
   orgId: string;
   categoryId: string;

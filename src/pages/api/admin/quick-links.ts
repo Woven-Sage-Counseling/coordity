@@ -9,6 +9,7 @@ import {
   deleteQuickLink,
   deleteQuickLinkCategory,
   moveQuickLinkCategory,
+  reorderQuickLinks,
   updateQuickLink,
   updateQuickLinkCategory,
 } from '../../../lib/quick-links';
@@ -163,6 +164,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         orgId,
         categoryId: String(form.get('categoryId') ?? '').trim(),
         direction,
+      });
+      return finish(request);
+    }
+
+    if (action === 'reorder-links') {
+      await reorderQuickLinks({
+        orgId,
+        categoryId: String(form.get('categoryId') ?? '').trim(),
+        linkIds: form
+          .getAll('linkIds')
+          .map((value) => String(value).trim())
+          .filter(Boolean),
       });
       return finish(request);
     }
