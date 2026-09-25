@@ -40,6 +40,7 @@ const catalogByGroup = Object.fromEntries(
   ]),
 ) as Record<string, typeof QUICK_LINK_CATALOG>;
 const defaultCategoryId = categories[0]?.id ?? '';
+const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="transition group-open:rotate-180"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
 
 <section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} id="quick-links" aria-labelledby="quick-links-heading">
@@ -58,10 +59,13 @@ const defaultCategoryId = categories[0]?.id ?? '';
     ) : null
   }
 
-  <div class="mt-6 space-y-6">
-    <div>
-      <h3 class="text-sm font-semibold text-charcoal">Sections</h3>
-      <div class="mt-2 space-y-1.5">
+  <div class="mt-6 space-y-3">
+    <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+        <span>Sections</span>
+        <span class="text-sage-dark/40" set:html={sectionChevron} />
+      </summary>
+      <div class="space-y-1.5 border-t border-sage-dark/10 px-5 pb-5 pt-4">
         {
           categories.map((category, index) => (
             <div class="flex items-center gap-1.5">
@@ -122,20 +126,24 @@ const defaultCategoryId = categories[0]?.id ?? '';
             </div>
           ))
         }
-      </div>
       <form method="post" action="/api/admin/quick-links" class="mt-1.5 flex items-center gap-1.5">
         <input type="hidden" name="action" value="create-category" />
         <input class="field min-w-0 flex-1" type="text" name="title" required placeholder="New section" aria-label="New section title" />
         <button class="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
       </form>
-    </div>
+      </div>
+    </details>
 
-    <div>
-      <h3 class="text-sm font-semibold text-charcoal">Add from catalog</h3>
+    <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+        <span>Add from catalog</span>
+        <span class="text-sage-dark/40" set:html={sectionChevron} />
+      </summary>
+      <div class="border-t border-sage-dark/10 px-5 pb-5 pt-4">
       <form
         method="post"
         action="/api/admin/quick-links"
-        class="mt-2 space-y-2"
+        class="space-y-2"
         data-catalog-add
       >
         <input type="hidden" name="action" value="add-from-catalog" />
@@ -216,10 +224,15 @@ const defaultCategoryId = categories[0]?.id ?? '';
           fillTools();
         })();
       </script>
-    </div>
+      </div>
+    </details>
 
-    <div>
-      <h3 class="text-sm font-semibold text-charcoal">Your quick links</h3>
+    <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+        <span>Your quick links</span>
+        <span class="text-sage-dark/40" set:html={sectionChevron} />
+      </summary>
+      <div class="border-t border-sage-dark/10 px-5 pb-5 pt-4">
       {
         links.length === 0 ? (
           <p class="mt-2 text-sm text-sage-dark/60">No quick links yet.</p>
@@ -306,16 +319,15 @@ const defaultCategoryId = categories[0]?.id ?? '';
           </div>
         )
       }
-    </div>
+      </div>
+    </details>
 
-    <details class="group/ql rounded-xl bg-[#f7f8fa]">
-      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
-        <span class="text-sm font-semibold text-charcoal">Add a custom link</span>
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="shrink-0 text-sage-dark/40 transition group-open/ql:rotate-180">
-          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+    <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
+        <span>Add a custom link</span>
+        <span class="text-sage-dark/40" set:html={sectionChevron} />
       </summary>
-      <form method="post" action="/api/admin/quick-links" class="space-y-2 border-t border-sage-dark/10 px-3 pb-3 pt-3">
+      <form method="post" action="/api/admin/quick-links" class="space-y-2 border-t border-sage-dark/10 px-5 pb-5 pt-4">
         <input type="hidden" name="action" value="create-custom" />
         <input type="hidden" name="enabled" value="1" />
         <div class="grid gap-2 sm:grid-cols-2">
