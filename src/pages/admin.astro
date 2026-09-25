@@ -1621,22 +1621,39 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         </svg>
                       </summary>
                       <div class="border-t border-sage-dark/10 px-3 pb-3 pt-3">
-                    <p>
-                      Still on the Production keys page, open
-                      <span class="font-medium text-charcoal">Redirect URIs</span>, paste this URL, then click Save.
-                    </p>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                      <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
-                        {quickbooksRedirectUri}
-                      </code>
-                      <button
-                        type="button"
-                        class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
-                        data-copy-text={quickbooksRedirectUri}
-                      >
-                        Copy
-                      </button>
-                    </div>
+                    <ol class="list-decimal space-y-3 pl-5">
+                      <li>
+                        Still inside the app, open <span class="font-medium text-charcoal">Settings</span>.
+                      </li>
+                      <li>
+                        Click <span class="font-medium text-charcoal">Redirect URLs</span>.
+                      </li>
+                      <li>
+                        Make sure <span class="font-medium text-charcoal">Production</span> is selected.
+                      </li>
+                      <li>
+                        Click <span class="font-medium text-charcoal">Add URL</span>.
+                      </li>
+                      <li>
+                        Copy this URL.
+                        <div class="mt-1 flex flex-wrap items-center gap-2">
+                          <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                            {quickbooksRedirectUri}
+                          </code>
+                          <button
+                            type="button"
+                            class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                            data-copy-text={quickbooksRedirectUri}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </li>
+                      <li>Paste the URL into the box.</li>
+                      <li>
+                        Click <span class="font-medium text-charcoal">Save</span>.
+                      </li>
+                    </ol>
                       </div>
                     </details>
                   </li>
