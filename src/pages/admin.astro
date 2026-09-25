@@ -633,7 +633,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
               <div class="space-y-0.5">
                 {section.groups.map((group) => (
                   <details class="group" data-admin-group={group.id}>
-                    <summary class="item-selected-summary item-selected-hover flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition [&::-webkit-details-marker]:hidden">
+                    <summary class="item-selected-hover flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-[15px] font-medium text-charcoal transition [&::-webkit-details-marker]:hidden">
                       <span>{group.label}</span>
                       <span class="text-sage-dark/40" set:html={menuChevron} />
                     </summary>
