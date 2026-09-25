@@ -42,15 +42,12 @@ const catalogByGroup = Object.fromEntries(
 const defaultCategoryId = categories[0]?.id ?? '';
 const knownCategoryIds = new Set(categories.map((category) => category.id));
 const unsectioned = links.filter((link) => !knownCategoryIds.has(link.categoryId));
-const previewSections = [
-  ...categories.map((category) => ({
-    id: category.id,
-    title: category.title,
-    links: links.filter((link) => link.categoryId === category.id),
-  })),
-  ...(unsectioned.length > 0 ? [{ id: 'unsectioned', title: 'Other', links: unsectioned }] : []),
-].filter((section) => section.links.length > 0);
-const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="transition group-open:rotate-180"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const previewSections = categories.map((category, index) => ({
+  id: category.id,
+  title: category.title,
+  index,
+  links: links.filter((link) => link.categoryId === category.id),
+}));
 ---
 
 <section class:list={[!embedded && 'mt-10', 'scroll-mt-24']} id="quick-links" aria-labelledby="quick-links-heading">
@@ -71,13 +68,74 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
 
   <div class="mt-6 space-y-6">
     <div data-ql-board>
-      {
-        previewSections.length === 0 ? null : (
-          <div class="space-y-5">
+      <div class="space-y-5">
             {previewSections.map((section) => (
                 <section>
-                  <h3 class="font-display text-lg text-charcoal">{section.title}</h3>
-                  <div class="mt-3 flex flex-wrap gap-x-3 gap-y-4">
+                  <button
+                    type="button"
+                    data-ql-section={section.id}
+                    aria-pressed="false"
+                    class="rounded-md font-display text-lg text-charcoal outline-none aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2"
+                  >
+                    {section.title}
+                  </button>
+                  <div hidden data-ql-section-editor={section.id} class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <form method="post" action="/api/admin/quick-links" class="flex min-w-0 flex-1 items-center gap-1.5">
+                      <input type="hidden" name="action" value="update-category" />
+                      <input type="hidden" name="categoryId" value={section.id} />
+                      <input class="field min-w-0 flex-1" type="text" name="title" required value={section.title} aria-label="Section title" />
+                      <button class="shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white" type="submit">
+                        Save
+                      </button>
+                    </form>
+                    <form method="post" action="/api/admin/quick-links">
+                      <input type="hidden" name="action" value="move-category" />
+                      <input type="hidden" name="categoryId" value={section.id} />
+                      <input type="hidden" name="direction" value="up" />
+                      <button
+                        class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
+                        type="submit"
+                        disabled={section.index === 0}
+                        aria-label="Move section up"
+                      >
+                        ↑
+                      </button>
+                    </form>
+                    <form method="post" action="/api/admin/quick-links">
+                      <input type="hidden" name="action" value="move-category" />
+                      <input type="hidden" name="categoryId" value={section.id} />
+                      <input type="hidden" name="direction" value="down" />
+                      <button
+                        class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
+                        type="submit"
+                        disabled={section.index === categories.length - 1}
+                        aria-label="Move section down"
+                      >
+                        ↓
+                      </button>
+                    </form>
+                    {
+                      categories.length > 1 ? (
+                        <form method="post" action="/api/admin/quick-links">
+                          <input type="hidden" name="action" value="delete-category" />
+                          <input type="hidden" name="categoryId" value={section.id} />
+                          <input
+                            type="hidden"
+                            name="moveLinksToCategoryId"
+                            value={categories.find((item) => item.id !== section.id)?.id ?? ''}
+                          />
+                          <button
+                            class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+                            type="submit"
+                            onclick="return confirm('Delete this section? Links in it move to another section.')"
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      ) : null
+                    }
+                  </div>
+                  <div class:list={['flex flex-wrap gap-x-3 gap-y-4', section.links.length > 0 ? 'mt-3' : 'hidden']}>
                     {section.links.map((link) => (
                       <button
                         type="button"
@@ -116,10 +174,65 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
                   </div>
                 </section>
             ))}
+            {
+              unsectioned.length > 0 ? (
+                <section>
+                  <h3 class="font-display text-lg text-charcoal">Other</h3>
+                  <div class="mt-3 flex flex-wrap gap-x-3 gap-y-4">
+                    {unsectioned.map((link) => (
+                      <button
+                        type="button"
+                        data-ql-open={link.id}
+                        aria-pressed="false"
+                        class:list={[
+                          'rounded-xl outline-none transition hover:-translate-y-0.5 aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2',
+                          link.iconSrc
+                            ? 'inline-flex w-[4.65rem] flex-col items-center text-center'
+                            : 'flex w-36 flex-col border border-sage-dark/10 bg-white p-2.5 text-left shadow-sm',
+                          link.enabled ? '' : 'opacity-45 aria-pressed:opacity-100',
+                        ]}
+                      >
+                        {
+                          link.iconSrc ? (
+                            <img
+                              src={link.iconSrc}
+                              alt=""
+                              class="h-16 w-16 rounded-[0.92rem] bg-white object-contain shadow-[0_6px_14px_rgba(26,28,30,0.16)] ring-1 ring-black/10"
+                            />
+                          ) : (
+                            <span class="text-[10px] uppercase tracking-[0.14em] text-sage-dark/55">Other</span>
+                          )
+                        }
+                        <span class:list={['font-medium leading-tight text-charcoal', link.iconSrc ? 'mt-1.5 text-[11px]' : 'mt-1 font-display text-base']}>
+                          {link.name}
+                        </span>
+                        {link.enabled ? null : <span class="mt-1 text-[10px] font-medium text-sage-dark/60">Hidden</span>}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ) : null
+            }
+            <div>
+              <button
+                type="button"
+                data-ql-add-section
+                aria-pressed="false"
+                class="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-sage-dark/30 px-3 py-1.5 font-display text-lg text-sage-dark/50 outline-none aria-pressed:ring-2 aria-pressed:ring-sage-dark aria-pressed:ring-offset-2"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+                </svg>
+                Section
+              </button>
+              <form hidden method="post" action="/api/admin/quick-links" class="mt-2 flex items-center gap-1.5" data-ql-add-section-panel>
+                <input type="hidden" name="action" value="create-category" />
+                <input class="field min-w-0 max-w-xs flex-1" type="text" name="title" required placeholder="New section" aria-label="New section title" />
+                <button class="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
+              </form>
+            </div>
           </div>
-        )
-      }
-      <div class:list={['flex', previewSections.length === 0 ? '' : 'mt-5']}>
+      <div class="mt-5 flex">
         <button
           type="button"
           data-ql-add
@@ -308,6 +421,10 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
           var addPanel = root.querySelector('[data-ql-add-panel]');
           var catalogChoice = root.querySelector('[data-ql-add-catalog]');
           var customFields = root.querySelector('[data-ql-custom-fields]');
+          var sectionButtons = root.querySelectorAll('[data-ql-section]');
+          var sectionPanels = root.querySelectorAll('[data-ql-section-editor]');
+          var addSectionButton = root.querySelector('[data-ql-add-section]');
+          var addSectionPanel = root.querySelector('[data-ql-add-section-panel]');
 
           function showCatalogChoice() {
             if (catalogChoice) catalogChoice.hidden = false;
@@ -318,6 +435,17 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
             if (addButton) addButton.setAttribute('aria-pressed', 'false');
             if (addPanel) addPanel.hidden = true;
             showCatalogChoice();
+          }
+
+          function closeSections() {
+            sectionButtons.forEach(function (item) {
+              item.setAttribute('aria-pressed', 'false');
+            });
+            sectionPanels.forEach(function (panel) {
+              panel.hidden = true;
+            });
+            if (addSectionButton) addSectionButton.setAttribute('aria-pressed', 'false');
+            if (addSectionPanel) addSectionPanel.hidden = true;
           }
 
           function closeEditors() {
@@ -335,6 +463,7 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
               var id = button.getAttribute('data-ql-open');
               var already = button.getAttribute('aria-pressed') === 'true';
               closeAdd();
+              closeSections();
               closeEditors();
               if (already) return;
               button.setAttribute('aria-pressed', 'true');
@@ -354,6 +483,7 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
             addButton.addEventListener('click', function () {
               var already = addButton.getAttribute('aria-pressed') === 'true';
               closeEditors();
+              closeSections();
               if (already) {
                 closeAdd();
                 return;
@@ -376,83 +506,44 @@ const sectionChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="no
           if (showCatalog) {
             showCatalog.addEventListener('click', showCatalogChoice);
           }
+
+          sectionButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+              var id = button.getAttribute('data-ql-section');
+              var already = button.getAttribute('aria-pressed') === 'true';
+              closeAdd();
+              closeEditors();
+              closeSections();
+              if (already) return;
+              button.setAttribute('aria-pressed', 'true');
+              sectionPanels.forEach(function (panel) {
+                if (panel.getAttribute('data-ql-section-editor') === id) {
+                  panel.hidden = false;
+                  if (panel.scrollIntoView) panel.scrollIntoView({ block: 'nearest' });
+                }
+              });
+            });
+          });
+
+          if (addSectionButton) {
+            addSectionButton.addEventListener('click', function () {
+              var already = addSectionButton.getAttribute('aria-pressed') === 'true';
+              closeAdd();
+              closeEditors();
+              closeSections();
+              if (already) return;
+              addSectionButton.setAttribute('aria-pressed', 'true');
+              if (addSectionPanel) {
+                addSectionPanel.hidden = false;
+                if (addSectionPanel.scrollIntoView) addSectionPanel.scrollIntoView({ block: 'nearest' });
+                var title = addSectionPanel.querySelector('input[name="title"]');
+                if (title instanceof HTMLInputElement) title.focus();
+              }
+            });
+          }
         })();
       </script>
     </div>
-
-    <details class="group rounded-2xl border border-sage-dark/10 bg-white/90 shadow-sm">
-      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-charcoal [&::-webkit-details-marker]:hidden">
-        <span>Sections</span>
-        <span class="text-sage-dark/40" set:html={sectionChevron} />
-      </summary>
-      <div class="space-y-1.5 border-t border-sage-dark/10 px-5 pb-5 pt-4">
-        {
-          categories.map((category, index) => (
-            <div class="flex items-center gap-1.5">
-              <form method="post" action="/api/admin/quick-links" class="flex min-w-0 flex-1 items-center gap-1.5">
-                <input type="hidden" name="action" value="update-category" />
-                <input type="hidden" name="categoryId" value={category.id} />
-                <input class="field min-w-0 flex-1" type="text" name="title" required value={category.title} aria-label="Section title" />
-                <button class="shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white" type="submit">
-                  Save
-                </button>
-              </form>
-              <form method="post" action="/api/admin/quick-links">
-                <input type="hidden" name="action" value="move-category" />
-                <input type="hidden" name="categoryId" value={category.id} />
-                <input type="hidden" name="direction" value="up" />
-                <button
-                  class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
-                  type="submit"
-                  disabled={index === 0}
-                  aria-label="Move section up"
-                >
-                  ↑
-                </button>
-              </form>
-              <form method="post" action="/api/admin/quick-links">
-                <input type="hidden" name="action" value="move-category" />
-                <input type="hidden" name="categoryId" value={category.id} />
-                <input type="hidden" name="direction" value="down" />
-                <button
-                  class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
-                  type="submit"
-                  disabled={index === categories.length - 1}
-                  aria-label="Move section down"
-                >
-                  ↓
-                </button>
-              </form>
-              {
-                categories.length > 1 ? (
-                  <form method="post" action="/api/admin/quick-links">
-                    <input type="hidden" name="action" value="delete-category" />
-                    <input type="hidden" name="categoryId" value={category.id} />
-                    <input
-                      type="hidden"
-                      name="moveLinksToCategoryId"
-                      value={categories.find((item) => item.id !== category.id)?.id ?? ''}
-                    />
-                    <button
-                      class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
-                      type="submit"
-                      onclick="return confirm('Delete this section? Links in it move to another section.')"
-                    >
-                      Delete
-                    </button>
-                  </form>
-                ) : null
-              }
-            </div>
-          ))
-        }
-      <form method="post" action="/api/admin/quick-links" class="mt-1.5 flex items-center gap-1.5">
-        <input type="hidden" name="action" value="create-category" />
-        <input class="field min-w-0 flex-1" type="text" name="title" required placeholder="New section" aria-label="New section title" />
-        <button class="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand" type="submit">Add</button>
-      </form>
-      </div>
-    </details>
 
       <script
         is:inline
