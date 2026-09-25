@@ -514,6 +514,26 @@ export class QuickBooksProvider implements FinancialDataProvider {
     };
   }
 
+  async disconnect(): Promise<void> {
+    await getEnv()
+      .DB.prepare(
+        `UPDATE quickbooks_connection
+         SET realm_id = NULL,
+             access_token_encrypted = NULL,
+             refresh_token_encrypted = NULL,
+             access_token_expires_at = NULL,
+             refresh_token_expires_at = NULL,
+             connected_by = NULL,
+             company_name = NULL,
+             connected_email = NULL,
+             status = 'disconnected',
+             last_error = NULL
+         WHERE id = ?`,
+      )
+      .bind(CONNECTION_ID)
+      .run();
+  }
+
   async saveAppSettings(input: {
     clientId: string;
     clientSecret?: string | null;

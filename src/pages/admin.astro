@@ -977,7 +977,9 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     ? 'QuickBooks keys saved. You can connect now.'
                     : integrationsSaved === 'quickbooks'
                       ? 'QuickBooks connected.'
-                      : 'Saved.'}
+                      : integrationsSaved === 'quickbooks-disconnected'
+                        ? 'QuickBooks disconnected.'
+                        : 'Saved.'}
           </p>
         ) : null
       }
@@ -1273,7 +1275,8 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
             qbStatus.status !== 'connected' ||
             Boolean(integrationsError) ||
             integrationsSaved === 'quickbooks' ||
-            integrationsSaved === 'quickbooks-settings'
+            integrationsSaved === 'quickbooks-settings' ||
+            integrationsSaved === 'quickbooks-disconnected'
               ? true
               : undefined
           }
@@ -1762,6 +1765,18 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           {qbConnected ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
                         </button>
                       </form>
+                      {
+                        qbConnected ? (
+                          <form method="post" action="/api/quickbooks/disconnect">
+                            <button
+                              class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700"
+                              type="submit"
+                            >
+                              Disconnect
+                            </button>
+                          </form>
+                        ) : null
+                      }
                       <a
                         href="/financials"
                         class="rounded-full border border-sage-dark/20 px-4 py-2 text-sm font-semibold text-sage-dark transition hover:bg-sage/10"
