@@ -1305,10 +1305,13 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                           <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                       </summary>
-                      <ol class="list-decimal space-y-3 border-t border-sage-dark/10 pb-3 pl-8 pr-3 pt-3">
+                      <div class="border-t border-sage-dark/10 px-3 pb-3 pt-3">
+                      <p>
+                        Before you can see your credentials you must fill a few things in.
+                      </p>
+                      <ol class="mt-3 list-decimal space-y-3 pl-5">
                       <li>
-                        Before you can see your credentials you must fill a few things in. Under
-                        <span class="font-medium text-charcoal">App Details</span> complete the
+                        Under <span class="font-medium text-charcoal">App Details</span> complete the
                         <span class="font-medium text-charcoal">Review your developer portal profile</span> task.
                       </li>
                       <li>
@@ -1445,6 +1448,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         </p>
                       </li>
                       </ol>
+                      </div>
                     </details>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa]">
