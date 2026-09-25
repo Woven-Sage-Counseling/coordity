@@ -55,9 +55,25 @@ const previewSections = categories.map((category, index) => ({
 
   {
     saved ? (
-      <p class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        Quick links saved.
-      </p>
+      <>
+        <p data-quick-links-saved class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Quick links saved.
+        </p>
+        <script is:inline>
+          (function () {
+            var nav = performance.getEntriesByType('navigation')[0];
+            if (nav && nav.type === 'reload') {
+              var badge = document.querySelector('[data-quick-links-saved]');
+              if (badge) badge.remove();
+            }
+            var params = new URLSearchParams(location.search);
+            if (!params.has('quickLinksSaved')) return;
+            params.delete('quickLinksSaved');
+            var search = params.toString();
+            history.replaceState(null, '', location.pathname + (search ? '?' + search : '') + location.hash);
+          })();
+        </script>
+      </>
     ) : null
   }
   {
