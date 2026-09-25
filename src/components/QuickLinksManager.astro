@@ -87,31 +87,13 @@ const previewSections = categories.map((category, index) => ({
       <div class="space-y-5">
             {previewSections.map((section) => (
                 <section>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <h3 data-ql-section-label={section.id} class="font-display text-lg text-charcoal">{section.title}</h3>
-                    <div hidden data-ql-section-editor={section.id} class="flex min-w-0 flex-wrap items-center gap-1.5">
-                    <form method="post" action="/api/admin/quick-links" class="flex min-w-0 items-center gap-1.5">
-                      <input type="hidden" name="action" value="update-category" />
-                      <input type="hidden" name="categoryId" value={section.id} />
-                      <input
-                        class="w-auto max-w-full bg-transparent p-0 font-display text-lg text-charcoal outline-none"
-                        type="text"
-                        name="title"
-                        required
-                        value={section.title}
-                        size={Math.max(section.title.length, 1)}
-                        aria-label="Section title"
-                      />
-                      <button class="shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white" type="submit">
-                        Save
-                      </button>
-                    </form>
+                  <div class="flex w-full items-center gap-1.5">
                     <form method="post" action="/api/admin/quick-links">
                       <input type="hidden" name="action" value="move-category" />
                       <input type="hidden" name="categoryId" value={section.id} />
                       <input type="hidden" name="direction" value="up" />
                       <button
-                        class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
+                        class="rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white disabled:opacity-40"
                         type="submit"
                         disabled={section.index === 0}
                         aria-label="Move section up"
@@ -124,12 +106,37 @@ const previewSections = categories.map((category, index) => ({
                       <input type="hidden" name="categoryId" value={section.id} />
                       <input type="hidden" name="direction" value="down" />
                       <button
-                        class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 disabled:opacity-40"
+                        class="rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white disabled:opacity-40"
                         type="submit"
                         disabled={section.index === categories.length - 1}
                         aria-label="Move section down"
                       >
                         ↓
+                      </button>
+                    </form>
+                    <form method="post" action="/api/admin/quick-links" class="flex min-w-0 flex-1 items-center gap-1.5">
+                      <input type="hidden" name="action" value="update-category" />
+                      <input type="hidden" name="categoryId" value={section.id} />
+                      <input
+                        data-ql-section-title
+                        class="w-auto max-w-full border-0 bg-transparent p-0 font-display text-lg text-charcoal shadow-none outline-none ring-0 read-only:cursor-default"
+                        type="text"
+                        name="title"
+                        required
+                        readonly
+                        value={section.title}
+                        size={Math.max(section.title.length, 1)}
+                        aria-label="Section title"
+                      />
+                      <button
+                        type="button"
+                        data-ql-section-edit
+                        class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white"
+                      >
+                        Edit
+                      </button>
+                      <button class="ml-auto shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white" type="submit">
+                        Save
                       </button>
                     </form>
                     {
@@ -143,7 +150,7 @@ const previewSections = categories.map((category, index) => ({
                             value={categories.find((item) => item.id !== section.id)?.id ?? ''}
                           />
                           <button
-                            class="rounded-full px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+                            class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
                             type="submit"
                             onclick="return confirm('Delete this section? Links in it move to another section.')"
                           >
@@ -152,15 +159,6 @@ const previewSections = categories.map((category, index) => ({
                         </form>
                       ) : null
                     }
-                    </div>
-                    <button
-                      type="button"
-                      data-ql-section={section.id}
-                      aria-pressed="false"
-                      class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/15 hover:bg-white"
-                    >
-                      Edit
-                    </button>
                   </div>
                   <div class="mt-3 flex flex-wrap items-start gap-x-3 gap-y-4">
                     {section.links.map((link) => (
@@ -453,9 +451,6 @@ const previewSections = categories.map((category, index) => ({
           var addPanel = root.querySelector('[data-ql-add-panel]');
           var catalogChoice = root.querySelector('[data-ql-add-catalog]');
           var customFields = root.querySelector('[data-ql-custom-fields]');
-          var sectionButtons = root.querySelectorAll('[data-ql-section]');
-          var sectionPanels = root.querySelectorAll('[data-ql-section-editor]');
-          var sectionLabels = root.querySelectorAll('[data-ql-section-label]');
 
           function showCatalogChoice() {
             if (catalogChoice) catalogChoice.hidden = false;
@@ -468,18 +463,6 @@ const previewSections = categories.map((category, index) => ({
             });
             if (addPanel) addPanel.hidden = true;
             showCatalogChoice();
-          }
-
-          function closeSections() {
-            sectionButtons.forEach(function (item) {
-              item.setAttribute('aria-pressed', 'false');
-            });
-            sectionPanels.forEach(function (panel) {
-              panel.hidden = true;
-            });
-            sectionLabels.forEach(function (label) {
-              label.hidden = false;
-            });
           }
 
           function closeEditors() {
@@ -497,7 +480,6 @@ const previewSections = categories.map((category, index) => ({
               var id = button.getAttribute('data-ql-open');
               var already = button.getAttribute('aria-pressed') === 'true';
               closeAdd();
-              closeSections();
               closeEditors();
               if (already) return;
               button.setAttribute('aria-pressed', 'true');
@@ -533,7 +515,6 @@ const previewSections = categories.map((category, index) => ({
               var already = addButton.getAttribute('aria-pressed') === 'true';
               var sectionId = addButton.getAttribute('data-ql-add') || '';
               closeEditors();
-              closeSections();
               if (already) {
                 closeAdd();
                 return;
@@ -565,25 +546,20 @@ const previewSections = categories.map((category, index) => ({
             showCatalog.addEventListener('click', showCatalogChoice);
           }
 
-          sectionButtons.forEach(function (button) {
+          root.querySelectorAll('[data-ql-section-edit]').forEach(function (button) {
             button.addEventListener('click', function () {
-              var id = button.getAttribute('data-ql-section');
-              var already = button.getAttribute('aria-pressed') === 'true';
-              closeAdd();
-              closeEditors();
-              closeSections();
-              if (already) return;
-              button.setAttribute('aria-pressed', 'true');
-              sectionPanels.forEach(function (panel) {
-                if (panel.getAttribute('data-ql-section-editor') === id) {
-                  panel.hidden = false;
-                  var title = panel.querySelector('input[name="title"]');
-                  if (title instanceof HTMLInputElement) title.focus();
-                }
-              });
-              sectionLabels.forEach(function (label) {
-                if (label.getAttribute('data-ql-section-label') === id) label.hidden = true;
-              });
+              var form = button.closest('form');
+              var title = form ? form.querySelector('[data-ql-section-title]') : null;
+              if (!(title instanceof HTMLInputElement)) return;
+              title.readOnly = false;
+              title.focus();
+              title.select();
+            });
+          });
+          root.querySelectorAll('[data-ql-section-title]').forEach(function (title) {
+            title.addEventListener('input', function () {
+              if (!(title instanceof HTMLInputElement)) return;
+              title.size = Math.max(title.value.length, 1);
             });
           });
         })();
