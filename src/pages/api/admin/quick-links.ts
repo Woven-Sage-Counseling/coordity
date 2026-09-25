@@ -22,6 +22,26 @@ function redirectOk(): Response {
   });
 }
 
+function isFetchSave(request: Request): boolean {
+  return request.headers.get('x-quick-links-fetch') === '1';
+}
+
+function finish(request: Request): Response {
+  if (!isFetchSave(request)) return redirectOk();
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
+function fail(request: Request, message: string): Response {
+  if (!isFetchSave(request)) return formErrorRedirect('/admin', message, 'quickLinksError');
+  return new Response(JSON.stringify({ ok: false, error: message }), {
+    status: 400,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = requireManagementAccess(locals.employee);
   if (denied) return denied;
@@ -42,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         categoryId: String(form.get('categoryId') ?? '').trim() || undefined,
         roleKeys: roleKeys.length > 0 ? roleKeys : undefined,
       });
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'create-custom') {
@@ -56,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         roleKeys,
         enabled: String(form.get('enabled') ?? '1') === '1',
       });
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'update-custom') {
@@ -71,12 +91,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         roleKeys,
         enabled: String(form.get('enabled') ?? '') === '1',
       });
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'delete-custom') {
       await deleteQuickLink(orgId, String(form.get('linkId') ?? '').trim());
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'create-category') {
@@ -84,7 +104,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         orgId,
         title: String(form.get('title') ?? ''),
       });
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'update-category') {
@@ -93,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         categoryId: String(form.get('categoryId') ?? '').trim(),
         title: String(form.get('title') ?? ''),
       });
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'move-category') {
@@ -104,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         categoryId: String(form.get('categoryId') ?? '').trim(),
         direction,
       });
-      return redirectOk();
+      return finish(request);
     }
 
     if (action === 'delete-category') {
@@ -113,12 +133,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         categoryId: String(form.get('categoryId') ?? '').trim(),
         moveLinksToCategoryId: String(form.get('moveLinksToCategoryId') ?? '').trim() || undefined,
       });
-      return redirectOk();
+      return finish(request);
     }
 
     throw new Error('Unknown action.');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not save quick links.';
-    return formErrorRedirect('/admin', message, 'quickLinksError');
+    return fail(request, message);
   }
 };

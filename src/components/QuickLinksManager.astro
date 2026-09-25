@@ -440,10 +440,13 @@ const previewSections = categories.map((category, index) => ({
           </dialog>
         )
       }
+      <script type="application/json" data-ql-catalog is:inline set:html={JSON.stringify({ catalogByGroup, addedCatalogKeys: [...addedCatalogKeys] })}></script>
       <script is:inline>
-        (function () {
-          var root = document.querySelector('[data-ql-board]');
-          if (!root) return;
+        window.initQuickLinks = function () {
+          var section = document.getElementById('quick-links');
+          var root = section && section.querySelector('[data-ql-board]');
+          if (!section || !root || section.getAttribute('data-ql-bound') === '1') return;
+          section.setAttribute('data-ql-bound', '1');
           var buttons = root.querySelectorAll('[data-ql-open]');
           var panels = root.querySelectorAll('[data-ql-editor]');
           var dialog = root.querySelector('[data-ql-dialog]');
@@ -562,46 +565,101 @@ const previewSections = categories.map((category, index) => ({
               title.size = Math.max(title.value.length, 1);
             });
           });
-        })();
-      </script>
-    </div>
 
-      <script
-        is:inline
-        define:vars={{
-          catalogByGroup,
-          addedCatalogKeys: [...addedCatalogKeys],
-        }}
-      >
-        (function () {
-          var form = document.querySelector('[data-catalog-add]');
-          if (!form) return;
-          var groupSelect = form.querySelector('[data-catalog-group]');
-          var toolSelect = form.querySelector('[data-catalog-tool]');
-          if (!(groupSelect instanceof HTMLSelectElement) || !(toolSelect instanceof HTMLSelectElement)) return;
-          var added = Array.isArray(addedCatalogKeys) ? addedCatalogKeys : [];
-
-          function fillTools() {
-            var group = groupSelect.value;
-            var items = (catalogByGroup && catalogByGroup[group]) || [];
-            toolSelect.innerHTML = '';
-            var placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = items.length ? 'Tool' : 'No tools';
-            toolSelect.appendChild(placeholder);
-            items.forEach(function (item) {
-              var opt = document.createElement('option');
-              opt.value = item.key;
-              opt.textContent = added.indexOf(item.key) >= 0 ? item.name + ' (already added)' : item.name;
-              if (added.indexOf(item.key) >= 0) opt.disabled = true;
-              toolSelect.appendChild(opt);
-            });
-            toolSelect.disabled = !group || items.length === 0;
+          var catalogEl = section.querySelector('[data-ql-catalog]');
+          var catalogForm = root.querySelector('[data-catalog-add]');
+          if (catalogEl && catalogForm) {
+            var catalogData = {};
+            try {
+              catalogData = JSON.parse(catalogEl.textContent || '{}');
+            } catch (error) {
+              catalogData = {};
+            }
+            var groupSelect = catalogForm.querySelector('[data-catalog-group]');
+            var toolSelect = catalogForm.querySelector('[data-catalog-tool]');
+            if (groupSelect instanceof HTMLSelectElement && toolSelect instanceof HTMLSelectElement) {
+              var added = Array.isArray(catalogData.addedCatalogKeys) ? catalogData.addedCatalogKeys : [];
+              var fillTools = function () {
+                var group = groupSelect.value;
+                var items = (catalogData.catalogByGroup && catalogData.catalogByGroup[group]) || [];
+                toolSelect.innerHTML = '';
+                var placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = items.length ? 'Tool' : 'No tools';
+                toolSelect.appendChild(placeholder);
+                items.forEach(function (item) {
+                  var opt = document.createElement('option');
+                  opt.value = item.key;
+                  opt.textContent = added.indexOf(item.key) >= 0 ? item.name + ' (already added)' : item.name;
+                  if (added.indexOf(item.key) >= 0) opt.disabled = true;
+                  toolSelect.appendChild(opt);
+                });
+                toolSelect.disabled = !group || items.length === 0;
+              };
+              groupSelect.addEventListener('change', fillTools);
+              fillTools();
+            }
           }
 
-          groupSelect.addEventListener('change', fillTools);
-          fillTools();
-        })();
+          section.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (form.getAttribute('action') !== '/api/admin/quick-links') return;
+            event.preventDefault();
+            var submitter = event.submitter;
+            if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
+            fetch(form.action, {
+              method: 'POST',
+              body: new FormData(form),
+              credentials: 'same-origin',
+              headers: { 'X-Quick-Links-Fetch': '1', Accept: 'application/json' },
+            })
+              .then(function (res) {
+                return res.json().then(function (data) {
+                  return { ok: res.ok && data && data.ok, error: data && data.error };
+                });
+              })
+              .then(function (result) {
+                if (!result.ok) throw new Error(result.error || 'Could not save quick links.');
+                return fetch(location.pathname, {
+                  credentials: 'same-origin',
+                  cache: 'no-store',
+                  headers: { Accept: 'text/html' },
+                });
+              })
+              .then(function (res) {
+                if (!res.ok) throw new Error('Saved, but the preview could not refresh.');
+                return res.text();
+              })
+              .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var next = doc.getElementById('quick-links');
+                var current = document.getElementById('quick-links');
+                if (!next || !current || !current.parentNode) throw new Error('Saved, but the preview could not refresh.');
+                var openDialog = current.querySelector('[data-ql-dialog]');
+                if (openDialog && openDialog.open) openDialog.close();
+                current.parentNode.replaceChild(document.importNode(next, true), current);
+                if (window.initQuickLinks) window.initQuickLinks();
+              })
+              .catch(function (error) {
+                if (submitter instanceof HTMLButtonElement) submitter.disabled = false;
+                var current = document.getElementById('quick-links');
+                if (!current) return;
+                var note = current.querySelector('[data-ql-error]');
+                if (!note) {
+                  note = document.createElement('p');
+                  note.setAttribute('data-ql-error', '');
+                  note.className = 'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800';
+                  var board = current.querySelector('[data-ql-board]');
+                  if (board && board.parentNode) board.parentNode.insertBefore(note, board);
+                  else current.appendChild(note);
+                }
+                note.textContent = error instanceof Error ? error.message : 'Could not save quick links.';
+              });
+          });
+        };
+        window.initQuickLinks();
       </script>
+    </div>
   </div>
 </section>
