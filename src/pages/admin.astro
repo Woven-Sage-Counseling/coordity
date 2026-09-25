@@ -1280,6 +1280,19 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                         {
                           quickbooksEulaUrl && quickbooksPrivacyUrl ? (
                             <div class="mt-2 space-y-2">
+                              <p>
+                                On your website, create these two public pages if they are not already there. Open
+                                each address and make sure the page loads. Then paste that same address into the
+                                matching box in Intuit.
+                              </p>
+                              <ol class="list-decimal space-y-1 pl-5">
+                                <li>
+                                  End-user license agreement: the rules for using this workspace.
+                                </li>
+                                <li>
+                                  Privacy policy: what information this workspace collects and how you use it.
+                                </li>
+                              </ol>
                               <div>
                                 <p class="text-xs text-sage-dark/60">End-user license agreement URL</p>
                                 <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -1312,10 +1325,27 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                               </div>
                             </div>
                           ) : (
-                            <p class="mt-1">
-                              Use the public terms page and privacy page on your practice website. Both need
-                              https://.
-                            </p>
+                            <div class="mt-1 space-y-2">
+                              <p>
+                                Intuit needs two public pages on your practice website. This workspace does not have
+                                a website saved yet, so do this first:
+                              </p>
+                              <ol class="list-decimal space-y-1 pl-5">
+                                <li>In the admin menu, open Workspace branding.</li>
+                                <li>Open Workspace identity.</li>
+                                <li>Enter your website, starting with https://, and click Save.</li>
+                                <li>Come back to Integrations. This step will show two addresses.</li>
+                                <li>
+                                  On your website, create a page at each address: an end-user license agreement (the
+                                  rules for using this workspace) and a privacy policy (what information this
+                                  workspace collects and how you use it).
+                                </li>
+                                <li>
+                                  Open each address and make sure the page loads. Then paste that same address into
+                                  the matching box in Intuit.
+                                </li>
+                              </ol>
+                            </div>
                           )
                         }
                       </div>
