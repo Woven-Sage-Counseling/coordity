@@ -1324,44 +1324,38 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                                 each address and make sure the page loads. Then paste that same address into the
                                 matching box in Intuit.
                               </p>
-                              <ol class="list-decimal space-y-1 pl-5">
+                              <ol class="list-decimal space-y-3 pl-5">
                                 <li>
                                   End-user license agreement: the rules for using this workspace.
+                                  <div class="mt-1 flex flex-wrap items-center gap-2">
+                                    <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                                      {quickbooksEulaUrl}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                                      data-copy-text={quickbooksEulaUrl}
+                                    >
+                                      Copy
+                                    </button>
+                                  </div>
                                 </li>
                                 <li>
                                   Privacy policy: what information this workspace collects and how you use it.
+                                  <div class="mt-1 flex flex-wrap items-center gap-2">
+                                    <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                                      {quickbooksPrivacyUrl}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                                      data-copy-text={quickbooksPrivacyUrl}
+                                    >
+                                      Copy
+                                    </button>
+                                  </div>
                                 </li>
                               </ol>
-                              <div>
-                                <p class="text-xs text-sage-dark/60">End-user license agreement URL</p>
-                                <div class="mt-1 flex flex-wrap items-center gap-2">
-                                  <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
-                                    {quickbooksEulaUrl}
-                                  </code>
-                                  <button
-                                    type="button"
-                                    class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
-                                    data-copy-text={quickbooksEulaUrl}
-                                  >
-                                    Copy
-                                  </button>
-                                </div>
-                              </div>
-                              <div>
-                                <p class="text-xs text-sage-dark/60">Privacy policy URL</p>
-                                <div class="mt-1 flex flex-wrap items-center gap-2">
-                                  <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
-                                    {quickbooksPrivacyUrl}
-                                  </code>
-                                  <button
-                                    type="button"
-                                    class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
-                                    data-copy-text={quickbooksPrivacyUrl}
-                                  >
-                                    Copy
-                                  </button>
-                                </div>
-                              </div>
                             </div>
                           ) : (
                             <div class="mt-1 space-y-2">
