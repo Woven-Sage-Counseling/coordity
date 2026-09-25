@@ -408,7 +408,21 @@ const docusignStatuses = docusignStatusesRaw.map((row) => ({
 const qbConnected = qbStatus.status === 'connected';
 const canManageQuickBooks = hasPermission(employee, 'financials:manage');
 const docusignRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/docusign/callback`;
-const quickbooksRedirectUri = `${orgCanonicalOrigin(organization, Astro.url.href)}/api/quickbooks/callback`;
+const quickbooksOrigin = orgCanonicalOrigin(organization, Astro.url.href);
+const quickbooksRedirectUri = `${quickbooksOrigin}/api/quickbooks/callback`;
+const quickbooksHost = new URL(quickbooksOrigin).host;
+const quickbooksConnectPage = `${quickbooksOrigin}/admin#integrations`;
+const practiceOrigin = (() => {
+  const raw = organization?.websiteUrl?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).origin;
+  } catch {
+    return null;
+  }
+})();
+const quickbooksEulaUrl = practiceOrigin ? `${practiceOrigin}/portal-terms` : null;
+const quickbooksPrivacyUrl = practiceOrigin ? `${practiceOrigin}/portal-privacy` : null;
 
 const menuChevron = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="transition group-open:rotate-180"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -1256,7 +1270,119 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </p>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-                    <p class="font-semibold text-charcoal">2. Paste your keys here</p>
+                    <p class="font-semibold text-charcoal">2. Answer Intuit’s production questions</p>
+                    <p class="mt-1">
+                      Intuit asks these before it shows production keys. This is still the one Coordity app.
+                      Your workspace connects afterward, in step 5. Use these answers.
+                    </p>
+                    <div class="mt-3 space-y-3">
+                      <div>
+                        <p class="font-medium text-charcoal">End-user license agreement and privacy policy</p>
+                        {
+                          quickbooksEulaUrl && quickbooksPrivacyUrl ? (
+                            <div class="mt-2 space-y-2">
+                              <div>
+                                <p class="text-xs text-sage-dark/60">End-user license agreement URL</p>
+                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                  <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                                    {quickbooksEulaUrl}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                                    data-copy-text={quickbooksEulaUrl}
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <p class="text-xs text-sage-dark/60">Privacy policy URL</p>
+                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                  <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                                    {quickbooksPrivacyUrl}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                                    data-copy-text={quickbooksPrivacyUrl}
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p class="mt-1">
+                              Use the public terms page and privacy page on your practice website. Both need
+                              https://.
+                            </p>
+                          )
+                        }
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">
+                          Host domain, launch URL, disconnect URL, and connect/reconnect URL
+                        </p>
+                        <div class="mt-2 space-y-2">
+                          <div>
+                            <p class="text-xs text-sage-dark/60">Host domain. No https://.</p>
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                              <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                                {quickbooksHost}
+                              </code>
+                              <button
+                                type="button"
+                                class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                                data-copy-text={quickbooksHost}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <p class="text-xs text-sage-dark/60">
+                              Launch URL, Disconnect URL, and Connect/Reconnect URL. Use this for all three.
+                            </p>
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                              <code class="block max-w-full flex-1 truncate rounded-lg bg-white px-2.5 py-2 text-xs text-charcoal ring-1 ring-sage-dark/10">
+                                {quickbooksConnectPage}
+                              </code>
+                              <button
+                                type="button"
+                                class="rounded-full border border-sage-dark/20 px-3 py-1.5 text-xs font-semibold text-sage-dark hover:bg-white"
+                                data-copy-text={quickbooksConnectPage}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">Category</p>
+                        <p class="mt-1">
+                          Select <span class="font-medium text-charcoal">Business Insights</span>. You can also
+                          select <span class="font-medium text-charcoal">Expenses</span>.
+                        </p>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">Regulated industries</p>
+                        <p class="mt-1">
+                          Select <span class="font-medium text-charcoal">None of the above</span>.
+                        </p>
+                      </div>
+                      <div>
+                        <p class="font-medium text-charcoal">Where your app is hosted</p>
+                        <p class="mt-1">
+                          Country: <span class="font-medium text-charcoal">United States</span>. Leave the IP address
+                          blank. Coordity runs on Cloudflare, which does not use one fixed IP.
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
+                    <p class="font-semibold text-charcoal">3. Paste your keys here</p>
                     <p class="mt-1 text-xs text-sage-dark/60">
                       Paste the Client ID and Client Secret from the Production credentials, and leave the environment
                       on <span class="font-medium text-charcoal">Production</span>. Sandbox only matches Development
@@ -1313,7 +1439,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </form>
                     {
                       qbStatus.hasOrgApp ? (
-                        <p class="mt-2 text-xs text-emerald-800">Keys saved. Continue to step 3.</p>
+                        <p class="mt-2 text-xs text-emerald-800">Keys saved. Continue to step 4.</p>
                       ) : qbStatus.hasPlatformApp ? (
                         <p class="mt-2 text-xs text-sage-dark/60">
                           Optional: Coordity already has platform QuickBooks keys, so you can skip to Connect — or
@@ -1323,7 +1449,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     }
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-                    <p class="font-semibold text-charcoal">3. Add this Redirect URI</p>
+                    <p class="font-semibold text-charcoal">4. Add this Redirect URI</p>
                     <p class="mt-1">
                       Still on the Production keys page, open
                       <span class="font-medium text-charcoal">Redirect URIs</span>, paste this URL, then click Save.
@@ -1342,7 +1468,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     </div>
                   </li>
                   <li class="rounded-xl bg-[#f7f8fa] px-3 py-3">
-                    <p class="font-semibold text-charcoal">4. Connect your QuickBooks company</p>
+                    <p class="font-semibold text-charcoal">5. Connect your QuickBooks company</p>
                     <p class="mt-1">
                       Click Connect, sign in to Intuit, and choose the company file Coordity should sync.
                     </p>
@@ -1366,7 +1492,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
                     {
                       !qbStatus.configured ? (
                         <p class="mt-2 text-xs text-amber-800">
-                          Save your Client ID and Client Secret in step 2 first.
+                          Save your Client ID and Client Secret in step 3 first.
                         </p>
                       ) : null
                     }
