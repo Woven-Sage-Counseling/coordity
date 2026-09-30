@@ -343,7 +343,7 @@ const previewSections = categories.map((category, index) => ({
           <label class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-sage-dark/30 px-3 py-4 text-center transition hover:-translate-y-0.5">
             <img data-ql-icon-preview alt="" hidden class="mb-1 h-16 w-16 rounded-[0.92rem] bg-white object-contain" />
             <span data-ql-icon-caption class="text-sm font-medium text-sage-dark">Add your own image</span>
-            <span class="text-[11px] text-sage-dark/55">Leave this empty and the website’s icon is used when you save.</span>
+            <span class="text-[11px] text-sage-dark/55">Photos open a square crop for the thumbnail. Leave this empty and the website’s icon is used when you save.</span>
             <input data-ql-icon-file class="sr-only" type="file" name="icon" accept="image/png,image/jpeg,image/webp,image/gif" />
           </label>
           <details class="group/ql" data-ql-visibility>
@@ -409,7 +409,7 @@ const previewSections = categories.map((category, index) => ({
                       <span data-ql-icon-caption class="text-sm font-medium text-sage-dark">
                         {link.iconSrc ? 'Replace image' : 'Add your own image'}
                       </span>
-                      <span class="text-[11px] text-sage-dark/55">Leave this empty to keep the current icon.</span>
+                      <span class="text-[11px] text-sage-dark/55">Photos open a square crop for the thumbnail. Leave this empty to keep the current icon.</span>
                       <input data-ql-icon-file class="sr-only" type="file" name="icon" accept="image/png,image/jpeg,image/webp,image/gif" />
                     </label>
                     <input type="hidden" name="useSiteIcon" value="" data-ql-use-site-icon />
@@ -464,6 +464,50 @@ const previewSections = categories.map((category, index) => ({
           </dialog>
         )
       }
+      <dialog
+        data-ql-crop
+        class="w-[min(22rem,calc(100%-2rem))] rounded-2xl border border-sage-dark/10 bg-white p-4 shadow-xl [&::backdrop]:bg-charcoal/45"
+      >
+        <form method="dialog" class="space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-display text-xl text-charcoal">Crop thumbnail</h3>
+              <p class="mt-1 text-xs leading-snug text-sage-dark/70">Drag the photo and zoom so the square matches the quick link.</p>
+            </div>
+            <button
+              type="submit"
+              value="cancel"
+              class="rounded-full px-2 py-1 text-sm text-sage-dark/50 hover:bg-sage-dark/5 hover:text-charcoal"
+              aria-label="Cancel crop"
+            >
+              ×
+            </button>
+          </div>
+          <div
+            data-ql-crop-stage
+            class="relative mx-auto h-72 w-72 cursor-grab overflow-hidden rounded-[0.92rem] bg-sage-dark/5 touch-none active:cursor-grabbing"
+          >
+            <img data-ql-crop-image alt="" draggable="false" class="pointer-events-none absolute left-0 top-0 max-w-none select-none" />
+          </div>
+          <label class="flex items-center gap-3 text-xs font-semibold text-sage-dark">
+            Zoom
+            <input data-ql-crop-zoom class="w-full accent-sage-dark" type="range" min="1" max="4" step="0.01" value="1" />
+          </label>
+          <div class="flex justify-end gap-2">
+            <button type="submit" value="cancel" class="rounded-full px-3 py-1.5 text-xs font-semibold text-sage-dark ring-1 ring-sage-dark/20">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              value="apply"
+              data-ql-crop-apply
+              class="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-onbrand"
+            >
+              Use crop
+            </button>
+          </div>
+        </form>
+      </dialog>
       <script type="application/json" data-ql-catalog is:inline set:html={JSON.stringify({ catalogByGroup, addedCatalogKeys: [...addedCatalogKeys] })}></script>
       <script is:inline>
         window.initQuickLinks = function () {
@@ -643,22 +687,303 @@ const previewSections = categories.map((category, index) => ({
             sync();
           });
 
+          var cropDialog = root.querySelector('[data-ql-crop]');
+          var cropStage = root.querySelector('[data-ql-crop-stage]');
+          var cropImage = root.querySelector('[data-ql-crop-image]');
+          var cropZoom = root.querySelector('[data-ql-crop-zoom]');
+          var cropApply = root.querySelector('[data-ql-crop-apply]');
+          var cropSession = null;
+
+          function cropCoverScale() {
+            var size = cropStage.clientWidth || 288;
+            return Math.max(size / cropSession.nw, size / cropSession.nh) * cropSession.zoom;
+          }
+
+          function clampCrop() {
+            var size = cropStage.clientWidth || 288;
+            var scale = cropCoverScale();
+            var minX = size - cropSession.nw * scale;
+            var minY = size - cropSession.nh * scale;
+            cropSession.x = Math.min(0, Math.max(minX, cropSession.x));
+            cropSession.y = Math.min(0, Math.max(minY, cropSession.y));
+          }
+
+          function paintCrop() {
+            if (!cropSession || !(cropImage instanceof HTMLImageElement) || !(cropStage instanceof HTMLElement)) return;
+            clampCrop();
+            var scale = cropCoverScale();
+            cropImage.style.width = cropSession.nw * scale + 'px';
+            cropImage.style.height = cropSession.nh * scale + 'px';
+            cropImage.style.left = cropSession.x + 'px';
+            cropImage.style.top = cropSession.y + 'px';
+          }
+
+          function setCropZoom(next) {
+            if (!cropSession) return;
+            var size = cropStage.clientWidth || 288;
+            var prev = cropCoverScale();
+            var focusX = (size / 2 - cropSession.x) / prev;
+            var focusY = (size / 2 - cropSession.y) / prev;
+            cropSession.zoom = Math.min(4, Math.max(1, next));
+            var scale = cropCoverScale();
+            cropSession.x = size / 2 - focusX * scale;
+            cropSession.y = size / 2 - focusY * scale;
+            if (cropZoom instanceof HTMLInputElement) cropZoom.value = String(cropSession.zoom);
+            paintCrop();
+          }
+
+          function restoreIconPreview(session) {
+            var preview = session.preview;
+            var caption = session.caption;
+            if (preview instanceof HTMLImageElement) {
+              if (session.prevSrc) preview.src = session.prevSrc;
+              else preview.removeAttribute('src');
+              preview.hidden = session.prevHidden;
+            }
+            if (caption) caption.textContent = session.prevCaption;
+          }
+
+          function assignIconFile(input, file) {
+            var transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.dataset.qlCropApplied = '1';
+            input.files = transfer.files;
+            setTimeout(function () {
+              delete input.dataset.qlCropApplied;
+            }, 0);
+          }
+
+          function restoreCommittedFile(input) {
+            if (!(input instanceof HTMLInputElement)) return;
+            var committed = input._qlCroppedFile;
+            if (committed) {
+              assignIconFile(input, committed);
+              return;
+            }
+            input.value = '';
+          }
+
+          function closeCrop() {
+            if (!cropSession) return;
+            var session = cropSession;
+            cropSession = null;
+            restoreCommittedFile(session.input);
+            restoreIconPreview(session);
+            URL.revokeObjectURL(session.url);
+          }
+
+          function exportCrop(session, done) {
+            var sizes = [512, 384, 256];
+            var qualities = [0.9, 0.8, 0.7, 0.6];
+            var view = cropStage.clientWidth || 288;
+            var scale = Math.max(view / session.nw, view / session.nh) * session.zoom;
+            var sx = -session.x / scale;
+            var sy = -session.y / scale;
+            var sw = view / scale;
+            function attempt(sizeIndex, qualityIndex) {
+              var px = sizes[sizeIndex];
+              var canvas = document.createElement('canvas');
+              canvas.width = px;
+              canvas.height = px;
+              var ctx = canvas.getContext('2d');
+              if (!ctx || !(cropImage instanceof HTMLImageElement)) {
+                done(null);
+                return;
+              }
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, px, px);
+              ctx.drawImage(cropImage, sx, sy, sw, sw, 0, 0, px, px);
+              canvas.toBlob(
+                function (blob) {
+                  if (!blob) {
+                    done(null);
+                    return;
+                  }
+                  if (blob.size <= 500000 || (sizeIndex === sizes.length - 1 && qualityIndex === qualities.length - 1)) {
+                    done(blob);
+                    return;
+                  }
+                  if (qualityIndex + 1 < qualities.length) attempt(sizeIndex, qualityIndex + 1);
+                  else attempt(sizeIndex + 1, 0);
+                },
+                'image/jpeg',
+                qualities[qualityIndex],
+              );
+            }
+            attempt(0, 0);
+          }
+
+          function finishCrop() {
+            if (!cropSession || !(cropDialog instanceof HTMLDialogElement)) return;
+            var session = cropSession;
+            cropSession = null;
+            if (cropApply instanceof HTMLButtonElement) cropApply.disabled = true;
+            exportCrop(session, function (blob) {
+              if (cropApply instanceof HTMLButtonElement) cropApply.disabled = false;
+              if (!blob || !(session.input instanceof HTMLInputElement)) {
+                restoreCommittedFile(session.input);
+                restoreIconPreview(session);
+                URL.revokeObjectURL(session.url);
+                if (cropDialog.open) cropDialog.close();
+                return;
+              }
+              var base = session.file.name.replace(/\.[^.]+$/, '') || 'thumbnail';
+              var cropped = new File([blob], base + '.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+              session.input._qlCroppedFile = cropped;
+              assignIconFile(session.input, cropped);
+              if (session.preview instanceof HTMLImageElement) {
+                if (session.prevSrc.indexOf('blob:') === 0) URL.revokeObjectURL(session.prevSrc);
+                session.preview.src = URL.createObjectURL(cropped);
+                session.preview.hidden = false;
+              }
+              if (session.caption) session.caption.textContent = 'Cropped thumbnail';
+              var flag = session.form && session.form.querySelector('[data-ql-use-site-icon]');
+              if (flag instanceof HTMLInputElement) flag.value = '';
+              URL.revokeObjectURL(session.url);
+              if (cropDialog.open) cropDialog.close();
+            });
+          }
+
+          function openCrop(input, file) {
+            if (!(cropDialog instanceof HTMLDialogElement) || !(cropImage instanceof HTMLImageElement) || !(cropStage instanceof HTMLElement)) return;
+            var label = input.closest('label');
+            var preview = label && label.querySelector('[data-ql-icon-preview]');
+            var caption = label && label.querySelector('[data-ql-icon-caption]');
+            var url = URL.createObjectURL(file);
+            var session = {
+              input: input,
+              form: input.closest('form'),
+              file: file,
+              url: url,
+              preview: preview,
+              caption: caption,
+              prevSrc: preview instanceof HTMLImageElement ? preview.getAttribute('src') || '' : '',
+              prevHidden: !(preview instanceof HTMLImageElement) || preview.hidden,
+              prevCaption: caption ? caption.textContent : '',
+              nw: 0,
+              nh: 0,
+              zoom: 1,
+              x: 0,
+              y: 0,
+            };
+            cropImage.onload = function () {
+              session.nw = cropImage.naturalWidth;
+              session.nh = cropImage.naturalHeight;
+              if (!session.nw || !session.nh) {
+                URL.revokeObjectURL(url);
+                restoreCommittedFile(input);
+                return;
+              }
+              cropSession = session;
+              session.zoom = 1;
+              if (cropZoom instanceof HTMLInputElement) cropZoom.value = '1';
+              document.querySelectorAll('[data-ql-crop]').forEach(function (node) {
+                if (node !== cropDialog) node.remove();
+              });
+              document.body.appendChild(cropDialog);
+              var size = cropStage.clientWidth || 288;
+              var scale = Math.max(size / session.nw, size / session.nh);
+              session.x = (size - session.nw * scale) / 2;
+              session.y = (size - session.nh * scale) / 2;
+              paintCrop();
+              if (!cropDialog.open) cropDialog.showModal();
+              requestAnimationFrame(function () {
+                if (cropSession !== session || session.moved || session.zoom !== 1) return;
+                var fitted = cropStage.clientWidth || size;
+                var fittedScale = Math.max(fitted / session.nw, fitted / session.nh);
+                session.x = (fitted - session.nw * fittedScale) / 2;
+                session.y = (fitted - session.nh * fittedScale) / 2;
+                paintCrop();
+              });
+            };
+            cropImage.onerror = function () {
+              URL.revokeObjectURL(url);
+              restoreCommittedFile(input);
+              if (caption) caption.textContent = 'Could not open that image.';
+            };
+            cropImage.src = url;
+          }
+
+          if (cropStage instanceof HTMLElement) {
+            cropStage.addEventListener('pointerdown', function (event) {
+              if (!cropSession || event.button !== 0) return;
+              cropStage.setPointerCapture(event.pointerId);
+              cropSession.dragX = event.clientX;
+              cropSession.dragY = event.clientY;
+              cropSession.dragging = true;
+            });
+            cropStage.addEventListener('pointermove', function (event) {
+              if (!cropSession || !cropSession.dragging) return;
+              cropSession.moved = true;
+              cropSession.x += event.clientX - cropSession.dragX;
+              cropSession.y += event.clientY - cropSession.dragY;
+              cropSession.dragX = event.clientX;
+              cropSession.dragY = event.clientY;
+              paintCrop();
+            });
+            function endCropDrag(event) {
+              if (!cropSession || !cropSession.dragging) return;
+              cropSession.dragging = false;
+              if (cropStage.hasPointerCapture(event.pointerId)) cropStage.releasePointerCapture(event.pointerId);
+            }
+            cropStage.addEventListener('pointerup', endCropDrag);
+            cropStage.addEventListener('pointercancel', endCropDrag);
+            cropStage.addEventListener(
+              'wheel',
+              function (event) {
+                if (!cropSession) return;
+                event.preventDefault();
+                setCropZoom(cropSession.zoom * (event.deltaY < 0 ? 1.06 : 0.94));
+              },
+              { passive: false },
+            );
+          }
+          if (cropZoom instanceof HTMLInputElement) {
+            cropZoom.addEventListener('input', function () {
+              setCropZoom(Number(cropZoom.value));
+            });
+          }
+          if (cropDialog instanceof HTMLDialogElement) {
+            var cropForm = cropDialog.querySelector('form');
+            if (cropForm) {
+              cropForm.addEventListener('submit', function (event) {
+                var submitter = event.submitter;
+                if (submitter instanceof HTMLButtonElement && submitter.value === 'apply') {
+                  event.preventDefault();
+                  finishCrop();
+                  return;
+                }
+                closeCrop();
+              });
+            }
+            cropDialog.addEventListener('close', function () {
+              closeCrop();
+            });
+          }
+
           root.querySelectorAll('[data-ql-icon-file]').forEach(function (input) {
             input.addEventListener('change', function () {
               if (!(input instanceof HTMLInputElement)) return;
-              var label = input.closest('label');
-              var file = input.files && input.files[0];
-              if (!label || !file) return;
-              var preview = label.querySelector('[data-ql-icon-preview]');
-              var caption = label.querySelector('[data-ql-icon-caption]');
-              if (preview instanceof HTMLImageElement) {
-                preview.src = URL.createObjectURL(file);
-                preview.hidden = false;
+              if (input.dataset.qlCropApplied === '1') {
+                delete input.dataset.qlCropApplied;
+                return;
               }
-              if (caption) caption.textContent = file.name;
-              var form = input.closest('form');
-              var flag = form && form.querySelector('[data-ql-use-site-icon]');
-              if (flag instanceof HTMLInputElement) flag.value = '';
+              var file = input.files && input.files[0];
+              if (!file) return;
+              var committed = input._qlCroppedFile;
+              if (
+                committed &&
+                file.name === committed.name &&
+                file.size === committed.size &&
+                file.lastModified === committed.lastModified
+              ) {
+                return;
+              }
+              if (!file.type || file.type.indexOf('image/') !== 0) {
+                input.value = '';
+                return;
+              }
+              openCrop(input, file);
             });
           });
           root.querySelectorAll('[data-ql-use-site]').forEach(function (button) {
@@ -670,7 +995,10 @@ const previewSections = categories.map((category, index) => ({
               var preview = form.querySelector('[data-ql-icon-preview]');
               var caption = form.querySelector('[data-ql-icon-caption]');
               if (flag instanceof HTMLInputElement) flag.value = '1';
-              if (file instanceof HTMLInputElement) file.value = '';
+              if (file instanceof HTMLInputElement) {
+                delete file._qlCroppedFile;
+                file.value = '';
+              }
               if (preview instanceof HTMLImageElement) preview.hidden = true;
               if (caption) caption.textContent = 'Will use the website’s icon';
             });
