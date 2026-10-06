@@ -706,7 +706,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                       Close
                     </button>
                   </div>
-                  <div class="max-h-[min(78vh,44rem)] space-y-4 overflow-y-auto px-4 py-4">
+                  <div class="max-h-[min(78vh,44rem)] space-y-4 overflow-y-auto px-4 py-4" data-training-preview-body>
                     {
                       selectedBlocks.length === 0 ? (
                         <p class="text-sm text-sage-dark/65">This {selectedIsAssignment ? 'assignment' : 'lesson'} has no content yet.</p>
@@ -1195,9 +1195,12 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                               ) : null}
                               <div class="flex flex-wrap items-center gap-2">
                                 {needsExplicitSave ? (
-                                  <button class="training-filled !px-3 !py-1.5 text-xs" type="submit">
-                                    Save block
-                                  </button>
+                                  <>
+                                    <button class="training-filled !px-3 !py-1.5 text-xs" type="submit" data-training-block-save>
+                                      Save block
+                                    </button>
+                                    <p class="text-[10px] text-sage-dark/50" data-training-block-save-status></p>
+                                  </>
                                 ) : (
                                   <p class="text-[10px] text-sage-dark/50" data-training-autosave-status></p>
                                 )}
@@ -1773,12 +1776,68 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       }
     };
 
-    const setAutosaveStatus = (form: HTMLFormElement, message: string, isError = false) => {
-      const status = form.querySelector('[data-training-autosave-status]');
+    const setFormStatus = (form: HTMLFormElement, selector: string, message: string, isError = false) => {
+      const status = form.querySelector(selector);
       if (!(status instanceof HTMLElement)) return;
       status.textContent = message;
       status.classList.toggle('text-red-700', isError);
       status.classList.toggle('text-sage-dark/50', !isError);
+    };
+
+    const setAutosaveStatus = (form: HTMLFormElement, message: string, isError = false) => {
+      setFormStatus(form, '[data-training-autosave-status]', message, isError);
+    };
+
+    const refreshLessonPreview = async () => {
+      const dialog = document.querySelector('[data-training-preview-dialog="lesson"]');
+      if (!(dialog instanceof HTMLElement)) return;
+      const url = new URL(window.location.href);
+      url.searchParams.set('_browse', String(Date.now()));
+      const response = await fetch(url.pathname + url.search, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'text/html', 'X-Requested-With': 'training-browse' },
+      });
+      if (!response.ok) return;
+      const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const next = doc.querySelector('[data-training-preview-body]');
+      const current = dialog.querySelector('[data-training-preview-body]');
+      if (!(next instanceof HTMLElement) || !(current instanceof HTMLElement)) return;
+      current.replaceWith(document.importNode(next, true));
+    };
+
+    const saveBlockForm = async (form: HTMLFormElement) => {
+      if (form.dataset.blockSaving === '1') return;
+      form.dataset.blockSaving = '1';
+      const button = form.querySelector('[data-training-block-save]');
+      if (button instanceof HTMLButtonElement) button.disabled = true;
+      setFormStatus(form, '[data-training-block-save-status]', 'Saving…');
+      try {
+        const response = await fetch(trainingAdminUrl(form), {
+          method: 'POST',
+          body: new FormData(form),
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'training-autosave', Accept: 'application/json' },
+        });
+        const raw = await response.text();
+        let data: { ok?: boolean; error?: string } | null = null;
+        try {
+          data = JSON.parse(raw) as { ok?: boolean; error?: string };
+        } catch {
+          data = null;
+        }
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.error || raw.trim().slice(0, 160) || `Could not save (${response.status})`);
+        }
+        setFormStatus(form, '[data-training-block-save-status]', 'Saved');
+        void refreshLessonPreview();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not save.';
+        setFormStatus(form, '[data-training-block-save-status]', message, true);
+      } finally {
+        form.dataset.blockSaving = '0';
+        if (button instanceof HTMLButtonElement) button.disabled = false;
+      }
     };
 
     const syncLessonTitleUi = (form: HTMLFormElement, title: string) => {
@@ -1908,6 +1967,24 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
     document.addEventListener('submit', (event) => {
       const form = event.target;
       if (!(form instanceof HTMLFormElement)) return;
+
+      const submitter = 'submitter' in event ? (event as SubmitEvent).submitter : null;
+      const namedAction =
+        submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement
+          ? submitter.name === 'action'
+            ? String(submitter.value || '').trim()
+            : ''
+          : '';
+      if (
+        !namedAction &&
+        !form.hasAttribute('data-training-autosave') &&
+        form.closest('[data-training-block-card]') &&
+        form.querySelector('input[name="action"][value="update-block"]')
+      ) {
+        event.preventDefault();
+        void saveBlockForm(form);
+        return;
+      }
 
       if (form.hasAttribute('data-training-autosave')) {
         const submitter = 'submitter' in event ? (event as SubmitEvent).submitter : null;
