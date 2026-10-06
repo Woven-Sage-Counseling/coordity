@@ -1971,7 +1971,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       });
     };
 
-    const retargetTrainingForms = (root: ParentNode) => {
+    const retargetTrainingForms = (root: Element) => {
       root.querySelectorAll('form').forEach((node) => {
         if (!(node instanceof HTMLFormElement)) return;
         const action = node.getAttribute('action') || '';
@@ -1997,7 +1997,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
       const current = document.querySelector(selector);
       if (!(next instanceof HTMLElement) || !(current instanceof HTMLElement)) return;
       const imported = document.importNode(next, true);
-      retargetTrainingForms(imported);
+      if (imported instanceof Element) retargetTrainingForms(imported);
       current.replaceWith(imported);
     };
 
@@ -2022,7 +2022,7 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
         const id = idInput instanceof HTMLInputElement ? idInput.value : '';
         if (!id || existing.has(id)) return;
         const imported = document.importNode(card, true);
-        retargetTrainingForms(imported);
+        if (imported instanceof Element) retargetTrainingForms(imported);
         currentList.appendChild(imported);
       });
       if (currentList.querySelector('[data-training-block-card]')) {
