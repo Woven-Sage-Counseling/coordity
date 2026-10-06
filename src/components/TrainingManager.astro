@@ -1786,9 +1786,20 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
     const setFormStatus = (form: HTMLFormElement, selector: string, message: string, isError = false) => {
       const status = form.querySelector(selector);
       if (!(status instanceof HTMLElement)) return;
+      const pending = Number(status.dataset.statusTimer || '');
+      if (pending) window.clearTimeout(pending);
+      delete status.dataset.statusTimer;
       status.textContent = message;
       status.classList.toggle('text-red-700', isError);
       status.classList.toggle('text-sage-dark/50', !isError);
+      if (!isError && message === 'Saved') {
+        status.dataset.statusTimer = String(
+          window.setTimeout(() => {
+            if (status.textContent === 'Saved') status.textContent = '';
+            delete status.dataset.statusTimer;
+          }, 3000),
+        );
+      }
     };
 
     const setAutosaveStatus = (form: HTMLFormElement, message: string, isError = false) => {
