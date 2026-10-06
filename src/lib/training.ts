@@ -1,6 +1,11 @@
 import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
-import { formatPhoneNumber, updateDirectoryProfile, updateEmployeeJobTitle } from './employees';
+import {
+  formatPhoneNumber,
+  updateDirectoryProfile,
+  updateEmployeeAvatar,
+  updateEmployeeJobTitle,
+} from './employees';
 import { DEFAULT_ORG_ID } from './organization';
 
 export const TRAINING_MODULE_KINDS = ['onboarding', 'using_coordity', 'custom'] as const;
@@ -93,28 +98,93 @@ export interface TrainingUploadFile {
   updatedAt: number;
 }
 
+export const PREFERRED_CONTACT_METHODS = ['phone', 'email'] as const;
+export type PreferredContactMethod = (typeof PREFERRED_CONTACT_METHODS)[number];
+
+export const CONTACT_HEADSHOT_MAX_BYTES = 250_000;
+
 export interface ContactDetailsAnswers {
   fullName: string;
   phone: string;
   workEmail: string;
   jobTitle: string;
+  address: string;
+  preferredContact: PreferredContactMethod[];
+  hasHeadshot: boolean;
 }
 
-export const CONTACT_FIELD_KEYS = ['fullName', 'phone', 'workEmail', 'jobTitle'] as const;
+export const CONTACT_FIELD_KEYS = [
+  'fullName',
+  'phone',
+  'workEmail',
+  'jobTitle',
+  'address',
+  'preferredContact',
+  'headshot',
+] as const;
 export type ContactFieldKey = (typeof CONTACT_FIELD_KEYS)[number];
+
+export const DEFAULT_CONTACT_FIELDS: ContactFieldKey[] = [
+  'fullName',
+  'phone',
+  'workEmail',
+  'address',
+  'preferredContact',
+  'headshot',
+];
 
 export const CONTACT_FIELD_OPTIONS: Array<{
   key: ContactFieldKey;
   label: string;
   shortLabel: string;
-  inputType: 'text' | 'tel' | 'email';
+  inputType: 'text' | 'tel' | 'email' | 'textarea' | 'checkboxes' | 'file';
   required: boolean;
 }> = [
   { key: 'fullName', label: 'Name', shortLabel: 'Name', inputType: 'text', required: true },
   { key: 'phone', label: 'Phone number', shortLabel: 'Phone', inputType: 'tel', required: true },
   { key: 'workEmail', label: 'Email', shortLabel: 'Email', inputType: 'email', required: true },
   { key: 'jobTitle', label: 'Job title', shortLabel: 'Job title', inputType: 'text', required: false },
+  { key: 'address', label: 'Address', shortLabel: 'Address', inputType: 'textarea', required: true },
+  {
+    key: 'preferredContact',
+    label: 'Preferred method of routine communication',
+    shortLabel: 'Preferred contact',
+    inputType: 'checkboxes',
+    required: true,
+  },
+  { key: 'headshot', label: 'Headshot', shortLabel: 'Headshot', inputType: 'file', required: true },
 ];
+
+export function parseContactFieldSelection(values: string[]): ContactFieldKey[] {
+  return CONTACT_FIELD_KEYS.filter((key) => values.includes(key));
+}
+
+export function preferredContactLabel(methods: PreferredContactMethod[]): string {
+  return methods.map((method) => (method === 'phone' ? 'Phone' : 'Email')).join(', ');
+}
+
+export function contactFieldHasAnswer(
+  answers: ContactDetailsAnswers,
+  key: ContactFieldKey,
+): boolean {
+  if (key === 'preferredContact') return answers.preferredContact.length > 0;
+  if (key === 'headshot') return answers.hasHeadshot;
+  if (key === 'fullName') return answers.fullName.trim().length > 0;
+  if (key === 'phone') return answers.phone.trim().length > 0;
+  if (key === 'workEmail') return answers.workEmail.trim().length > 0;
+  if (key === 'jobTitle') return answers.jobTitle.trim().length > 0;
+  return answers.address.trim().length > 0;
+}
+
+export function contactFieldText(answers: ContactDetailsAnswers, key: ContactFieldKey): string {
+  if (key === 'preferredContact') return preferredContactLabel(answers.preferredContact);
+  if (key === 'headshot') return answers.hasHeadshot ? 'Uploaded' : '';
+  if (key === 'fullName') return answers.fullName;
+  if (key === 'phone') return answers.phone;
+  if (key === 'workEmail') return answers.workEmail;
+  if (key === 'jobTitle') return answers.jobTitle;
+  return answers.address;
+}
 
 export function parseContactFields(raw: string | null | undefined): ContactFieldKey[] {
   if (!raw?.trim()) return ['fullName'];
@@ -1254,7 +1324,7 @@ export async function createBlock(input: {
     .first<{ n: number }>();
   const contactFieldsJson =
     input.type === 'contact'
-      ? serializeContactFields(input.contactFields ?? ['fullName', 'phone', 'workEmail'])
+      ? serializeContactFields(input.contactFields ?? DEFAULT_CONTACT_FIELDS)
       : null;
   const uploadDocs: UploadDocKey[] =
     input.uploadDocs && input.uploadDocs.length > 0 ? input.uploadDocs : ['photoId'];
@@ -1632,19 +1702,68 @@ export async function listQuizScoresForUser(userId: string, orgId: string): Prom
   }));
 }
 
-function parseContactAnswers(raw: string | null | undefined): ContactDetailsAnswers | null {
+interface StoredContactAnswers extends ContactDetailsAnswers {
+  headshotMime: string;
+  headshotData: string;
+}
+
+function emptyContactAnswers(): StoredContactAnswers {
+  return {
+    fullName: '',
+    phone: '',
+    workEmail: '',
+    jobTitle: '',
+    address: '',
+    preferredContact: [],
+    hasHeadshot: false,
+    headshotMime: '',
+    headshotData: '',
+  };
+}
+
+export function parsePreferredContact(value: unknown): PreferredContactMethod[] {
+  const raw = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [];
+  const selected = new Set(raw.map((item) => String(item).trim()));
+  return PREFERRED_CONTACT_METHODS.filter((method) => selected.has(method));
+}
+
+function parseStoredContact(raw: string | null | undefined): StoredContactAnswers | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<ContactDetailsAnswers>;
+    const parsed = JSON.parse(raw) as Partial<StoredContactAnswers>;
+    const headshotMime = String(parsed.headshotMime ?? '').trim();
+    const headshotData = String(parsed.headshotData ?? '').trim();
     return {
       fullName: String(parsed.fullName ?? '').trim(),
       phone: String(parsed.phone ?? '').trim(),
       workEmail: String(parsed.workEmail ?? '').trim(),
       jobTitle: String(parsed.jobTitle ?? '').trim(),
+      address: String(parsed.address ?? '').trim(),
+      preferredContact: parsePreferredContact(parsed.preferredContact),
+      hasHeadshot: Boolean(headshotMime && headshotData),
+      headshotMime,
+      headshotData,
     };
   } catch {
     return null;
   }
+}
+
+function publicContactAnswers(stored: StoredContactAnswers): ContactDetailsAnswers {
+  return {
+    fullName: stored.fullName,
+    phone: stored.phone,
+    workEmail: stored.workEmail,
+    jobTitle: stored.jobTitle,
+    address: stored.address,
+    preferredContact: stored.preferredContact,
+    hasHeadshot: stored.hasHeadshot,
+  };
+}
+
+function parseContactAnswers(raw: string | null | undefined): ContactDetailsAnswers | null {
+  const stored = parseStoredContact(raw);
+  return stored ? publicContactAnswers(stored) : null;
 }
 
 export async function getBlockResponse(
@@ -1658,6 +1777,40 @@ export async function getBlockResponse(
     .bind(userId, blockId)
     .first<{ answers_json: string }>();
   return parseContactAnswers(row?.answers_json);
+}
+
+async function readStoredContact(
+  userId: string,
+  blockId: string,
+): Promise<StoredContactAnswers | null> {
+  const { DB } = getEnv();
+  const row = await DB.prepare(
+    `SELECT answers_json FROM training_block_response WHERE user_id = ? AND block_id = ?`,
+  )
+    .bind(userId, blockId)
+    .first<{ answers_json: string }>();
+  return parseStoredContact(row?.answers_json);
+}
+
+export async function getContactHeadshot(input: {
+  orgId: string;
+  userId: string;
+  blockId: string;
+}): Promise<{ mime: string; data: string } | null> {
+  const { DB } = getEnv();
+  const block = await DB.prepare(
+    `SELECT b.id
+     FROM training_block b
+     JOIN training_lesson l ON l.id = b.lesson_id
+     JOIN training_module m ON m.id = l.module_id
+     WHERE b.id = ? AND b.type = 'contact' AND m.org_id = ?`,
+  )
+    .bind(input.blockId, input.orgId)
+    .first<{ id: string }>();
+  if (!block) return null;
+  const stored = await readStoredContact(input.userId, input.blockId);
+  if (!stored?.headshotMime || !stored.headshotData) return null;
+  return { mime: stored.headshotMime, data: stored.headshotData };
 }
 
 export async function hasBlockResponse(userId: string, blockId: string): Promise<boolean> {
@@ -1674,11 +1827,14 @@ export async function hasBlockResponse(userId: string, blockId: string): Promise
   return fields.every((key) => {
     const option = CONTACT_FIELD_OPTIONS.find((item) => item.key === key);
     if (!option?.required) return true;
-    const value = answers[key]?.trim() ?? '';
-    if (key === 'fullName') return value.length >= 2;
-    if (key === 'workEmail') return value.includes('@');
-    if (key === 'phone') return value.length > 0;
-    return value.length > 0;
+    if (key === 'fullName') return answers.fullName.trim().length >= 2;
+    if (key === 'workEmail') return answers.workEmail.includes('@');
+    if (key === 'preferredContact') return answers.preferredContact.length > 0;
+    if (key === 'headshot') return answers.hasHeadshot;
+    if (key === 'address') return answers.address.trim().length > 0;
+    if (key === 'phone') return answers.phone.trim().length > 0;
+    if (key === 'jobTitle') return answers.jobTitle.trim().length > 0;
+    return false;
   });
 }
 
@@ -1732,6 +1888,7 @@ export async function saveContactDetailsResponse(input: {
   blockId: string;
   orgId: string;
   answers: ContactDetailsAnswers;
+  headshot?: { mime: string; data: string } | null;
 }): Promise<{ answers: ContactDetailsAnswers; profileUpdated: string[] }> {
   const { DB } = getEnv();
   const block = await DB.prepare(
@@ -1748,26 +1905,49 @@ export async function saveContactDetailsResponse(input: {
   }
 
   const fields = parseContactFields(block.resource_label);
-  const existing = (await getBlockResponse(input.userId, input.blockId)) ?? {
-    fullName: '',
-    phone: '',
-    workEmail: '',
-    jobTitle: '',
-  };
-  const answers: ContactDetailsAnswers = { ...existing };
+  const existing =
+    (await readStoredContact(input.userId, input.blockId)) ?? emptyContactAnswers();
+  const answers: StoredContactAnswers = { ...existing, preferredContact: [...existing.preferredContact] };
 
   for (const key of fields) {
-    const raw = input.answers[key]?.trim() ?? '';
     if (key === 'fullName') {
+      const raw = input.answers.fullName.trim();
       if (raw.length < 2) throw new Error('Enter your name.');
       answers.fullName = raw;
     } else if (key === 'phone') {
-      answers.phone = formatPhoneNumber(raw) ?? raw;
+      const raw = input.answers.phone.trim();
+      answers.phone = raw ? (formatPhoneNumber(raw) ?? raw) : '';
     } else if (key === 'workEmail') {
+      const raw = input.answers.workEmail.trim();
       if (!raw.includes('@')) throw new Error('Enter a valid email.');
       answers.workEmail = raw;
     } else if (key === 'jobTitle') {
-      answers.jobTitle = raw;
+      answers.jobTitle = input.answers.jobTitle.trim();
+    } else if (key === 'address') {
+      const raw = input.answers.address.trim();
+      if (!raw) throw new Error('Enter your address.');
+      answers.address = raw;
+    } else if (key === 'preferredContact') {
+      const methods = parsePreferredContact(input.answers.preferredContact);
+      if (methods.length === 0) {
+        throw new Error('Choose phone, email, or both for routine communication.');
+      }
+      answers.preferredContact = methods;
+    } else if (key === 'headshot') {
+      if (input.headshot) {
+        const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+        if (!allowed.has(input.headshot.mime)) {
+          throw new Error('Headshots must be JPEG, PNG, or WebP.');
+        }
+        if (input.headshot.data.length > 350_000) {
+          throw new Error('Headshot is too large. Try a smaller image.');
+        }
+        answers.headshotMime = input.headshot.mime;
+        answers.headshotData = input.headshot.data;
+        answers.hasHeadshot = true;
+      } else if (!answers.headshotData) {
+        throw new Error('Upload a headshot.');
+      }
     }
   }
 
@@ -1778,8 +1958,31 @@ export async function saveContactDetailsResponse(input: {
        answers_json = excluded.answers_json,
        updated_at = excluded.updated_at`,
   )
-    .bind(input.userId, input.blockId, JSON.stringify(answers), nowMs())
+    .bind(
+      input.userId,
+      input.blockId,
+      JSON.stringify({
+        fullName: answers.fullName,
+        phone: answers.phone,
+        workEmail: answers.workEmail,
+        jobTitle: answers.jobTitle,
+        address: answers.address,
+        preferredContact: answers.preferredContact,
+        headshotMime: answers.headshotMime,
+        headshotData: answers.headshotData,
+      }),
+      nowMs(),
+    )
     .run();
+
+  if (fields.includes('headshot') && input.headshot) {
+    await updateEmployeeAvatar({
+      userId: input.userId,
+      mime: answers.headshotMime,
+      dataBase64: answers.headshotData,
+      actorUserId: input.userId,
+    });
+  }
 
   const profile = await DB.prepare(
     `SELECT u.name, u.email, p.phone, p.job_title
@@ -1819,7 +2022,7 @@ export async function saveContactDetailsResponse(input: {
     }
   }
 
-  return { answers, profileUpdated };
+  return { answers: publicContactAnswers(answers), profileUpdated };
 }
 
 const UPLOAD_ALLOWED_MIMES = new Set([

@@ -387,7 +387,9 @@ function blockHeading(label: string, required: boolean) {
               phone: saved?.phone || employee.phone || '',
               workEmail: saved?.workEmail || employee.email || '',
               jobTitle: saved?.jobTitle || employee.jobTitle || '',
+              address: saved?.address || '',
             };
+            const preferred = saved?.preferredContact ?? [];
             return (
               <section class="card">
                 <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-sage-dark/60">
@@ -403,27 +405,86 @@ function blockHeading(label: string, required: boolean) {
                 {contactDoneMap.get(block.id) ? (
                   <p class="mt-3 text-sm font-semibold text-emerald-800">Saved for this {itemLabel}.</p>
                 ) : null}
-                <form method="post" action="/api/training/contact" class="mt-4 space-y-3">
+                <form method="post" action="/api/training/contact" enctype="multipart/form-data" class="mt-4 space-y-3">
                   <input type="hidden" name="blockId" value={block.id} />
                   <input type="hidden" name="moduleId" value={moduleId} />
                   <input type="hidden" name="lessonId" value={lessonId} />
-                  {fields.map((field) => (
-                    <label class="block text-sm font-medium text-charcoal">
-                      {field.label}
-                      {!field.required ? (
-                        <span class="font-normal text-sage-dark/55"> (optional)</span>
-                      ) : null}
-                      <input
-                        class="field mt-1.5"
-                        type={field.inputType}
-                        name={field.key}
-                        required={field.required}
-                        maxlength={field.key === 'fullName' || field.key === 'jobTitle' ? 80 : undefined}
-                        value={defaults[field.key] ?? ''}
-                        placeholder={field.key === 'phone' ? '(555) 555-5555' : undefined}
-                      />
-                    </label>
-                  ))}
+                  {fields.map((field) => {
+                    if (field.key === 'address') {
+                      return (
+                        <label class="block text-sm font-medium text-charcoal">
+                          {field.label}
+                          <textarea
+                            class="field mt-1.5"
+                            name="address"
+                            required
+                            rows={3}
+                            maxlength={300}
+                          >{defaults.address}</textarea>
+                        </label>
+                      );
+                    }
+                    if (field.key === 'preferredContact') {
+                      return (
+                        <fieldset class="text-sm font-medium text-charcoal">
+                          <legend>{field.label}</legend>
+                          <div class="mt-2 flex flex-wrap gap-4 font-normal">
+                            <label class="inline-flex items-center gap-2">
+                              <input type="checkbox" name="preferredContact" value="phone" checked={preferred.includes('phone')} />
+                              Phone
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                              <input type="checkbox" name="preferredContact" value="email" checked={preferred.includes('email')} />
+                              Email
+                            </label>
+                          </div>
+                        </fieldset>
+                      );
+                    }
+                    if (field.key === 'headshot') {
+                      return (
+                        <label class="block text-sm font-medium text-charcoal">
+                          {field.label}
+                          {saved?.hasHeadshot ? (
+                            <img
+                              src={`/api/training/contact/headshot/${employee.id}/${block.id}`}
+                              alt=""
+                              class="mt-2 h-20 w-20 rounded-xl object-cover"
+                            />
+                          ) : null}
+                          <input
+                            class="field mt-1.5"
+                            type="file"
+                            name="headshot"
+                            accept="image/jpeg,image/png,image/webp"
+                            required={!saved?.hasHeadshot}
+                          />
+                          {saved?.hasHeadshot ? (
+                            <span class="mt-1 block text-xs font-normal text-sage-dark/60">
+                              Leave this empty to keep the current headshot.
+                            </span>
+                          ) : null}
+                        </label>
+                      );
+                    }
+                    return (
+                      <label class="block text-sm font-medium text-charcoal">
+                        {field.label}
+                        {!field.required ? (
+                          <span class="font-normal text-sage-dark/55"> (optional)</span>
+                        ) : null}
+                        <input
+                          class="field mt-1.5"
+                          type={field.inputType === 'tel' || field.inputType === 'email' ? field.inputType : 'text'}
+                          name={field.key}
+                          required={field.required}
+                          maxlength={field.key === 'fullName' || field.key === 'jobTitle' ? 80 : undefined}
+                          value={defaults[field.key] ?? ''}
+                          placeholder={field.key === 'phone' ? '(555) 555-5555' : undefined}
+                        />
+                      </label>
+                    );
+                  })}
                   <button class="btn-primary" type="submit">
                     {contactDoneMap.get(block.id) ? 'Update answers' : 'Save answers'}
                   </button>

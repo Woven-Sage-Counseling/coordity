@@ -12,6 +12,7 @@ import {
   deleteLesson,
   getTrainingModule,
   moveBlock,
+  parseContactFieldSelection,
   updateBlock,
   updateLesson,
   updateModule,
@@ -175,13 +176,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         contactFields:
           type === 'contact'
             ? (() => {
-                const selected = form
-                  .getAll('contactFields')
-                  .map((value) => String(value))
-                  .filter((value): value is 'fullName' | 'phone' | 'workEmail' | 'jobTitle' =>
-                    ['fullName', 'phone', 'workEmail', 'jobTitle'].includes(value),
-                  );
-                return selected.length > 0 ? selected : ['fullName', 'phone', 'workEmail'];
+                const selected = parseContactFieldSelection(
+                  form.getAll('contactFields').map((value) => String(value)),
+                );
+                return selected.length > 0 ? selected : undefined;
               })()
             : undefined,
         uploadDocs:
@@ -244,12 +242,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           : {}),
         ...(form.has('contactFieldsConfigured')
           ? {
-              contactFields: form
-                .getAll('contactFields')
-                .map((value) => String(value))
-                .filter((value): value is 'fullName' | 'phone' | 'workEmail' | 'jobTitle' =>
-                  ['fullName', 'phone', 'workEmail', 'jobTitle'].includes(value),
-                ),
+              contactFields: parseContactFieldSelection(
+                form.getAll('contactFields').map((value) => String(value)),
+              ),
             }
           : {}),
         ...(form.has('uploadDocsConfigured')

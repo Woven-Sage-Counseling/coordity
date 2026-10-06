@@ -5,9 +5,12 @@ import {
   MODULE_TEMPLATES,
   UPLOAD_DOC_OPTIONS,
   canToggleBlockRequired,
+  contactFieldHasAnswer,
+  contactFieldText,
   extractYoutubeId,
   uploadDocAcceptsText,
   uploadDocLabel,
+  type ContactDetailsAnswers,
 } from '../lib/training';
 
 interface Props {
@@ -50,12 +53,7 @@ interface Props {
           label: string;
           status: string;
           detail: string | null;
-          contactAnswers: {
-            fullName: string;
-            phone: string;
-            workEmail: string;
-            jobTitle: string;
-          } | null;
+          contactAnswers: ContactDetailsAnswers | null;
           uploadSubmissions: Array<{
             docKey: string;
             label: string;
@@ -891,20 +889,55 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                   </p>
                                 )}
                                 <div class="mt-4 space-y-3">
-                                  {fields.map((field) => (
-                                    <label class="block text-sm font-medium text-charcoal">
-                                      {field.label}
-                                      {!field.required ? (
-                                        <span class="font-normal text-sage-dark/55"> (optional)</span>
-                                      ) : null}
-                                      <input
-                                        class="field mt-1.5"
-                                        type={field.inputType}
-                                        disabled
-                                        placeholder={field.key === 'phone' ? '(555) 555-5555' : field.label}
-                                      />
-                                    </label>
-                                  ))}
+                                  {fields.map((field) => {
+                                    if (field.key === 'address') {
+                                      return (
+                                        <label class="block text-sm font-medium text-charcoal">
+                                          {field.label}
+                                          <textarea class="field mt-1.5" rows={3} disabled placeholder="Street, city, state, ZIP" />
+                                        </label>
+                                      );
+                                    }
+                                    if (field.key === 'preferredContact') {
+                                      return (
+                                        <fieldset class="text-sm font-medium text-charcoal">
+                                          <legend>{field.label}</legend>
+                                          <div class="mt-2 flex flex-wrap gap-4 font-normal">
+                                            <label class="inline-flex items-center gap-2">
+                                              <input type="checkbox" disabled />
+                                              Phone
+                                            </label>
+                                            <label class="inline-flex items-center gap-2">
+                                              <input type="checkbox" disabled />
+                                              Email
+                                            </label>
+                                          </div>
+                                        </fieldset>
+                                      );
+                                    }
+                                    if (field.key === 'headshot') {
+                                      return (
+                                        <label class="block text-sm font-medium text-charcoal">
+                                          {field.label}
+                                          <input class="field mt-1.5" type="file" disabled accept="image/jpeg,image/png,image/webp" />
+                                        </label>
+                                      );
+                                    }
+                                    return (
+                                      <label class="block text-sm font-medium text-charcoal">
+                                        {field.label}
+                                        {!field.required ? (
+                                          <span class="font-normal text-sage-dark/55"> (optional)</span>
+                                        ) : null}
+                                        <input
+                                          class="field mt-1.5"
+                                          type={field.inputType === 'tel' || field.inputType === 'email' ? field.inputType : 'text'}
+                                          disabled
+                                          placeholder={field.key === 'phone' ? '(555) 555-5555' : field.label}
+                                        />
+                                      </label>
+                                    );
+                                  })}
                                 </div>
                               </section>
                             );
@@ -1058,11 +1091,16 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                   <input type="hidden" name="contactFieldsConfigured" value="1" />
                                   <p class="text-xs font-medium text-charcoal">Fields to collect</p>
                                   <p class="text-[11px] text-sage-dark/60">
-                                    Choose what appears as short-answer questions for the learner.
+                                    Preferred contact is phone and/or email. Headshot is a photo upload.
                                   </p>
                                   <div class="grid gap-1.5 sm:grid-cols-2">
                                     {CONTACT_FIELD_OPTIONS.map((field) => (
-                                      <label class="flex items-center gap-2 text-xs text-charcoal">
+                                      <label
+                                        class:list={[
+                                          'flex items-center gap-2 text-xs text-charcoal',
+                                          field.key === 'preferredContact' && 'sm:col-span-2',
+                                        ]}
+                                      >
                                         <input
                                           type="checkbox"
                                           name="contactFields"
@@ -1528,13 +1566,23 @@ function moduleHref(moduleId: string, opts?: { item?: string; view?: 'settings' 
                                     <p class="mt-1 text-xs text-sage-dark/70">{block.detail}</p>
                                   ) : null}
                                   {block.contactAnswers ? (
-                                    <dl class="mt-2 grid gap-1 text-xs text-charcoal sm:grid-cols-2">
+                                    <dl class="mt-2 grid gap-2 text-xs text-charcoal sm:grid-cols-2">
                                       {CONTACT_FIELD_OPTIONS.filter((field) =>
-                                        block.contactAnswers?.[field.key],
+                                        contactFieldHasAnswer(block.contactAnswers!, field.key),
                                       ).map((field) => (
-                                        <div>
-                                          <dt class="text-sage-dark/55">{field.label}</dt>
-                                          <dd>{block.contactAnswers?.[field.key] || '—'}</dd>
+                                        <div class={field.key === 'address' || field.key === 'preferredContact' ? 'sm:col-span-2' : undefined}>
+                                          <dt class="text-sage-dark/55">{field.shortLabel}</dt>
+                                          {field.key === 'headshot' ? (
+                                            <dd class="mt-1">
+                                              <img
+                                                src={`/api/training/contact/headshot/${traineeReview.userId}/${block.blockId}`}
+                                                alt=""
+                                                class="h-16 w-16 rounded-lg object-cover"
+                                              />
+                                            </dd>
+                                          ) : (
+                                            <dd>{contactFieldText(block.contactAnswers!, field.key)}</dd>
+                                          )}
                                         </div>
                                       ))}
                                     </dl>
