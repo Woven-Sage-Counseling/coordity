@@ -87,6 +87,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description,
         roleKeys,
       });
+      if (asJson) return jsonOk({ moduleId: created.id });
       return redirectAdmin({ moduleId: created.id });
     }
 
@@ -118,6 +119,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'archive-module') {
       await archiveModule(orgId, String(form.get('moduleId') ?? '').trim());
+      if (asJson) return jsonOk();
       return redirectAdmin();
     }
 
@@ -127,6 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const isAssignment = String(form.get('isAssignment') ?? '') === '1';
       if (!title) throw new Error(isAssignment ? 'Assignment title is required.' : 'Lesson title is required.');
       const created = await createLesson({ orgId, moduleId, title, isAssignment });
+      if (asJson) return jsonOk({ moduleId, itemId: created.id });
       return redirectAdmin({ moduleId, itemId: created.id });
     }
 
@@ -151,6 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'delete-lesson') {
       const moduleId = String(form.get('moduleId') ?? '').trim();
       await deleteLesson(orgId, String(form.get('lessonId') ?? '').trim());
+      if (asJson) return jsonOk({ moduleId });
       return redirectAdmin({ moduleId });
     }
 
@@ -158,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const lessonId = String(form.get('lessonId') ?? '').trim();
       const moduleId = String(form.get('moduleId') ?? '').trim();
       const type = String(form.get('type') ?? '').trim() as TrainingBlockType;
-      await createBlock({
+      const created = await createBlock({
         orgId,
         lessonId,
         type,
@@ -213,6 +217,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         uploadOtherLabel:
           type === 'upload' ? String(form.get('uploadOtherLabel') ?? '').trim() || null : undefined,
       });
+      if (asJson) return jsonOk({ moduleId, itemId: lessonId, blockId: created.id });
       return redirectAdmin({ moduleId, itemId: lessonId });
     }
 
@@ -288,6 +293,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const moduleId = String(form.get('moduleId') ?? '').trim();
       const lessonId = String(form.get('lessonId') ?? '').trim();
       await deleteBlock(orgId, String(form.get('blockId') ?? '').trim());
+      if (asJson) return jsonOk({ moduleId, itemId: lessonId, blockId: String(form.get('blockId') ?? '').trim() });
       return redirectAdmin({
         moduleId,
         ...(lessonId ? { itemId: lessonId } : {}),
@@ -327,6 +333,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .filter(Boolean);
       const correctIndex = Number(form.get('correctIndex') ?? 0);
       await addQuizQuestion({ orgId, blockId, prompt, options, correctIndex });
+      if (asJson) return jsonOk({ moduleId, itemId: lessonId, blockId });
       return redirectAdmin({
         moduleId,
         ...(lessonId ? { itemId: lessonId } : {}),
