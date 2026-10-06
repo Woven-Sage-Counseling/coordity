@@ -290,7 +290,7 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
     <section class="mt-8 max-w-3xl rounded-2xl border border-sage-dark/10 bg-white/80 p-4 shadow-sm">
         <h2 class="text-sm font-semibold text-charcoal">Request backlog hours</h2>
         <p class="mt-1 text-sm text-sage-dark/65">
-          Forgot to clock in? Submit the date, start time, and end time for admin approval.
+          Forgot to clock in? Submit the date, start time, and end time for admin approval. Choose Next day on the end time if the shift went past midnight.
         </p>
 
         <form method="post" action="/api/timesheet/backlog" class="mt-4" data-timesheet-backlog-form>
@@ -301,7 +301,7 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
               <input class="field mt-1.5 max-w-xs" name="workDate" type="date" required />
             </label>
             <BacklogTimePicker name="timeStarted" label="Time started" />
-            <BacklogTimePicker name="timeEnded" label="Time ended" />
+            <BacklogTimePicker name="timeEnded" label="Time ended" showNextDay />
             <div class="flex flex-wrap items-center gap-3">
               <button class="btn-primary !px-4 !py-2" type="submit">Submit</button>
               <p

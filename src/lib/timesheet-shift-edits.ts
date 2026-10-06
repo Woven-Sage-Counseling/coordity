@@ -2,12 +2,11 @@ import { randomToken, nowMs } from './crypto';
 import { getEnv } from './env';
 import {
   easternDateFromMs,
-  easternDateTimeToMs,
-  addDays,
+  endedNextDayFromForm,
+  resolveClockRange,
   formatHours,
   formatShiftRange,
   formatWorkDate,
-  minutesBetween,
 } from './timesheet';
 import { applyApprovedShiftEdit, getShiftForUser } from './timesheet-entries';
 
@@ -329,13 +328,12 @@ export function parseShiftEditTimeRange(form: FormData): {
     throw new Error('Enter both a start time and an end time.');
   }
 
-  const startedAt = easternDateTimeToMs(workDate, timeStarted);
-  let endedAt = easternDateTimeToMs(workDate, timeEnded);
-  if (endedAt <= startedAt) {
-    endedAt = easternDateTimeToMs(addDays(workDate, 1), timeEnded);
-  }
-
-  const minutes = minutesBetween(startedAt, endedAt);
+  const { startedAt, endedAt, minutes } = resolveClockRange(
+    workDate,
+    timeStarted,
+    timeEnded,
+    endedNextDayFromForm(form),
+  );
   const notes = String(form.get('notes') ?? '').trim();
   const resolvedWorkDate = easternDateFromMs(startedAt);
 

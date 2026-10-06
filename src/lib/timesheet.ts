@@ -96,7 +96,12 @@ export function easternDateFromMs(ms: number): string {
 
 export function formatShiftRange(startedAt: number | null, endedAt: number | null): string {
   if (startedAt == null || endedAt == null) return 'Manual entry';
-  return `${formatClockTime(startedAt)} – ${formatClockTime(endedAt)}`;
+  const start = formatClockTime(startedAt);
+  const end = formatClockTime(endedAt);
+  if (easternDateFromMs(startedAt) !== easternDateFromMs(endedAt)) {
+    return `${start} – ${end} next day`;
+  }
+  return `${start} – ${end}`;
 }
 
 export function minutesBetween(startedAt: number, endedAt: number): number {
@@ -170,6 +175,34 @@ export function easternDateTimeToMs(workDate: string, time: string): number {
   throw new Error('Enter a valid start and end time.');
 }
 
+export function endedNextDayFromForm(form: FormData): boolean {
+  const raw = String(form.get('endedNextDay') ?? '').trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'on' || raw === 'next';
+}
+
+export function resolveClockRange(
+  workDate: string,
+  timeStarted: string,
+  timeEnded: string,
+  endedNextDay: boolean,
+): { startedAt: number; endedAt: number; minutes: number } {
+  const startedAt = easternDateTimeToMs(workDate, timeStarted);
+  const endDate = endedNextDay ? addDays(workDate, 1) : workDate;
+  let endedAt = easternDateTimeToMs(endDate, timeEnded);
+  if (!endedNextDay && endedAt <= startedAt) {
+    endedAt = easternDateTimeToMs(addDays(workDate, 1), timeEnded);
+  }
+  if (endedAt <= startedAt) {
+    throw new Error('Clock out must be after clock in. Choose next day if the shift went past midnight.');
+  }
+
+  return {
+    startedAt,
+    endedAt,
+    minutes: minutesBetween(startedAt, endedAt),
+  };
+}
+
 export function parseBacklogTimeRange(form: FormData): {
   workDate: string;
   startedAt: number;
@@ -188,20 +221,12 @@ export function parseBacklogTimeRange(form: FormData): {
     throw new Error('Enter both a start time and an end time.');
   }
 
-  const startedAt = easternDateTimeToMs(workDate, timeStarted);
-  let endedAt = easternDateTimeToMs(workDate, timeEnded);
-  if (endedAt <= startedAt) {
-    endedAt = easternDateTimeToMs(addDays(workDate, 1), timeEnded);
-  }
-
-  const minutes = minutesBetween(startedAt, endedAt);
+  const range = resolveClockRange(workDate, timeStarted, timeEnded, endedNextDayFromForm(form));
   const notes = String(form.get('notes') ?? '').trim();
 
   return {
     workDate,
-    startedAt,
-    endedAt,
-    minutes,
+    ...range,
     notes: notes || null,
   };
 }

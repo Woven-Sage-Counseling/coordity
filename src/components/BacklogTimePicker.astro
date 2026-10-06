@@ -5,6 +5,8 @@ interface Props {
   initialHour?: number;
   initialMinute?: number;
   initialPeriod?: 'AM' | 'PM';
+  showNextDay?: boolean;
+  initialNextDay?: boolean;
 }
 
 const {
@@ -13,16 +15,23 @@ const {
   initialHour = 12,
   initialMinute = 0,
   initialPeriod = 'AM',
+  showNextDay = false,
+  initialNextDay = false,
 } = Astro.props;
 const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const minutes = [0, 15, 30, 45];
 const selectClass = 'field !mt-0 !w-[6.5rem] shrink-0';
 const periodClass = 'field !mt-0 !w-[7rem] shrink-0';
+const dayClass = 'field !mt-0 !w-[8.75rem] shrink-0';
 ---
 
 <label class="block shrink-0 text-sm">
   <span class="font-medium text-charcoal">{label}</span>
-  <div class="mt-1.5 flex flex-wrap items-center gap-2" data-backlog-time-picker>
+  <div
+    class="mt-1.5 flex flex-wrap items-center gap-2"
+    data-backlog-time-picker
+    data-initial-next-day={initialNextDay ? '1' : '0'}
+  >
     <input type="hidden" name={name} required />
     <select data-time-hour class={selectClass} aria-label={`${label} hour`}>
       {
@@ -46,6 +55,18 @@ const periodClass = 'field !mt-0 !w-[7rem] shrink-0';
       <option value="AM" selected={initialPeriod === 'AM'}>AM</option>
       <option value="PM" selected={initialPeriod === 'PM'}>PM</option>
     </select>
+    {
+      showNextDay ? (
+        <select name="endedNextDay" data-time-day class={dayClass} aria-label={`${label} day`}>
+          <option value="0" selected={!initialNextDay}>
+            Same day
+          </option>
+          <option value="1" selected={initialNextDay}>
+            Next day
+          </option>
+        </select>
+      ) : null
+    }
   </div>
 </label>
 
@@ -78,9 +99,11 @@ const periodClass = 'field !mt-0 !w-[7rem] shrink-0';
     const hourSelect = container.querySelector('[data-time-hour]') as HTMLSelectElement | null;
     const minuteSelect = container.querySelector('[data-time-minute]') as HTMLSelectElement | null;
     const periodSelect = container.querySelector('[data-time-period]') as HTMLSelectElement | null;
+    const daySelect = container.querySelector('[data-time-day]') as HTMLSelectElement | null;
     if (hourSelect) hourSelect.value = '12';
     if (minuteSelect) minuteSelect.value = '0';
     if (periodSelect) periodSelect.value = 'AM';
+    if (daySelect) daySelect.value = container.dataset.initialNextDay === '1' ? '1' : '0';
     syncTimePicker(container);
   }
 

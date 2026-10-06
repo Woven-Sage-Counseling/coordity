@@ -1,6 +1,6 @@
 ---
 import BacklogTimePicker from './BacklogTimePicker.astro';
-import { easternClockParts } from '../lib/timesheet';
+import { easternClockParts, easternDateFromMs } from '../lib/timesheet';
 
 interface Props {
   shiftId: string;
@@ -13,6 +13,7 @@ interface Props {
 const { shiftId, workDate, startedAt, endedAt, hasPendingEdit = false } = Astro.props;
 const startParts = easternClockParts(startedAt);
 const endParts = easternClockParts(endedAt);
+const endsNextDay = easternDateFromMs(startedAt) !== easternDateFromMs(endedAt);
 const toggleId = `shift-edit-toggle-${shiftId}`;
 ---
 
@@ -38,7 +39,7 @@ const toggleId = `shift-edit-toggle-${shiftId}`;
           <input type="hidden" name="returnTo" value="/timesheet" />
           <input type="hidden" name="shiftId" value={shiftId} />
           <p class="mb-4 text-sm text-sage-dark/70">
-            Change clock-in or clock-out. The update is sent for the same approval as backlog hours.
+            Change clock-in or clock-out. Choose Next day if the shift went past midnight. The update is sent for the same approval as backlog hours.
           </p>
           <div class="flex max-w-lg flex-col gap-4">
             <label class="block text-sm">
@@ -58,6 +59,8 @@ const toggleId = `shift-edit-toggle-${shiftId}`;
               initialHour={endParts.hour}
               initialMinute={endParts.minute}
               initialPeriod={endParts.period}
+              showNextDay
+              initialNextDay={endsNextDay}
             />
             <label class="block text-sm">
               <span class="font-medium text-charcoal">Reason (optional)</span>
