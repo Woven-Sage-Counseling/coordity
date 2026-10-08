@@ -214,7 +214,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  if (pathname === '/api/financials/outlook' && context.request.method === 'POST') {
+  if (
+    (pathname === '/api/financials/outlook' || pathname === '/api/financials/cards') &&
+    context.request.method === 'POST'
+  ) {
     if (!employee.permissions.includes('financials:manage')) {
       return new Response('Forbidden', { status: 403, headers: { 'cache-control': 'no-store' } });
     }

@@ -1,3 +1,4 @@
+import { getDashboardCards } from './cards';
 import { DEFAULT_ORG_ID } from '../organization';
 import { ManualSnapshotProvider } from './manual-snapshot';
 import {
@@ -138,6 +139,7 @@ export async function getFinancialSummary(
       accountId: bank.accountId,
       accountNumber: bank.accountNumber,
     })),
+    dashboardCards: await getDashboardCards(orgId),
     quickbooks: {
       configured: qbStatus.configured,
       status: qbStatus.status,

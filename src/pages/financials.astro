@@ -1,13 +1,11 @@
 ---
 import PortalLayout from '../layouts/PortalLayout.astro';
-import PeriodPicker from '../components/PeriodPicker.astro';
-import FinancialScrollPanel from '../components/FinancialScrollPanel.astro';
-import FinancialTransactionItem from '../components/FinancialTransactionItem.astro';
+import FinancialCardBoard from '../components/FinancialCardBoard.astro';
 import { QuickBooksProvider, type ChartAccountChoice } from '../lib/financials/quickbooks';
-import { calendarDateValue, formatDisplayDate, formatUsd, getFinancialSummary } from '../lib/financials/summary';
+import { formatDisplayDate, getFinancialSummary } from '../lib/financials/summary';
 import { orgIdFromLocals } from '../lib/organization';
-import FinancialDashboardSetup from '../components/FinancialDashboardSetup.astro';
-import { getFinancialOutlook, type OutlookLine } from '../lib/financials/outlook';
+import { normalizeMatchName } from '../lib/financials/outlook';
+import type { DashboardAccountChoice } from '../lib/financials/cards';
 import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
@@ -19,423 +17,73 @@ if (!hasPermission(employee, 'financials:view')) {
 
 const orgId = orgIdFromLocals(Astro.locals.organization);
 const summary = await getFinancialSummary(Astro.url.searchParams, { orgId });
-const snapshot = summary.snapshot;
 const canManage = hasPermission(employee, 'financials:manage');
-const outlookOpen = canManage && summary.quickbooks.status === 'connected';
-const outlook = outlookOpen ? await getFinancialOutlook(orgId) : null;
-const outlookLines: OutlookLine[] = outlook?.lines ?? [];
+const connected = summary.quickbooks.status === 'connected';
 let chartAccounts: ChartAccountChoice[] = [];
 let accountsError: string | null = null;
-if (outlookOpen) {
+if (canManage && connected) {
   try {
     chartAccounts = await new QuickBooksProvider(orgId).listChartAccounts();
   } catch (loadError) {
     accountsError = loadError instanceof Error ? loadError.message : 'Could not load QuickBooks accounts.';
   }
 }
-const expenseAccounts = chartAccounts.filter((account) => account.accountType === 'expense');
-const bankAccounts = chartAccounts.filter((account) => account.accountType === 'bank');
-const error = Astro.url.searchParams.get('error');
-const lastSync = summary.quickbooks.lastSyncAt
-  ? new Date(summary.quickbooks.lastSyncAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
-  : null;
 
-const revenue = snapshot?.revenueCents ?? 0;
-const net = summary.reportedNetCents ?? 0;
-const expenses = summary.reportedExpensesCents ?? 0;
-const linePalette = ['#3d8b37', '#6aa84f', '#8fbc8f', '#a8c5a0'];
-const scale = Math.max(revenue, expenses, ...summary.expenseLines.map((line) => line.cents ?? 0), 1);
-const bar = (cents: number) => `${Math.round((cents / scale) * 100)}%`;
-const shareOfIncome = (cents: number) => (revenue > 0 ? `${Math.round((cents / revenue) * 100)}%` : null);
-const netPositive = net >= 0;
-
-const ratio = summary.reserveProgressRatio;
-const percent = ratio == null ? null : Math.round(ratio * 100);
-const ringRatio = ratio == null ? 0 : Math.min(Math.max(ratio, 0), 1);
-const ringRadius = 30;
-const ringCircumference = 2 * Math.PI * ringRadius;
-const ringOffset = ringCircumference * (1 - ringRatio);
-
-const pnlRows = [
-  { label: 'Income', cents: revenue, color: '#2CA01C', share: null as string | null, showBar: false },
-  ...summary.expenseLines.map((line, index) => ({
-    label: line.label,
-    cents: line.cents ?? 0,
-    color: line.color || linePalette[index % linePalette.length],
-    share: shareOfIncome(line.cents ?? 0),
-    showBar: true,
-  })),
-  {
-    label: 'Total expenses',
-    cents: expenses,
-    color: '#a8c5a0',
-    share: shareOfIncome(expenses),
-    showBar: summary.expenseLines.length === 0,
-  },
-];
-const reserveLine = summary.cashLines.find((line) => line.role === 'reserve') ?? null;
-const setupExpenseCount = outlookLines.filter((line) => line.kind === 'expense').length;
-const setupCashCount = outlookLines.filter((line) => line.kind === 'cash').length;
-
-const incomeTransactions = summary.transactions
-  .filter((transaction) => transaction.bucket === 'income' && transaction.cents !== 0)
-  .sort(
-    (a, b) =>
-      calendarDateValue(b.date) - calendarDateValue(a.date) ||
-      Math.abs(b.cents) - Math.abs(a.cents),
-  );
-
-const expenseTransactions = summary.transactions
-  .filter((transaction) => transaction.bucket !== 'income' && transaction.cents !== 0)
-  .sort(
-    (a, b) =>
-      calendarDateValue(b.date) - calendarDateValue(a.date) ||
-      Math.abs(b.cents) - Math.abs(a.cents),
-  );
-
-function formatPeriod(iso: string): string {
-  return formatDisplayDate(iso) ?? iso;
+const choices: DashboardAccountChoice[] = [];
+const seenIds = new Set<string>();
+const seenNames = new Set<string>();
+function addChoice(choice: DashboardAccountChoice) {
+  const nameKey = normalizeMatchName(choice.name);
+  if (!choice.id || seenIds.has(choice.id) || (nameKey && seenNames.has(nameKey))) return;
+  seenIds.add(choice.id);
+  if (nameKey) seenNames.add(nameKey);
+  choices.push(choice);
 }
 
-function formatMonthYear(iso: string): string {
-  const [year, month] = iso.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
+for (const account of chartAccounts) {
+  if (account.accountType !== 'income' && account.accountType !== 'expense' && account.accountType !== 'bank') continue;
+  addChoice({ id: account.id, name: account.name, kind: account.accountType });
+}
+for (const line of summary.pnlLines) {
+  addChoice({
+    id: line.accountId || `name:${normalizeMatchName(line.name)}`,
+    name: line.name,
+    kind: line.bucket === 'income' ? 'income' : 'expense',
+  });
+}
+for (const bank of summary.bankAccounts) {
+  addChoice({
+    id: bank.accountId || `bank:${normalizeMatchName(bank.name)}`,
+    name: bank.name,
+    kind: 'bank',
   });
 }
 
-function transactionMetaLine(
-  transaction: (typeof summary.transactions)[number],
-  omitTypes: readonly string[],
-): string {
-  const omit = new Set(omitTypes.map((value) => value.toLowerCase()));
-  const type =
-    transaction.type && !omit.has(transaction.type.trim().toLowerCase()) ? transaction.type : null;
-  return [formatDisplayDate(transaction.date), type].filter(Boolean).join(' · ');
-}
-
-const periodLabel = snapshot
-  ? `${formatPeriod(snapshot.periodStart)} – ${formatPeriod(snapshot.periodEnd)}`
-  : null;
+const error = Astro.url.searchParams.get('error');
 const connectionError = error ?? summary.quickbooks.lastError;
 const needsReconnect =
   summary.quickbooks.status === 'disconnected' ||
   (connectionError?.toLowerCase().includes('reconnect quickbooks') ?? false);
+const periodLabel = summary.snapshot
+  ? `${formatDisplayDate(summary.snapshot.periodStart) ?? summary.snapshot.periodStart} – ${formatDisplayDate(summary.snapshot.periodEnd) ?? summary.snapshot.periodEnd}`
+  : null;
 ---
 
 <PortalLayout title="Financials" wide>
   <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
-  {
-    outlookOpen && (
-      <p class="mt-4 max-w-2xl rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-charcoal shadow-sm ring-1 ring-black/[0.06]">
-        {
-          setupExpenseCount === 0 && setupCashCount === 0 ? (
-            <>
-              This page is showing every QuickBooks number. <a class="font-semibold text-[#248a18] underline" href="#outlook">Set up the dashboard</a> to choose which expense bars and bank cards appear.
-            </>
-          ) : (
-            <>
-              Showing {setupExpenseCount} expense {setupExpenseCount === 1 ? 'bar' : 'bars'} and {setupCashCount} bank {setupCashCount === 1 ? 'card' : 'cards'}. <a class="font-semibold text-[#248a18] underline" href="#outlook">Change the dashboard</a>.
-            </>
-          )
-        }
-      </p>
-    )
-  }
-
   <div class="mt-6">
-    <PeriodPicker period={summary.period} action="/financials" allowCustom theme="quickbooks" />
+    <FinancialCardBoard
+      canManage={canManage}
+      cards={summary.dashboardCards}
+      choices={choices}
+      accountsError={accountsError}
+      summary={summary}
+      period={summary.period}
+      periodLabel={periodLabel}
+      connectionError={connectionError}
+      needsReconnect={needsReconnect}
+      quickbooksConfigured={summary.quickbooks.configured}
+      quickbooksStatus={summary.quickbooks.status}
+    />
   </div>
-  {
-    periodLabel ? (
-      <p class="mt-2 text-sm text-sage-dark/65">{periodLabel}</p>
-    ) : (
-      <p class="mt-2 text-sm text-sage-dark/65">No financial snapshot is available yet.</p>
-    )
-  }
-
-  <section class="mt-10" aria-labelledby="overview-heading">
-    <h2 id="overview-heading" class="font-display text-2xl text-charcoal">Overview</h2>
-    <div class:list={['mt-4 grid gap-4', reserveLine && 'md:grid-cols-2']}>
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Net income</p>
-        <p
-          class:list={[
-            'mt-2 text-4xl font-semibold tracking-tight tabular-nums',
-            netPositive ? 'text-[#2CA01C]' : 'text-[#d52b1e]',
-          ]}
-        >
-          {formatUsd(snapshot ? net : null)}
-        </p>
-      </article>
-
-      {reserveLine && (
-      <article class="flex items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <div class="min-w-0">
-          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Reserve</p>
-          <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">
-            {formatUsd(summary.reserveCents)}
-          </p>
-          <p class="mt-1 text-sm text-[#6b6c72]">
-            of {formatUsd(summary.reserveTargetCents)}
-          </p>
-          <p class="mt-2 text-xs text-[#b0b1b6]">
-            {summary.reserveTargetMonths}-month target
-            {summary.reserveAveragingStart
-              ? ` since ${formatMonthYear(summary.reserveAveragingStart)}`
-              : ''}
-          </p>
-        </div>
-        <div
-          class="relative h-24 w-24 shrink-0"
-          role="img"
-          aria-label={percent == null ? 'Reserve progress unavailable' : `Reserve ${percent} percent of target`}
-        >
-          <svg class="h-full w-full -rotate-90" viewBox="0 0 76 76" aria-hidden="true">
-            <circle cx="38" cy="38" r={ringRadius} fill="none" stroke="#e3e5e8" stroke-width="6"></circle>
-            <circle
-              cx="38"
-              cy="38"
-              r={ringRadius}
-              fill="none"
-              stroke={percent != null && percent >= 100 ? '#2CA01C' : '#3d8b37'}
-              stroke-width="6"
-              stroke-linecap="round"
-              stroke-dasharray={ringCircumference.toFixed(2)}
-              stroke-dashoffset={ringOffset.toFixed(2)}
-            ></circle>
-          </svg>
-          <p class="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums text-charcoal">
-            {percent == null ? '—' : `${percent}%`}
-          </p>
-        </div>
-      </article>
-      )}
-    </div>
-  </section>
-
-  <div class:list={['mt-12 grid gap-8 lg:items-stretch', summary.cashLines.length > 0 && 'lg:grid-cols-2']}>
-    <section class="flex flex-col" aria-labelledby="pnl-heading">
-      <h2 id="pnl-heading" class="font-display text-2xl text-charcoal">Profit and Loss</h2>
-      <div class="mt-4 flex flex-1 flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <div class="flex flex-1 flex-col justify-between gap-5">
-          {
-            pnlRows.map((row) => (
-              <div>
-                <div class="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span class="font-medium text-charcoal">{row.label}</span>
-                  <span class="flex items-baseline gap-1.5 tabular-nums">
-                    <span class="font-semibold text-charcoal">{formatUsd(snapshot ? row.cents : null)}</span>
-                    {row.share ? <span class="font-medium text-[#b0b1b6]">{row.share}</span> : null}
-                  </span>
-                </div>
-                {
-                  row.showBar && (
-                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-                      <div
-                        class="h-full rounded-full"
-                        style={`width: ${snapshot ? bar(row.cents) : '0%'}; background-color: ${row.color}`}
-                      ></div>
-                    </div>
-                  )
-                }
-              </div>
-            ))
-          }
-        </div>
-      </div>
-    </section>
-
-    {
-      summary.cashLines.length > 0 && (
-        <section class="flex flex-col" aria-labelledby="cash-heading">
-          <h2 id="cash-heading" class="font-display text-2xl text-charcoal">Cash and reserves</h2>
-          <div class="mt-4 flex flex-1 flex-col gap-3">
-            {summary.cashLines.map((line) => (
-              <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">{line.label}</p>
-                <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">{formatUsd(line.cents)}</p>
-              </article>
-            ))}
-            <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Total cash</p>
-              <p class="mt-2 text-2xl font-semibold tabular-nums text-charcoal">{formatUsd(summary.totalCashCents)}</p>
-            </article>
-          </div>
-        </section>
-      )
-    }
-  </div>
-
-    {
-    outlookOpen && (
-      <FinancialDashboardSetup
-        lines={outlookLines}
-        expenseAccounts={expenseAccounts}
-        bankAccounts={bankAccounts}
-        accountsLoaded={chartAccounts.length > 0}
-        accountsError={accountsError}
-        reserveTargetMonths={summary.reserveTargetMonths}
-        operationsStart={outlook?.operationsStart ?? ''}
-        periodId={summary.period.id}
-        periodStart={summary.period.start}
-        periodEnd={summary.period.end}
-      />
-    )
-  }
-
-  <section class="mt-12" aria-labelledby="detail-heading">
-    <h2 id="detail-heading" class="font-display text-2xl text-charcoal">Income and expense transactions</h2>
-
-    <div class="mt-4 grid gap-8 lg:grid-cols-2 lg:items-start">
-      <article class="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Income</h3>
-        {
-          incomeTransactions.length === 0 ? (
-            <p class="mt-4 text-sm text-sage-dark/65">
-              No income transactions are available for this period yet.
-            </p>
-          ) : (
-            <FinancialScrollPanel ariaLabel="Income transactions">
-              <ul class="divide-y divide-black/[0.06]">
-                {incomeTransactions.map((transaction) => (
-                  <FinancialTransactionItem
-                    transaction={transaction}
-                    metaLine={transactionMetaLine(transaction, ['deposit'])}
-                    amountClass="text-[#2CA01C]"
-                  />
-                ))}
-              </ul>
-            </FinancialScrollPanel>
-          )
-        }
-      </article>
-
-      <article class="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h3 class="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expenses</h3>
-        {
-          expenseTransactions.length === 0 ? (
-            <p class="mt-4 text-sm text-sage-dark/65">
-              No expense transactions are available for this period yet.
-            </p>
-          ) : (
-            <FinancialScrollPanel ariaLabel="Expense transactions">
-              <ul class="divide-y divide-black/[0.06]">
-                {expenseTransactions.map((transaction) => (
-                  <FinancialTransactionItem
-                    transaction={transaction}
-                    metaLine={transactionMetaLine(transaction, ['expense'])}
-                    amountClass="text-charcoal"
-                  />
-                ))}
-              </ul>
-            </FinancialScrollPanel>
-          )
-        }
-      </article>
-    </div>
-  </section>
-
-  <section class="mt-12" aria-labelledby="connection-heading">
-    <h2 id="connection-heading" class="font-display text-2xl text-charcoal">QuickBooks connection</h2>
-    <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-sm text-[#6b6c72]">
-          {summary.quickbooks.environment}
-          {lastSync ? ` · last sync ${lastSync}` : ''}
-        </p>
-        <span
-          class:list={[
-            'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1',
-            summary.quickbooks.status === 'connected'
-              ? 'bg-[#eaf6ea] text-[#2CA01C] ring-[#2CA01C]/25'
-              : summary.quickbooks.status === 'error'
-                ? 'bg-red-50 text-red-800 ring-red-200'
-                : 'bg-[#f4f5f8] text-[#6b6c72] ring-black/10',
-          ]}
-        >
-          {summary.quickbooks.status}
-        </span>
-      </div>
-      {
-        canManage && summary.quickbooks.status !== 'connected' && (
-          <p class="mt-3 text-sm leading-6 text-charcoal">Connect QuickBooks first. After that, you can choose which expense bars and bank cards show on this page.</p>
-        )
-      }
-
-      {
-        connectionError && (
-          <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{connectionError}</p>
-        )
-      }
-
-      {
-        needsReconnect && canManage && summary.quickbooks.configured && (
-          <p class="mt-3 text-sm text-[#6b6c72]">
-            Use Reconnect QuickBooks below to sign in with Intuit again. Sync will work after that.
-          </p>
-        )
-      }
-
-      {
-        canManage && summary.quickbooks.configured && (
-          <div class="mt-4 flex flex-wrap gap-2">
-            <form method="post" action="/api/quickbooks/connect">
-              <button
-                class:list={[
-                  'rounded-md px-3.5 py-2 text-sm font-semibold shadow-sm',
-                  needsReconnect
-                    ? 'bg-[#2CA01C] text-white hover:bg-[#248a18]'
-                    : 'bg-white text-charcoal ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]',
-                ]}
-                type="submit"
-              >
-                {summary.quickbooks.status === 'connected' ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
-              </button>
-            </form>
-            {summary.quickbooks.status === 'connected' && (
-              <form method="post" action="/api/quickbooks/sync">
-                <button
-                  class="rounded-md bg-white px-3.5 py-2 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]"
-                  type="submit"
-                >
-                  Sync numbers now
-                </button>
-              </form>
-            )}
-          </div>
-        )
-      }
-    </div>
-  </section>
 </PortalLayout>
-
-<script>
-  const updateFinancialScrollHints = () => {
-    document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
-      const shell = panel.closest('.financials-scroll-shell');
-      const fade = shell?.querySelector<HTMLElement>('[data-financials-scroll-fade]');
-      const hint = shell?.querySelector<HTMLElement>('[data-financials-scroll-hint]');
-      const canScroll = panel.scrollHeight > panel.clientHeight + 1;
-      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 8;
-      const showHint = canScroll && !atBottom;
-
-      panel.classList.toggle('is-scrollable', canScroll);
-      fade?.classList.toggle('is-visible', showHint);
-      hint?.classList.toggle('is-visible', showHint);
-    });
-  };
-
-  document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
-    panel.addEventListener('scroll', updateFinancialScrollHints, { passive: true });
-  });
-
-  document.querySelectorAll<HTMLDetailsElement>('.financials-scroll-panel details').forEach((details) => {
-    details.addEventListener('toggle', updateFinancialScrollHints);
-  });
-
-  window.addEventListener('resize', updateFinancialScrollHints, { passive: true });
-  updateFinancialScrollHints();
-</script>

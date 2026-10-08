@@ -458,7 +458,7 @@ function basicAuth(clientId: string, clientSecret: string): string {
 export interface ChartAccountChoice {
   id: string;
   name: string;
-  accountType: 'expense' | 'bank';
+  accountType: 'expense' | 'income' | 'bank';
   accountNumber: string | null;
 }
 
@@ -473,6 +473,10 @@ interface BankQueryAccount {
 
 function expenseAccountType(type: string): boolean {
   return type === 'Expense' || type === 'Other Expense' || type === 'Cost of Goods Sold';
+}
+
+function incomeAccountType(type: string): boolean {
+  return type === 'Income' || type === 'Other Income';
 }
 
 export class QuickBooksProvider implements FinancialDataProvider {
@@ -947,7 +951,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
     };
     return asRows(payload.QueryResponse?.Account).flatMap((account) => {
       const type = account.AccountType ?? '';
-      const accountType = type === 'Bank' ? 'bank' : expenseAccountType(type) ? 'expense' : null;
+      const accountType = type === 'Bank' ? 'bank' : expenseAccountType(type) ? 'expense' : incomeAccountType(type) ? 'income' : null;
       if (!accountType || !account.Id) return [];
       const name = (account.FullyQualifiedName || account.Name || 'Account').slice(0, 200);
       return [{ id: account.Id, name, accountType, accountNumber: account.AcctNum ?? null }];

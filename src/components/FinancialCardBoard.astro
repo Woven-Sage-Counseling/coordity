@@ -1,0 +1,419 @@
+---
+import PeriodPicker from './PeriodPicker.astro';
+import FinancialAccountChecklist from './FinancialAccountChecklist.astro';
+import FinancialScrollPanel from './FinancialScrollPanel.astro';
+import FinancialTransactionItem from './FinancialTransactionItem.astro';
+import {
+  bankBalanceForAccount,
+  pnlAmountForAccount,
+  signedNetCents,
+  transactionsForAccounts,
+  type DashboardAccountChoice,
+  type DashboardCard,
+} from '../lib/financials/cards';
+import { calendarDateValue, formatDisplayDate, formatUsd } from '../lib/financials/summary';
+import type { FinancialSummary } from '../lib/financials/types';
+import type { ResolvedPeriod } from '../lib/financials/periods';
+
+interface Props {
+  canManage: boolean;
+  cards: DashboardCard[];
+  choices: DashboardAccountChoice[];
+  accountsError: string | null;
+  summary: FinancialSummary;
+  period: ResolvedPeriod;
+  periodLabel: string | null;
+  connectionError: string | null;
+  needsReconnect: boolean;
+  quickbooksConfigured: boolean;
+  quickbooksStatus: string;
+}
+
+const {
+  canManage,
+  cards,
+  choices,
+  accountsError,
+  summary,
+  period,
+  periodLabel,
+  connectionError,
+  needsReconnect,
+  quickbooksConfigured,
+  quickbooksStatus,
+} = Astro.props;
+
+const snapshot = summary.snapshot;
+const cardByKey = new Map(cards.map((card) => [card.key, card]));
+const pnlCard = cardByKey.get('pnl');
+const incomeCard = cardByKey.get('income_expenses');
+const balanceCard = cardByKey.get('account_balance');
+const netCard = cardByKey.get('net_income');
+const enabled = cards.filter((card) => card.enabled);
+const incomeChoices = choices.filter((account) => account.kind === 'income');
+const expenseChoices = choices.filter((account) => account.kind === 'expense');
+const activityChoices = [...incomeChoices, ...expenseChoices];
+const bankChoices = choices.filter((account) => account.kind === 'bank');
+
+const expenseBars = summary.pnlLines
+  .filter((line) => line.bucket !== 'income' && line.cents !== 0)
+  .sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
+const incomeCents = snapshot?.revenueCents ?? 0;
+const expenseTotal = summary.reportedExpensesCents ?? snapshot?.totalExpensesCents ?? 0;
+const pnlScale = Math.max(incomeCents, expenseTotal, ...expenseBars.map((line) => Math.abs(line.cents)), 1);
+const barWidth = (cents: number) => `${Math.round((Math.abs(cents) / pnlScale) * 100)}%`;
+
+const incomeAccounts = activityChoices.filter((account) => incomeCard?.accountIds.includes(account.id));
+const incomeScale = Math.max(...incomeAccounts.map((account) => pnlAmountForAccount(summary.pnlLines, account)), 1);
+const incomeTransactions = incomeCard
+  ? transactionsForAccounts(summary.transactions, activityChoices, incomeCard.accountIds).sort(
+      (a, b) => calendarDateValue(b.date) - calendarDateValue(a.date) || Math.abs(b.cents) - Math.abs(a.cents),
+    )
+  : [];
+const balance = bankBalanceForAccount(summary.bankAccounts, bankChoices, balanceCard?.accountIds[0] ?? null);
+const netCents = signedNetCents(summary.pnlLines, activityChoices, netCard?.accountIds ?? []);
+const palette = ['#3d8b37', '#6aa84f', '#8fbc8f', '#a8c5a0', '#c4d7b8'];
+
+function transactionMetaLine(transaction: (typeof summary.transactions)[number]): string {
+  return [formatDisplayDate(transaction.date), transaction.accountName].filter(Boolean).join(' · ');
+}
+---
+
+{
+  canManage && (
+    <section class="max-w-xl rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" aria-labelledby="add-card-heading">
+      <h2 id="add-card-heading" class="text-lg font-semibold text-charcoal">Add a card</h2>
+      <p class="mt-1 text-sm leading-6 text-sage-dark/75">Check a box. That card shows up on this page. Uncheck it to take the card off.</p>
+      <form method="post" action="/api/financials/cards" class="mt-4 space-y-3" data-card-picker>
+        <input type="hidden" name="intent" value="layout" />
+        <input type="hidden" name="period" value={period.id} />
+        <input type="hidden" name="start" value={period.start} />
+        <input type="hidden" name="end" value={period.end} />
+
+        <label class="flex items-start gap-3 rounded-xl bg-[#f7f8f6] px-3 py-3 text-sm text-charcoal">
+          <input class="mt-0.5" type="checkbox" name="card" value="pnl" checked={pnlCard?.enabled ?? false} />
+          <span>
+            <span class="font-semibold">Profit and loss</span>
+            <span class="mt-0.5 block text-sage-dark/70">Bars for income and each expense.</span>
+          </span>
+        </label>
+
+        <div class="rounded-xl bg-[#f7f8f6] px-3 py-3">
+          <label class="flex items-start gap-3 text-sm text-charcoal">
+            <input class="mt-0.5" type="checkbox" name="card" value="income_expenses" checked={incomeCard?.enabled ?? false} />
+            <span>
+              <span class="font-semibold">Income and expenses</span>
+              <span class="mt-0.5 block text-sage-dark/70">Then pick a graph or a list. Choose the accounts on the card.</span>
+            </span>
+          </label>
+          <div class="mt-3 space-y-2 pl-7">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input type="radio" name="incomeView" value="graph" checked={incomeCard?.viewMode !== 'list'} />
+              Summary graph
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input type="radio" name="incomeView" value="list" checked={incomeCard?.viewMode === 'list'} />
+              Detailed list
+            </label>
+          </div>
+        </div>
+
+        <label class="flex items-start gap-3 rounded-xl bg-[#f7f8f6] px-3 py-3 text-sm text-charcoal">
+          <input class="mt-0.5" type="checkbox" name="card" value="account_balance" checked={balanceCard?.enabled ?? false} />
+          <span>
+            <span class="font-semibold">Account balance</span>
+            <span class="mt-0.5 block text-sage-dark/70">The money in one account right now. Pick the account on the card.</span>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-3 rounded-xl bg-[#f7f8f6] px-3 py-3 text-sm text-charcoal">
+          <input class="mt-0.5" type="checkbox" name="card" value="net_income" checked={netCard?.enabled ?? false} />
+          <span>
+            <span class="font-semibold">Net income</span>
+            <span class="mt-0.5 block text-sage-dark/70">Income minus expenses. Pick which accounts count on the card.</span>
+          </span>
+        </label>
+      </form>
+      <p class="mt-3 text-xs text-sage-dark/60">Checking a box saves it and adds the card.</p>
+
+      {
+        connectionError && (
+          <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{connectionError}</p>
+        )
+      }
+      {
+        accountsError && (
+          <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{accountsError}</p>
+        )
+      }
+      {
+        canManage && quickbooksConfigured && (
+          <div class="mt-4 flex flex-wrap gap-2">
+            <form method="post" action="/api/quickbooks/connect">
+              <button class="rounded-md bg-white px-3.5 py-2 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]" type="submit">
+                {quickbooksStatus === 'connected' ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}
+              </button>
+            </form>
+            {
+              quickbooksStatus === 'connected' && (
+                <form method="post" action="/api/quickbooks/sync">
+                  <button class="rounded-md bg-white px-3.5 py-2 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]" type="submit">
+                    Update numbers
+                  </button>
+                </form>
+              )
+            }
+          </div>
+        )
+      }
+      {
+        needsReconnect && (
+          <p class="mt-2 text-sm text-sage-dark/70">Sign in to QuickBooks again, then the cards can fill in.</p>
+        )
+      }
+    </section>
+  )
+}
+
+{
+  !canManage && enabled.length === 0 && (
+    <p class="max-w-xl rounded-2xl bg-white px-4 py-3 text-sm text-charcoal shadow-sm ring-1 ring-black/[0.06]">
+      No cards on this dashboard yet.
+    </p>
+  )
+}
+
+{
+  enabled.length > 0 && (
+    <div class="mt-8">
+      <PeriodPicker period={period} action="/financials" allowCustom theme="quickbooks" />
+      {periodLabel && <p class="mt-2 text-sm text-sage-dark/65">{periodLabel}</p>}
+    </div>
+  )
+}
+
+<div class="mt-6 space-y-6">
+  {
+    pnlCard?.enabled && (
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h2 class="font-display text-2xl text-charcoal">Profit and loss</h2>
+        {
+          !snapshot ? (
+            <p class="mt-3 text-sm text-sage-dark/70">No numbers yet. Connect QuickBooks, then choose Update numbers.</p>
+          ) : (
+            <div class="mt-4 space-y-4">
+              <div>
+                <div class="flex items-baseline justify-between gap-3 text-sm">
+                  <span class="font-medium text-charcoal">Income</span>
+                  <span class="font-semibold tabular-nums text-charcoal">{formatUsd(incomeCents)}</span>
+                </div>
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                  <div class="h-full rounded-full bg-[#2CA01C]" style={`width: ${barWidth(incomeCents)}`}></div>
+                </div>
+              </div>
+              {
+                (expenseBars.length > 0 ? expenseBars : [{ name: 'Total expenses', cents: expenseTotal }]).map((line, index) => (
+                  <div>
+                    <div class="flex items-baseline justify-between gap-3 text-sm">
+                      <span class="font-medium text-charcoal">{line.name}</span>
+                      <span class="font-semibold tabular-nums text-charcoal">{formatUsd(line.cents)}</span>
+                    </div>
+                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                      <div class="h-full rounded-full" style={`width: ${barWidth(line.cents)}; background-color: ${palette[index % palette.length]}`}></div>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          )
+        }
+      </article>
+    )
+  }
+
+  {
+    incomeCard?.enabled && (
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h2 class="font-display text-2xl text-charcoal">Income and expenses</h2>
+        <p class="mt-1 text-sm text-sage-dark/70">
+          {incomeCard.viewMode === 'list' ? 'Detailed list' : 'Summary graph'}
+        </p>
+        {
+          incomeCard.accountIds.length === 0 ? (
+            <p class="mt-3 text-sm text-sage-dark/70">Check the accounts that should feed this card, then save.</p>
+          ) : incomeCard.viewMode === 'list' ? (
+            incomeTransactions.length === 0 ? (
+              <p class="mt-4 text-sm text-sage-dark/70">No transactions for those accounts in this date range.</p>
+            ) : (
+              <FinancialScrollPanel ariaLabel="Income and expense transactions">
+                <ul class="divide-y divide-black/[0.06]">
+                  {incomeTransactions.map((transaction) => (
+                    <FinancialTransactionItem
+                      transaction={transaction}
+                      metaLine={transactionMetaLine(transaction)}
+                      amountClass={transaction.cents < 0 ? 'text-charcoal' : 'text-[#2CA01C]'}
+                    />
+                  ))}
+                </ul>
+              </FinancialScrollPanel>
+            )
+          ) : (
+            <div class="mt-4 space-y-4">
+              {incomeAccounts.map((account, index) => {
+                const cents = pnlAmountForAccount(summary.pnlLines, account);
+                return (
+                  <div>
+                    <div class="flex items-baseline justify-between gap-3 text-sm">
+                      <span class="font-medium text-charcoal">{account.name}</span>
+                      <span class="font-semibold tabular-nums text-charcoal">{formatUsd(cents)}</span>
+                    </div>
+                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                      <div class="h-full rounded-full" style={`width: ${Math.round((cents / incomeScale) * 100)}%; background-color: ${account.kind === 'income' ? '#2CA01C' : palette[index % palette.length]}`}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        }
+        {
+          canManage && (
+            <form method="post" action="/api/financials/cards" class="mt-5 border-t border-black/[0.06] pt-4">
+              <input type="hidden" name="intent" value="accounts" />
+              <input type="hidden" name="cardKey" value="income_expenses" />
+              <input type="hidden" name="period" value={period.id} />
+              <input type="hidden" name="start" value={period.start} />
+              <input type="hidden" name="end" value={period.end} />
+              <p class="text-sm font-semibold text-charcoal">Which accounts feed this card?</p>
+              <FinancialAccountChecklist
+                accounts={activityChoices.map((account) => ({ id: account.id, name: account.name, accountType: account.kind, accountNumber: null }))}
+                fieldName="accountId"
+                emptyMessage="No income or expense accounts yet. Connect QuickBooks and update the numbers."
+                valueFor={(account) => account.id}
+                isChecked={(account) => incomeCard.accountIds.includes(account.id)}
+              />
+              <button class="mt-3 rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]" type="submit">
+                Save accounts
+              </button>
+            </form>
+          )
+        }
+      </article>
+    )
+  }
+
+  {
+    balanceCard?.enabled && (
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h2 class="font-display text-2xl text-charcoal">Account balance</h2>
+        <p class="mt-3 text-4xl font-semibold tabular-nums text-charcoal">{formatUsd(balance?.cents ?? null)}</p>
+        <p class="mt-1 text-sm text-sage-dark/70">{balance?.name ?? 'Choose an account.'}</p>
+        {
+          canManage && (
+            <form method="post" action="/api/financials/cards" class="mt-4" data-balance-form>
+              <input type="hidden" name="intent" value="accounts" />
+              <input type="hidden" name="cardKey" value="account_balance" />
+              <input type="hidden" name="period" value={period.id} />
+              <input type="hidden" name="start" value={period.start} />
+              <input type="hidden" name="end" value={period.end} />
+              <label class="block text-sm text-charcoal">
+                Which account?
+                <select class="field max-w-md" name="accountId">
+                  <option value="">Choose an account</option>
+                  {bankChoices.map((account) => (
+                    <option value={account.id} selected={balanceCard.accountIds[0] === account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </form>
+          )
+        }
+      </article>
+    )
+  }
+
+  {
+    netCard?.enabled && (
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h2 class="font-display text-2xl text-charcoal">Net income</h2>
+        <p class:list={['mt-3 text-4xl font-semibold tabular-nums', netCents != null && netCents < 0 ? 'text-[#d52b1e]' : 'text-[#2CA01C]']}>
+          {formatUsd(netCents)}
+        </p>
+        <p class="mt-1 text-sm text-sage-dark/70">Income accounts add. Expense accounts subtract.</p>
+        {
+          canManage && (
+            <form method="post" action="/api/financials/cards" class="mt-5 border-t border-black/[0.06] pt-4">
+              <input type="hidden" name="intent" value="accounts" />
+              <input type="hidden" name="cardKey" value="net_income" />
+              <input type="hidden" name="period" value={period.id} />
+              <input type="hidden" name="start" value={period.start} />
+              <input type="hidden" name="end" value={period.end} />
+              <p class="text-sm font-semibold text-charcoal">Income accounts</p>
+              <FinancialAccountChecklist
+                accounts={incomeChoices.map((account) => ({ id: account.id, name: account.name, accountType: 'income', accountNumber: null }))}
+                fieldName="accountId"
+                emptyMessage="No income accounts yet."
+                valueFor={(account) => account.id}
+                isChecked={(account) => netCard.accountIds.includes(account.id)}
+              />
+              <p class="mt-4 text-sm font-semibold text-charcoal">Expense accounts</p>
+              <FinancialAccountChecklist
+                accounts={expenseChoices.map((account) => ({ id: account.id, name: account.name, accountType: 'expense', accountNumber: null }))}
+                fieldName="accountId"
+                emptyMessage="No expense accounts yet."
+                valueFor={(account) => account.id}
+                isChecked={(account) => netCard.accountIds.includes(account.id)}
+              />
+              <button class="mt-3 rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]" type="submit">
+                Save accounts
+              </button>
+            </form>
+          )
+        }
+      </article>
+    )
+  }
+</div>
+
+<script>
+  document.querySelectorAll('[data-card-picker]').forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) return;
+    form.addEventListener('change', (event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.name === 'incomeView') {
+        const box = form.querySelector('input[value="income_expenses"]');
+        if (box instanceof HTMLInputElement) box.checked = true;
+      }
+      form.requestSubmit();
+    });
+  });
+
+  document.querySelectorAll('[data-balance-form]').forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) return;
+    form.addEventListener('change', () => form.requestSubmit());
+  });
+</script>
+
+<script>
+  const updateFinancialScrollHints = () => {
+    document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
+      const shell = panel.closest('.financials-scroll-shell');
+      const fade = shell?.querySelector<HTMLElement>('[data-financials-scroll-fade]');
+      const hint = shell?.querySelector<HTMLElement>('[data-financials-scroll-hint]');
+      const canScroll = panel.scrollHeight > panel.clientHeight + 1;
+      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 8;
+      const showHint = canScroll && !atBottom;
+      panel.classList.toggle('is-scrollable', canScroll);
+      fade?.classList.toggle('is-visible', showHint);
+      hint?.classList.toggle('is-visible', showHint);
+    });
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
+    panel.addEventListener('scroll', updateFinancialScrollHints, { passive: true });
+  });
+  window.addEventListener('resize', updateFinancialScrollHints, { passive: true });
+  updateFinancialScrollHints();
+</script>

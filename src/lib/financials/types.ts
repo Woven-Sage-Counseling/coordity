@@ -1,3 +1,4 @@
+import type { DashboardCard } from './cards';
 import type { ResolvedPeriod } from './periods';
 
 export interface FinancialSnapshot {
@@ -64,6 +65,7 @@ export interface FinancialSummary {
   pnlLines: PnlLine[];
   transactions: FinancialTransaction[];
   bankAccounts: BankAccountLine[];
+  dashboardCards: DashboardCard[];
   quickbooks: {
     configured: boolean;
     status: 'disconnected' | 'connected' | 'error';
