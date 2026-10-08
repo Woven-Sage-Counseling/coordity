@@ -1,0 +1,43 @@
+---
+import type { ChartAccountChoice } from '../lib/financials/quickbooks';
+
+interface Props {
+  accounts: ChartAccountChoice[];
+  fieldName: string;
+  valueFor: (account: ChartAccountChoice) => string;
+  isChecked?: (account: ChartAccountChoice) => boolean;
+  emptyMessage: string;
+}
+
+const { accounts, fieldName, valueFor, isChecked, emptyMessage } = Astro.props;
+---
+
+{
+  accounts.length === 0 ? (
+    <p class="mt-2 text-sm text-sage-dark/70">{emptyMessage}</p>
+  ) : (
+    <div class="mt-2">
+      <label class="block text-sm text-charcoal">
+        Find an account
+        <input class="field" type="search" data-account-filter placeholder="Start typing a name" />
+      </label>
+      <div class="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-xl bg-white p-3 ring-1 ring-black/[0.06]" data-account-list>
+        {accounts.map((account) => (
+          <label class="flex items-start gap-2 text-sm text-charcoal" data-account-name={account.name.toLowerCase()}>
+            <input
+              class="mt-0.5"
+              type="checkbox"
+              name={fieldName}
+              value={valueFor(account)}
+              checked={isChecked?.(account) ?? false}
+            />
+            <span>
+              {account.name}
+              {account.accountNumber ? <span class="text-sage-dark/55"> · {account.accountNumber}</span> : null}
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}

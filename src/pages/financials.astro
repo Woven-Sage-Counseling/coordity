@@ -4,10 +4,10 @@ import PeriodPicker from '../components/PeriodPicker.astro';
 import FinancialScrollPanel from '../components/FinancialScrollPanel.astro';
 import FinancialTransactionItem from '../components/FinancialTransactionItem.astro';
 import { QuickBooksProvider, type ChartAccountChoice } from '../lib/financials/quickbooks';
-import { periodQuery } from '../lib/financials/periods';
 import { calendarDateValue, formatDisplayDate, formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { orgIdFromLocals } from '../lib/organization';
-import { getFinancialOutlook, normalizeMatchName, type OutlookLine } from '../lib/financials/outlook';
+import FinancialDashboardSetup from '../components/FinancialDashboardSetup.astro';
+import { getFinancialOutlook, type OutlookLine } from '../lib/financials/outlook';
 import { hasPermission } from '../lib/permissions';
 
 export const prerender = false;
@@ -26,7 +26,7 @@ const outlook = outlookOpen ? await getFinancialOutlook(orgId) : null;
 const outlookLines: OutlookLine[] = outlook?.lines ?? [];
 let chartAccounts: ChartAccountChoice[] = [];
 let accountsError: string | null = null;
-if (outlookOpen && Astro.url.searchParams.get('accounts') === '1') {
+if (outlookOpen) {
   try {
     chartAccounts = await new QuickBooksProvider(orgId).listChartAccounts();
   } catch (loadError) {
@@ -74,7 +74,8 @@ const pnlRows = [
   },
 ];
 const reserveLine = summary.cashLines.find((line) => line.role === 'reserve') ?? null;
-const accountsHref = `${periodQuery(summary.period)}${periodQuery(summary.period) ? '&' : '?'}accounts=1#outlook`;
+const setupExpenseCount = outlookLines.filter((line) => line.kind === 'expense').length;
+const setupCashCount = outlookLines.filter((line) => line.kind === 'cash').length;
 
 const incomeTransactions = summary.transactions
   .filter((transaction) => transaction.bucket === 'income' && transaction.cents !== 0)
@@ -126,6 +127,23 @@ const needsReconnect =
 
 <PortalLayout title="Financials" wide>
   <h1 class="font-display text-4xl text-charcoal sm:text-5xl">Financial dashboard</h1>
+  {
+    outlookOpen && (
+      <p class="mt-4 max-w-2xl rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-charcoal shadow-sm ring-1 ring-black/[0.06]">
+        {
+          setupExpenseCount === 0 && setupCashCount === 0 ? (
+            <>
+              This page is showing every QuickBooks number. <a class="font-semibold text-[#248a18] underline" href="#outlook">Set up the dashboard</a> to choose which expense bars and bank cards appear.
+            </>
+          ) : (
+            <>
+              Showing {setupExpenseCount} expense {setupExpenseCount === 1 ? 'bar' : 'bars'} and {setupCashCount} bank {setupCashCount === 1 ? 'card' : 'cards'}. <a class="font-semibold text-[#248a18] underline" href="#outlook">Change the dashboard</a>.
+            </>
+          )
+        }
+      </p>
+    )
+  }
 
   <div class="mt-6">
     <PeriodPicker period={summary.period} action="/financials" allowCustom theme="quickbooks" />
@@ -251,173 +269,20 @@ const needsReconnect =
     }
   </div>
 
-  {
+    {
     outlookOpen && (
-      <section class="mt-12" id="outlook" aria-labelledby="outlook-heading">
-        <h2 id="outlook-heading" class="font-display text-2xl text-charcoal">Outlook</h2>
-        <p class="mt-2 max-w-2xl text-sm text-sage-dark/70">
-          Choose which QuickBooks accounts roll into each expense group and cash account. Until you save groups, the dashboard keeps the full QuickBooks income, expenses, and net income.
-        </p>
-        <form method="post" action="/api/financials/outlook" class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-          {chartAccounts.length > 0 && <input type="hidden" name="accountsLoaded" value="1" />}
-          <input type="hidden" name="period" value={summary.period.id} />
-          <input type="hidden" name="start" value={summary.period.start} />
-          <input type="hidden" name="end" value={summary.period.end} />
-
-          <div class="grid gap-3 sm:grid-cols-2">
-            <label class="block text-sm text-charcoal">
-              Reserve target (months)
-              <input class="field" type="number" name="reserveTargetMonths" min="1" max="24" required value={summary.reserveTargetMonths} />
-            </label>
-            <label class="block text-sm text-charcoal">
-              Averaging starts
-              <input class="field" type="date" name="operationsStart" value={outlook?.operationsStart ?? ''} />
-            </label>
-          </div>
-          <p class="mt-1 text-[11px] text-sage-dark/55">Leave the date empty to average across the whole reporting period. The reserve ring appears after you mark one cash account as the reserve.</p>
-
-          {
-            outlookLines.filter((line) => line.kind === 'expense').map((line) => (
-              <fieldset class="mt-5 rounded-xl border border-black/[0.08] p-3">
-                <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Expense group</legend>
-                <input type="hidden" name="lineId" value={line.id} />
-                <input type="hidden" name="lineKind" value="expense" />
-                <input type="hidden" name="lineRole" value="expense" />
-                <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-                  <input class="field" type="text" name="lineLabel" required value={line.label} aria-label="Expense group name" />
-                  <input class="field h-11 w-16" type="color" name="lineColor" value={line.color || '#3d8b37'} aria-label="Bar color" />
-                </div>
-                <label class="mt-2 inline-flex items-center gap-2 text-sm text-charcoal">
-                  <input type="checkbox" name="remove" value={line.id} />
-                  Remove
-                </label>
-                {chartAccounts.length > 0 && (
-                  <div class="mt-3 grid gap-1 sm:grid-cols-2">
-                    {expenseAccounts.map((account) => (
-                      <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                        <input
-                          type="checkbox"
-                          name="lineAccount"
-                          value={`${line.id}\t${account.id}\t${normalizeMatchName(account.name)}`}
-                          checked={line.accounts.some((saved) => saved.qbAccountId === account.id || saved.matchName === normalizeMatchName(account.name))}
-                        />
-                        {account.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {chartAccounts.length === 0 && (
-                  <label class="mt-2 block text-sm text-charcoal">
-                    Account names, one per line
-                    <textarea class="field min-h-16" name="lineTyped" placeholder="Software and technology">{line.accounts.map((account) => account.matchName).join('\n')}</textarea>
-                  </label>
-                )}
-              </fieldset>
-            ))
-          }
-
-          {
-            outlookLines.filter((line) => line.kind === 'cash').map((line) => (
-              <fieldset class="mt-5 rounded-xl border border-black/[0.08] p-3">
-                <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Cash account</legend>
-                <input type="hidden" name="lineId" value={line.id} />
-                <input type="hidden" name="lineKind" value="cash" />
-                <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-                  <input class="field" type="text" name="lineLabel" required value={line.label} aria-label="Cash account name" />
-                  <select class="field" name="lineRole" aria-label="Cash role">
-                    <option value="operating" selected={line.role === 'operating'}>Operating</option>
-                    <option value="reserve" selected={line.role === 'reserve'}>Reserve</option>
-                  </select>
-                </div>
-                <input type="hidden" name="lineColor" value={line.color || '#3d8b37'} />
-                <label class="mt-2 inline-flex items-center gap-2 text-sm text-charcoal">
-                  <input type="checkbox" name="remove" value={line.id} />
-                  Remove
-                </label>
-                {chartAccounts.length > 0 && (
-                  <div class="mt-3 grid gap-1 sm:grid-cols-2">
-                    {bankAccounts.map((account) => (
-                      <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                        <input
-                          type="checkbox"
-                          name="lineAccount"
-                          value={`${line.id}\t${account.id}\t${normalizeMatchName(account.name)}`}
-                          checked={line.accounts.some((saved) => saved.qbAccountId === account.id || saved.matchName === normalizeMatchName(account.name) || (account.accountNumber != null && saved.matchName === normalizeMatchName(account.accountNumber)))}
-                        />
-                        {account.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {chartAccounts.length === 0 && (
-                  <label class="mt-2 block text-sm text-charcoal">
-                    Account names or numbers, one per line
-                    <textarea class="field min-h-16" name="lineTyped">{line.accounts.map((account) => account.matchName).join('\n')}</textarea>
-                  </label>
-                )}
-              </fieldset>
-            ))
-          }
-
-          <fieldset class="mt-5 rounded-xl border border-dashed border-sage-dark/30 p-3">
-            <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Add expense group</legend>
-            <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input class="field" type="text" name="newExpenseLabel" placeholder="Group name" aria-label="New expense group name" />
-              <input class="field h-11 w-16" type="color" name="newExpenseColor" value="#3d8b37" aria-label="New group color" />
-            </div>
-            {expenseAccounts.length > 0 && (
-              <div class="mt-3 grid gap-1 sm:grid-cols-2">
-                {expenseAccounts.map((account) => (
-                  <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                    <input type="checkbox" name="newExpenseAccount" value={`${account.id}\t${normalizeMatchName(account.name)}`} />
-                    {account.name}
-                  </label>
-                ))}
-              </div>
-            )}
-            <label class="mt-2 block text-sm text-charcoal">
-              Account names, one per line
-              <textarea class="field min-h-16" name="newExpenseTyped"></textarea>
-            </label>
-          </fieldset>
-
-          <fieldset class="mt-5 rounded-xl border border-dashed border-sage-dark/30 p-3">
-            <legend class="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6c72]">Add cash account</legend>
-            <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input class="field" type="text" name="newCashLabel" placeholder="Account name" aria-label="New cash account name" />
-              <select class="field" name="newCashRole" aria-label="New cash role">
-                <option value="operating">Operating</option>
-                <option value="reserve">Reserve</option>
-              </select>
-            </div>
-            {bankAccounts.length > 0 && (
-              <div class="mt-3 grid gap-1 sm:grid-cols-2">
-                {bankAccounts.map((account) => (
-                  <label class="inline-flex items-center gap-2 text-sm text-charcoal">
-                    <input type="checkbox" name="newCashAccount" value={`${account.id}\t${normalizeMatchName(`${account.name} ${account.accountNumber ?? ''}`)}`} />
-                    {account.name}
-                  </label>
-                ))}
-              </div>
-            )}
-            <label class="mt-2 block text-sm text-charcoal">
-              Account names or numbers, one per line
-              <textarea class="field min-h-16" name="newCashTyped"></textarea>
-            </label>
-          </fieldset>
-
-          {accountsError && <p class="mt-3 text-sm text-red-800">{accountsError}</p>}
-
-          <div class="mt-4 flex flex-wrap gap-2">
-            <a class="rounded-md bg-white px-3.5 py-2 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.1] hover:bg-[#f4f5f8]" href={accountsHref}>
-              Load accounts from QuickBooks
-            </a>
-            <button class="rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]" type="submit">
-              Save outlook
-            </button>
-          </div>
-        </form>
-      </section>
+      <FinancialDashboardSetup
+        lines={outlookLines}
+        expenseAccounts={expenseAccounts}
+        bankAccounts={bankAccounts}
+        accountsLoaded={chartAccounts.length > 0}
+        accountsError={accountsError}
+        reserveTargetMonths={summary.reserveTargetMonths}
+        operationsStart={outlook?.operationsStart ?? ''}
+        periodId={summary.period.id}
+        periodStart={summary.period.start}
+        periodEnd={summary.period.end}
+      />
     )
   }
 
@@ -494,6 +359,11 @@ const needsReconnect =
           {summary.quickbooks.status}
         </span>
       </div>
+      {
+        canManage && summary.quickbooks.status !== 'connected' && (
+          <p class="mt-3 text-sm leading-6 text-charcoal">Connect QuickBooks first. After that, you can choose which expense bars and bank cards show on this page.</p>
+        )
+      }
 
       {
         connectionError && (
