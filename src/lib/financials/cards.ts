@@ -46,8 +46,25 @@ export function isDashboardCardKey(value: string): value is DashboardCardKey {
   return (DASHBOARD_CARD_KEYS as readonly string[]).includes(value);
 }
 
+async function ensureDashboardCardTable(): Promise<void> {
+  await getEnv()
+    .DB.prepare(
+      `CREATE TABLE IF NOT EXISTS financial_dashboard_card (
+         org_id TEXT NOT NULL,
+         card_key TEXT NOT NULL,
+         enabled INTEGER NOT NULL DEFAULT 0,
+         view_mode TEXT,
+         account_ids TEXT NOT NULL DEFAULT '[]',
+         updated_at INTEGER NOT NULL,
+         PRIMARY KEY (org_id, card_key)
+       )`,
+    )
+    .run();
+}
+
 export async function getDashboardCards(orgId: string): Promise<DashboardCard[]> {
   try {
+    await ensureDashboardCardTable();
     return await readDashboardCards(orgId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -87,6 +104,7 @@ export async function saveDashboardLayout(
   input: { enabled: DashboardCardKey[]; incomeView: IncomeExpensesView },
 ): Promise<void> {
   const enabled = new Set(input.enabled);
+  await ensureDashboardCardTable();
   const { DB } = getEnv();
   const ts = nowMs();
   const statements = DASHBOARD_CARD_KEYS.map((key) =>
@@ -112,6 +130,7 @@ export async function saveDashboardCardAccounts(
 ): Promise<void> {
   const ids = [...new Set(accountIds.map((id) => id.trim()).filter(Boolean))].slice(0, 80);
   if (cardKey === 'account_balance') ids.splice(1);
+  await ensureDashboardCardTable();
   const { DB } = getEnv();
   await DB.prepare(
     `INSERT INTO financial_dashboard_card (org_id, card_key, enabled, view_mode, account_ids, updated_at)
