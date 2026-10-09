@@ -120,10 +120,17 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
 }
 ---
 
-<div data-financial-board class="transition-opacity">
+<div
+  data-financial-board
+  class:list={[
+    'transition-opacity',
+    canManage && 'lg:grid lg:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-8',
+  ]}
+>
 {
   canManage && (
-    <section class="max-w-xl rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" aria-labelledby="add-card-heading">
+    <aside class="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+    <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" aria-labelledby="add-card-heading">
       <h2 id="add-card-heading" class="text-lg font-semibold text-charcoal">Add a card</h2>
       <p class="mt-1 text-sm leading-6 text-sage-dark/75">Check a box. That card shows up on this page. Uncheck it to take the card off.</p>
       <form method="post" action="/api/financials/cards" class="mt-4 space-y-3" data-card-picker>
@@ -215,20 +222,29 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
         )
       }
     </section>
+    </aside>
   )
 }
 
+<div class="min-w-0">
 {
   !canManage && enabled.length === 0 && (
-    <p class="max-w-xl rounded-2xl bg-white px-4 py-3 text-sm text-charcoal shadow-sm ring-1 ring-black/[0.06]">
+    <p class="rounded-2xl bg-white px-4 py-3 text-sm text-charcoal shadow-sm ring-1 ring-black/[0.06]">
       No cards on this dashboard yet.
+    </p>
+  )
+}
+{
+  canManage && enabled.length === 0 && (
+    <p class="mt-6 rounded-2xl bg-white px-4 py-3 text-sm text-charcoal shadow-sm ring-1 ring-black/[0.06] lg:mt-0">
+      Cards you add show up here.
     </p>
   )
 }
 
 {
   enabled.length > 0 && (
-    <div class="mt-8">
+    <div class:list={[canManage && 'mt-6 lg:mt-0']}>
       <PeriodPicker period={period} action="/financials" allowCustom theme="quickbooks" live />
       {periodLabel && <p class="mt-2 text-sm text-sage-dark/65">{periodLabel}</p>}
     </div>
@@ -570,6 +586,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
       </article>
     )
   }
+</div>
 </div>
 </div>
 
