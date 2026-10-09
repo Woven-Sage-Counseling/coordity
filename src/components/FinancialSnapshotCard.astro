@@ -200,11 +200,11 @@ function piePath(start: number, end: number): string {
               return (
                 <div class="rounded-lg bg-white p-3 shadow-sm">
                   <p class="m-0 text-xs font-semibold text-[#393a3d]">Income and expenses</p>
-                  <div class="mt-2 flex flex-col items-center gap-2">
+                  <div class="mt-2 flex w-full flex-col items-center gap-3">
                     {pies.map(({ label, pie }) => (
-                      <div class="flex flex-col items-center">
+                      <div class="flex w-full flex-col items-center">
                         <p class="text-[10px] font-medium uppercase tracking-wide text-[#6b6c72]">{label}</p>
-                        <svg class="mt-1 h-14 w-14" viewBox="0 0 100 100" role="img" aria-label={`${label} pie chart`}>
+                        <svg class="mt-1 aspect-square w-[92%]" viewBox="0 0 100 100" role="img" aria-label={`${label} pie chart`}>
                           {pie.empty ? (
                             <circle cx="50" cy="50" r="42" fill="#e3e5e8">
                               <title>{`No ${label.toLowerCase()} in this range`}</title>
@@ -239,19 +239,34 @@ function piePath(start: number, end: number): string {
                   <p class="m-0 text-xs font-semibold text-[#393a3d]">Income and expenses</p>
                   {lists.map((column) => (
                     <div class="mt-2">
-                      <p class="text-[10px] font-medium uppercase tracking-wide text-[#6b6c72]">{column.label}</p>
-                      <ul class="mt-1 h-14 overflow-y-auto">
-                        {column.items.length === 0 ? (
-                          <li class="flex h-7 items-center text-[11px] text-[#6b6c72]">None in this range</li>
-                        ) : (
-                          column.items.map((transaction) => (
-                            <li class="flex h-7 items-center justify-between gap-2 text-[11px] text-[#393a3d]">
-                              <span class="min-w-0 truncate">{transactionShortName(transaction.name)}</span>
-                              <span class="shrink-0 font-semibold tabular-nums">{formatUsd(Math.abs(transaction.cents))}</span>
-                            </li>
-                          ))
-                        )}
-                      </ul>
+                      <div class="flex items-center justify-between gap-2">
+                        <p class="text-[10px] font-medium uppercase tracking-wide text-[#6b6c72]">{column.label}</p>
+                        {column.items.length > 2 ? (
+                          <p class="flex items-center gap-0.5 text-[10px] font-semibold text-[#6b6c72]">
+                            Scroll
+                            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                              <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                          </p>
+                        ) : null}
+                      </div>
+                      <div class="relative mt-1 overflow-hidden rounded-md bg-[#f4f5f8] ring-1 ring-black/[0.08]">
+                        <ul class:list={['widget-detail-scroll h-14', column.items.length > 2 ? 'overflow-y-scroll' : 'overflow-y-hidden']}>
+                          {column.items.length === 0 ? (
+                            <li class="flex h-7 items-center px-2 text-[11px] text-[#6b6c72]">None in this range</li>
+                          ) : (
+                            column.items.map((transaction) => (
+                              <li class="flex h-7 items-center justify-between gap-2 px-2 text-[11px] text-[#393a3d]">
+                                <span class="min-w-0 truncate">{transactionShortName(transaction.name)}</span>
+                                <span class="shrink-0 font-semibold tabular-nums">{formatUsd(Math.abs(transaction.cents))}</span>
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                        {column.items.length > 2 ? (
+                          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-[#f4f5f8] to-transparent" aria-hidden="true"></div>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -272,3 +287,23 @@ function piePath(start: number, end: number): string {
     }
   </div>
 </aside>
+
+<style>
+  .widget-detail-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #6b6c72 #e3e5e8;
+  }
+
+  .widget-detail-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .widget-detail-scroll::-webkit-scrollbar-thumb {
+    background: #6b6c72;
+    border-radius: 999px;
+  }
+
+  .widget-detail-scroll::-webkit-scrollbar-track {
+    background: #e3e5e8;
+  }
+</style>
