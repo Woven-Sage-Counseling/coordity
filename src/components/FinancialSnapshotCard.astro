@@ -292,45 +292,53 @@ function piePath(start: number, end: number): string {
 </aside>
 
 <script>
-  const showPieSlice = (slice: Element) => {
-    const pie = slice.closest('[data-pie]');
-    const caption = pie?.parentElement?.querySelector('[data-pie-caption]');
-    if (caption) caption.textContent = slice.getAttribute('data-label') || '';
-    pie?.querySelectorAll('[data-pie-slice]').forEach((path) => {
-      if (path instanceof SVGElement) path.style.opacity = path === slice ? '1' : '0.35';
-    });
-  };
-
-  const clearPieSlice = (slice: Element) => {
-    const pie = slice.closest('[data-pie]');
-    const caption = pie?.parentElement?.querySelector('[data-pie-caption]');
-    if (caption) caption.textContent = '';
-    pie?.querySelectorAll('[data-pie-slice]').forEach((path) => {
-      if (path instanceof SVGElement) path.style.opacity = '1';
-    });
-  };
-
   if (!document.documentElement.dataset.pieHover) {
     document.documentElement.dataset.pieHover = '1';
-    document.addEventListener('pointerover', (event) => {
+    let activeSlice: Element | null = null;
+
+    const paintPieSlice = (slice: Element | null) => {
+      if (slice === activeSlice) return;
+      const nextPie = slice?.closest('[data-pie]') ?? null;
+      const previousPie = activeSlice?.closest('[data-pie]') ?? null;
+      if (previousPie && previousPie !== nextPie) {
+        previousPie.classList.remove('is-hot');
+        previousPie.querySelectorAll('[data-pie-slice]').forEach((path) => path.classList.remove('is-on'));
+        const previousCaption = previousPie.parentElement?.querySelector('[data-pie-caption]');
+        if (previousCaption) previousCaption.textContent = '';
+      }
+      activeSlice = slice;
+      if (!slice || !nextPie) return;
+      nextPie.classList.add('is-hot');
+      nextPie.querySelectorAll('[data-pie-slice]').forEach((path) => path.classList.toggle('is-on', path === slice));
+      const caption = nextPie.parentElement?.querySelector('[data-pie-caption]');
+      if (caption) caption.textContent = slice.getAttribute('data-label') || '';
+    };
+
+    document.addEventListener('pointermove', (event) => {
       const target = event.target;
-      if (!(target instanceof Element)) return;
-      const slice = target.closest('[data-pie-slice]');
-      if (slice) showPieSlice(slice);
+      const slice = target instanceof Element ? target.closest('[data-pie-slice]') : null;
+      paintPieSlice(slice);
     });
+
     document.addEventListener('pointerout', (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const slice = target.closest('[data-pie-slice]');
-      if (!slice) return;
-      const next = event.relatedTarget;
-      if (next instanceof Element && next.closest('[data-pie]') === slice.closest('[data-pie]')) return;
-      clearPieSlice(slice);
+      if (event.relatedTarget == null) paintPieSlice(null);
     });
   }
 </script>
 
 <style>
+  [data-pie-slice] {
+    transition: opacity 180ms ease;
+  }
+
+  [data-pie].is-hot [data-pie-slice] {
+    opacity: 0.4;
+  }
+
+  [data-pie].is-hot [data-pie-slice].is-on {
+    opacity: 1;
+  }
+
   .widget-detail-scroll {
     scrollbar-width: thin;
     scrollbar-color: #6b6c72 #e3e5e8;
