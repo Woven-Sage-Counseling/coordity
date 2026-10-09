@@ -342,6 +342,36 @@ export function transactionsForAccounts(
   return transactions.filter((transaction) => names.has(normalizeMatchName(transaction.accountName)));
 }
 
+export function splitTransactionsByKind(
+  transactions: FinancialTransaction[],
+  accounts: DashboardAccountChoice[],
+  selectedIds: string[],
+): { income: FinancialTransaction[]; expenses: FinancialTransaction[] } {
+  const selected = new Set(selectedIds);
+  const incomeNames = new Set<string>();
+  const expenseNames = new Set<string>();
+  for (const account of accounts) {
+    if (!selected.has(account.id)) continue;
+    const name = normalizeMatchName(account.name);
+    if (!name) continue;
+    if (account.kind === 'income') incomeNames.add(name);
+    else if (account.kind === 'expense') expenseNames.add(name);
+  }
+
+  const income: FinancialTransaction[] = [];
+  const expenses: FinancialTransaction[] = [];
+  for (const transaction of transactions) {
+    const name = normalizeMatchName(transaction.accountName);
+    const incomeHit = incomeNames.has(name);
+    const expenseHit = expenseNames.has(name);
+    if (incomeHit && !expenseHit) income.push(transaction);
+    else if (expenseHit && !incomeHit) expenses.push(transaction);
+    else if (transaction.bucket === 'income') income.push(transaction);
+    else expenses.push(transaction);
+  }
+  return { income, expenses };
+}
+
 export function bankBalanceForAccount(
   banks: BankAccountLine[],
   accounts: DashboardAccountChoice[],

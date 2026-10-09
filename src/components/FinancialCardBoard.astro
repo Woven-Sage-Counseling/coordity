@@ -7,6 +7,7 @@ import {
   bankBalanceForAccount,
   pnlAmountForAccount,
   signedNetCents,
+  splitTransactionsByKind,
   transactionsForAccounts,
   type DashboardAccountChoice,
   type DashboardCard,
@@ -317,6 +318,11 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
       const blockTransactions = transactionsForAccounts(summary.transactions, activityChoices, block.accountIds).sort(
         (a, b) => calendarDateValue(b.date) - calendarDateValue(a.date) || Math.abs(b.cents) - Math.abs(a.cents),
       );
+      const transactionColumns = splitTransactionsByKind(blockTransactions, activityChoices, block.accountIds);
+      const listColumns = [
+        { label: 'Expenses', items: transactionColumns.expenses, amountClass: 'text-charcoal' },
+        { label: 'Income', items: transactionColumns.income, amountClass: 'text-[#2CA01C]' },
+      ];
       const pies = [
         { label: 'Income', pie: incomePie, emptyNote: incomeSelected.length === 0 ? 'No income accounts in this block.' : 'No income in this date range.' },
         { label: 'Expenses', pie: expensePie, emptyNote: expenseSelected.length === 0 ? 'No expense accounts in this block.' : 'No expenses in this date range.' },
@@ -350,17 +356,28 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
               blockTransactions.length === 0 ? (
                 <p class="mt-4 text-sm text-sage-dark/70">No transactions for those accounts in this date range.</p>
               ) : (
-                <FinancialScrollPanel ariaLabel="Income and expense transactions">
-                  <ul class="divide-y divide-black/[0.06]">
-                    {blockTransactions.map((transaction) => (
-                      <FinancialTransactionItem
-                        transaction={transaction}
-                        metaLine={transactionMetaLine(transaction)}
-                        amountClass={transaction.cents < 0 ? 'text-charcoal' : 'text-[#2CA01C]'}
-                      />
-                    ))}
-                  </ul>
-                </FinancialScrollPanel>
+                <div class="mt-4 grid gap-6 md:grid-cols-2">
+                  {listColumns.map((column) => (
+                    <div class="min-w-0">
+                      <h3 class="text-sm font-semibold text-charcoal">{column.label}</h3>
+                      {column.items.length === 0 ? (
+                        <p class="mt-3 text-sm text-sage-dark/70">Nothing in this column for this date range.</p>
+                      ) : (
+                        <FinancialScrollPanel ariaLabel={`${column.label} transactions`}>
+                          <ul class="divide-y divide-black/[0.06]">
+                            {column.items.map((transaction) => (
+                              <FinancialTransactionItem
+                                transaction={transaction}
+                                metaLine={transactionMetaLine(transaction)}
+                                amountClass={column.amountClass}
+                              />
+                            ))}
+                          </ul>
+                        </FinancialScrollPanel>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )
             ) : block.viewMode === 'pie' ? (
               <div class="mt-4 grid gap-6 md:grid-cols-2">
