@@ -70,7 +70,13 @@ const incomeTransactions = incomeCard
       (a, b) => calendarDateValue(b.date) - calendarDateValue(a.date) || Math.abs(b.cents) - Math.abs(a.cents),
     )
   : [];
-const balance = bankBalanceForAccount(summary.bankAccounts, bankChoices, balanceCard?.accountIds[0] ?? null);
+const balanceIds = balanceCard?.accountIds ?? [];
+const balances = balanceIds.flatMap((id) => {
+  const found = bankBalanceForAccount(summary.bankAccounts, bankChoices, id);
+  if (!found) return [];
+  return [{ id, name: found.name, cents: found.cents }];
+});
+const remainingBanks = bankChoices.filter((account) => !balanceIds.includes(account.id));
 const netCents = signedNetCents(summary.pnlLines, activityChoices, netCard?.accountIds ?? []);
 const palette = ['#3d8b37', '#6aa84f', '#8fbc8f', '#a8c5a0', '#c4d7b8'];
 
@@ -122,7 +128,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
           <input class="mt-0.5" type="checkbox" name="card" value="account_balance" checked={balanceCard?.enabled ?? false} />
           <span>
             <span class="font-semibold">Account balance</span>
-            <span class="mt-0.5 block text-sage-dark/70">The money in one account right now. Pick the account on the card.</span>
+            <span class="mt-0.5 block text-sage-dark/70">The money in an account right now. Add as many accounts as you want on the card.</span>
           </span>
         </label>
 
@@ -305,25 +311,57 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
   {
     balanceCard?.enabled && (
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h2 class="font-display text-2xl text-charcoal">Account balance</h2>
-        <p class="mt-3 text-4xl font-semibold tabular-nums text-charcoal">{formatUsd(balance?.cents ?? null)}</p>
-        <p class="mt-1 text-sm text-sage-dark/70">{balance?.name ?? 'Choose an account.'}</p>
+        <h2 class="font-display text-2xl text-charcoal">Account balances</h2>
         {
-          canManage && (
-            <form method="post" action="/api/financials/cards" class="mt-4" data-balance-form>
+          balances.length === 0 ? (
+            <p class="mt-3 text-sm text-sage-dark/70">Add an account below. Each one shows the money in it right now.</p>
+          ) : (
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              {balances.map((item) => (
+                <div class="rounded-xl bg-[#f7f8f6] p-4">
+                  <p class="text-sm text-sage-dark/70">{item.name}</p>
+                  <p class="mt-1 text-3xl font-semibold tabular-nums text-charcoal">{formatUsd(item.cents)}</p>
+                  {
+                    canManage && (
+                      <form method="post" action="/api/financials/cards" class="mt-3">
+                        <input type="hidden" name="intent" value="accounts" />
+                        <input type="hidden" name="cardKey" value="account_balance" />
+                        <input type="hidden" name="period" value={period.id} />
+                        <input type="hidden" name="start" value={period.start} />
+                        <input type="hidden" name="end" value={period.end} />
+                        {balanceIds
+                          .filter((id) => id !== item.id)
+                          .map((id) => (
+                            <input type="hidden" name="accountId" value={id} />
+                          ))}
+                        <button class="text-sm font-semibold text-[#248a18] underline" type="submit">
+                          Remove
+                        </button>
+                      </form>
+                    )
+                  }
+                </div>
+              ))}
+            </div>
+          )
+        }
+        {
+          canManage && remainingBanks.length > 0 && (
+            <form method="post" action="/api/financials/cards" class="mt-4" data-balance-add>
               <input type="hidden" name="intent" value="accounts" />
               <input type="hidden" name="cardKey" value="account_balance" />
               <input type="hidden" name="period" value={period.id} />
               <input type="hidden" name="start" value={period.start} />
               <input type="hidden" name="end" value={period.end} />
+              {balanceIds.map((id) => (
+                <input type="hidden" name="accountId" value={id} />
+              ))}
               <label class="block text-sm text-charcoal">
-                Which account?
+                Add an account
                 <select class="field max-w-md" name="accountId">
                   <option value="">Choose an account</option>
-                  {bankChoices.map((account) => (
-                    <option value={account.id} selected={balanceCard.accountIds[0] === account.id}>
-                      {account.name}
-                    </option>
+                  {remainingBanks.map((account) => (
+                    <option value={account.id}>{account.name}</option>
                   ))}
                 </select>
               </label>
@@ -390,9 +428,13 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
     });
   });
 
-  document.querySelectorAll('[data-balance-form]').forEach((form) => {
+  document.querySelectorAll('[data-balance-add]').forEach((form) => {
     if (!(form instanceof HTMLFormElement)) return;
-    form.addEventListener('change', () => form.requestSubmit());
+    form.addEventListener('change', (event) => {
+      const target = event.target;
+      if (target instanceof HTMLSelectElement && !target.value) return;
+      form.requestSubmit();
+    });
   });
 </script>
 

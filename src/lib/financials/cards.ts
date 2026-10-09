@@ -129,7 +129,6 @@ export async function saveDashboardCardAccounts(
   accountIds: string[],
 ): Promise<void> {
   const ids = [...new Set(accountIds.map((id) => id.trim()).filter(Boolean))].slice(0, 80);
-  if (cardKey === 'account_balance') ids.splice(1);
   await ensureDashboardCardTable();
   const { DB } = getEnv();
   await DB.prepare(
