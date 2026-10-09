@@ -63,24 +63,32 @@ const expenseTotal = summary.reportedExpensesCents ?? snapshot?.totalExpensesCen
 const pnlScale = Math.max(incomeCents, expenseTotal, ...expenseBars.map((line) => Math.abs(line.cents)), 1);
 const barWidth = (cents: number) => `${Math.round((Math.abs(cents) / pnlScale) * 100)}%`;
 
-const incomeAccounts = activityChoices.filter((account) => incomeCard?.accountIds.includes(account.id));
-const incomeScale = Math.max(...incomeAccounts.map((account) => pnlAmountForAccount(summary.pnlLines, account)), 1);
-const pieColors = ['#2CA01C', '#3d8b37', '#6aa84f', '#c4a35a', '#a9533d', '#6b8f71', '#8fbc8f', '#d4a017', '#4f6f52', '#7d9a78'];
-const pieParts = incomeAccounts.map((account, index) => ({
-  account,
-  cents: Math.abs(pnlAmountForAccount(summary.pnlLines, account)),
-  color: pieColors[index % pieColors.length],
-}));
-const pieTotal = pieParts.reduce((sum, part) => sum + part.cents, 0);
-let pieCursor = -Math.PI / 2;
-const pieSlices = pieParts.map((part) => {
-  const sweep = pieTotal > 0 ? (part.cents / pieTotal) * Math.PI * 2 : 0;
-  const start = pieCursor;
-  pieCursor += sweep;
-  return { ...part, start, end: pieCursor };
-});
+const incomeBlocks = incomeCard?.blocks ?? [];
+const incomePieColors = ['#2CA01C', '#3d8b37', '#6aa84f', '#8fbc8f', '#4f6f52', '#7d9a78'];
+const expensePieColors = ['#c4a35a', '#a9533d', '#d4a017', '#8a5a44', '#b8956a', '#6b4f3a'];
 
-const pieEmpty = pieTotal <= 0;
+function pieFor(accounts: DashboardAccountChoice[], colors: string[]) {
+  const parts = accounts.map((account, index) => ({
+    account,
+    cents: Math.abs(pnlAmountForAccount(summary.pnlLines, account)),
+    color: colors[index % colors.length] ?? '#2CA01C',
+  }));
+  const total = parts.reduce((sum, part) => sum + part.cents, 0);
+  let cursor = -Math.PI / 2;
+  const slices = parts.map((part) => {
+    const sweep = total > 0 ? (part.cents / total) * Math.PI * 2 : 0;
+    const start = cursor;
+    cursor += sweep;
+    return { ...part, start, end: cursor };
+  });
+  return { slices, total, empty: total <= 0 };
+}
+
+function incomeViewLabel(view: string): string {
+  if (view === 'list') return 'Detailed list';
+  if (view === 'pie') return 'Pie chart';
+  return 'Summary graph';
+}
 
 function piePath(start: number, end: number): string {
   const radius = 42;
@@ -96,11 +104,6 @@ function piePath(start: number, end: number): string {
   const large = sweep > Math.PI ? 1 : 0;
   return `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
 }
-const incomeTransactions = incomeCard
-  ? transactionsForAccounts(summary.transactions, activityChoices, incomeCard.accountIds).sort(
-      (a, b) => calendarDateValue(b.date) - calendarDateValue(a.date) || Math.abs(b.cents) - Math.abs(a.cents),
-    )
-  : [];
 const balanceIds = balanceCard?.accountIds ?? [];
 const balanceLabels = balanceCard?.labels ?? {};
 const balances = balanceIds.flatMap((id) => {
@@ -138,26 +141,14 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
         </label>
 
         <div class="rounded-xl bg-[#f7f8f6] px-3 py-3">
-          <label class="flex items-start gap-3 text-sm text-charcoal">
-            <input class="mt-0.5" type="checkbox" name="card" value="income_expenses" checked={incomeCard?.enabled ?? false} />
-            <span>
-              <span class="font-semibold">Income and expenses</span>
-              <span class="mt-0.5 block text-sage-dark/70">Then pick a graph, a pie chart, or a list. Choose the accounts on the card.</span>
-            </span>
-          </label>
-          <div class="mt-3 space-y-2 pl-7">
-            <label class="flex items-center gap-2 text-sm text-charcoal">
-              <input type="radio" name="incomeView" value="graph" checked={incomeCard?.viewMode === 'graph' || !incomeCard?.viewMode} />
-              Summary graph
-            </label>
-            <label class="flex items-center gap-2 text-sm text-charcoal">
-              <input type="radio" name="incomeView" value="pie" checked={incomeCard?.viewMode === 'pie'} />
-              Pie chart
-            </label>
-            <label class="flex items-center gap-2 text-sm text-charcoal">
-              <input type="radio" name="incomeView" value="list" checked={incomeCard?.viewMode === 'list'} />
-              Detailed list
-            </label>
+          <p class="text-sm font-semibold text-charcoal">Income and expenses</p>
+          <p class="mt-0.5 text-sm text-sage-dark/70">Add a block for each way you want to see it. A graph, a pie chart, and a list can all be on the page.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            {(['graph', 'pie', 'list'] as const).map((view) => (
+              <button class="rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-charcoal shadow-sm ring-1 ring-black/[0.08] hover:bg-[#f4f5f8]" type="submit" form={`add-income-${view}`}>
+                {view === 'graph' ? 'Add a summary graph' : view === 'pie' ? 'Add a pie chart' : 'Add a detailed list'}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -177,7 +168,16 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
           </span>
         </label>
       </form>
-      <p class="mt-3 text-xs text-sage-dark/60">Checking a box saves it and adds the card.</p>
+      {(['graph', 'pie', 'list'] as const).map((view) => (
+        <form id={`add-income-${view}`} method="post" action="/api/financials/cards" class="hidden">
+          <input type="hidden" name="intent" value="add-income" />
+          <input type="hidden" name="incomeView" value={view} />
+          <input type="hidden" name="period" value={period.id} />
+          <input type="hidden" name="start" value={period.start} />
+          <input type="hidden" name="end" value={period.end} />
+        </form>
+      ))}
+      <p class="mt-3 text-xs text-sage-dark/60">Checking a box saves it and adds the card. The income and expense buttons add another block.</p>
 
       {
         connectionError && (
@@ -275,106 +275,160 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
   }
 
   {
-    incomeCard?.enabled && (
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h2 class="font-display text-2xl text-charcoal">Income and expenses</h2>
-        <p class="mt-1 text-sm text-sage-dark/70">
-          {incomeCard.viewMode === 'list' ? 'Detailed list' : incomeCard.viewMode === 'pie' ? 'Pie chart' : 'Summary graph'}
-        </p>
-        {
-          incomeCard.accountIds.length === 0 ? (
-            <p class="mt-3 text-sm text-sage-dark/70">Check the accounts that should feed this card, then save.</p>
-          ) : incomeCard.viewMode === 'list' ? (
-            incomeTransactions.length === 0 ? (
-              <p class="mt-4 text-sm text-sage-dark/70">No transactions for those accounts in this date range.</p>
-            ) : (
-              <FinancialScrollPanel ariaLabel="Income and expense transactions">
-                <ul class="divide-y divide-black/[0.06]">
-                  {incomeTransactions.map((transaction) => (
-                    <FinancialTransactionItem
-                      transaction={transaction}
-                      metaLine={transactionMetaLine(transaction)}
-                      amountClass={transaction.cents < 0 ? 'text-charcoal' : 'text-[#2CA01C]'}
-                    />
-                  ))}
-                </ul>
-              </FinancialScrollPanel>
-            )
-          ) : incomeCard.viewMode === 'pie' ? (
-            pieEmpty ? (
-              <p class="mt-4 text-sm text-sage-dark/70">Those accounts have no amounts in this date range.</p>
-            ) : (
-              <div class="mt-4 flex flex-wrap items-center gap-6">
-                <svg class="h-44 w-44 shrink-0" viewBox="0 0 100 100" role="img" aria-label="Income and expenses pie chart">
-                  {pieSlices
-                    .filter((slice) => slice.cents > 0)
-                    .map((slice) => (
-                      <path d={piePath(slice.start, slice.end)} fill={slice.color}>
-                        <title>{`${slice.account.name}: ${formatUsd(slice.cents)}`}</title>
-                      </path>
+    incomeBlocks.map((block) => {
+      const selected = activityChoices.filter((account) => block.accountIds.includes(account.id));
+      const incomeSelected = selected.filter((account) => account.kind === 'income');
+      const expenseSelected = selected.filter((account) => account.kind === 'expense');
+      const incomePie = pieFor(incomeSelected, incomePieColors);
+      const expensePie = pieFor(expenseSelected, expensePieColors);
+      const incomeScale = Math.max(1, ...selected.map((account) => Math.abs(pnlAmountForAccount(summary.pnlLines, account))));
+      const blockTransactions = transactionsForAccounts(summary.transactions, activityChoices, block.accountIds).sort(
+        (a, b) => calendarDateValue(b.date) - calendarDateValue(a.date) || Math.abs(b.cents) - Math.abs(a.cents),
+      );
+      const pies = [
+        { label: 'Income', pie: incomePie, emptyNote: incomeSelected.length === 0 ? 'No income accounts in this block.' : 'No income in this date range.' },
+        { label: 'Expenses', pie: expensePie, emptyNote: expenseSelected.length === 0 ? 'No expense accounts in this block.' : 'No expenses in this date range.' },
+      ];
+      return (
+        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-2xl text-charcoal">Income and expenses</h2>
+              <p class="mt-1 text-sm text-sage-dark/70">{incomeViewLabel(block.viewMode)}</p>
+            </div>
+            {
+              canManage && (
+                <form method="post" action="/api/financials/cards">
+                  <input type="hidden" name="intent" value="remove-income" />
+                  <input type="hidden" name="blockId" value={block.id} />
+                  <input type="hidden" name="period" value={period.id} />
+                  <input type="hidden" name="start" value={period.start} />
+                  <input type="hidden" name="end" value={period.end} />
+                  <button class="rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal" type="submit">
+                    Remove
+                  </button>
+                </form>
+              )
+            }
+          </div>
+          {
+            block.accountIds.length === 0 ? (
+              <p class="mt-3 text-sm text-sage-dark/70">Check the accounts that should feed this block, then save.</p>
+            ) : block.viewMode === 'list' ? (
+              blockTransactions.length === 0 ? (
+                <p class="mt-4 text-sm text-sage-dark/70">No transactions for those accounts in this date range.</p>
+              ) : (
+                <FinancialScrollPanel ariaLabel="Income and expense transactions">
+                  <ul class="divide-y divide-black/[0.06]">
+                    {blockTransactions.map((transaction) => (
+                      <FinancialTransactionItem
+                        transaction={transaction}
+                        metaLine={transactionMetaLine(transaction)}
+                        amountClass={transaction.cents < 0 ? 'text-charcoal' : 'text-[#2CA01C]'}
+                      />
                     ))}
-                </svg>
-                <ul class="min-w-0 flex-1 space-y-2">
-                  {pieSlices.map((slice) => (
-                    <li class="flex items-baseline justify-between gap-3 text-sm">
-                      <span class="flex min-w-0 items-center gap-2">
-                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" style={`background-color: ${slice.color}`}></span>
-                        <span class="truncate font-medium text-charcoal">{slice.account.name}</span>
-                      </span>
-                      <span class="shrink-0 tabular-nums text-charcoal">
-                        <span class="font-semibold">{formatUsd(slice.cents)}</span>
-                        <span class="ml-1 text-xs text-sage-dark/55">
-                          {pieTotal > 0 ? `${Math.round((slice.cents / pieTotal) * 100)}%` : ''}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          ) : (
-            <div class="mt-4 space-y-4">
-              {incomeAccounts.map((account, index) => {
-                const cents = pnlAmountForAccount(summary.pnlLines, account);
-                return (
+                  </ul>
+                </FinancialScrollPanel>
+              )
+            ) : block.viewMode === 'pie' ? (
+              <div class="mt-4 grid gap-6 md:grid-cols-2">
+                {pies.map(({ label, pie, emptyNote }) => (
                   <div>
-                    <div class="flex items-baseline justify-between gap-3 text-sm">
-                      <span class="font-medium text-charcoal">{account.name}</span>
-                      <span class="font-semibold tabular-nums text-charcoal">{formatUsd(cents)}</span>
-                    </div>
-                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
-                      <div class="h-full rounded-full" style={`width: ${Math.round((cents / incomeScale) * 100)}%; background-color: ${account.kind === 'income' ? '#2CA01C' : palette[index % palette.length]}`}></div>
+                    <h3 class="text-sm font-semibold text-charcoal">{label}</h3>
+                    <div class="mt-3 flex flex-wrap items-center gap-4">
+                      <svg class="h-40 w-40 shrink-0" viewBox="0 0 100 100" role="img" aria-label={`${label} pie chart`}>
+                        {pie.empty ? (
+                          <circle cx="50" cy="50" r="42" fill="#e3e5e8" />
+                        ) : (
+                          pie.slices
+                            .filter((slice) => slice.cents > 0)
+                            .map((slice) => (
+                              <path d={piePath(slice.start, slice.end)} fill={slice.color}>
+                                <title>{`${slice.account.name}: ${formatUsd(slice.cents)}`}</title>
+                              </path>
+                            ))
+                        )}
+                      </svg>
+                      {pie.empty ? (
+                        <p class="text-sm text-sage-dark/70">{emptyNote}</p>
+                      ) : (
+                        <ul class="min-w-0 flex-1 space-y-2">
+                          {pie.slices
+                            .filter((slice) => slice.cents > 0)
+                            .map((slice) => (
+                              <li class="flex items-baseline justify-between gap-3 text-sm">
+                                <span class="flex min-w-0 items-center gap-2">
+                                  <span class="h-2.5 w-2.5 shrink-0 rounded-full" style={`background-color: ${slice.color}`}></span>
+                                  <span class="truncate font-medium text-charcoal">{slice.account.name}</span>
+                                </span>
+                                <span class="shrink-0 tabular-nums text-charcoal">
+                                  <span class="font-semibold">{formatUsd(slice.cents)}</span>
+                                  <span class="ml-1 text-xs text-sage-dark/55">
+                                    {pie.total > 0 ? `${Math.round((slice.cents / pie.total) * 100)}%` : ''}
+                                  </span>
+                                </span>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )
-        }
-        {
-          canManage && (
-            <form method="post" action="/api/financials/cards" class="mt-5 border-t border-black/[0.06] pt-4">
-              <input type="hidden" name="intent" value="accounts" />
-              <input type="hidden" name="cardKey" value="income_expenses" />
-              <input type="hidden" name="period" value={period.id} />
-              <input type="hidden" name="start" value={period.start} />
-              <input type="hidden" name="end" value={period.end} />
-              <p class="text-sm font-semibold text-charcoal">Which accounts feed this card?</p>
-              <FinancialAccountChecklist
-                accounts={activityChoices.map((account) => ({ id: account.id, name: account.name, accountType: account.kind, accountNumber: null }))}
-                fieldName="accountId"
-                emptyMessage="No income or expense accounts yet. Connect QuickBooks and update the numbers."
-                valueFor={(account) => account.id}
-                isChecked={(account) => incomeCard.accountIds.includes(account.id)}
-              />
-              <button class="mt-3 rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]" type="submit">
-                Save accounts
-              </button>
-            </form>
-          )
-        }
-      </article>
-    )
+                ))}
+              </div>
+            ) : (
+              <div class="mt-4 space-y-4">
+                {selected.map((account, index) => {
+                  const cents = pnlAmountForAccount(summary.pnlLines, account);
+                  return (
+                    <div>
+                      <div class="flex items-baseline justify-between gap-3 text-sm">
+                        <span class="font-medium text-charcoal">{account.name}</span>
+                        <span class="font-semibold tabular-nums text-charcoal">{formatUsd(cents)}</span>
+                      </div>
+                      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e3e5e8]">
+                        <div class="h-full rounded-full" style={`width: ${Math.round((Math.abs(cents) / incomeScale) * 100)}%; background-color: ${account.kind === 'income' ? '#2CA01C' : palette[index % palette.length]}`}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          }
+          {
+            canManage && (
+              <form method="post" action="/api/financials/cards" class="mt-5 border-t border-black/[0.06] pt-4" data-income-view>
+                <input type="hidden" name="intent" value="accounts" />
+                <input type="hidden" name="cardKey" value="income_expenses" />
+                <input type="hidden" name="blockId" value={block.id} />
+                <input type="hidden" name="period" value={period.id} />
+                <input type="hidden" name="start" value={period.start} />
+                <input type="hidden" name="end" value={period.end} />
+                <p class="text-sm font-semibold text-charcoal">How should this block look?</p>
+                <div class="mt-2 flex flex-wrap gap-3">
+                  {(['graph', 'pie', 'list'] as const).map((view) => (
+                    <label class="flex items-center gap-2 text-sm text-charcoal">
+                      <input type="radio" name="incomeView" value={view} checked={block.viewMode === view} />
+                      {incomeViewLabel(view)}
+                    </label>
+                  ))}
+                </div>
+                <p class="mt-4 text-sm font-semibold text-charcoal">Which accounts feed this block?</p>
+                <FinancialAccountChecklist
+                  accounts={activityChoices.map((account) => ({ id: account.id, name: account.name, accountType: account.kind, accountNumber: null }))}
+                  fieldName="accountId"
+                  emptyMessage="No income or expense accounts yet. Connect QuickBooks and update the numbers."
+                  valueFor={(account) => account.id}
+                  isChecked={(account) => block.accountIds.includes(account.id)}
+                />
+                <button class="mt-3 rounded-md bg-[#2CA01C] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#248a18]" type="submit">
+                  Save accounts
+                </button>
+              </form>
+            )
+          }
+        </article>
+      );
+    })
   }
 
   {
@@ -641,11 +695,12 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
         return;
       }
 
-      if (target instanceof HTMLInputElement && form.hasAttribute('data-card-picker')) {
-        if (target.name === 'incomeView') {
-          const box = form.querySelector('input[value="income_expenses"]');
-          if (box instanceof HTMLInputElement) box.checked = true;
-        }
+      if (target instanceof HTMLInputElement && target.name === 'incomeView' && form.hasAttribute('data-income-view')) {
+        form.requestSubmit();
+        return;
+      }
+
+      if (form.hasAttribute('data-card-picker')) {
         form.requestSubmit();
         return;
       }

@@ -1,5 +1,5 @@
 ---
-import { bankBalanceForAccount, pnlAmountForAccount, signedNetCents } from '../lib/financials/cards';
+import { bankBalanceForAccount, signedNetCents } from '../lib/financials/cards';
 import { formatUsd, getFinancialSummary } from '../lib/financials/summary';
 import { periodQuery, resolvePeriodFromSearch } from '../lib/financials/periods';
 import { orgIdFromLocals } from '../lib/organization';
@@ -134,19 +134,15 @@ const periodLabel = snapshot
                 </div>
               );
             }
-            const picked = card.accountIds.length;
-            const total = summary
-              ? card.accountIds.reduce((sum, id) => sum + pnlAmountForAccount(summary.pnlLines, { id, name: '', kind: 'expense' }), 0)
-              : 0;
-            return (
+            return card.blocks.map((block) => (
               <div class="rounded-lg bg-white p-3 shadow-sm">
                 <p class="m-0 text-xs font-semibold text-[#393a3d]">Income and expenses</p>
                 <p class="mt-1 text-xs text-[#6b6c72]">
-                  {card.viewMode === 'list' ? 'Detailed list' : card.viewMode === 'pie' ? 'Pie chart' : 'Summary graph'}
-                  {picked > 0 ? ` · ${formatUsd(total)}` : ' · choose accounts'}
+                  {block.viewMode === 'list' ? 'Detailed list' : block.viewMode === 'pie' ? 'Pie chart' : 'Summary graph'}
+                  {block.accountIds.length > 0 ? ` · ${block.accountIds.length} accounts` : ' · choose accounts'}
                 </p>
               </div>
-            );
+            ));
           })}
         </div>
       )

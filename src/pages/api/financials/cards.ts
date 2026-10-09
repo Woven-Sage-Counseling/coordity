@@ -1,8 +1,11 @@
 import type { APIRoute } from 'astro';
 import {
+  addIncomeExpenseBlock,
   isDashboardCardKey,
+  removeIncomeExpenseBlock,
   saveDashboardCardAccounts,
   saveDashboardLayout,
+  saveIncomeExpenseBlock,
   type DashboardCardKey,
   type IncomeExpensesView,
 } from '../../../lib/financials/cards';
@@ -35,25 +38,37 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   try {
     const intent = String(form.get('intent') ?? 'layout');
-    if (intent === 'accounts') {
+    const rawView = String(form.get('incomeView') ?? '');
+    const incomeView: IncomeExpensesView = rawView === 'list' || rawView === 'pie' ? rawView : 'graph';
+    if (intent === 'add-income') {
+      await addIncomeExpenseBlock(orgId, incomeView);
+    } else if (intent === 'remove-income') {
+      await removeIncomeExpenseBlock(orgId, String(form.get('blockId') ?? ''));
+    } else if (intent === 'accounts') {
       const cardKey = String(form.get('cardKey') ?? '');
-      if (!isDashboardCardKey(cardKey) || cardKey === 'pnl') {
+      if (cardKey === 'income_expenses') {
+        await saveIncomeExpenseBlock(
+          orgId,
+          String(form.get('blockId') ?? ''),
+          form.getAll('accountId').map((value) => String(value)),
+          incomeView,
+        );
+      } else if (!isDashboardCardKey(cardKey) || cardKey === 'pnl') {
         throw new Error('Choose a card first.');
+      } else {
+        await saveDashboardCardAccounts(
+          orgId,
+          cardKey,
+          form.getAll('accountId').map((value) => String(value)),
+          form.getAll('accountLabel').map((value) => String(value)),
+        );
       }
-      await saveDashboardCardAccounts(
-        orgId,
-        cardKey,
-        form.getAll('accountId').map((value) => String(value)),
-        form.getAll('accountLabel').map((value) => String(value)),
-      );
     } else {
       const enabled = form
         .getAll('card')
         .map((value) => String(value))
         .filter((value): value is DashboardCardKey => isDashboardCardKey(value));
-      const rawView = String(form.get('incomeView') ?? '');
-      const incomeView: IncomeExpensesView = rawView === 'list' || rawView === 'pie' ? rawView : 'graph';
-      await saveDashboardLayout(orgId, { enabled, incomeView });
+      await saveDashboardLayout(orgId, { enabled });
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not update the dashboard.';
