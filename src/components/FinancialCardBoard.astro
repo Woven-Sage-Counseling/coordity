@@ -273,6 +273,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                 index={boardIndex('pnl')}
                 total={boardRefs.length}
                 period={period}
+                show="remove"
                 removeIntent="remove-card"
                 cardKey="pnl"
               />
@@ -307,6 +308,17 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                 ))
               }
             </div>
+          )
+        }
+        {
+          canManage && (
+            <FinancialBlockActions
+              blockRef="pnl"
+              index={boardIndex('pnl')}
+              total={boardRefs.length}
+              period={period}
+              show="arrows"
+            />
           )
         }
       </article>
@@ -347,6 +359,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                   index={boardIndex(`income:${block.id}`)}
                   total={boardRefs.length}
                   period={period}
+                  show="remove"
                   removeIntent="remove-income"
                   blockId={block.id}
                 />
@@ -479,6 +492,17 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
               </form>
             )
           }
+          {
+            canManage && (
+              <FinancialBlockActions
+                blockRef={`income:${block.id}`}
+                index={boardIndex(`income:${block.id}`)}
+                total={boardRefs.length}
+                period={period}
+                show="arrows"
+              />
+            )
+          }
         </article>
       );
     })
@@ -496,6 +520,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                 index={boardIndex('account_balance')}
                 total={boardRefs.length}
                 period={period}
+                show="remove"
                 removeIntent="remove-card"
                 cardKey="account_balance"
               />
@@ -592,6 +617,17 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
             </form>
           )
         }
+        {
+          canManage && (
+            <FinancialBlockActions
+              blockRef="account_balance"
+              index={boardIndex('account_balance')}
+              total={boardRefs.length}
+              period={period}
+              show="arrows"
+            />
+          )
+        }
       </article>
     )
   }
@@ -599,19 +635,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
   {
     netCard?.enabled && (
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" style={`order: ${boardIndex('net_income')}`}>
-        <div class="flex items-start justify-between gap-3">
-          <h2 class="font-display text-2xl text-charcoal">Net income</h2>
-          {
-            canManage && (
-              <FinancialBlockActions
-                blockRef="net_income"
-                index={boardIndex('net_income')}
-                total={boardRefs.length}
-                period={period}
-              />
-            )
-          }
-        </div>
+        <h2 class="font-display text-2xl text-charcoal">Net income</h2>
         <p class:list={['mt-3 text-4xl font-semibold tabular-nums', netCents != null && netCents < 0 ? 'text-[#d52b1e]' : 'text-[#2CA01C]']}>
           {formatUsd(netCents)}
         </p>
@@ -644,6 +668,17 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                 Save accounts
               </button>
             </form>
+          )
+        }
+        {
+          canManage && (
+            <FinancialBlockActions
+              blockRef="net_income"
+              index={boardIndex('net_income')}
+              total={boardRefs.length}
+              period={period}
+              show="arrows"
+            />
           )
         }
       </article>

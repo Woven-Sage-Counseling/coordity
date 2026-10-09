@@ -6,32 +6,49 @@ interface Props {
   index: number;
   total: number;
   period: ResolvedPeriod;
+  show: 'arrows' | 'remove';
   removeIntent?: 'remove-card' | 'remove-income';
   cardKey?: string;
   blockId?: string;
 }
 
-const { blockRef, index, total, period, removeIntent, cardKey, blockId } = Astro.props;
-const buttonClass = 'rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent';
+const { blockRef, index, total, period, show, removeIntent, cardKey, blockId } = Astro.props;
+const buttonClass =
+  'inline-flex h-8 w-8 items-center justify-center rounded-md text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent';
 ---
 
-<div class="flex shrink-0 items-center gap-1">
-  {
-    (['up', 'down'] as const).map((direction) => (
-      <form method="post" action="/api/financials/cards">
-        <input type="hidden" name="intent" value="move-block" />
-        <input type="hidden" name="blockRef" value={blockRef} />
-        <input type="hidden" name="direction" value={direction} />
-        <input type="hidden" name="period" value={period.id} />
-        <input type="hidden" name="start" value={period.start} />
-        <input type="hidden" name="end" value={period.end} />
-        <button class={buttonClass} type="submit" disabled={direction === 'up' ? index === 0 : index >= total - 1}>
-          {direction === 'up' ? 'Up' : 'Down'}
-        </button>
-      </form>
-    ))
-  }
-  {
+{
+  show === 'arrows' ? (
+    <div class="mt-5 flex items-center justify-center gap-2 border-t border-black/[0.06] pt-3">
+      {(['up', 'down'] as const).map((direction) => (
+        <form method="post" action="/api/financials/cards">
+          <input type="hidden" name="intent" value="move-block" />
+          <input type="hidden" name="blockRef" value={blockRef} />
+          <input type="hidden" name="direction" value={direction} />
+          <input type="hidden" name="period" value={period.id} />
+          <input type="hidden" name="start" value={period.start} />
+          <input type="hidden" name="end" value={period.end} />
+          <button
+            class={buttonClass}
+            type="submit"
+            aria-label={direction === 'up' ? 'Move up' : 'Move down'}
+            disabled={direction === 'up' ? index === 0 : index >= total - 1}
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path
+                d={direction === 'up' ? 'M4 10l4-4 4 4' : 'M4 6l4 4 4-4'}
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </form>
+      ))}
+    </div>
+  ) : (
     removeIntent && (
       <form method="post" action="/api/financials/cards">
         <input type="hidden" name="intent" value={removeIntent} />
@@ -40,10 +57,10 @@ const buttonClass = 'rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f
         <input type="hidden" name="period" value={period.id} />
         <input type="hidden" name="start" value={period.start} />
         <input type="hidden" name="end" value={period.end} />
-        <button class={buttonClass} type="submit">
+        <button class="rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal" type="submit">
           Remove
         </button>
       </form>
     )
-  }
-</div>
+  )
+}
