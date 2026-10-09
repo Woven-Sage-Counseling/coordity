@@ -204,21 +204,24 @@ function piePath(start: number, end: number): string {
                     {pies.map(({ label, pie }) => (
                       <div class="flex w-full flex-col items-center">
                         <p class="text-[10px] font-medium uppercase tracking-wide text-[#6b6c72]">{label}</p>
-                        <svg class="mt-1 aspect-square w-[92%]" viewBox="0 0 100 100" role="img" aria-label={`${label} pie chart`}>
+                        <svg class="mt-1 aspect-square w-[92%]" viewBox="0 0 100 100" data-pie role="img" aria-label={`${label} pie chart`}>
                           {pie.empty ? (
-                            <circle cx="50" cy="50" r="42" fill="#e3e5e8">
-                              <title>{`No ${label.toLowerCase()} in this range`}</title>
-                            </circle>
+                            <circle cx="50" cy="50" r="42" fill="#e3e5e8" />
                           ) : (
                             pie.slices
                               .filter((slice) => slice.cents > 0)
                               .map((slice) => (
-                                <path d={piePath(slice.start, slice.end)} fill={slice.color}>
-                                  <title>{`${slice.account.name}: ${formatUsd(slice.cents)}`}</title>
-                                </path>
+                                <path
+                                  class="cursor-pointer"
+                                  data-pie-slice
+                                  data-label={`${slice.account.name}: ${formatUsd(slice.cents)}`}
+                                  d={piePath(slice.start, slice.end)}
+                                  fill={slice.color}
+                                />
                               ))
                           )}
                         </svg>
+                        <p class="mt-1 h-4 w-full truncate text-center text-[11px] font-semibold text-[#393a3d]" data-pie-caption></p>
                       </div>
                     ))}
                   </div>
@@ -287,6 +290,45 @@ function piePath(start: number, end: number): string {
     }
   </div>
 </aside>
+
+<script>
+  const showPieSlice = (slice: Element) => {
+    const pie = slice.closest('[data-pie]');
+    const caption = pie?.parentElement?.querySelector('[data-pie-caption]');
+    if (caption) caption.textContent = slice.getAttribute('data-label') || '';
+    pie?.querySelectorAll('[data-pie-slice]').forEach((path) => {
+      if (path instanceof SVGElement) path.style.opacity = path === slice ? '1' : '0.35';
+    });
+  };
+
+  const clearPieSlice = (slice: Element) => {
+    const pie = slice.closest('[data-pie]');
+    const caption = pie?.parentElement?.querySelector('[data-pie-caption]');
+    if (caption) caption.textContent = '';
+    pie?.querySelectorAll('[data-pie-slice]').forEach((path) => {
+      if (path instanceof SVGElement) path.style.opacity = '1';
+    });
+  };
+
+  if (!document.documentElement.dataset.pieHover) {
+    document.documentElement.dataset.pieHover = '1';
+    document.addEventListener('pointerover', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const slice = target.closest('[data-pie-slice]');
+      if (slice) showPieSlice(slice);
+    });
+    document.addEventListener('pointerout', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const slice = target.closest('[data-pie-slice]');
+      if (!slice) return;
+      const next = event.relatedTarget;
+      if (next instanceof Element && next.closest('[data-pie]') === slice.closest('[data-pie]')) return;
+      clearPieSlice(slice);
+    });
+  }
+</script>
 
 <style>
   .widget-detail-scroll {
