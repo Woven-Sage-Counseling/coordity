@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import {
   addIncomeExpenseBlock,
+  disableDashboardCard,
   isDashboardCardKey,
   removeIncomeExpenseBlock,
   saveDashboardCardAccounts,
@@ -44,6 +45,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
       await addIncomeExpenseBlock(orgId, incomeView);
     } else if (intent === 'remove-income') {
       await removeIncomeExpenseBlock(orgId, String(form.get('blockId') ?? ''));
+    } else if (intent === 'remove-card') {
+      const cardKey = String(form.get('cardKey') ?? '');
+      if (!isDashboardCardKey(cardKey) || cardKey === 'income_expenses') {
+        throw new Error('Choose a card first.');
+      }
+      await disableDashboardCard(orgId, cardKey);
     } else if (intent === 'accounts') {
       const cardKey = String(form.get('cardKey') ?? '');
       if (cardKey === 'income_expenses') {

@@ -223,6 +223,21 @@ export async function saveDashboardLayout(orgId: string, input: { enabled: Dashb
   await DB.batch(statements);
 }
 
+export async function disableDashboardCard(orgId: string, cardKey: DashboardCardKey): Promise<void> {
+  if (cardKey === 'income_expenses') return;
+  await ensureDashboardCardTable();
+  const { DB } = getEnv();
+  await DB.prepare(
+    `INSERT INTO financial_dashboard_card (org_id, card_key, enabled, view_mode, account_ids, updated_at)
+     VALUES (?, ?, 0, NULL, '[]', ?)
+     ON CONFLICT(org_id, card_key) DO UPDATE SET
+       enabled = 0,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(orgId, cardKey, nowMs())
+    .run();
+}
+
 export async function addIncomeExpenseBlock(orgId: string, viewMode: IncomeExpensesView): Promise<void> {
   const blocks = await incomeBlocksFor(orgId);
   if (blocks.length >= MAX_INCOME_BLOCKS) {

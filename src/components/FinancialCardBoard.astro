@@ -255,7 +255,23 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
   {
     pnlCard?.enabled && (
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h2 class="font-display text-2xl text-charcoal">Profit and loss</h2>
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-display text-2xl text-charcoal">Profit and loss</h2>
+          {
+            canManage && (
+              <form method="post" action="/api/financials/cards">
+                <input type="hidden" name="intent" value="remove-card" />
+                <input type="hidden" name="cardKey" value="pnl" />
+                <input type="hidden" name="period" value={period.id} />
+                <input type="hidden" name="start" value={period.start} />
+                <input type="hidden" name="end" value={period.end} />
+                <button class="rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal" type="submit">
+                  Remove
+                </button>
+              </form>
+            )
+          }
+        </div>
         {
           !snapshot ? (
             <p class="mt-3 text-sm text-sage-dark/70">No numbers yet. Connect QuickBooks, then choose Update numbers.</p>
