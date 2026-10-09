@@ -142,7 +142,7 @@ const periodLabel = snapshot
               <div class="rounded-lg bg-white p-3 shadow-sm">
                 <p class="m-0 text-xs font-semibold text-[#393a3d]">Income and expenses</p>
                 <p class="mt-1 text-xs text-[#6b6c72]">
-                  {card.viewMode === 'list' ? 'Detailed list' : 'Summary graph'}
+                  {card.viewMode === 'list' ? 'Detailed list' : card.viewMode === 'pie' ? 'Pie chart' : 'Summary graph'}
                   {picked > 0 ? ` · ${formatUsd(total)}` : ' · choose accounts'}
                 </p>
               </div>

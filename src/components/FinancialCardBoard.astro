@@ -65,6 +65,37 @@ const barWidth = (cents: number) => `${Math.round((Math.abs(cents) / pnlScale) *
 
 const incomeAccounts = activityChoices.filter((account) => incomeCard?.accountIds.includes(account.id));
 const incomeScale = Math.max(...incomeAccounts.map((account) => pnlAmountForAccount(summary.pnlLines, account)), 1);
+const pieColors = ['#2CA01C', '#3d8b37', '#6aa84f', '#c4a35a', '#a9533d', '#6b8f71', '#8fbc8f', '#d4a017', '#4f6f52', '#7d9a78'];
+const pieParts = incomeAccounts.map((account, index) => ({
+  account,
+  cents: Math.abs(pnlAmountForAccount(summary.pnlLines, account)),
+  color: pieColors[index % pieColors.length],
+}));
+const pieTotal = pieParts.reduce((sum, part) => sum + part.cents, 0);
+let pieCursor = -Math.PI / 2;
+const pieSlices = pieParts.map((part) => {
+  const sweep = pieTotal > 0 ? (part.cents / pieTotal) * Math.PI * 2 : 0;
+  const start = pieCursor;
+  pieCursor += sweep;
+  return { ...part, start, end: pieCursor };
+});
+
+const pieEmpty = pieTotal <= 0;
+
+function piePath(start: number, end: number): string {
+  const radius = 42;
+  const center = 50;
+  const sweep = end - start;
+  if (sweep >= Math.PI * 2 - 0.0001) {
+    return `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center - 0.01} ${center - radius} Z`;
+  }
+  const x1 = center + radius * Math.cos(start);
+  const y1 = center + radius * Math.sin(start);
+  const x2 = center + radius * Math.cos(end);
+  const y2 = center + radius * Math.sin(end);
+  const large = sweep > Math.PI ? 1 : 0;
+  return `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
+}
 const incomeTransactions = incomeCard
   ? transactionsForAccounts(summary.transactions, activityChoices, incomeCard.accountIds).sort(
       (a, b) => calendarDateValue(b.date) - calendarDateValue(a.date) || Math.abs(b.cents) - Math.abs(a.cents),
@@ -110,13 +141,17 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
             <input class="mt-0.5" type="checkbox" name="card" value="income_expenses" checked={incomeCard?.enabled ?? false} />
             <span>
               <span class="font-semibold">Income and expenses</span>
-              <span class="mt-0.5 block text-sage-dark/70">Then pick a graph or a list. Choose the accounts on the card.</span>
+              <span class="mt-0.5 block text-sage-dark/70">Then pick a graph, a pie chart, or a list. Choose the accounts on the card.</span>
             </span>
           </label>
           <div class="mt-3 space-y-2 pl-7">
             <label class="flex items-center gap-2 text-sm text-charcoal">
-              <input type="radio" name="incomeView" value="graph" checked={incomeCard?.viewMode !== 'list'} />
+              <input type="radio" name="incomeView" value="graph" checked={incomeCard?.viewMode === 'graph' || !incomeCard?.viewMode} />
               Summary graph
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input type="radio" name="incomeView" value="pie" checked={incomeCard?.viewMode === 'pie'} />
+              Pie chart
             </label>
             <label class="flex items-center gap-2 text-sm text-charcoal">
               <input type="radio" name="incomeView" value="list" checked={incomeCard?.viewMode === 'list'} />
@@ -243,7 +278,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
       <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
         <h2 class="font-display text-2xl text-charcoal">Income and expenses</h2>
         <p class="mt-1 text-sm text-sage-dark/70">
-          {incomeCard.viewMode === 'list' ? 'Detailed list' : 'Summary graph'}
+          {incomeCard.viewMode === 'list' ? 'Detailed list' : incomeCard.viewMode === 'pie' ? 'Pie chart' : 'Summary graph'}
         </p>
         {
           incomeCard.accountIds.length === 0 ? (
@@ -263,6 +298,38 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                   ))}
                 </ul>
               </FinancialScrollPanel>
+            )
+          ) : incomeCard.viewMode === 'pie' ? (
+            pieEmpty ? (
+              <p class="mt-4 text-sm text-sage-dark/70">Those accounts have no amounts in this date range.</p>
+            ) : (
+              <div class="mt-4 flex flex-wrap items-center gap-6">
+                <svg class="h-44 w-44 shrink-0" viewBox="0 0 100 100" role="img" aria-label="Income and expenses pie chart">
+                  {pieSlices
+                    .filter((slice) => slice.cents > 0)
+                    .map((slice) => (
+                      <path d={piePath(slice.start, slice.end)} fill={slice.color}>
+                        <title>{`${slice.account.name}: ${formatUsd(slice.cents)}`}</title>
+                      </path>
+                    ))}
+                </svg>
+                <ul class="min-w-0 flex-1 space-y-2">
+                  {pieSlices.map((slice) => (
+                    <li class="flex items-baseline justify-between gap-3 text-sm">
+                      <span class="flex min-w-0 items-center gap-2">
+                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" style={`background-color: ${slice.color}`}></span>
+                        <span class="truncate font-medium text-charcoal">{slice.account.name}</span>
+                      </span>
+                      <span class="shrink-0 tabular-nums text-charcoal">
+                        <span class="font-semibold">{formatUsd(slice.cents)}</span>
+                        <span class="ml-1 text-xs text-sage-dark/55">
+                          {pieTotal > 0 ? `${Math.round((slice.cents / pieTotal) * 100)}%` : ''}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )
           ) : (
             <div class="mt-4 space-y-4">

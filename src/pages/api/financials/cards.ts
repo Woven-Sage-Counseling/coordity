@@ -51,7 +51,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
         .getAll('card')
         .map((value) => String(value))
         .filter((value): value is DashboardCardKey => isDashboardCardKey(value));
-      const incomeView: IncomeExpensesView = String(form.get('incomeView') ?? '') === 'list' ? 'list' : 'graph';
+      const rawView = String(form.get('incomeView') ?? '');
+      const incomeView: IncomeExpensesView = rawView === 'list' || rawView === 'pie' ? rawView : 'graph';
       await saveDashboardLayout(orgId, { enabled, incomeView });
     }
   } catch (error) {

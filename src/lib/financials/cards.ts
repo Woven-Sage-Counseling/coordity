@@ -6,7 +6,7 @@ import type { BankAccountLine, FinancialTransaction, PnlLine } from './types';
 export const DASHBOARD_CARD_KEYS = ['pnl', 'income_expenses', 'account_balance', 'net_income'] as const;
 
 export type DashboardCardKey = (typeof DASHBOARD_CARD_KEYS)[number];
-export type IncomeExpensesView = 'graph' | 'list';
+export type IncomeExpensesView = 'graph' | 'pie' | 'list';
 
 export interface DashboardCard {
   key: DashboardCardKey;
@@ -57,7 +57,8 @@ function parseStoredAccounts(raw: string | null): { ids: string[]; labels: Recor
 }
 
 function parseViewMode(raw: string | null): IncomeExpensesView {
-  return raw === 'list' ? 'list' : 'graph';
+  if (raw === 'list' || raw === 'pie') return raw;
+  return 'graph';
 }
 
 export function isDashboardCardKey(value: string): value is DashboardCardKey {
