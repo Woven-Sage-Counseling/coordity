@@ -71,10 +71,11 @@ const incomeTransactions = incomeCard
     )
   : [];
 const balanceIds = balanceCard?.accountIds ?? [];
+const balanceLabels = balanceCard?.labels ?? {};
 const balances = balanceIds.flatMap((id) => {
   const found = bankBalanceForAccount(summary.bankAccounts, bankChoices, id);
   if (!found) return [];
-  return [{ id, name: found.name, cents: found.cents }];
+  return [{ id, name: found.name, label: balanceLabels[id] ?? '', cents: found.cents }];
 });
 const remainingBanks = bankChoices.filter((account) => !balanceIds.includes(account.id));
 const netCents = signedNetCents(summary.pnlLines, activityChoices, netCard?.accountIds ?? []);
@@ -319,8 +320,36 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
             <div class="mt-4 grid gap-3 sm:grid-cols-2">
               {balances.map((item) => (
                 <div class="rounded-xl bg-[#f7f8f6] p-4">
-                  <p class="text-sm text-sage-dark/70">{item.name}</p>
-                  <p class="mt-1 text-3xl font-semibold tabular-nums text-charcoal">{formatUsd(item.cents)}</p>
+                  {
+                    canManage ? (
+                      <form method="post" action="/api/financials/cards" data-balance-name>
+                        <input type="hidden" name="intent" value="accounts" />
+                        <input type="hidden" name="cardKey" value="account_balance" />
+                        <input type="hidden" name="period" value={period.id} />
+                        <input type="hidden" name="start" value={period.start} />
+                        <input type="hidden" name="end" value={period.end} />
+                        {balances.map((other) => (
+                          <>
+                            <input type="hidden" name="accountId" value={other.id} />
+                            <input
+                              type={other.id === item.id ? 'text' : 'hidden'}
+                              class={other.id === item.id ? 'field !mt-0 font-medium' : undefined}
+                              name="accountLabel"
+                              value={other.id === item.id ? other.label || other.name : other.label}
+                              aria-label={other.id === item.id ? 'Name on the dashboard' : undefined}
+                            />
+                          </>
+                        ))}
+                        <p class="mt-1 text-[10px] leading-tight text-sage-dark/50">{item.name}</p>
+                      </form>
+                    ) : (
+                      <>
+                        <p class="text-sm font-medium text-charcoal">{item.label || item.name}</p>
+                        <p class="mt-1 text-[10px] leading-tight text-sage-dark/50">{item.name}</p>
+                      </>
+                    )
+                  }
+                  <p class="mt-2 text-3xl font-semibold tabular-nums text-charcoal">{formatUsd(item.cents)}</p>
                   {
                     canManage && (
                       <form method="post" action="/api/financials/cards" class="mt-3">
@@ -329,10 +358,13 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
                         <input type="hidden" name="period" value={period.id} />
                         <input type="hidden" name="start" value={period.start} />
                         <input type="hidden" name="end" value={period.end} />
-                        {balanceIds
-                          .filter((id) => id !== item.id)
-                          .map((id) => (
-                            <input type="hidden" name="accountId" value={id} />
+                        {balances
+                          .filter((other) => other.id !== item.id)
+                          .map((other) => (
+                            <>
+                              <input type="hidden" name="accountId" value={other.id} />
+                              <input type="hidden" name="accountLabel" value={other.label} />
+                            </>
                           ))}
                         <button class="text-sm font-semibold text-[#248a18] underline" type="submit">
                           Remove
@@ -353,8 +385,11 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
               <input type="hidden" name="period" value={period.id} />
               <input type="hidden" name="start" value={period.start} />
               <input type="hidden" name="end" value={period.end} />
-              {balanceIds.map((id) => (
-                <input type="hidden" name="accountId" value={id} />
+              {balances.map((item) => (
+                <>
+                  <input type="hidden" name="accountId" value={item.id} />
+                  <input type="hidden" name="accountLabel" value={item.label} />
+                </>
               ))}
               <label class="block text-sm text-charcoal">
                 Add an account
@@ -425,6 +460,24 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
         if (box instanceof HTMLInputElement) box.checked = true;
       }
       form.requestSubmit();
+    });
+  });
+
+  document.querySelectorAll('[data-balance-name]').forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) return;
+    const input = form.querySelector('input[name="accountLabel"]:not([type="hidden"])');
+    if (!(input instanceof HTMLInputElement)) return;
+    let sending = false;
+    const send = () => {
+      if (sending) return;
+      sending = true;
+      form.requestSubmit();
+    };
+    input.addEventListener('change', send);
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      send();
     });
   });
 

@@ -44,6 +44,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         orgId,
         cardKey,
         form.getAll('accountId').map((value) => String(value)),
+        form.getAll('accountLabel').map((value) => String(value)),
       );
     } else {
       const enabled = form

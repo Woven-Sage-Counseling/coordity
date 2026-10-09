@@ -13,6 +13,7 @@ export interface DashboardCard {
   enabled: boolean;
   viewMode: IncomeExpensesView;
   accountIds: string[];
+  labels: Record<string, string>;
 }
 
 export interface DashboardAccountChoice {
@@ -24,18 +25,35 @@ export interface DashboardAccountChoice {
 const CARD_ORDER = new Map(DASHBOARD_CARD_KEYS.map((key, index) => [key, index]));
 
 function emptyCard(key: DashboardCardKey): DashboardCard {
-  return { key, enabled: false, viewMode: 'graph', accountIds: [] };
+  return { key, enabled: false, viewMode: 'graph', accountIds: [], labels: {} };
 }
 
-function parseAccountIds(raw: string | null): string[] {
-  if (!raw) return [];
+function parseStoredAccounts(raw: string | null): { ids: string[]; labels: Record<string, string> } {
+  const ids: string[] = [];
+  const labels: Record<string, string> = {};
+  if (!raw) return { ids, labels };
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return [...new Set(parsed.map((value) => String(value).trim()).filter(Boolean))].slice(0, 80);
+    if (!Array.isArray(parsed)) return { ids, labels };
+    for (const item of parsed) {
+      if (typeof item === 'string') {
+        const id = item.trim();
+        if (!id || ids.includes(id)) continue;
+        ids.push(id);
+        continue;
+      }
+      if (!item || typeof item !== 'object') continue;
+      const record = item as { id?: unknown; label?: unknown };
+      const id = String(record.id ?? '').trim();
+      if (!id || ids.includes(id)) continue;
+      ids.push(id);
+      const label = String(record.label ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+      if (label) labels[id] = label;
+    }
   } catch {
-    return [];
+    return { ids: [], labels: {} };
   }
+  return { ids: ids.slice(0, 80), labels };
 }
 
 function parseViewMode(raw: string | null): IncomeExpensesView {
@@ -89,11 +107,13 @@ async function readDashboardCards(orgId: string): Promise<DashboardCard[]> {
   for (const key of DASHBOARD_CARD_KEYS) byKey.set(key, emptyCard(key));
   for (const row of rows.results ?? []) {
     if (!isDashboardCardKey(row.card_key)) continue;
+    const stored = parseStoredAccounts(row.account_ids);
     byKey.set(row.card_key, {
       key: row.card_key,
       enabled: row.enabled === 1,
       viewMode: parseViewMode(row.view_mode),
-      accountIds: parseAccountIds(row.account_ids),
+      accountIds: stored.ids,
+      labels: stored.labels,
     });
   }
   return [...byKey.values()].sort((a, b) => (CARD_ORDER.get(a.key) ?? 0) - (CARD_ORDER.get(b.key) ?? 0));
@@ -127,8 +147,21 @@ export async function saveDashboardCardAccounts(
   orgId: string,
   cardKey: DashboardCardKey,
   accountIds: string[],
+  accountLabels: string[] = [],
 ): Promise<void> {
-  const ids = [...new Set(accountIds.map((id) => id.trim()).filter(Boolean))].slice(0, 80);
+  const ids: string[] = [];
+  const labels: Record<string, string> = {};
+  accountIds.forEach((raw, index) => {
+    const id = raw.trim();
+    if (!id || ids.includes(id)) return;
+    ids.push(id);
+    const label = String(accountLabels[index] ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (label) labels[id] = label;
+  });
+  const stored =
+    cardKey === 'account_balance'
+      ? ids.slice(0, 80).map((id) => (labels[id] ? { id, label: labels[id] } : id))
+      : ids.slice(0, 80);
   await ensureDashboardCardTable();
   const { DB } = getEnv();
   await DB.prepare(
@@ -139,7 +172,7 @@ export async function saveDashboardCardAccounts(
        enabled = 1,
        updated_at = excluded.updated_at`,
   )
-    .bind(orgId, cardKey, JSON.stringify(ids), nowMs())
+    .bind(orgId, cardKey, JSON.stringify(stored), nowMs())
     .run();
 }
 

@@ -111,9 +111,11 @@ const periodLabel = snapshot
               );
             }
             if (card.key === 'account_balance') {
-              const balances = card.accountIds
-                .map((id) => (summary ? bankBalanceForAccount(summary.bankAccounts, [], id) : null))
-                .filter((item): item is { name: string; cents: number | null } => item != null);
+              const balances = card.accountIds.flatMap((id) => {
+                const found = summary ? bankBalanceForAccount(summary.bankAccounts, [], id) : null;
+                if (!found) return [];
+                return [{ name: card.labels[id] || found.name, cents: found.cents }];
+              });
               return (
                 <div class="rounded-lg bg-white p-3 shadow-sm">
                   <p class="m-0 text-xs font-semibold text-[#393a3d]">Account balances</p>
