@@ -8,9 +8,11 @@ interface Props {
   allowCustom?: boolean;
   /** Match the homepage QuickBooks widget styling. */
   theme?: 'default' | 'quickbooks';
+  /** Update the surrounding page without a full navigation. */
+  live?: boolean;
 }
 
-const { period, action, compact = false, allowCustom = false, theme = 'default' } = Astro.props;
+const { period, action, compact = false, allowCustom = false, theme = 'default', live = false } = Astro.props;
 const options = periodOptions();
 const showDates = allowCustom && period.id === 'custom';
 const qb = theme === 'quickbooks';
@@ -19,6 +21,7 @@ const qb = theme === 'quickbooks';
 <form
   method="get"
   action={action}
+  data-financial-period={live ? '' : undefined}
   class:list={[
     compact && !qb ? 'mt-2' : null,
     qb ? 'mt-3 flex flex-wrap items-end gap-2' : null,
@@ -46,7 +49,7 @@ const qb = theme === 'quickbooks';
           : null,
         !compact && !qb ? 'field mt-1 max-w-xs' : null,
       ]}
-      onchange="const custom = this.value === 'custom'; const start = this.form.elements.namedItem('start'); const end = this.form.elements.namedItem('end'); if (start) start.disabled = !custom; if (end) end.disabled = !custom; if (!custom) this.form.submit();"
+      onchange={`const custom = this.value === 'custom'; const start = this.form.elements.namedItem('start'); const end = this.form.elements.namedItem('end'); if (start) start.disabled = !custom; if (end) end.disabled = !custom; if (!custom) this.form.${live ? 'requestSubmit()' : 'submit()'}`}
     >
       {options.map((option) => (
         <option value={option.id} selected={period.id === option.id}>

@@ -117,6 +117,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
 }
 ---
 
+<div data-financial-board class="transition-opacity">
 {
   canManage && (
     <section class="max-w-xl rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" aria-labelledby="add-card-heading">
@@ -228,7 +229,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
 {
   enabled.length > 0 && (
     <div class="mt-8">
-      <PeriodPicker period={period} action="/financials" allowCustom theme="quickbooks" />
+      <PeriodPicker period={period} action="/financials" allowCustom theme="quickbooks" live />
       {periodLabel && <p class="mt-2 text-sm text-sage-dark/65">{periodLabel}</p>}
     </div>
   )
@@ -516,47 +517,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
     )
   }
 </div>
-
-<script>
-  document.querySelectorAll('[data-card-picker]').forEach((form) => {
-    if (!(form instanceof HTMLFormElement)) return;
-    form.addEventListener('change', (event) => {
-      const target = event.target;
-      if (target instanceof HTMLInputElement && target.name === 'incomeView') {
-        const box = form.querySelector('input[value="income_expenses"]');
-        if (box instanceof HTMLInputElement) box.checked = true;
-      }
-      form.requestSubmit();
-    });
-  });
-
-  document.querySelectorAll('[data-balance-name]').forEach((form) => {
-    if (!(form instanceof HTMLFormElement)) return;
-    const input = form.querySelector('input[name="accountLabel"]:not([type="hidden"])');
-    if (!(input instanceof HTMLInputElement)) return;
-    let sending = false;
-    const send = () => {
-      if (sending) return;
-      sending = true;
-      form.requestSubmit();
-    };
-    input.addEventListener('change', send);
-    input.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      send();
-    });
-  });
-
-  document.querySelectorAll('[data-balance-add]').forEach((form) => {
-    if (!(form instanceof HTMLFormElement)) return;
-    form.addEventListener('change', (event) => {
-      const target = event.target;
-      if (target instanceof HTMLSelectElement && !target.value) return;
-      form.requestSubmit();
-    });
-  });
-</script>
+</div>
 
 <script>
   const updateFinancialScrollHints = () => {
@@ -573,9 +534,142 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
     });
   };
 
-  document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
-    panel.addEventListener('scroll', updateFinancialScrollHints, { passive: true });
-  });
-  window.addEventListener('resize', updateFinancialScrollHints, { passive: true });
-  updateFinancialScrollHints();
+  const bindFinancialScroll = () => {
+    document.querySelectorAll<HTMLElement>('[data-financials-scroll]').forEach((panel) => {
+      if (panel.dataset.scrollBound) return;
+      panel.dataset.scrollBound = '1';
+      panel.addEventListener('scroll', updateFinancialScrollHints, { passive: true });
+    });
+    updateFinancialScrollHints();
+  };
+
+  const applyFinancialHtml = (html: string, url: string) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const next = doc.querySelector('[data-financial-board]');
+    const current = document.querySelector('[data-financial-board]');
+    if (!(next instanceof HTMLElement) || !(current instanceof HTMLElement)) {
+      window.location.assign(url);
+      return;
+    }
+    const scrollY = window.scrollY;
+    current.replaceWith(document.importNode(next, true));
+    if (url) history.replaceState(null, '', url);
+    bindFinancialScroll();
+    window.scrollTo(0, scrollY);
+  };
+
+  const showFinancialError = (message: string) => {
+    const board = document.querySelector('[data-financial-board]');
+    if (!(board instanceof HTMLElement)) return;
+    board.classList.remove('opacity-60');
+    const existing = board.querySelector('[data-financial-live-error]');
+    const note = existing instanceof HTMLElement ? existing : document.createElement('p');
+    if (!(existing instanceof HTMLElement)) {
+      note.dataset.financialLiveError = '';
+      note.className = 'mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800';
+      board.insertBefore(note, board.firstChild);
+    }
+    note.textContent = message;
+  };
+
+  const shouldHandleFinancialForm = (form: HTMLFormElement) => {
+    if (!form.closest('[data-financial-board]')) return false;
+    const action = form.getAttribute('action') || '';
+    if (action.includes('/api/quickbooks/connect')) return false;
+    return (
+      form.hasAttribute('data-financial-period') ||
+      action.includes('/api/financials/cards') ||
+      action.includes('/api/quickbooks/sync')
+    );
+  };
+
+  let financialSaving = false;
+
+  const saveFinancialForm = async (form: HTMLFormElement) => {
+    if (financialSaving) return;
+    financialSaving = true;
+    const board = document.querySelector('[data-financial-board]');
+    board?.classList.add('opacity-60');
+    try {
+      const method = (form.getAttribute('method') || 'get').toLowerCase();
+      const params = new URLSearchParams();
+      new FormData(form).forEach((value, key) => {
+        if (typeof value === 'string') params.append(key, value);
+      });
+      const response =
+        method === 'get'
+          ? await fetch(`${form.action.split('?')[0]}?${params.toString()}`, {
+              headers: { accept: 'text/html' },
+              credentials: 'same-origin',
+            })
+          : await fetch(form.action, {
+              method: 'POST',
+              body: new FormData(form),
+              headers: { accept: 'text/html' },
+              credentials: 'same-origin',
+            });
+      const html = await response.text();
+      if (!html.includes('data-financial-board')) {
+        throw new Error('Could not update the dashboard.');
+      }
+      applyFinancialHtml(html, response.url);
+    } catch (error) {
+      showFinancialError(error instanceof Error ? error.message : 'Could not update the dashboard.');
+    } finally {
+      financialSaving = false;
+    }
+  };
+
+  if (!document.documentElement.dataset.financialLive) {
+    document.documentElement.dataset.financialLive = '1';
+
+    document.addEventListener('submit', (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || !shouldHandleFinancialForm(form)) return;
+      event.preventDefault();
+      void saveFinancialForm(form);
+    });
+
+    document.addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.closest('[data-financial-board]')) return;
+      const form = target instanceof HTMLInputElement || target instanceof HTMLSelectElement ? target.form : null;
+      if (!form) return;
+
+      if (target instanceof HTMLSelectElement && target.name === 'period') {
+        form.querySelector('[data-custom-dates]')?.classList.toggle('hidden', target.value !== 'custom');
+        return;
+      }
+
+      if (target instanceof HTMLInputElement && form.hasAttribute('data-card-picker')) {
+        if (target.name === 'incomeView') {
+          const box = form.querySelector('input[value="income_expenses"]');
+          if (box instanceof HTMLInputElement) box.checked = true;
+        }
+        form.requestSubmit();
+        return;
+      }
+
+      if (target instanceof HTMLInputElement && target.name === 'accountLabel' && form.hasAttribute('data-balance-name')) {
+        form.requestSubmit();
+        return;
+      }
+
+      if (target instanceof HTMLSelectElement && form.hasAttribute('data-balance-add') && target.value) {
+        form.requestSubmit();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || event.key !== 'Enter') return;
+      const form = target.form;
+      if (!form?.hasAttribute('data-balance-name') || target.type === 'hidden') return;
+      event.preventDefault();
+      form.requestSubmit();
+    });
+
+    window.addEventListener('resize', updateFinancialScrollHints, { passive: true });
+    bindFinancialScroll();
+  }
 </script>
