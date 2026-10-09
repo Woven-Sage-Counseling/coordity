@@ -3,6 +3,7 @@ import {
   addIncomeExpenseBlock,
   disableDashboardCard,
   isDashboardCardKey,
+  moveBoardBlock,
   removeIncomeExpenseBlock,
   saveDashboardCardAccounts,
   saveDashboardLayout,
@@ -45,6 +46,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
       await addIncomeExpenseBlock(orgId, incomeView);
     } else if (intent === 'remove-income') {
       await removeIncomeExpenseBlock(orgId, String(form.get('blockId') ?? ''));
+    } else if (intent === 'move-block') {
+      const direction = String(form.get('direction') ?? '');
+      if (direction !== 'up' && direction !== 'down') throw new Error('Choose a direction.');
+      await moveBoardBlock(orgId, String(form.get('blockRef') ?? ''), direction);
     } else if (intent === 'remove-card') {
       const cardKey = String(form.get('cardKey') ?? '');
       if (!isDashboardCardKey(cardKey) || cardKey === 'income_expenses') {

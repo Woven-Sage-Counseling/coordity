@@ -66,6 +66,7 @@ export interface FinancialSummary {
   transactions: FinancialTransaction[];
   bankAccounts: BankAccountLine[];
   dashboardCards: DashboardCard[];
+  boardOrder: string[];
   quickbooks: {
     configured: boolean;
     status: 'disconnected' | 'connected' | 'error';

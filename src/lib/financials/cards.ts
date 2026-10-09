@@ -223,6 +223,93 @@ export async function saveDashboardLayout(orgId: string, input: { enabled: Dashb
   await DB.batch(statements);
 }
 
+const BOARD_ORDER_KEY = 'board_order';
+
+export function visibleBoardRefs(cards: DashboardCard[]): string[] {
+  const refs: string[] = [];
+  for (const card of cards) {
+    if (!card.enabled) continue;
+    if (card.key === 'income_expenses') {
+      for (const block of card.blocks) refs.push(`income:${block.id}`);
+      continue;
+    }
+    refs.push(card.key);
+  }
+  return refs;
+}
+
+export function orderedBoardRefs(visible: string[], stored: string[]): string[] {
+  const visibleSet = new Set(visible);
+  const result: string[] = [];
+  for (const ref of stored) {
+    if (!visibleSet.has(ref) || result.includes(ref)) continue;
+    result.push(ref);
+  }
+  for (const ref of visible) {
+    if (!result.includes(ref)) result.push(ref);
+  }
+  return result;
+}
+
+function parseBoardOrder(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const refs: string[] = [];
+    for (const item of parsed) {
+      const ref = String(item ?? '').trim();
+      if (!/^(pnl|account_balance|net_income|income:[A-Za-z0-9_-]+)$/.test(ref) || refs.includes(ref)) continue;
+      refs.push(ref);
+    }
+    return refs.slice(0, 40);
+  } catch {
+    return [];
+  }
+}
+
+export async function getBoardOrder(orgId: string): Promise<string[]> {
+  try {
+    await ensureDashboardCardTable();
+    const row = await getEnv()
+      .DB.prepare(`SELECT account_ids FROM financial_dashboard_card WHERE org_id = ? AND card_key = ?`)
+      .bind(orgId, BOARD_ORDER_KEY)
+      .first<{ account_ids: string }>();
+    return parseBoardOrder(row?.account_ids ?? null);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.toLowerCase().includes('no such table')) return [];
+    throw error;
+  }
+}
+
+async function writeBoardOrder(orgId: string, refs: string[]): Promise<void> {
+  await ensureDashboardCardTable();
+  await getEnv()
+    .DB.prepare(
+      `INSERT INTO financial_dashboard_card (org_id, card_key, enabled, view_mode, account_ids, updated_at)
+       VALUES (?, ?, 0, NULL, ?, ?)
+       ON CONFLICT(org_id, card_key) DO UPDATE SET
+         account_ids = excluded.account_ids,
+         updated_at = excluded.updated_at`,
+    )
+    .bind(orgId, BOARD_ORDER_KEY, JSON.stringify(refs.slice(0, 40)), nowMs())
+    .run();
+}
+
+export async function moveBoardBlock(orgId: string, blockRef: string, direction: 'up' | 'down'): Promise<void> {
+  const visible = visibleBoardRefs(await getDashboardCards(orgId));
+  const order = orderedBoardRefs(visible, await getBoardOrder(orgId));
+  const index = order.indexOf(blockRef);
+  const nextIndex = direction === 'up' ? index - 1 : index + 1;
+  if (index < 0 || nextIndex < 0 || nextIndex >= order.length) return;
+  const next = [...order];
+  const [moved] = next.splice(index, 1);
+  if (!moved) return;
+  next.splice(nextIndex, 0, moved);
+  await writeBoardOrder(orgId, next);
+}
+
 export async function disableDashboardCard(orgId: string, cardKey: DashboardCardKey): Promise<void> {
   if (cardKey === 'income_expenses') return;
   await ensureDashboardCardTable();

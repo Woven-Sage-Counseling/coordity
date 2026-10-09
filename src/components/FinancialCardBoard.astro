@@ -1,4 +1,5 @@
 ---
+import FinancialBlockActions from './FinancialBlockActions.astro';
 import PeriodPicker from './PeriodPicker.astro';
 import FinancialAccountChecklist from './FinancialAccountChecklist.astro';
 import FinancialScrollPanel from './FinancialScrollPanel.astro';
@@ -6,9 +7,11 @@ import FinancialTransactionItem from './FinancialTransactionItem.astro';
 import {
   bankBalanceForAccount,
   pnlAmountForAccount,
+  orderedBoardRefs,
   signedNetCents,
   splitTransactionsByKind,
   transactionsForAccounts,
+  visibleBoardRefs,
   type DashboardAccountChoice,
   type DashboardCard,
 } from '../lib/financials/cards';
@@ -65,6 +68,11 @@ const pnlScale = Math.max(incomeCents, expenseTotal, ...expenseBars.map((line) =
 const barWidth = (cents: number) => `${Math.round((Math.abs(cents) / pnlScale) * 100)}%`;
 
 const incomeBlocks = incomeCard?.blocks ?? [];
+const boardRefs = orderedBoardRefs(visibleBoardRefs(cards), summary.boardOrder);
+const boardIndex = (ref: string) => {
+  const index = boardRefs.indexOf(ref);
+  return index < 0 ? boardRefs.length : index;
+};
 const incomePieColors = ['#2CA01C', '#3d8b37', '#6aa84f', '#8fbc8f', '#4f6f52', '#7d9a78'];
 const expensePieColors = ['#c4a35a', '#a9533d', '#d4a017', '#8a5a44', '#b8956a', '#6b4f3a'];
 
@@ -252,24 +260,22 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
   )
 }
 
-<div class="mt-6 space-y-6">
+<div class="mt-6 flex flex-col gap-6">
   {
     pnlCard?.enabled && (
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" style={`order: ${boardIndex('pnl')}`}>
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-display text-2xl text-charcoal">Profit and loss</h2>
           {
             canManage && (
-              <form method="post" action="/api/financials/cards">
-                <input type="hidden" name="intent" value="remove-card" />
-                <input type="hidden" name="cardKey" value="pnl" />
-                <input type="hidden" name="period" value={period.id} />
-                <input type="hidden" name="start" value={period.start} />
-                <input type="hidden" name="end" value={period.end} />
-                <button class="rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal" type="submit">
-                  Remove
-                </button>
-              </form>
+              <FinancialBlockActions
+                blockRef="pnl"
+                index={boardIndex('pnl')}
+                total={boardRefs.length}
+                period={period}
+                removeIntent="remove-card"
+                cardKey="pnl"
+              />
             )
           }
         </div>
@@ -328,7 +334,7 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
         { label: 'Expenses', pie: expensePie, emptyNote: expenseSelected.length === 0 ? 'No expense accounts in this block.' : 'No expenses in this date range.' },
       ];
       return (
-        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" style={`order: ${boardIndex(`income:${block.id}`)}`}>
           <div class="flex items-start justify-between gap-3">
             <div>
               <h2 class="font-display text-2xl text-charcoal">Income and expenses</h2>
@@ -336,16 +342,14 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
             </div>
             {
               canManage && (
-                <form method="post" action="/api/financials/cards">
-                  <input type="hidden" name="intent" value="remove-income" />
-                  <input type="hidden" name="blockId" value={block.id} />
-                  <input type="hidden" name="period" value={period.id} />
-                  <input type="hidden" name="start" value={period.start} />
-                  <input type="hidden" name="end" value={period.end} />
-                  <button class="rounded-md px-2 py-1 text-sm text-sage-dark/70 hover:bg-[#f4f5f8] hover:text-charcoal" type="submit">
-                    Remove
-                  </button>
-                </form>
+                <FinancialBlockActions
+                  blockRef={`income:${block.id}`}
+                  index={boardIndex(`income:${block.id}`)}
+                  total={boardRefs.length}
+                  period={period}
+                  removeIntent="remove-income"
+                  blockId={block.id}
+                />
               )
             }
           </div>
@@ -482,8 +486,22 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
 
   {
     balanceCard?.enabled && (
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h2 class="font-display text-2xl text-charcoal">Account balances</h2>
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" style={`order: ${boardIndex('account_balance')}`}>
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-display text-2xl text-charcoal">Account balances</h2>
+          {
+            canManage && (
+              <FinancialBlockActions
+                blockRef="account_balance"
+                index={boardIndex('account_balance')}
+                total={boardRefs.length}
+                period={period}
+                removeIntent="remove-card"
+                cardKey="account_balance"
+              />
+            )
+          }
+        </div>
         {
           balances.length === 0 ? (
             <p class="mt-3 text-sm text-sage-dark/70">Add an account below. Each one shows the money in it right now.</p>
@@ -580,8 +598,20 @@ function transactionMetaLine(transaction: (typeof summary.transactions)[number])
 
   {
     netCard?.enabled && (
-      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-        <h2 class="font-display text-2xl text-charcoal">Net income</h2>
+      <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]" style={`order: ${boardIndex('net_income')}`}>
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-display text-2xl text-charcoal">Net income</h2>
+          {
+            canManage && (
+              <FinancialBlockActions
+                blockRef="net_income"
+                index={boardIndex('net_income')}
+                total={boardRefs.length}
+                period={period}
+              />
+            )
+          }
+        </div>
         <p class:list={['mt-3 text-4xl font-semibold tabular-nums', netCents != null && netCents < 0 ? 'text-[#d52b1e]' : 'text-[#2CA01C]']}>
           {formatUsd(netCents)}
         </p>
