@@ -39,15 +39,18 @@ export function normalizePortalHex(value: unknown, fallback: string): string {
   return raw.toUpperCase();
 }
 
-export function themeFromFields(input: Partial<AppPortalTheme> | null | undefined): AppPortalTheme {
+export function themeFromFields(
+  input: Partial<AppPortalTheme> | null | undefined,
+  fallback: AppPortalTheme = DEFAULT_APP_PORTAL,
+): AppPortalTheme {
   return {
-    background: normalizePortalHex(input?.background, DEFAULT_APP_PORTAL.background),
-    surface: normalizePortalHex(input?.surface, DEFAULT_APP_PORTAL.surface),
-    accent: normalizePortalHex(input?.accent, DEFAULT_APP_PORTAL.accent),
-    ink: normalizePortalHex(input?.ink, DEFAULT_APP_PORTAL.ink),
-    tabIcon: normalizePortalHex(input?.tabIcon, DEFAULT_APP_PORTAL.tabIcon),
-    icon: normalizePortalHex(input?.icon, DEFAULT_APP_PORTAL.icon),
-    bubbleText: normalizePortalHex(input?.bubbleText, DEFAULT_APP_PORTAL.bubbleText),
+    background: normalizePortalHex(input?.background, fallback.background),
+    surface: normalizePortalHex(input?.surface, fallback.surface),
+    accent: normalizePortalHex(input?.accent, fallback.accent),
+    ink: normalizePortalHex(input?.ink, fallback.ink),
+    tabIcon: normalizePortalHex(input?.tabIcon, fallback.tabIcon),
+    icon: normalizePortalHex(input?.icon, fallback.icon),
+    bubbleText: normalizePortalHex(input?.bubbleText, fallback.bubbleText),
   };
 }
 
@@ -85,7 +88,7 @@ async function ensureAppPortalTable(): Promise<void> {
 function darkFromStored(raw: string | null | undefined): AppPortalTheme {
   if (!raw) return { ...DEFAULT_DARK_APP_PORTAL };
   try {
-    return themeFromFields(JSON.parse(raw) as Partial<AppPortalTheme>);
+    return themeFromFields(JSON.parse(raw) as Partial<AppPortalTheme>, DEFAULT_DARK_APP_PORTAL);
   } catch {
     return { ...DEFAULT_DARK_APP_PORTAL };
   }
@@ -127,7 +130,7 @@ export async function saveAppPortalTheme(
   darkInput?: Partial<AppPortalTheme> | null,
 ): Promise<{ theme: AppPortalTheme; dark: AppPortalTheme }> {
   const theme = themeFromFields(input);
-  const dark = themeFromFields(darkInput ?? DEFAULT_DARK_APP_PORTAL);
+  const dark = themeFromFields(darkInput, DEFAULT_DARK_APP_PORTAL);
   await ensureAppPortalTable();
   const { DB } = getEnv();
   await DB.prepare(

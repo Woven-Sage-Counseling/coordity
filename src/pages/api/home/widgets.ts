@@ -24,6 +24,7 @@ const TITLES: Record<HomeWidgetId, string> = {
   tasks: 'Tasks',
   credentialing: 'Credentialing',
   quickbooks: 'QuickBooks',
+  training: 'Training',
 };
 
 export const GET: APIRoute = async ({ locals }) => {
@@ -99,6 +100,7 @@ async function detailFor(id: HomeWidgetId, userId: string, orgId: string, roleKe
     return open === 1 ? '1 open task.' : `${open} open tasks.`;
   }
   if (id === 'credentialing') return 'Insurance coverage by provider.';
+  if (id === 'training') return 'Assigned courses.';
   const summary = await getFinancialSummary(null, { orgId, cachedOnly: true });
   if (summary.quickbooks.status !== 'connected' || !summary.snapshot) return 'QuickBooks not connected.';
   const dollars = Math.round(summary.snapshot.netIncomeCents / 100);
