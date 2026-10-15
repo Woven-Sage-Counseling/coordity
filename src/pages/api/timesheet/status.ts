@@ -15,14 +15,24 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
-  const canChange = canUseTimesheet(employee) && !onTimeOff;
+  let onTimeOff = false;
+  try {
+    onTimeOff = await isUserOnApprovedTimeOffNow(employee.id);
+  } catch (error) {
+    console.error('availability time off failed', error);
+  }
+  const canUse = canUseTimesheet(employee);
+  const canChange = canUse && !onTimeOff;
   let onShift = false;
   let onBreak = false;
-  if (canUseTimesheet(employee)) {
-    const shift = await getActiveShift(employee.id);
-    onShift = shift != null;
-    onBreak = shift ? isOnBreak(shift.breaks) : false;
+  if (canUse) {
+    try {
+      const shift = await getActiveShift(employee.id);
+      onShift = shift != null;
+      onBreak = shift ? isOnBreak(shift.breaks) : false;
+    } catch (error) {
+      console.error('availability shift failed', error);
+    }
   }
 
   return new Response(JSON.stringify({ ok: true, onShift, onBreak, onTimeOff, canChange }), {
