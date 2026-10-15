@@ -40,6 +40,9 @@ export const POST: APIRoute = async ({ request }) => {
         surface: String(form.get('appSurface') ?? ''),
         accent: String(form.get('appAccent') ?? ''),
         ink: String(form.get('appInk') ?? ''),
+        tabIcon: String(form.get('appTabIcon') ?? ''),
+        icon: String(form.get('appIcon') ?? ''),
+        bubbleText: String(form.get('appBubbleText') ?? ''),
       }),
     ).catch((error) => {
       console.error('app portal theme on create failed', error);
