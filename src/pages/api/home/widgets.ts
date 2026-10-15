@@ -63,10 +63,13 @@ async function summarize(
   title: string;
   detail: string;
   events?: Array<Pick<ScheduleEvent, 'title' | 'start' | 'end' | 'allDay'>>;
+  progress?: number;
+  focus?: string;
 }> {
   const title = TITLES[id];
   try {
     if (id === 'schedule') return await scheduleWidget(userId, title);
+    if (id === 'my_progress') return await progressWidget(userId, orgId, roleKeys, title);
     return { id, title, detail: await detailFor(id, userId, orgId, roleKeys) };
   } catch (error) {
     console.error('home widget', id, error);
@@ -90,7 +93,14 @@ async function scheduleWidget(userId: string, title: string) {
   return { id: 'schedule' as const, title, detail, events };
 }
 
-async function detailFor(id: HomeWidgetId, userId: string, orgId: string, roleKeys: string[]): Promise<string> {
+async function progressWidget(userId: string, orgId: string, roleKeys: string[], title: string) {
+  const tracks = await listProgressTracksForUser(userId, { orgId, roleKeys });
+  const overall = overallProgress(tracks);
+  const detail = overall.total === 0 ? 'Nothing assigned yet.' : `${overall.percent}% complete.`;
+  return { id: 'my_progress' as const, title, detail, progress: overall.percent, focus: 'Overall' };
+}
+
+async function detailFor(id: HomeWidgetId, userId: string, orgId: string, _roleKeys: string[]): Promise<string> {
   if (id === 'caseload') {
     const snapshot = getCaseloadSnapshot(userId);
     return `${snapshot.sessionsThisWeek} sessions this week.`;
@@ -105,11 +115,6 @@ async function detailFor(id: HomeWidgetId, userId: string, orgId: string, roleKe
     const shift = await getActiveShift(userId);
     if (!shift) return 'Not clocked in.';
     return isOnBreak(shift.breaks) ? 'On break.' : 'Clocked in.';
-  }
-  if (id === 'my_progress') {
-    const tracks = await listProgressTracksForUser(userId, { orgId, roleKeys });
-    const overall = overallProgress(tracks);
-    return overall.total === 0 ? 'Nothing assigned yet.' : `${overall.percent}% complete.`;
   }
   if (id === 'tasks') {
     const tasks = await listTasksForUser(userId, 50);
