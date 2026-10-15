@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createInvitation } from '../../../lib/invites';
 import { formErrorRedirect } from '../../../lib/http';
+import { saveAppPortalTheme, themeFromFields } from '../../../lib/app-portal';
 import {
   COORDITY_SYSTEM_USER_ID,
   createOrganization,
@@ -31,6 +32,17 @@ export const POST: APIRoute = async ({ request }) => {
       slug: normalizeOrgSlug(slugRaw),
       displayName: companyName,
       websiteUrl: websiteUrl || null,
+    });
+    await saveAppPortalTheme(
+      org.id,
+      themeFromFields({
+        background: String(form.get('appBackground') ?? ''),
+        surface: String(form.get('appSurface') ?? ''),
+        accent: String(form.get('appAccent') ?? ''),
+        ink: String(form.get('appInk') ?? ''),
+      }),
+    ).catch((error) => {
+      console.error('app portal theme on create failed', error);
     });
 
     const origin = tenantOrigin(org.slug, request.url);
