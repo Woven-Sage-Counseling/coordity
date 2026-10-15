@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
-import { canAccessManagement } from '../../lib/permissions';
-import { orgIdFromLocals } from '../../lib/organization';
-import { createQuickLink, listQuickLinkCategories, listVisibleQuickLinks } from '../../lib/quick-links';
+import { canAccessManagement } from '../../../lib/permissions';
+import { orgIdFromLocals } from '../../../lib/organization';
+import { createQuickLink, listQuickLinkCategories, listVisibleQuickLinks } from '../../../lib/quick-links';
 
 export const prerender = false;
 
@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const orgId = orgIdFromLocals(locals.organization);
   try {
     const [links, categories] = await Promise.all([
-      listVisibleQuickLinks({ orgId, roleKeys: employee.roles }),
+      listVisibleQuickLinks({ orgId, roleKeys: employee.roles ?? [] }),
       listQuickLinkCategories(orgId),
     ]);
     return json({
@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ locals }) => {
       links: links.map((link) => ({
         id: link.id,
         name: link.name,
-        description: link.description,
+        description: link.description ?? '',
         href: link.href,
         iconSrc: link.iconSrc ?? null,
         categoryId: link.categoryId,
@@ -37,7 +37,8 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   } catch (error) {
     console.error('quick links read failed', error);
-    return json({ ok: true, canManage: false, categories: [], links: [] });
+    const message = error instanceof Error ? error.message : 'Quick links could not be loaded.';
+    return json({ ok: false, error: message, canManage: false, categories: [], links: [] }, 500);
   }
 };
 
