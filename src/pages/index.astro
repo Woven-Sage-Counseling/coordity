@@ -146,7 +146,7 @@ const widgetProps = {
         {
           showRail ? (
             <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
-              {widgetsOnRail ? <HomeWidgetCarousel {...widgetProps} prepared={prepared} /> : null}
+              {widgetsOnRail ? <HomeWidgetCarousel {...widgetProps} prepared={prepared} placement="rail" /> : null}
               {railBoard ? (
                 <HomeBulletinBoard
                   shape="portrait"

@@ -18,6 +18,8 @@ interface Props {
   canSeeClinical: boolean;
   canSeeTimesheet: boolean;
   prepared?: HomePrepared;
+  /** Right-hand column shows one full-width card at a time. */
+  placement?: 'rail' | 'wide';
 }
 
 const {
@@ -28,6 +30,7 @@ const {
   canSeeClinical,
   canSeeTimesheet,
   prepared,
+  placement = 'wide',
 } = Astro.props;
 
 const available = availableWidgets({
@@ -62,7 +65,8 @@ const arrowClass =
       aria-label="Home widgets"
       data-widget-carousel
       data-widgets-build="2026-09-09a"
-      data-per-page="4"
+      data-placement={placement}
+      data-per-page={placement === 'rail' ? '1' : '4'}
       data-scrollable="false"
       data-user-id={userId}
       data-available={JSON.stringify(availableIds)}
@@ -261,6 +265,19 @@ const arrowClass =
     [data-widget-carousel] {
       --widget-per-page: 2;
     }
+  }
+
+  [data-widget-carousel][data-placement='rail'] {
+    --widget-per-page: 1;
+  }
+
+  [data-widget-carousel][data-placement='rail'] .widget-carousel-slide {
+    width: 100%;
+  }
+
+  [data-widget-carousel][data-placement='rail'][data-scrollable='true'] .widget-carousel-viewport {
+    -webkit-mask-image: var(--widget-mask-bottom);
+    mask-image: var(--widget-mask-bottom);
   }
 
   @media (max-width: 639px) {
@@ -526,6 +543,7 @@ const arrowClass =
     };
 
     const perPage = () => {
+      if (root.dataset.placement === 'rail') return 1;
       const width = viewport.clientWidth;
       if (width <= 0) return Number.parseInt(root.dataset.perPage || '4', 10) || 4;
       if (width < 640) return 1;
@@ -577,6 +595,7 @@ const arrowClass =
       const count = pageCount();
       const canScroll = n > count;
       root.dataset.perPage = String(count);
+      root.style.setProperty('--widget-per-page', String(count));
       root.dataset.scrollable = canScroll ? 'true' : 'false';
       const viewportWidth = viewport.clientWidth;
       const gap = gapSize();
@@ -585,7 +604,7 @@ const arrowClass =
 
       if (count === 1) {
         enabledSlides.forEach((el) => {
-          el.style.width = '';
+          el.style.width = root.dataset.placement === 'rail' ? '100%' : '';
         });
         if (!canScroll) {
           track.style.transform = 'translate3d(0,0,0)';

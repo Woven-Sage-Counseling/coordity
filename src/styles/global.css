@@ -770,6 +770,19 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
   }
 }
 
+[data-widget-carousel][data-placement='rail'] {
+  --widget-per-page: 1;
+}
+
+[data-widget-carousel][data-placement='rail'] .widget-carousel-slide {
+  width: 100%;
+}
+
+[data-widget-carousel][data-placement='rail'][data-scrollable='true'] .widget-carousel-viewport {
+  -webkit-mask-image: var(--widget-mask-bottom);
+  mask-image: var(--widget-mask-bottom);
+}
+
 @media (max-width: 639px) {
   [data-widget-carousel] {
     --widget-per-page: 1;
