@@ -272,12 +272,11 @@ const arrowClass =
   }
 
   [data-widget-carousel][data-placement='rail'] .widget-carousel-slide {
-    width: 100%;
+    width: 72%;
   }
 
-  [data-widget-carousel][data-placement='rail'][data-scrollable='true'] .widget-carousel-viewport {
-    -webkit-mask-image: var(--widget-mask-bottom);
-    mask-image: var(--widget-mask-bottom);
+  [data-widget-carousel][data-placement='rail'] .widget-carousel-slide:not([data-active='true']) {
+    opacity: 0.72;
   }
 
   @media (max-width: 639px) {
@@ -604,7 +603,7 @@ const arrowClass =
 
       if (count === 1) {
         enabledSlides.forEach((el) => {
-          el.style.width = root.dataset.placement === 'rail' ? '100%' : '';
+          el.style.width = root.dataset.placement === 'rail' ? '72%' : '';
         });
         if (!canScroll) {
           track.style.transform = 'translate3d(0,0,0)';

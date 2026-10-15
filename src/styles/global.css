@@ -775,12 +775,11 @@ html.dark :is([data-schedule-card], [data-schedule-dialog]) .text-\[\#8b8d93\] {
 }
 
 [data-widget-carousel][data-placement='rail'] .widget-carousel-slide {
-  width: 100%;
+  width: 72%;
 }
 
-[data-widget-carousel][data-placement='rail'][data-scrollable='true'] .widget-carousel-viewport {
-  -webkit-mask-image: var(--widget-mask-bottom);
-  mask-image: var(--widget-mask-bottom);
+[data-widget-carousel][data-placement='rail'] .widget-carousel-slide:not([data-active='true']) {
+  opacity: 0.72;
 }
 
 @media (max-width: 639px) {
