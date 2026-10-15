@@ -70,11 +70,11 @@ const showRail = layout.showRail;
 const railBoard = layout.showRailBoard;
 const railImageUrl = layout.railImageUrl;
 const belowBoard = layout.showBelowBoard;
+const widgetsOnRail = layout.showRailWidgets;
+const widgetsBelow = layout.showBelowWidgets;
 const showCoordityArcs = layout.showCoordityArcs;
 /** Match board layout width for announcements even when the right slot is Coordity arcs. */
 const useRailGrid = showRail || showCoordityArcs;
-/** Always render widgets full-width below — ignore rail placement and never hide them. */
-const showWidgets = true;
 const suggestOnRail = railBoard;
 const suggestOnBelow = belowBoard;
 
@@ -134,11 +134,19 @@ const widgetProps = {
               </div>
             ) : null
           }
+          {
+            widgetsBelow ? (
+              <div class="mt-8">
+                <HomeWidgetCarousel {...widgetProps} prepared={prepared} />
+              </div>
+            ) : null
+          }
         </div>
 
         {
           showRail ? (
             <aside class="order-2 mt-8 flex min-w-0 flex-col gap-6 lg:order-2 lg:mt-0">
+              {widgetsOnRail ? <HomeWidgetCarousel {...widgetProps} prepared={prepared} /> : null}
               {railBoard ? (
                 <HomeBulletinBoard
                   shape="portrait"
@@ -165,14 +173,6 @@ const widgetProps = {
           ) : null
         }
       </div>
-
-      {
-        showWidgets ? (
-          <div class="mt-8">
-            <HomeWidgetCarousel {...widgetProps} prepared={prepared} />
-          </div>
-        ) : null
-      }
 
       {
         visibleApps.length === 0 ? (
