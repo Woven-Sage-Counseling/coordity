@@ -21,6 +21,16 @@ export const DEFAULT_APP_PORTAL: AppPortalTheme = {
   bubbleText: '#FFFFFF',
 };
 
+export const DEFAULT_DARK_APP_PORTAL: AppPortalTheme = {
+  background: '#171816',
+  surface: '#242623',
+  accent: '#535F51',
+  ink: '#F4F5F8',
+  tabIcon: '#E4E6E1',
+  icon: '#E4E6E1',
+  bubbleText: '#FFFFFF',
+};
+
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
 export function normalizePortalHex(value: unknown, fallback: string): string {
@@ -67,34 +77,62 @@ async function ensureAppPortalTable(): Promise<void> {
     if (names.has(column)) continue;
     await DB.prepare(`ALTER TABLE app_portal ADD COLUMN ${column} TEXT NOT NULL DEFAULT '${fallback}'`).run();
   }
+  if (!names.has('dark_json')) {
+    await DB.prepare(`ALTER TABLE app_portal ADD COLUMN dark_json TEXT`).run();
+  }
 }
 
-export async function getAppPortalTheme(orgId: string): Promise<{ theme: AppPortalTheme; customized: boolean }> {
+function darkFromStored(raw: string | null | undefined): AppPortalTheme {
+  if (!raw) return { ...DEFAULT_DARK_APP_PORTAL };
+  try {
+    return themeFromFields(JSON.parse(raw) as Partial<AppPortalTheme>);
+  } catch {
+    return { ...DEFAULT_DARK_APP_PORTAL };
+  }
+}
+
+export async function getAppPortalTheme(
+  orgId: string,
+): Promise<{ theme: AppPortalTheme; dark: AppPortalTheme; customized: boolean }> {
+  const fallback = {
+    theme: { ...DEFAULT_APP_PORTAL },
+    dark: { ...DEFAULT_DARK_APP_PORTAL },
+    customized: false,
+  };
   try {
     await ensureAppPortalTable();
     const { DB } = getEnv();
     const row = await DB.prepare(
       `SELECT background, surface, accent, ink,
-              tab_icon AS tabIcon, icon, bubble_text AS bubbleText
+              tab_icon AS tabIcon, icon, bubble_text AS bubbleText, dark_json AS darkJson
        FROM app_portal WHERE org_id = ?`,
     )
       .bind(orgId)
-      .first<AppPortalTheme>();
-    if (!row) return { theme: { ...DEFAULT_APP_PORTAL }, customized: false };
-    return { theme: themeFromFields(row), customized: true };
+      .first<AppPortalTheme & { darkJson: string | null }>();
+    if (!row) return fallback;
+    return {
+      theme: themeFromFields(row),
+      dark: darkFromStored(row.darkJson),
+      customized: true,
+    };
   } catch (error) {
     console.error('app portal theme read failed', error);
-    return { theme: { ...DEFAULT_APP_PORTAL }, customized: false };
+    return fallback;
   }
 }
 
-export async function saveAppPortalTheme(orgId: string, input: Partial<AppPortalTheme>): Promise<AppPortalTheme> {
+export async function saveAppPortalTheme(
+  orgId: string,
+  input: Partial<AppPortalTheme>,
+  darkInput?: Partial<AppPortalTheme> | null,
+): Promise<{ theme: AppPortalTheme; dark: AppPortalTheme }> {
   const theme = themeFromFields(input);
+  const dark = themeFromFields(darkInput ?? DEFAULT_DARK_APP_PORTAL);
   await ensureAppPortalTable();
   const { DB } = getEnv();
   await DB.prepare(
-    `INSERT INTO app_portal (org_id, background, surface, accent, ink, tab_icon, icon, bubble_text, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO app_portal (org_id, background, surface, accent, ink, tab_icon, icon, bubble_text, dark_json, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(org_id) DO UPDATE SET
        background = excluded.background,
        surface = excluded.surface,
@@ -103,6 +141,7 @@ export async function saveAppPortalTheme(orgId: string, input: Partial<AppPortal
        tab_icon = excluded.tab_icon,
        icon = excluded.icon,
        bubble_text = excluded.bubble_text,
+       dark_json = excluded.dark_json,
        updated_at = excluded.updated_at`,
   )
     .bind(
@@ -114,8 +153,9 @@ export async function saveAppPortalTheme(orgId: string, input: Partial<AppPortal
       theme.tabIcon,
       theme.icon,
       theme.bubbleText,
+      JSON.stringify(dark),
       nowMs(),
     )
     .run();
-  return theme;
+  return { theme, dark };
 }

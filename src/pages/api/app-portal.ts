@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getAppPortalTheme, saveAppPortalTheme, themeFromFields } from '../../lib/app-portal';
+import { getAppPortalTheme, saveAppPortalTheme, themeFromFields, type AppPortalTheme } from '../../lib/app-portal';
 import { canAccessManagement } from '../../lib/permissions';
 import { orgIdFromLocals } from '../../lib/organization';
 
@@ -14,8 +14,8 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const { theme, customized } = await getAppPortalTheme(orgIdFromLocals(locals.organization));
-  return new Response(JSON.stringify({ ok: true, theme, customized }), {
+  const { theme, dark, customized } = await getAppPortalTheme(orgIdFromLocals(locals.organization));
+  return new Response(JSON.stringify({ ok: true, theme, dark, customized }), {
     status: 200,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
@@ -36,14 +36,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const body = (await request.json().catch(() => null)) as Partial<{
-    background: string;
-    surface: string;
-    accent: string;
-    ink: string;
-  }> | null;
-  const theme = await saveAppPortalTheme(orgIdFromLocals(locals.organization), themeFromFields(body));
-  return new Response(JSON.stringify({ ok: true, theme, customized: true }), {
+  const body = (await request.json().catch(() => null)) as
+    | (Partial<AppPortalTheme> & { dark?: Partial<AppPortalTheme> | null })
+    | null;
+  const { theme, dark } = await saveAppPortalTheme(
+    orgIdFromLocals(locals.organization),
+    themeFromFields(body),
+    body?.dark,
+  );
+  return new Response(JSON.stringify({ ok: true, theme, dark, customized: true }), {
     status: 200,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
