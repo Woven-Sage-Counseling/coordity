@@ -1,7 +1,17 @@
 import type { APIRoute } from 'astro';
 import { canSeeCaseload, getCaseloadSnapshot } from '../../../lib/caseload';
 import { canSeeCredentialing } from '../../../lib/credentialing';
-import { getFinancialSummary } from '../../../lib/financials/summary';
+import {
+  bankBalanceForAccount,
+  orderedBoardRefs,
+  pnlAmountForAccount,
+  signedNetCents,
+  visibleBoardRefs,
+  type DashboardAccountChoice,
+} from '../../../lib/financials/cards';
+import { normalizeMatchName } from '../../../lib/financials/outlook';
+import { formatUsd, getFinancialSummary } from '../../../lib/financials/summary';
+import type { FinancialSummary } from '../../../lib/financials/types';
 import { defaultPrefs, type HomeWidgetId } from '../../../lib/home-widgets';
 import { orgIdFromLocals } from '../../../lib/organization';
 import { hasPermission } from '../../../lib/permissions';
@@ -65,11 +75,13 @@ async function summarize(
   events?: Array<Pick<ScheduleEvent, 'title' | 'start' | 'end' | 'allDay'>>;
   progress?: number;
   focus?: string;
+  books?: HomeBooks;
 }> {
   const title = TITLES[id];
   try {
     if (id === 'schedule') return await scheduleWidget(userId, title);
     if (id === 'my_progress') return await progressWidget(userId, orgId, roleKeys, title);
+    if (id === 'quickbooks') return await quickbooksWidget(orgId, title);
     return { id, title, detail: await detailFor(id, userId, orgId, roleKeys) };
   } catch (error) {
     console.error('home widget', id, error);
@@ -123,13 +135,110 @@ async function detailFor(id: HomeWidgetId, userId: string, orgId: string, _roleK
   }
   if (id === 'credentialing') return 'Insurance coverage by provider.';
   if (id === 'training') return 'Assigned courses.';
+  return 'Open to see more.';
+}
+
+interface HomeBooks {
+  period: string;
+  sections: Array<{ title: string; rows: Array<{ label: string; amount: string }> }>;
+}
+
+async function quickbooksWidget(orgId: string, title: string) {
   const summary = await getFinancialSummary(null, { orgId, cachedOnly: true });
-  if (summary.quickbooks.status !== 'connected' || !summary.snapshot) return 'QuickBooks not connected.';
-  const dollars = Math.round(summary.snapshot.netIncomeCents / 100);
-  const formatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(dollars);
-  return `${formatted} net income.`;
+  const books = booksFromSummary(summary);
+  const net = books.sections.find((section) => section.title === 'Net income')?.rows[0]?.amount;
+  const detail =
+    summary.quickbooks.status !== 'connected' || !summary.snapshot
+      ? 'QuickBooks not connected.'
+      : books.sections.length === 0
+        ? 'No cards yet. Add them on the financials page.'
+        : net
+          ? `${net} net income.`
+          : 'Snapshot.';
+  return { id: 'quickbooks' as const, title, detail, books };
+}
+
+function booksFromSummary(summary: FinancialSummary): HomeBooks {
+  const snapshot = summary.snapshot;
+  const period = snapshot
+    ? `${formatPeriod(snapshot.periodStart)} – ${formatPeriod(snapshot.periodEnd)}`
+    : 'No snapshot yet';
+  if (summary.quickbooks.status !== 'connected' || !snapshot) {
+    return { period, sections: [] };
+  }
+
+  const enabled = summary.dashboardCards.filter((card) => card.enabled);
+  if (enabled.length === 0) return { period, sections: [] };
+
+  const activityChoices: DashboardAccountChoice[] = summary.pnlLines.map((line) => ({
+    id: line.accountId || `name:${normalizeMatchName(line.name)}`,
+    name: line.name,
+    kind: line.bucket === 'income' ? 'income' : 'expense',
+  }));
+  const refs = orderedBoardRefs(visibleBoardRefs(summary.dashboardCards), summary.boardOrder);
+  const sections: HomeBooks['sections'] = [];
+
+  for (const ref of refs) {
+    const card = enabled.find((item) => (ref.startsWith('income:') ? item.key === 'income_expenses' : item.key === ref));
+    if (!card) continue;
+    if (card.key === 'pnl') {
+      sections.push({
+        title: 'Profit and loss',
+        rows: [
+          { label: 'Income', amount: formatUsd(snapshot.revenueCents) },
+          { label: 'Expenses', amount: formatUsd(summary.reportedExpensesCents) },
+        ],
+      });
+      continue;
+    }
+    if (card.key === 'net_income') {
+      const accountChoices = summary.pnlLines
+        .filter((line) => line.accountId)
+        .map((line) => ({
+          id: line.accountId as string,
+          name: line.name,
+          kind: line.bucket === 'income' ? ('income' as const) : ('expense' as const),
+        }));
+      sections.push({
+        title: 'Net income',
+        rows: [{ label: 'Net income', amount: formatUsd(signedNetCents(summary.pnlLines, accountChoices, card.accountIds)) }],
+      });
+      continue;
+    }
+    if (card.key === 'account_balance') {
+      const balances = card.accountIds.flatMap((id) => {
+        const found = bankBalanceForAccount(summary.bankAccounts, [], id);
+        if (!found) return [];
+        return [{ label: card.labels[id] || found.name, amount: formatUsd(found.cents) }];
+      });
+      sections.push({
+        title: 'Account balances',
+        rows: balances.length > 0 ? balances : [{ label: 'Add an account', amount: '' }],
+      });
+      continue;
+    }
+    const block = card.blocks.find((item) => `income:${item.id}` === ref);
+    if (!block) continue;
+    const selected = activityChoices.filter((account) => block.accountIds.includes(account.id));
+    const rows = selected.slice(0, 8).map((account) => ({
+      label: account.name,
+      amount: formatUsd(Math.abs(pnlAmountForAccount(summary.pnlLines, account))),
+    }));
+    sections.push({
+      title: 'Income and expenses',
+      rows: rows.length > 0 ? rows : [{ label: 'Choose accounts', amount: '' }],
+    });
+  }
+
+  return { period, sections };
+}
+
+function formatPeriod(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
