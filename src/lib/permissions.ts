@@ -79,10 +79,13 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
       : Promise.resolve({ results: [] as { key: Permission }[] }),
   ]);
 
+  const roleKeys = (roles.results ?? []).map((row) => row.key).filter(Boolean);
   let permissionKeys: Permission[] = active
     ? (orgPermissions.results ?? []).map((row) => row.key)
     : [];
-  if (active && permissionKeys.length === 0) {
+  if (active && roleKeys.includes('owner')) {
+    permissionKeys = [...PERMISSIONS];
+  } else if (active && permissionKeys.length === 0) {
     const fromGlobal = await DB.prepare(
       `SELECT DISTINCT perm.key
        FROM user_role ur
@@ -104,7 +107,7 @@ export async function loadEmployee(userId: string): Promise<PortalEmployee | nul
     teams: (teams.results ?? []).map((row) => row.name),
     hasAvatar: profile.has_avatar === 1,
     status: profile.status,
-    roles: (roles.results ?? []).map((row) => row.key).filter(Boolean),
+    roles: roleKeys,
     permissions: permissionKeys,
   };
 }

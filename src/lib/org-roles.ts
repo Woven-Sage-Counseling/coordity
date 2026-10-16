@@ -118,18 +118,34 @@ async function setOrgRolePermissions(roleId: string, permissions: Permission[]):
   );
 }
 
-/** Skip the role seed when this org already has the system roles. */
+async function ensureRoleSeedTable(): Promise<void> {
+  const { DB } = getEnv();
+  await DB.prepare(
+    `CREATE TABLE IF NOT EXISTS organization_role_seed (
+       org_id TEXT PRIMARY KEY NOT NULL,
+       seeded_at INTEGER NOT NULL
+     )`,
+  ).run();
+}
+
+/** Seed the starter roles once per organization. Later edits and deletes stay put. */
 export async function ensureOrganizationRolesSeeded(orgId: string): Promise<void> {
   const { DB } = getEnv();
   try {
-    const countRow = await DB.prepare(`SELECT COUNT(*) AS n FROM organization_role WHERE org_id = ?`)
+    await ensureRoleSeedTable();
+    const seeded = await DB.prepare(`SELECT org_id FROM organization_role_seed WHERE org_id = ?`)
       .bind(orgId)
-      .first<{ n: number }>();
-    if (Number(countRow?.n ?? 0) >= SYSTEM_ROLE_KEYS.length) return;
+      .first<{ org_id: string }>();
+    if (seeded) return;
   } catch {
     return;
   }
   await ensureOrganizationRoles(orgId);
+  try {
+    await DB.prepare(`INSERT OR IGNORE INTO organization_role_seed (org_id, seeded_at) VALUES (?, ?)`).bind(orgId, nowMs()).run();
+  } catch (error) {
+    console.error('organization role seed stamp failed', error);
+  }
 }
 
 /** Seed default Woven Sage roles for an org and remap user/invite role ids onto org copies. */
@@ -310,7 +326,8 @@ export async function listOrganizationRoles(orgId: string): Promise<OrgRole[]> {
 export async function listOrganizationRolesWithPermissions(orgId: string) {
   let roles: OrgRole[] = [];
   try {
-    roles = await ensureOrganizationRoles(orgId);
+    await ensureOrganizationRolesSeeded(orgId);
+    roles = await listOrganizationRoles(orgId);
   } catch (error) {
     console.error('ensureOrganizationRoles failed', error);
     roles = [];
@@ -378,7 +395,7 @@ export async function createOrganizationRole(input: {
   description?: string;
   permissions: string[];
 }): Promise<OrgRole> {
-  await ensureOrganizationRoles(input.orgId);
+  await ensureOrganizationRolesSeeded(input.orgId);
   const name = input.name.trim();
   if (!name) throw new Error('Enter a role name.');
   if (name.length > 80) throw new Error('Role name is too long.');
@@ -428,6 +445,9 @@ export async function updateOrganizationRole(input: {
 }): Promise<void> {
   const existing = await getOrganizationRole(input.orgId, input.roleId);
   if (!existing) throw new Error('Role not found.');
+  if (existing.key === 'owner') {
+    throw new Error('The primary owner always has every permission and cannot be changed.');
+  }
 
   const name = input.name !== undefined ? input.name.trim() : existing.name;
   if (!name) throw new Error('Enter a role name.');
@@ -445,9 +465,6 @@ export async function updateOrganizationRole(input: {
     .run();
 
   if (input.permissions !== undefined) {
-    if (existing.isSystem) {
-      throw new Error('System role permissions cannot be changed.');
-    }
     await setOrgRolePermissions(input.roleId, normalizePermissionKeys(input.permissions));
   }
 }
@@ -555,8 +572,8 @@ export function roleUsageIsEmpty(usage: RoleUsageReport): boolean {
 export async function deleteOrganizationRole(orgId: string, roleId: string): Promise<void> {
   const existing = await getOrganizationRole(orgId, roleId);
   if (!existing) throw new Error('Role not found.');
-  if (existing.isSystem || isSystemRoleKey(existing.key)) {
-    throw new Error('System roles cannot be deleted.');
+  if (existing.key === 'owner') {
+    throw new Error('The primary owner role cannot be deleted.');
   }
   const usage = await findRoleUsage(orgId, existing.key);
   if (!roleUsageIsEmpty(usage)) {

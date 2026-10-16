@@ -2590,7 +2590,7 @@ const adminCollapsedItems = adminNav.flatMap((section) =>
       <PanelHeading
         id="roles-heading"
         title="Roles and permissions"
-        description="Manage who can do what. Default roles match the Woven Sage starter set. Custom roles appear in People, Training, and Quick links without changing existing assignments."
+        description="Choose what each role can do. Primary owner always has every permission. New organizations still start with these default roles."
       />
       <RolesManager
         roles={roles.map((role) => ({
