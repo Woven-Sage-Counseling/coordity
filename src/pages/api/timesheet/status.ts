@@ -25,17 +25,24 @@ export const GET: APIRoute = async ({ locals }) => {
   const canChange = canUse && !onTimeOff;
   let onShift = false;
   let onBreak = false;
+  let startedAt: number | null = null;
+  let breaks: Array<{ startedAt: number; endedAt: number | null }> = [];
   if (canUse) {
     try {
       const shift = await getActiveShift(employee.id);
       onShift = shift != null;
       onBreak = shift ? isOnBreak(shift.breaks) : false;
+      startedAt = shift?.startedAt ?? null;
+      breaks = (shift?.breaks ?? []).map((item) => ({
+        startedAt: item.startedAt,
+        endedAt: item.endedAt,
+      }));
     } catch (error) {
       console.error('availability shift failed', error);
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, onShift, onBreak, onTimeOff, canChange }), {
+  return new Response(JSON.stringify({ ok: true, onShift, onBreak, onTimeOff, canChange, startedAt, breaks }), {
     status: 200,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
