@@ -48,9 +48,10 @@ export async function getFinancialSummary(
         (await qb.getCachedSnapshot(ytd.start, ytd.end)) ??
         snapshot);
   const bankNotes = selectedNotes.banks.length > 0 ? selectedNotes : readSnapshotNotes(reserveSnapshot?.notes);
+  const banks = bankNotes.banks.length > 0 ? bankNotes.banks : await qb.latestStoredBanks();
   const amounts = centsByOutlookLine(outlook, {
     ...selectedNotes,
-    banks: bankNotes.banks,
+    banks,
   });
   const storedCash = amounts.cash.size > 0 ? amounts.cash : await readCashBalances(orgId);
 
@@ -132,7 +133,7 @@ export async function getFinancialSummary(
       accountId: line.accountId,
     })),
     transactions: selectedNotes.transactions,
-    bankAccounts: bankNotes.banks.map((bank) => ({
+    bankAccounts: banks.map((bank) => ({
       name: bank.name,
       balanceCents: bank.balanceCents,
       mappedKey: null,

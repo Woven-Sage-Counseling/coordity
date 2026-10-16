@@ -5,7 +5,9 @@ import {
   expenseTotals,
   getFinancialOutlook,
   matchOutlookLine,
+  readSnapshotNotes,
   type FinancialOutlook,
+  type StoredBankLine,
 } from './outlook';
 import { resolvePreset, todayEastern } from './periods';
 import type { FinancialDataProvider, FinancialSnapshot, FinancialTransaction } from './types';
@@ -712,6 +714,19 @@ export class QuickBooksProvider implements FinancialDataProvider {
     }
   }
 
+  async latestStoredBanks(): Promise<StoredBankLine[]> {
+    const row = await getEnv()
+      .DB.prepare(
+        `SELECT notes FROM financial_snapshot
+         WHERE org_id = ? AND source = 'quickbooks' AND notes LIKE '%"banks":[{%'
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      )
+      .bind(this.orgId)
+      .first<{ notes: string }>();
+    return readSnapshotNotes(row?.notes).banks;
+  }
+
   async getSnapshot(): Promise<FinancialSnapshot | null> {
     return this.readSnapshot();
   }
@@ -737,7 +752,7 @@ export class QuickBooksProvider implements FinancialDataProvider {
       if (!connection?.realm_id) return fallback;
 
       return await this.fetchAndStorePnl(accessToken, connection.realm_id, periodStart, periodEnd, {
-        includeBanks: false,
+        includeBanks: true,
       });
     } catch {
       return fallback;
@@ -891,6 +906,18 @@ export class QuickBooksProvider implements FinancialDataProvider {
 
     if (options.includeBanks) {
       bankAccounts = await this.storeBankBalances(accessToken, realmId, outlook, periodEnd);
+    }
+    if (bankAccounts.length === 0) {
+      bankAccounts = (await this.latestStoredBanks()).flatMap((bank) => {
+        if (bank.balanceCents == null) return [];
+        return [{
+          name: bank.name,
+          balanceCents: bank.balanceCents,
+          accountId: bank.accountId,
+          accountNumber: bank.accountNumber,
+          mappedKey: null,
+        }];
+      });
     }
 
     const envName = (await this.resolveAppCredentials())?.environment ?? qbApiEnvironment();
