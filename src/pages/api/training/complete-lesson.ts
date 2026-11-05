@@ -142,12 +142,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
+    if ((request.headers.get('accept') ?? '').includes('application/json')) {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
     return new Response(null, {
       status: 303,
       headers: { Location: `/training/${moduleId}?saved=lesson`, 'Cache-Control': 'no-store' },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not complete lesson.';
+    if ((request.headers.get('accept') ?? '').includes('application/json')) {
+      return new Response(JSON.stringify({ error: message }), {
+        status: 400,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
     return formErrorRedirect(returnPath, message);
   }
 };

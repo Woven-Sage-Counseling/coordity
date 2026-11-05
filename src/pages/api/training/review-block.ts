@@ -26,7 +26,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not save review.';
+    if ((request.headers.get('accept') ?? '').includes('application/json')) {
+      return new Response(JSON.stringify({ error: message }), {
+        status: 400,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
     return formErrorRedirect(returnPath, message);
+  }
+
+  if ((request.headers.get('accept') ?? '').includes('application/json')) {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
   }
 
   return new Response(null, {
