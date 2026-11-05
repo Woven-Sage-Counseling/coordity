@@ -6,10 +6,34 @@ export const prerender = false;
 
 const MAX_BYTES = 250_000;
 
+function wantsJson(request: Request): boolean {
+  return (request.headers.get('accept') ?? '').includes('application/json');
+}
+
+function avatarError(request: Request, message: string, status = 400): Response {
+  if (wantsJson(request)) {
+    return new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
+  }
+  return formErrorRedirect('/account', message);
+}
+
+function avatarDone(request: Request): Response {
+  if (wantsJson(request)) {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
+  }
+  return new Response(null, { status: 303, headers: { Location: '/account' } });
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const actor = locals.employee;
   if (!actor || actor.status !== 'active') {
-    return new Response('Forbidden', { status: 403 });
+    return wantsJson(request) ? avatarError(request, 'Forbidden', 403) : new Response('Forbidden', { status: 403 });
   }
 
   const form = await request.formData();
@@ -20,9 +44,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await clearEmployeeAvatar({ userId: actor.id, actorUserId: actor.id });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to remove photo.';
-      return formErrorRedirect('/account', message);
+      return avatarError(request, message);
     }
-    return new Response(null, { status: 303, headers: { Location: '/account' } });
+    return avatarDone(request);
   }
 
   const file = form.get('avatar');
@@ -32,10 +56,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (dataUrl.startsWith('data:')) {
       const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
       if (!match) {
-        return formErrorRedirect('/account', 'Invalid profile photo data.');
+        return avatarError(request, 'Invalid profile photo data.');
       }
       if (match[2].length > 350_000) {
-        return formErrorRedirect('/account', 'Profile photo is too large. Try a smaller image.');
+        return avatarError(request, 'Profile photo is too large. Try a smaller image.');
       }
       await updateEmployeeAvatar({
         userId: actor.id,
@@ -45,11 +69,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } else if (file instanceof File && file.size > 0) {
       if (file.size > MAX_BYTES) {
-        return formErrorRedirect('/account', 'Profile photo is too large. Try a smaller image.');
+        return avatarError(request, 'Profile photo is too large. Try a smaller image.');
       }
       const mime = file.type;
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) {
-        return formErrorRedirect('/account', 'Profile photos must be JPEG, PNG, or WebP.');
+        return avatarError(request, 'Profile photos must be JPEG, PNG, or WebP.');
       }
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
@@ -65,12 +89,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         actorUserId: actor.id,
       });
     } else {
-      return formErrorRedirect('/account', 'Choose a photo to upload.');
+      return avatarError(request, 'Choose a photo to upload.');
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to update photo.';
-    return formErrorRedirect('/account', message);
+    return avatarError(request, message);
   }
 
-  return new Response(null, { status: 303, headers: { Location: '/account' } });
+  return avatarDone(request);
 };

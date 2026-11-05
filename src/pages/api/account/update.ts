@@ -4,10 +4,24 @@ import { formErrorRedirect } from '../../../lib/http';
 
 export const prerender = false;
 
+function wantsJson(request: Request): boolean {
+  return (request.headers.get('accept') ?? '').includes('application/json');
+}
+
+function accountError(request: Request, message: string, status = 400): Response {
+  if (wantsJson(request)) {
+    return new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
+  }
+  return formErrorRedirect('/account', message);
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const actor = locals.employee;
   if (!actor || actor.status !== 'active') {
-    return new Response('Forbidden', { status: 403 });
+    return wantsJson(request) ? accountError(request, 'Forbidden', 403) : new Response('Forbidden', { status: 403 });
   }
 
   const form = await request.formData();
@@ -27,11 +41,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         actorUserId: actor.id,
       });
     } else {
-      return formErrorRedirect('/account', 'Unknown field.');
+      return accountError(request, 'Unknown field.');
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to update profile.';
-    return formErrorRedirect('/account', message);
+    return accountError(request, message);
+  }
+
+  if (wantsJson(request)) {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
   }
 
   return new Response(null, {
