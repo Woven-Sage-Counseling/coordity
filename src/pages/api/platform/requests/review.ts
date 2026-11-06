@@ -24,6 +24,10 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
 
   try {
     if (action === 'invite') {
+      // Approval now creates a customer workspace, so it needs the same permission as creating one directly.
+      if (!hasPlatformPermission(staff, 'platform:orgs:create')) {
+        return new Response('Forbidden', { status: 403 });
+      }
       const result = await inviteEarlyAccessRequest({
         id,
         reviewedBy: staff!.userId,

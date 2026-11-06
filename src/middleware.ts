@@ -38,7 +38,6 @@ function isPublicPath(pathname: string): boolean {
   if (pathname === '/api/bootstrap') return true;
   if (pathname === '/api/invites/accept') return true;
   if (pathname === '/api/orgs/resolve') return true;
-  if (pathname === '/api/orgs/create') return true;
   if (pathname === '/api/org/favicon') return true;
   if (pathname === '/api/org/logo') return true;
   return false;
@@ -129,7 +128,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
       pathname === '/early-access' ||
       pathname === '/api/early-access/request' ||
       pathname === '/api/orgs/resolve' ||
-      pathname === '/api/orgs/create' ||
       pathname === '/api/session/sign-out' ||
       pathname.startsWith('/api/auth') ||
       pathname === '/favicon.ico' ||

@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "types": "wrangler types --config wrangler.jsonc",
     "db:migrate:local": "wrangler d1 migrations apply wovensage-portal-preview --local --config wrangler.jsonc",
-    "db:migrate:preview": "wrangler d1 migrations apply wovensage-portal-preview --remote --config wrangler.jsonc"
+    "db:migrate:preview": "wrangler d1 migrations apply wovensage-portal-preview --remote --config wrangler.jsonc",
+    "test:security": "node --import ./tests/security/support/register.mjs --experimental-test-module-mocks --test tests/security/workspace-creation.test.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",

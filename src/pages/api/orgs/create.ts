@@ -1,72 +1,25 @@
 import type { APIRoute } from 'astro';
-import { createInvitation } from '../../../lib/invites';
-import { formErrorRedirect } from '../../../lib/http';
-import { saveAppPortalTheme, themeFromFields } from '../../../lib/app-portal';
-import {
-  COORDITY_SYSTEM_USER_ID,
-  createOrganization,
-  normalizeOrgSlug,
-  tenantOrigin,
-} from '../../../lib/organization';
 
+// SECURITY CONTAINMENT (2026-11-06): public, unauthenticated workspace creation is disabled.
+//
+// This endpoint used to create an organization for any visitor and redirect them straight to an OWNER invitation link,
+// with no authentication, e-mail verification or approval. Workspaces are now created only by:
+//   - platform staff holding `platform:orgs:create` (POST /api/platform/orgs/create), or
+//   - approving an early-access request in the platform console, which creates the workspace through the same platform
+//     path and e-mails the owner invitation to the requester's address (so only the mailbox owner can claim it).
+//
+// The handler refuses every request and performs no database access. It is also no longer a public middleware path.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
-  const form = await request.formData();
-  const companyName = String(form.get('companyName') ?? '').trim();
-  const slugRaw = String(form.get('slug') ?? '').trim() || companyName;
-  const websiteUrl = String(form.get('websiteUrl') ?? '').trim();
-  const adminName = String(form.get('adminName') ?? '').trim();
-  const adminEmail = String(form.get('adminEmail') ?? '').trim().toLowerCase();
+export const WORKSPACE_CREATION_DISABLED_MESSAGE =
+  'Coordity workspaces are created by invitation. Request early access and we will set up your workspace.';
 
-  if (!companyName || !adminName || !adminEmail) {
-    return formErrorRedirect('/sign-up', 'Company name, your name, and email are required.');
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-    return formErrorRedirect('/sign-up', 'Enter a valid work email.');
-  }
+function refuse(): Response {
+  return new Response(JSON.stringify({ error: WORKSPACE_CREATION_DISABLED_MESSAGE }), {
+    status: 403,
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+  });
+}
 
-  try {
-    const org = await createOrganization({
-      name: companyName,
-      slug: normalizeOrgSlug(slugRaw),
-      displayName: companyName,
-      websiteUrl: websiteUrl || null,
-    });
-    await saveAppPortalTheme(
-      org.id,
-      themeFromFields({
-        background: String(form.get('appBackground') ?? ''),
-        surface: String(form.get('appSurface') ?? ''),
-        accent: String(form.get('appAccent') ?? ''),
-        ink: String(form.get('appInk') ?? ''),
-        tabIcon: String(form.get('appTabIcon') ?? ''),
-        icon: String(form.get('appIcon') ?? ''),
-        bubbleText: String(form.get('appBubbleText') ?? ''),
-      }),
-    ).catch((error) => {
-      console.error('app portal theme on create failed', error);
-    });
-
-    const origin = tenantOrigin(org.slug, request.url);
-    const invite = await createInvitation({
-      email: adminEmail,
-      name: adminName,
-      roleId: 'role_owner',
-      actorUserId: COORDITY_SYSTEM_USER_ID,
-      origin,
-      orgId: org.id,
-    });
-
-    return new Response(null, {
-      status: 303,
-      headers: {
-        Location: invite.inviteUrl,
-        'Cache-Control': 'no-store',
-      },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not create workspace.';
-    return formErrorRedirect('/sign-up', message);
-  }
-};
+export const POST: APIRoute = async () => refuse();
+export const GET: APIRoute = async () => refuse();

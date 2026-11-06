@@ -2,6 +2,7 @@ import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
 import { getCoordityFromEmail, notifyAdminEmail } from './email';
 import { notifyUser } from './notifications';
+import { archiveOrganization, createPlatformOrganization } from './platform-orgs';
 
 export const EARLY_ACCESS_SOURCE = 'early_access_request';
 export const EARLY_ACCESS_EMAIL_TO = 'admin@coordity.com';
@@ -70,33 +71,20 @@ function escapeHtml(value: string): string {
 const REQUEST_SELECT = `id, name, email, practice_name, phone, title, message, status,
   resolution, created_at, reviewed_at, reviewed_by`;
 
-export function buildEarlyAccessSignupUrl(input: {
-  origin: string;
-  name: string;
-  email: string;
-  practiceName: string;
-}): string {
-  const url = new URL('/sign-up', input.origin);
-  url.searchParams.set('company', input.practiceName);
-  url.searchParams.set('name', input.name);
-  url.searchParams.set('email', input.email);
-  return url.toString();
-}
-
 export function buildEarlyAccessInviteEmail(input: {
   name: string;
   practiceName: string;
-  signupUrl: string;
+  inviteUrl: string;
 }): { subject: string; text: string; html: string } {
   const first = input.name.trim().split(/\s+/)[0] || input.name;
   const subject = 'Your Coordity early access invite';
   const text = [
     `Hi ${first},`,
     '',
-    `You're invited to create a Coordity workspace for ${input.practiceName}.`,
+    `Your Coordity workspace for ${input.practiceName} is ready.`,
     '',
-    'Create your workspace here:',
-    input.signupUrl,
+    'Accept your invitation and set your password here:',
+    input.inviteUrl,
     '',
     'If you did not request early access, you can ignore this email.',
     '',
@@ -105,9 +93,9 @@ export function buildEarlyAccessInviteEmail(input: {
 
   const html = `
     <p>Hi ${escapeHtml(first)},</p>
-    <p>You&rsquo;re invited to create a Coordity workspace for <strong>${escapeHtml(input.practiceName)}</strong>.</p>
-    <p><a href="${escapeHtml(input.signupUrl)}" style="display:inline-block;background:#fecb00;color:#0b1f33;font-weight:700;text-decoration:none;padding:12px 20px;border-radius:999px;">Create your workspace</a></p>
-    <p style="font-size:13px;color:#5b6b7c;">Or open this link:<br/><a href="${escapeHtml(input.signupUrl)}">${escapeHtml(input.signupUrl)}</a></p>
+    <p>Your Coordity workspace for <strong>${escapeHtml(input.practiceName)}</strong> is ready.</p>
+    <p><a href="${escapeHtml(input.inviteUrl)}" style="display:inline-block;background:#fecb00;color:#0b1f33;font-weight:700;text-decoration:none;padding:12px 20px;border-radius:999px;">Accept your invitation</a></p>
+    <p style="font-size:13px;color:#5b6b7c;">Or open this link:<br/><a href="${escapeHtml(input.inviteUrl)}">${escapeHtml(input.inviteUrl)}</a></p>
     <p style="font-size:13px;color:#5b6b7c;">If you did not request early access, you can ignore this email.</p>
     <p>— The Coordity team</p>
   `.trim();
@@ -350,18 +338,27 @@ export async function inviteEarlyAccessRequest(input: {
     return { ok: false, error: 'That request is already reviewed.' };
   }
 
-  const signupUrl = buildEarlyAccessSignupUrl({
-    origin: input.origin,
-    name: request.name,
-    email: request.email,
-    practiceName: request.practiceName,
-  });
+  // SECURITY CONTAINMENT (2026-11-06): approval creates the workspace through the platform path (the same one platform
+  // staff use) and e-mails the OWNER invitation to the requester's own address. Nothing is created by a public request,
+  // and only the person who controls that mailbox can claim the workspace.
+  let created: { org: { id: string }; inviteUrl: string };
+  try {
+    created = await createPlatformOrganization({
+      companyName: request.practiceName,
+      adminName: request.name,
+      adminEmail: request.email,
+      requestUrl: input.origin,
+      actorUserId: input.reviewedBy,
+    });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Could not create the workspace.' };
+  }
 
   const sent = await notifyAdminEmail({
     ...buildEarlyAccessInviteEmail({
       name: request.name,
       practiceName: request.practiceName,
-      signupUrl,
+      inviteUrl: created.inviteUrl,
     }),
     to: request.email,
     from: getCoordityFromEmail(),
@@ -369,6 +366,10 @@ export async function inviteEarlyAccessRequest(input: {
   });
 
   if (!sent.ok) {
+    // Do not leave an unclaimable workspace behind: archive it so a retry starts clean.
+    await archiveOrganization(created.org.id).catch((error) => {
+      console.error('early access: archive after failed invite e-mail failed', error);
+    });
     return { ok: false, error: sent.error };
   }
 
