@@ -390,6 +390,10 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
 <script>
   import { initTimesheetWorkItems, renderWorkItemsSection } from '../lib/timesheet-work-items-client';
   import { applyShiftButtonState } from '../lib/timesheet-shift-buttons';
+  import {
+    initShiftEditFormsIn,
+    renderShiftEditControls,
+  } from '../lib/timesheet-shift-edit-client';
 
   function formatDuration(minutes: number): string {
     const hrs = Math.floor(minutes / 60);
@@ -451,8 +455,9 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
         .map((entry) => {
           const source = String(entry.source ?? 'clock');
           const isActive = Boolean(entry.isActive);
-          const badge =
-            source === 'backlog'
+          const badge = entry.hasPendingEdit
+            ? '<p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">Edit pending</p>'
+            : source === 'backlog'
               ? '<p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-sage-dark/50">Backlog</p>'
               : isActive
                 ? '<p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#1a73e8]">Active</p>'
@@ -464,12 +469,16 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
             ? `<p class="mt-1 text-xs text-sage-dark/60">${String(entry.pausesLabel)}</p>`
             : '';
           const workItems = isActive ? '' : renderWorkItemsSection(entry, categories);
+          const editControls = renderShiftEditControls(entry);
           return `
             <li class="rounded-xl border border-sage-dark/10 bg-white px-4 py-3" data-timesheet-item data-entry-id="${String(entry.id)}">
               <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
+                <div class="min-w-0">
                   <p class="text-sm font-semibold text-charcoal">${String(entry.dateLabel)}</p>
-                  <p class="mt-1 text-sm text-sage-dark/75">${String(entry.timeLabel)}</p>
+                  <div class="mt-1 flex flex-wrap items-center gap-2">
+                    <p class="text-sm text-sage-dark/75">${String(entry.timeLabel)}</p>
+                    ${editControls}
+                  </div>
                   ${pauses}
                   ${notes}
                 </div>
@@ -484,6 +493,9 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
         })
         .join('');
       initTimesheetWorkItems(root, categories, (nextSummary) => applySummary(root, nextSummary));
+      initShiftEditFormsIn(root, (form) => {
+        void submitTimesheetForm(form, root);
+      });
     }
 
     if (empty instanceof HTMLElement) {
@@ -775,9 +787,12 @@ const logPeriodLabel = `${formatWorkDate(logPeriod.start, { weekday: false })} â
     }>;
     applySummary(node, summary, { updateList: false });
     initTimesheetWorkItems(node, categories, (nextSummary) => applySummary(node, nextSummary));
+    initShiftEditFormsIn(node, (form) => {
+      void submitTimesheetForm(form, node);
+    });
 
     node.querySelectorAll(
-      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-break-form], [data-timesheet-backlog-form], [data-timesheet-shift-edit-form]',
+      '[data-timesheet-start-form], [data-timesheet-end-form], [data-timesheet-break-form], [data-timesheet-backlog-form]',
     ).forEach((formNode) => {
       if (!(formNode instanceof HTMLFormElement)) return;
       formNode.addEventListener('submit', (event) => {
