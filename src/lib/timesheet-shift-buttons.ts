@@ -46,8 +46,8 @@ export function applyShiftButtonState(
     pauseBtn.className = pauseButtonClasses(onShift, variant);
     pauseBtn.textContent = onBreak
       ? variant === 'widget'
-        ? 'UNPAUSE'
-        : 'Unpause'
+        ? 'RESUME'
+        : 'Resume'
       : variant === 'widget'
         ? 'PAUSE'
         : 'Pause';
