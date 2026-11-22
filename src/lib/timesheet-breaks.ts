@@ -2,6 +2,9 @@ import { randomToken, nowMs } from './crypto';
 import { getEnv } from './env';
 import { formatClockTime, formatHours, minutesBetween } from './timesheet';
 
+/** Pauses shorter than this are discarded so brief interruptions don’t show on the log. */
+export const MIN_RECORDED_PAUSE_MS = 5 * 60_000;
+
 export interface TimesheetShiftBreak {
   id: string;
   shiftId: string;
@@ -156,7 +159,10 @@ export async function pauseShift(shiftId: string, userId: string): Promise<Times
   return mapBreak(row);
 }
 
-export async function resumeShift(shiftId: string, userId: string): Promise<TimesheetShiftBreak> {
+export async function resumeShift(
+  shiftId: string,
+  userId: string,
+): Promise<TimesheetShiftBreak | null> {
   const { DB } = getEnv();
   const shift = await DB.prepare(
     `SELECT id, user_id, ended_at FROM timesheet_shift WHERE id = ? AND user_id = ? AND source = 'clock'`,
@@ -172,6 +178,14 @@ export async function resumeShift(shiftId: string, userId: string): Promise<Time
   if (!open) throw new Error('This shift is not paused.');
 
   const now = nowMs();
+  const durationMs = now - open.startedAt;
+
+  if (durationMs < MIN_RECORDED_PAUSE_MS) {
+    await DB.prepare(`DELETE FROM timesheet_shift_break WHERE id = ?`).bind(open.id).run();
+    await DB.prepare(`UPDATE timesheet_shift SET updated_at = ? WHERE id = ?`).bind(now, shiftId).run();
+    return null;
+  }
+
   await DB.prepare(`UPDATE timesheet_shift_break SET ended_at = ? WHERE id = ?`)
     .bind(now, open.id)
     .run();
@@ -182,11 +196,20 @@ export async function resumeShift(shiftId: string, userId: string): Promise<Time
 
 export async function closeOpenBreak(shiftId: string, endedAt: number): Promise<void> {
   const { DB } = getEnv();
+  const open = await getOpenBreak(shiftId);
+  if (!open) return;
+
+  const durationMs = endedAt - open.startedAt;
+  if (durationMs < MIN_RECORDED_PAUSE_MS) {
+    await DB.prepare(`DELETE FROM timesheet_shift_break WHERE id = ?`).bind(open.id).run();
+    return;
+  }
+
   await DB.prepare(
     `UPDATE timesheet_shift_break
      SET ended_at = ?
-     WHERE shift_id = ? AND ended_at IS NULL`,
+     WHERE id = ? AND ended_at IS NULL`,
   )
-    .bind(endedAt, shiftId)
+    .bind(endedAt, open.id)
     .run();
 }
