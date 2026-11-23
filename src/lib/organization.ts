@@ -1,5 +1,10 @@
 import { getEnv } from './env';
 import { nowMs, randomToken } from './crypto';
+import {
+  WOVENSAGE_BOXED_FAVICON_AT,
+  WOVENSAGE_BOXED_FAVICON_BASE64,
+  WOVENSAGE_BOXED_FAVICON_MIME,
+} from './wovensage-favicon-boxed';
 
 /** Default org until host resolution supplies a tenant (local / legacy). */
 export const DEFAULT_ORG_ID = 'org_wovensage';
@@ -1213,6 +1218,32 @@ export async function getOrganizationFavicon(
   } catch {
     return null;
   }
+}
+
+/** One-time: put the boxed leaf on the Woven Sage workspace (public site took the simple leaf). */
+export async function ensureWovenSageBoxedFavicon(
+  org: PortalOrganization | null | undefined,
+): Promise<PortalOrganization | null | undefined> {
+  if (!org || org.slug !== DEFAULT_ORG_SLUG) return org;
+  if (org.faviconUpdatedAt === WOVENSAGE_BOXED_FAVICON_AT) return org;
+
+  const { DB } = getEnv();
+  const ts = nowMs();
+  await DB.prepare(
+    `UPDATE organization
+     SET favicon_mime = ?, favicon_data = ?, favicon_updated_at = ?, updated_at = ?
+     WHERE id = ?`,
+  )
+    .bind(
+      WOVENSAGE_BOXED_FAVICON_MIME,
+      WOVENSAGE_BOXED_FAVICON_BASE64,
+      WOVENSAGE_BOXED_FAVICON_AT,
+      ts,
+      org.id,
+    )
+    .run();
+
+  return (await getOrganizationById(org.id)) ?? org;
 }
 
 export async function getOrganizationLogo(

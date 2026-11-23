@@ -2,6 +2,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { createAuth } from './lib/auth';
 import {
   DEFAULT_ORG_ID,
+  ensureWovenSageBoxedFavicon,
   getOrganizationById,
   isCoordityApexHost,
   isOrganizationMember,
@@ -99,6 +100,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (!isApex && !context.locals.organization) {
     context.locals.organization = await getOrganizationById(DEFAULT_ORG_ID);
+  }
+
+  if (!isApex && context.locals.organization) {
+    try {
+      context.locals.organization = (await ensureWovenSageBoxedFavicon(
+        context.locals.organization,
+      )) ?? context.locals.organization;
+    } catch (error) {
+      console.error('woven sage favicon ensure failed', error);
+    }
   }
 
   let employee = session.employee;
